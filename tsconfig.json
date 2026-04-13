@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/types/*": ["packages/types/*"],
+      "@repo/utils/*": ["packages/utils/*"],
+      "@repo/db/*": ["packages/database/*"]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+# -------------------------
+# Node / Package Managers
+# -------------------------
+node_modules/
+.pnpm-store/
+.pnp.*
+package-lock.json
+yarn.lock
+
+# -------------------------
+# Build Outputs
+# -------------------------
+dist/
+build/
+.next/
+out/
+coverage/
+
+# -------------------------
+# Logs
+# -------------------------
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -------------------------
+# Environment Files
+# -------------------------
+.env
+.env.local
+.env.*.local
+
+# -------------------------
+# OS / System Files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# IDE / Editor
+# -------------------------
+.vscode/
+.idea/
+
+# -------------------------
+# Turbo
+# -------------------------
+.turbo/
+
+# -------------------------
+# Prisma (important later)
+# -------------------------
+node_modules/.prisma
+prisma/generated/
+
+# -------------------------
+# Docker
+# -------------------------
+docker-data/
+
+# -------------------------
+# Misc
+# -------------------------
+*.tsbuildinfo
