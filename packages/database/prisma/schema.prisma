@@ -10,9 +10,9 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
-  roleId    String
+  roleId    String   @map("role_id")
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   role Role @relation(fields: [roleId], references: [id])
 }
@@ -32,59 +32,62 @@ model Group {
 }
 
 model Account {
-  id        String   @id @default(uuid())
-  name      String
-  groupId   String
+  id              String   @id @default(uuid())
+  code            String?  @unique
+  name            String
+  groupId         String   @map("group_id")
 
-  address   String?
-  phone     String?
-  email     String?
+  address         String?
+  email           String?
+  reference       String?
 
-  openingBalance Float?
+  phoneHome       String?  @map("phone_home")
+  phoneOffice1    String?  @map("phone_office_1")
+  phoneOffice2    String?  @map("phone_office_2")
+  mobile          String?
 
-  // Broker fields
-  pan        String?
-  dpId       String?
+  // identity
+  dpId            String?  @map("dp_id")
+  clientId        String?  @map("client_id")
+  micr            String?
+  accountNo       String?  @map("account_no")
+  pan             String?
 
-  // Client fields
-  brokerageDefault Float?
+  // flags
+  printBill          Boolean? @map("print_bill")
+  serviceTax         Boolean? @map("service_tax")
+  turnoverTax        Boolean? @map("turnover_tax")
+  stampDuty          Boolean? @map("stamp_duty")
+  dematCharge        Boolean? @map("demat_charge")
+  transactionCharges Boolean? @map("transaction_charges")
 
-  reference      String?
-  contactPerson  String?
+  // financial
+  openingBalance  Float?   @map("opening_balance")
+  closingBalance  Float?   @map("closing_balance")
 
-  createdAt DateTime @default(now())
+  // script-related
+  shortName        String? @map("short_name")
+  fullName         String? @map("full_name")
+  isin             String?
+  aseCode         String? @map("ase_code")
+  bseCode         String? @map("bse_code")
+  nseCode         String? @map("nse_code")
+  mcxCode         String? @map("mcx_code")
+  ncdexCode       String? @map("ncdex_code")
+
+  multiplier       Float?
+  divider          Float?
+  lotSize          Int?    @map("lot_size")
+  tickPrice        Float?  @map("tick_price")
+  fixMarginPercent Float?  @map("fix_margin_percent")
+  lastClosingRate  Float?  @map("last_closing_rate")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   group Group @relation(fields: [groupId], references: [id])
 
-  brokerage ClientBrokerage[]
-}
-
-model Script {
-  id          String  @id
-  fullName    String
-  exchange    String?
-  lotSize     Int?
-  tickPrice   Float?
-  multiplier  Float?
-  closingRate Float?
-
-  brokerages  ClientBrokerage[]
-}
-
-model ClientBrokerage {
-  id        String @id @default(uuid())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id])
-
-  exchange  String
-  scriptId  String?
-
-  brokerageType String
-  value         Float
-  minValue      Float?
-
-  createdAt DateTime @default(now())
-
-  script Script? @relation(fields: [scriptId], references: [id])
+  @@index([name])
+  @@index([groupId])
+  @@map("accounts")
 }
