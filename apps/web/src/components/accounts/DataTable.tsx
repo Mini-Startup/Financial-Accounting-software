@@ -38,10 +38,10 @@ export function DataTable({ accounts, groupName }: { accounts: any[], groupName:
             ) : null}
             {accounts.map((acc) => (
               <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{acc.code || acc.id.substring(0, 8)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{acc.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{acc.mobile || acc.email || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{acc.closingBalance ? `$${acc.closingBalance}` : '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{acc.fldClient || acc.id.substring(0, 8)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{acc.fldName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{acc.fldMobile || acc.fldEmail || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{acc.fldClosing || acc.fldOpening ? `$${acc.fldClosing || acc.fldOpening}` : '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button 
                     onClick={() => setEditingAccount(acc)}

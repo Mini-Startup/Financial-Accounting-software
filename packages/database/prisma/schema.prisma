@@ -6,15 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─────────────────────────────────────────────
+// RBAC
+// ─────────────────────────────────────────────
+
 model User {
   id        String   @id @default(uuid())
-  email     String   @unique
   name      String?
-  roleId    String   @map("role_id")
+  email     String   @unique
+  password  String?
+  roleId    String?  @map("role_id")
 
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
 
-  role Role @relation(fields: [roleId], references: [id])
+  role Role? @relation(fields: [roleId], references: [id])
+
+  @@map("users")
 }
 
 model Role {
@@ -22,72 +30,130 @@ model Role {
   name String @unique
 
   users User[]
+
+  @@map("roles")
 }
+
+// ─────────────────────────────────────────────
+// GROUPS
+// ─────────────────────────────────────────────
 
 model Group {
-  id   String  @id @default(uuid())
-  name String  @unique
+  fldGroupNo   Int     @id @default(autoincrement())
+  fldGroupName String  @unique
+  fldNo        Int?
 
   accounts Account[]
+
+  @@map("groups")
 }
 
+// ─────────────────────────────────────────────
+// ACCOUNTS (Client + Broker + Ledger)
+// ─────────────────────────────────────────────
+
 model Account {
-  id              String   @id @default(uuid())
-  code            String?  @unique
-  name            String
-  groupId         String   @map("group_id")
+  id               String   @id @default(uuid())
 
-  address         String?
-  email           String?
-  reference       String?
+  fldClient        String?
+  fldName          String
+  fldAOD           String?
+  fldType          String?
 
-  phoneHome       String?  @map("phone_home")
-  phoneOffice1    String?  @map("phone_office_1")
-  phoneOffice2    String?  @map("phone_office_2")
-  mobile          String?
+  fldGroupNo       Int?
+  fldGroupBusiness String?
+  fldGroupFamily   String?
 
-  // identity
-  dpId            String?  @map("dp_id")
-  clientId        String?  @map("client_id")
-  micr            String?
-  accountNo       String?  @map("account_no")
-  pan             String?
+  fldOpening       Float?
+  fldDebit         Float?
+  fldCredit        Float?
+  fldClosing       Float?
 
-  // flags
-  printBill          Boolean? @map("print_bill")
-  serviceTax         Boolean? @map("service_tax")
-  turnoverTax        Boolean? @map("turnover_tax")
-  stampDuty          Boolean? @map("stamp_duty")
-  dematCharge        Boolean? @map("demat_charge")
-  transactionCharges Boolean? @map("transaction_charges")
+  fldAddress       String?
+  fldPhoneH        String?
+  fldPhoneO1       String?
+  fldPhoneO2       String?
+  fldMobile        String?
+  fldEmail         String?
+  fldReference     String?
 
-  // financial
-  openingBalance  Float?   @map("opening_balance")
-  closingBalance  Float?   @map("closing_balance")
+  fldClientID      String?
+  fldDPID          String?
 
-  // script-related
-  shortName        String? @map("short_name")
-  fullName         String? @map("full_name")
-  isin             String?
-  aseCode         String? @map("ase_code")
-  bseCode         String? @map("bse_code")
-  nseCode         String? @map("nse_code")
-  mcxCode         String? @map("mcx_code")
-  ncdexCode       String? @map("ncdex_code")
+  fldServiceTax    Boolean?  @default(false)
+  fldTurnOverTax   Boolean?  @default(false)
+  fldStampDuty     Boolean?  @default(false)
+  fldDematCharge   Boolean?  @default(false)
+  fldPrintBill     Boolean?  @default(false)
 
-  multiplier       Float?
-  divider          Float?
-  lotSize          Int?    @map("lot_size")
-  tickPrice        Float?  @map("tick_price")
-  fixMarginPercent Float?  @map("fix_margin_percent")
-  lastClosingRate  Float?  @map("last_closing_rate")
+  fldTeleDir       String?
+  fldAddBook       String?
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  fldTranCharge    Float?
+  fldMrgnAmt       Float?
+  fldExposure      Float?
+  fldShare         Float?
 
-  group Group @relation(fields: [groupId], references: [id])
+  fldPAN           String?
+  fldMICR          String?
+  fldBankAccNo     String?
 
-  @@index([name])
-  @@index([groupId])
+  fldTB            String?
+  fldL             String?
+  fldPT            String?
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt      @map("updated_at")
+
+  group Group? @relation(fields: [fldGroupNo], references: [fldGroupNo])
+
+  @@index([fldName])
+  @@index([fldGroupNo])
   @@map("accounts")
+}
+
+// ─────────────────────────────────────────────
+// SCRIPTS
+// ─────────────────────────────────────────────
+
+model Script {
+  id               String   @id @default(uuid())
+
+  fldShortScript   String?
+  fldScriptName    String
+
+  fldScriptASE     String?
+  fldScriptBSE     String?
+  fldScriptNSE     String?
+  fldScriptNMC     String?
+  fldScriptNCD     String?
+  fldScriptMCX     String?
+  fldScriptICE     String?
+
+  fldType          String?
+  fldISIN          String?
+
+  fldMargin        Float?
+  fldMultiplier    Float?
+  fldPrice         Float?
+  fldDivider       Float?
+
+  fldUoQ           String?
+  fldPU            String?
+  fldDC            String?
+
+  fldScriptACE     String?
+  fldScriptUSE     String?
+  fldScriptDGC     String?
+  fldScriptACX     String?
+  fldScriptUCX     String?
+
+  fldLotSize       Int?
+  fldTP            Float?
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt      @map("updated_at")
+
+  @@index([fldScriptName])
+  @@map("scripts")
 }

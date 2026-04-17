@@ -37,13 +37,23 @@ async function main() {
 
   for (const name of groups) {
     await prisma.group.upsert({
+      where: { fldGroupName: name },
+      update: {},
+      create: { fldGroupName: name },
+    });
+  }
+
+  // Seed default roles
+  const roles = ["admin", "user"];
+  for (const name of roles) {
+    await prisma.role.upsert({
       where: { name },
       update: {},
       create: { name },
     });
   }
 
-  console.log("✅ Seed done");
+  console.log("✅ Seed done — Groups & Roles created");
 }
 
 main()

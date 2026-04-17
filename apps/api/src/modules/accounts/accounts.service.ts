@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma, Prisma } from 'database';
 
 function sanitizePayload(payload: any) {
-  const numberFields = ['openingBalance', 'closingBalance', 'multiplier', 'divider', 'tickPrice', 'lotSize'];
+  const numberFields = [
+    'fldOpening', 'fldClosing', 'fldDebit', 'fldCredit', 
+    'fldTranCharge', 'fldMrgnAmt', 'fldExposure', 'fldShare'
+  ];
   for (const field of numberFields) {
     if (payload[field] === "") {
       payload[field] = null;
@@ -17,13 +20,15 @@ function sanitizePayload(payload: any) {
 export class AccountsService {
   async create(data: Prisma.AccountUncheckedCreateInput & { groupName?: string }) {
     const payload = { ...data };
+    
+    // Map groupName to fldGroupNo
     if (payload.groupName) {
       const group = await prisma.group.upsert({
-        where: { name: payload.groupName },
+        where: { fldGroupName: payload.groupName },
         update: {},
-        create: { name: payload.groupName }
+        create: { fldGroupName: payload.groupName }
       });
-      payload.groupId = group.id;
+      payload.fldGroupNo = group.fldGroupNo;
       delete payload.groupName;
     }
     
@@ -39,7 +44,7 @@ export class AccountsService {
 
     if (groupName) {
       where.group = {
-        name: {
+        fldGroupName: {
           equals: groupName,
           mode: 'insensitive'
         }
@@ -47,7 +52,7 @@ export class AccountsService {
     }
 
     if (search) {
-      where.name = {
+      where.fldName = {
         contains: search,
         mode: 'insensitive',
       };
