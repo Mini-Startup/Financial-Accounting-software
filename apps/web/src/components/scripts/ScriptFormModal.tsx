@@ -44,93 +44,94 @@ export function ScriptFormModal({ initialData, onClose }: { initialData?: any, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh]">
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-gray-800">{initialData ? 'Edit Script' : 'New Script'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent backdrop-blur-none pointer-events-none">
+      <div className="bg-[#e8ecf1] shadow-2xl w-[600px] border-2 border-blue-300 rounded-sm flex flex-col font-sans text-black pointer-events-auto overflow-hidden">
+        
+        {/* Title Bar */}
+        <div className="bg-gradient-to-r from-[#bbd2eb] to-[#e8ecf1] px-2 py-1 flex justify-between items-center border-b border-gray-300 cursor-move">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <span className="w-3 h-3 bg-white border border-gray-400 inline-block"></span>
+            Scrip Information
+          </div>
+          <button onClick={onClose} className="text-gray-600 hover:text-black hover:bg-red-200 px-2 py-0.5 rounded transition">
+            ✕
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
-          <form id="scriptForm" onSubmit={handleSubmit} className="space-y-6 text-black">
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-5">
+        {/* Global Header */}
+        <div className="p-3 bg-[#e8ecf1]">
+          <div className="bg-white border border-gray-300 px-3 py-1 text-center font-bold text-sm text-blue-900 mx-1 mb-2">
+            {formData.fldShortScript || formData.fldScriptName || 'Create New Scrip'}
+          </div>
+
+          {/* Tab Strip */}
+          <div className="flex border-b border-gray-400 mb-4 px-2 space-x-1">
+            <div className="bg-white px-3 py-1 text-xs border border-b-0 border-gray-400 cursor-default shadow-[0_-1px_0_0_rgba(0,0,0,0.1)]">Scrip</div>
+            <div className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-200 cursor-pointer">Exchange Code</div>
+            <div className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-200 cursor-pointer">Brokerage</div>
+            <div className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-200 cursor-pointer">Settings</div>
+          </div>
+
+          <form id="scriptForm" onSubmit={handleSubmit} className="px-2 pb-4">
+            <div className="grid grid-cols-[80px_100px_40px_100px_70px_1fr] gap-x-2 gap-y-2 items-center text-xs font-semibold">
+              <label>Short Name</label>
+              <input name="fldShortScript" value={formData.fldShortScript} onChange={handleChange} className="w-full border border-gray-400 p-1" />
               
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Full Script Name *</label>
-                <input required name="fldScriptName" value={formData.fldScriptName} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Short Name</label>
-                <input name="fldShortScript" value={formData.fldShortScript} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
+              <label className="text-right pr-1">ISIN</label>
+              <input name="fldISIN" value={formData.fldISIN || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
               
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">ISIN Structure</label>
-                <input name="fldISIN" value={formData.fldISIN} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
+              <label className="text-right pr-1">ASE code</label>
+              <input name="fldScriptASE" value={formData.fldScriptASE || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
+              
+              <label>Full Name</label>
+              <input required name="fldScriptName" value={formData.fldScriptName} onChange={handleChange} className="col-span-3 w-full border border-gray-400 p-1" />
+              
+              <label className="text-right pr-1">BSE code</label>
+              <input name="fldScriptBSE" value={formData.fldScriptBSE || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
+              
+              <label>Multiplier</label>
+              <input type="number" step="0.0001" name="fldMultiplier" value={formData.fldMultiplier || '1.0000'} onChange={handleChange} className="bg-black text-white px-1 text-right w-full border border-gray-400 p-1" />
 
-              <div className="md:col-span-3 pb-2 pt-2 border-b border-gray-200">
-                <h4 className="text-sm font-bold text-gray-700">Exchange Codes</h4>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">BSE Code</label>
-                <input name="fldScriptBSE" value={formData.fldScriptBSE} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">NSE Code</label>
-                <input name="fldScriptNSE" value={formData.fldScriptNSE} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">MCX Code</label>
-                <input name="fldScriptMCX" value={formData.fldScriptMCX} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">NCDEX Code</label>
-                <input name="fldScriptNCD" value={formData.fldScriptNCD} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">ASE Code</label>
-                <input name="fldScriptASE" value={formData.fldScriptASE} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
+              <label className="text-right pr-1">Divider</label>
+              <input type="number" step="0.0001" name="fldDivider" value={formData.fldDivider || '1.0000'} onChange={handleChange} className="text-right w-full border border-gray-400 p-1" />
+              
+              <label className="text-right pr-1">NSE code</label>
+              <input name="fldScriptNSE" value={formData.fldScriptNSE || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
+              
+              <label>LotSize</label>
+              <input type="number" name="fldLotSize" value={formData.fldLotSize || '1'} onChange={handleChange} className="text-right w-full border border-gray-400 p-1" />
 
-              <div className="md:col-span-3 pb-2 pt-2 border-b border-gray-200">
-                <h4 className="text-sm font-bold text-gray-700">Calculations & Margins</h4>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Multiplier</label>
-                <input type="number" step="0.01" name="fldMultiplier" value={formData.fldMultiplier} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Divider</label>
-                <input type="number" step="0.01" name="fldDivider" value={formData.fldDivider} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Lot Size</label>
-                <input type="number" name="fldLotSize" value={formData.fldLotSize} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Tick Price</label>
-                <input type="number" step="0.01" name="fldTP" value={formData.fldTP} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Margin (%)</label>
-                <input type="number" step="0.01" name="fldMargin" value={formData.fldMargin} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Closing Rate</label>
-                <input type="number" step="0.01" name="fldPrice" value={formData.fldPrice} onChange={handleChange} className="w-full border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 bg-white p-2 text-sm shadow-sm font-mono" />
-              </div>
+              <label className="text-right pr-1">Fix Margin%</label>
+              <input type="number" step="0.0001" name="fldMargin" value={formData.fldMargin || '0.0000'} onChange={handleChange} className="text-right w-full border border-gray-400 p-1" />
+              
+              <label className="text-right pr-1">MCX code</label>
+              <input name="fldScriptMCX" value={formData.fldScriptMCX || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
+              
+              <label>Tick-Price</label>
+              <input type="number" step="0.0001" name="fldTP" value={formData.fldTP || '1.0000'} onChange={handleChange} className="text-right w-full border border-gray-400 p-1" />
 
+              <label className="text-right pr-1 whitespace-nowrap">Last closing rate</label>
+              <input type="number" step="0.0001" name="fldPrice" value={formData.fldPrice || '0.0000'} onChange={handleChange} className="text-right w-full border border-gray-400 p-1" />
+              
+              <label className="text-right pr-1">NCDEX code</label>
+              <input name="fldScriptNCD" value={formData.fldScriptNCD || ''} onChange={handleChange} className="w-full border border-gray-400 p-1" />
+            </div>
+
+            <div className="mt-8 flex justify-end gap-2">
+               <button type="submit" form="scriptForm" className="bg-[#bbd2eb] border border-gray-500 px-6 py-1 text-xs hover:bg-[#a6c1de] shadow-sm">Save Record</button>
             </div>
           </form>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition">Cancel</button>
-          <button type="submit" form="scriptForm" className="px-8 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded shadow-sm hover:bg-blue-700 transition">Save Script</button>
+        {/* Footer Record Navigation */}
+        <div className="bg-gradient-to-r from-[#bbd2eb] to-[#e8ecf1] border-t border-gray-300 px-2 py-1 text-[11px] flex items-center justify-between text-gray-700">
+           <div className="flex items-center gap-2">
+              Record:  |◄  ◄  <input type="text" className="w-16 text-center border border-gray-300 py-0.5" value="1 of 592" readOnly />  ►  ►|  
+           </div>
+           <div className="flex items-center gap-2">
+             <button className="border border-gray-400 bg-gray-100 px-2 py-0.5 flex gap-1 items-center opacity-50"><span className="scale-75">❌</span> No Filter</button>
+             <button className="border border-gray-400 bg-gray-100 px-4 py-0.5">Search</button>
+           </div>
         </div>
       </div>
     </div>
