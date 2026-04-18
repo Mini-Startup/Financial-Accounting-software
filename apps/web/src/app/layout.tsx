@@ -66,6 +66,11 @@ export default async function RootLayout({
                 <div className="text-xl mb-1">📒</div>
                 <span className="text-[10px] text-gray-700 leading-tight">Ledger<br/>Account</span>
               </a>
+              <div className="w-px h-10 bg-gray-300 mx-1 self-center"></div>
+              <a href="/trades/import" className="flex flex-col items-center justify-center p-2 min-w-[64px] hover:bg-blue-50 hover:ring-1 ring-blue-200 rounded cursor-pointer transition-all">
+                <div className="text-xl mb-1">📥</div>
+                <span className="text-[10px] text-gray-700 leading-tight">Trade<br/>Import</span>
+              </a>
             </div>
             
             {/* Status array below icons */}
