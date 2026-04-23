@@ -18,7 +18,7 @@ export function DataTable({ accounts, groupName }: { accounts: any[], groupName:
 
   return (
     <>
-    <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden border border-gray-100/50 text-gray-800">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm overflow-hidden text-gray-800">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200/60">
           <thead className="bg-gray-50/50">

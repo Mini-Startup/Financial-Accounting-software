@@ -36,34 +36,18 @@
   align-items: center;
   justify-content: center;
   min-height: 280px;
-  border: 2px dashed var(--upload-border);
-  border-radius: 12px;
-  background: var(--upload-bg);
-  backdrop-filter: blur(8px);
+  border: 2px dashed var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
   cursor: pointer;
   transition: all 0.25s ease;
   overflow: hidden;
 }
 
-.trade-upload-zone::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 12px,
-    rgba(148, 163, 184, 0.04) 12px,
-    rgba(148, 163, 184, 0.04) 24px
-  );
-  pointer-events: none;
-}
-
 .trade-upload-zone:hover,
 .trade-upload-zone.dragging {
-  border-color: #3b82f6;
-  background: var(--upload-hover-bg);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+  border-color: var(--color-primary);
+  background: #f8fafc;
 }
 
 .trade-upload-zone.dragging {
@@ -77,11 +61,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+  background: #f1f5f9;
   border-radius: 14px;
-  color: #3b82f6;
+  color: var(--color-primary);
   font-size: 26px;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
   transition: transform 0.3s ease;
 }
 
@@ -144,8 +127,8 @@
   padding: 3px;
   background: var(--stats-bg);
   border: 1px solid var(--grid-border);
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
 }
 
@@ -195,10 +178,10 @@
 /* ─── Data Grid ─────────────────────────────────────── */
 .trade-grid-wrapper {
   border: 1px solid var(--grid-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface);
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .trade-grid-toolbar {
@@ -522,15 +505,14 @@
 }
 
 .trade-btn-save {
-  background: linear-gradient(135deg, #1e40af, #2563eb);
+  background: var(--color-primary);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .trade-btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .trade-btn-save:disabled {
