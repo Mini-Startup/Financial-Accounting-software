@@ -33,8 +33,8 @@ export function BrokerageFormModal({
   });
 
   const filteredAccounts = useMemo(() => {
-    const groupMatcher = formData.appliesTo === 'CLIENT' ? 'Client' : 'Broker';
-    return accounts.filter(acc => acc.group?.fldGroupName === groupMatcher);
+    const groupMatcher = formData.appliesTo === 'CLIENT' ? 'Sundry Debtors' : 'Sundry Creditors';
+    return accounts.filter(acc => acc.group?.name === groupMatcher || acc.group?.fldGroupName === groupMatcher);
   }, [accounts, formData.appliesTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +125,11 @@ export function BrokerageFormModal({
               <label className="text-sm font-medium text-gray-700">Account *</label>
               <select required name="accountId" value={formData.accountId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
                 <option value="">Select Account</option>
-                {filteredAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.fldName} ({acc.fldClient})</option>)}
+                {filteredAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {(acc.name || acc.fldName) ?? 'Unnamed'} ({acc.code || acc.fldClient || acc.id.substring(0, 8)})
+                  </option>
+                ))}
               </select>
             </div>
 

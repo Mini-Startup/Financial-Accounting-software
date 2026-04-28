@@ -3,7 +3,9 @@ import { prisma, Prisma } from 'database';
 
 function sanitizePayload(payload: any) {
   const numberFields = [
-    'fldOpening', 'fldClosing', 'fldDebit', 'fldCredit', 
+    'opening', 'closing', 'debit', 'credit',
+    'defaultCredit', 'interest',
+    'fldOpening', 'fldClosing', 'fldDebit', 'fldCredit',
     'fldTranCharge', 'fldMrgnAmt', 'fldExposure', 'fldShare'
   ];
   for (const field of numberFields) {
@@ -24,11 +26,11 @@ export class AccountsService {
     // Map groupName to fldGroupNo
     if (payload.groupName) {
       const group = await prisma.group.upsert({
-        where: { fldGroupName: payload.groupName },
+        where: { name: payload.groupName },
         update: {},
-        create: { fldGroupName: payload.groupName }
+        create: { name: payload.groupName }
       });
-      payload.fldGroupNo = group.fldGroupNo;
+      payload.groupId = group.id;
       delete payload.groupName;
     }
     
@@ -44,7 +46,7 @@ export class AccountsService {
 
     if (groupName) {
       where.group = {
-        fldGroupName: {
+        name: {
           equals: groupName,
           mode: 'insensitive'
         }
@@ -52,7 +54,7 @@ export class AccountsService {
     }
 
     if (search) {
-      where.fldName = {
+      where.name = {
         contains: search,
         mode: 'insensitive',
       };

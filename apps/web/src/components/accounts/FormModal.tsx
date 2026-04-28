@@ -3,21 +3,30 @@ import { useState } from 'react';
 
 export function FormModal({ initialData, groupName, onClose }: { initialData?: any, groupName: string, onClose: () => void }) {
   const [formData, setFormData] = useState({
-    fldClient: initialData?.fldClient || '',
-    fldName: initialData?.fldName || '',
-    fldAOD: initialData?.fldAOD || '',
-    fldAddress: initialData?.fldAddress || '',
-    fldEmail: initialData?.fldEmail || '',
-    fldReference: initialData?.fldReference || '',
-    fldPhoneH: initialData?.fldPhoneH || '',
-    fldPhoneO1: initialData?.fldPhoneO1 || '',
-    fldPhoneO2: initialData?.fldPhoneO2 || '',
-    fldMobile: initialData?.fldMobile || '',
-    fldOpening: initialData?.fldOpening || '',
-    fldClosing: initialData?.fldClosing || '',
-    fldPAN: initialData?.fldPAN || '',
-    fldDPID: initialData?.fldDPID || '',
-    fldClientID: initialData?.fldClientID || '',
+    code: initialData?.code || initialData?.fldClient || '',
+    name: initialData?.name || initialData?.fldName || '',
+    address: initialData?.address || initialData?.fldAddress || '',
+    mobileNumber: initialData?.mobileNumber || initialData?.fldMobile || '',
+    officeNumber: initialData?.officeNumber || initialData?.fldPhoneO1 || '',
+    whatsappNumber: initialData?.whatsappNumber || '',
+    isWhatsappSameAsMobile: false,
+    email: initialData?.email || initialData?.fldEmail || '',
+
+    contactPersonName: initialData?.contactPersonName || '',
+    contactPersonMobile: initialData?.contactPersonMobile || '',
+    contactPersonEmail: initialData?.contactPersonEmail || '',
+
+    defaultCredit: initialData?.defaultCredit ?? '',
+    interest: initialData?.interest ?? '',
+
+    bankName: initialData?.bankName || '',
+    bankBranch: initialData?.bankBranch || '',
+    ifscCode: initialData?.ifscCode || '',
+    accountNumber: initialData?.accountNumber || '',
+    upiId: initialData?.upiId || '',
+
+    referenceMobile: initialData?.referenceMobile || '',
+    referenceEmail: initialData?.referenceEmail || '',
     ...initialData // Keep ID if passing through
   });
 
@@ -28,8 +37,14 @@ export function FormModal({ initialData, groupName, onClose }: { initialData?: a
         ? `http://localhost:4000/accounts/${initialData.id}` 
         : `http://localhost:4000/accounts`;
       
+      const payloadForm = { ...formData };
+      if (payloadForm.isWhatsappSameAsMobile) {
+        payloadForm.whatsappNumber = payloadForm.mobileNumber;
+      }
+      delete (payloadForm as any).isWhatsappSameAsMobile;
+
       const payload = {
-        ...formData,
+        ...payloadForm,
         groupName: initialData?.fldGroupNo ? undefined : groupName, 
       };
       
@@ -46,7 +61,8 @@ export function FormModal({ initialData, groupName, onClose }: { initialData?: a
   }
 
   const handleChange = (e: any) => {
-    setFormData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev: any) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   }
 
   return (
@@ -67,69 +83,142 @@ export function FormModal({ initialData, groupName, onClose }: { initialData?: a
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto max-h-[85vh]">
           {initialData && (
             <div className="mb-6 pb-4 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <p className="text-caption">Selected Record</p>
-                <p className="text-title text-[var(--color-primary)]">{formData.fldClient} - {formData.fldName}</p>
+                <p className="text-title text-[var(--color-primary)]">{formData.code} - {formData.name}</p>
               </div>
             </div>
           )}
 
 
-          <form id="accountForm" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-[100px_1fr_80px_1fr] gap-x-4 gap-y-4 items-center text-sm">
-              <label className="text-gray-600 font-medium">Code</label>
-              <div className="flex items-center gap-2">
-                 <input required name="fldClient" value={formData.fldClient} onChange={handleChange} className="w-24 border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-                 {groupName === 'Client' && (
-                   <div className="flex items-center gap-2 ml-auto text-xs">
-                     <span className="text-gray-500">AOD:</span>
-                     <input type="date" className="border border-gray-200 rounded-lg p-1.5 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]" />
-                   </div>
-                 )}
+          <form id="accountForm" onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Basic</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Code *</label>
+                  <input required name="code" value={formData.code} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Name *</label>
+                  <input required name="name" value={formData.name} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
               </div>
+            </div>
 
-              <label className="text-right pr-2 text-gray-600 font-medium">Home</label>
-              <input name="fldTelHome" value={formData.fldPhoneH || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Contact details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1 col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Address</label>
+                  <textarea name="address" rows={3} value={formData.address} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all resize-none" />
+                </div>
 
-              <label className="text-gray-600 font-medium">Name</label>
-              <input required name="fldName" value={formData.fldName} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Mobile number</label>
+                  <input name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
 
-              <label className="text-right pr-2 text-gray-600 font-medium">Office</label>
-              <input name="fldTelOffice" value={formData.fldPhoneO1 || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Office number</label>
+                  <input name="officeNumber" value={formData.officeNumber} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
 
-              <label className="self-start mt-2 text-gray-600 font-medium">Address</label>
-              <textarea name="fldAddress" rows={3} value={formData.fldAddress} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all resize-none" />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">WhatsApp number</label>
+                  <input
+                    name="whatsappNumber"
+                    value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
+                    onChange={handleChange}
+                    disabled={formData.isWhatsappSameAsMobile}
+                    className={`w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all ${formData.isWhatsappSameAsMobile ? 'bg-gray-50 text-gray-500' : ''}`}
+                  />
+                  <label className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                    <input type="checkbox" name="isWhatsappSameAsMobile" checked={formData.isWhatsappSameAsMobile} onChange={handleChange} />
+                    WhatsApp number is same as mobile
+                  </label>
+                </div>
 
-              <div className="col-span-2 grid grid-cols-[80px_1fr] gap-y-4 items-center self-start">
-                  <label className="text-right pr-2 text-gray-600 font-medium">Office 2</label>
-                  <input name="fldTelOffice1" value={formData.fldPhoneO2 || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-                  
-                  <label className="text-right pr-2 text-gray-600 font-medium">Mobile</label>
-                  <input name="fldMobile" value={formData.fldMobile} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-                  
-                  <label className="text-right pr-2 text-gray-600 font-medium">Reference</label>
-                  <input name="fldRef" value={formData.fldReference || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Email ID</label>
+                  <input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
               </div>
+            </div>
 
-              <label className="text-gray-600 font-medium">Email</label>
-              <input name="fldEmail" type="email" value={formData.fldEmail} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-              
-              <div className="col-span-2"></div>
-              
-              {groupName === 'Broker' && (
-                <>
-                  <label className="text-gray-600 font-medium">PAN No</label>
-                  <input name="fldPAN" value={formData.fldPAN} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-                  <div className="col-span-2"></div>
-                  
-                  <label className="text-gray-600 font-medium">DP ID</label>
-                  <input name="fldDPID" value={formData.fldDPID} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
-                  <div className="col-span-2"></div>
-                </>
-              )}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Contact person</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1 col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Contact person name</label>
+                  <input name="contactPersonName" value={formData.contactPersonName} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Contact person mobile</label>
+                  <input name="contactPersonMobile" value={formData.contactPersonMobile} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Contact person email</label>
+                  <input name="contactPersonEmail" type="email" value={formData.contactPersonEmail} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Credit</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Default credit (optional)</label>
+                  <input name="defaultCredit" type="number" step="any" value={formData.defaultCredit} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Interest</label>
+                  <input name="interest" type="number" step="any" value={formData.interest} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Banking details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Bank name</label>
+                  <input name="bankName" value={formData.bankName} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Bank branch</label>
+                  <input name="bankBranch" value={formData.bankBranch} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">IFSC code</label>
+                  <input name="ifscCode" value={formData.ifscCode} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Account number</label>
+                  <input name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-sm font-medium text-gray-700">UPI ID</label>
+                  <input name="upiId" value={formData.upiId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Referred by</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Reference mobile number</label>
+                  <input name="referenceMobile" value={formData.referenceMobile} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Reference email</label>
+                  <input name="referenceEmail" type="email" value={formData.referenceEmail} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+                </div>
+              </div>
             </div>
             
             <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-gray-100">

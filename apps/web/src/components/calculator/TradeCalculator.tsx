@@ -26,8 +26,14 @@ export function TradeCalculator({
   
   const [result, setResult] = useState<CalcResult | null>(null);
 
-  const clients = useMemo(() => accounts.filter(a => a.group?.fldGroupName === 'Client'), [accounts]);
-  const brokers = useMemo(() => accounts.filter(a => a.group?.fldGroupName === 'Broker'), [accounts]);
+  const clients = useMemo(
+    () => accounts.filter(a => (a.group?.name || a.group?.fldGroupName) === 'Sundry Debtors'),
+    [accounts]
+  );
+  const brokers = useMemo(
+    () => accounts.filter(a => (a.group?.name || a.group?.fldGroupName) === 'Sundry Creditors'),
+    [accounts]
+  );
 
   // Fetch rules when dependencies change
   useEffect(() => {

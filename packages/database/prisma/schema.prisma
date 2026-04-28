@@ -39,9 +39,9 @@ model Role {
 // ─────────────────────────────────────────────
 
 model Group {
-  fldGroupNo   Int     @id @default(autoincrement())
-  fldGroupName String  @unique
-  fldNo        Int?
+  id   Int    @id @default(autoincrement()) @map("fldGroupNo")
+  name String @unique @map("fldGroupName")
+  fldNo Int?
 
   accounts Account[]
 
@@ -55,27 +55,41 @@ model Group {
 model Account {
   id               String   @id @default(uuid())
 
-  fldClient        String?
-  fldName          String
+  code             String?  @map("fldClient")
+  name             String   @map("fldName")
   fldAOD           String?
   fldType          String?
 
-  fldGroupNo       Int?
+  groupId          Int?     @map("fldGroupNo")
   fldGroupBusiness String?
   fldGroupFamily   String?
 
-  fldOpening       Float?
-  fldDebit         Float?
-  fldCredit        Float?
-  fldClosing       Float?
+  opening          Float?   @map("fldOpening")
+  debit            Float?   @map("fldDebit")
+  credit           Float?   @map("fldCredit")
+  closing          Float?   @map("fldClosing")
 
-  fldAddress       String?
-  fldPhoneH        String?
-  fldPhoneO1       String?
-  fldPhoneO2       String?
-  fldMobile        String?
-  fldEmail         String?
-  fldReference     String?
+  address          String?  @map("fldAddress")
+  mobileNumber     String?  @map("fldMobile")
+  officeNumber     String?  @map("fldPhoneO1")
+  whatsappNumber   String?  @map("whatsapp_number")
+  email            String?  @map("fldEmail")
+
+  contactPersonName  String? @map("contact_person_name")
+  contactPersonMobile String? @map("contact_person_mobile")
+  contactPersonEmail  String? @map("contact_person_email")
+
+  defaultCredit    Float?   @map("default_credit")
+  interest         Float?   @map("interest")
+
+  bankName         String?  @map("bank_name")
+  bankBranch       String?  @map("bank_branch")
+  ifscCode         String?  @map("ifsc_code")
+  accountNumber    String?  @map("bank_account_number")
+  upiId            String?  @map("upi_id")
+
+  referenceMobile  String?  @map("reference_mobile")
+  referenceEmail   String?  @map("reference_email")
 
   fldClientID      String?
   fldDPID          String?
@@ -105,12 +119,12 @@ model Account {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt      @map("updated_at")
 
-  group Group? @relation(fields: [fldGroupNo], references: [fldGroupNo])
+  group Group? @relation(fields: [groupId], references: [id])
 
   brokerages Brokerage[]
 
-  @@index([fldName])
-  @@index([fldGroupNo])
+  @@index([name])
+  @@index([groupId])
   @@map("accounts")
 }
 

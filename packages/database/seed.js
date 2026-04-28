@@ -8,6 +8,15 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  console.log('DB INIT: clearing data (keeping Groups, Roles, Exchanges)...');
+
+  // IMPORTANT: keep groups, roles, exchanges. Everything else is wiped.
+  // Order matters due to FKs.
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "users" RESTART IDENTITY CASCADE;`);
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "brokerages" RESTART IDENTITY CASCADE;`);
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "scripts" RESTART IDENTITY CASCADE;`);
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "accounts" RESTART IDENTITY CASCADE;`);
+
   const groups = [
     "Unknown",
     "Capital Account",
@@ -37,9 +46,9 @@ async function main() {
 
   for (const name of groups) {
     await prisma.group.upsert({
-      where: { fldGroupName: name },
+      where: { name },
       update: {},
-      create: { fldGroupName: name },
+      create: { name },
     });
   }
 
@@ -53,9 +62,25 @@ async function main() {
     });
   }
 
-  console.log("✅ Seed done — Groups & Roles created");
+  // Seed Exchanges
+  await prisma.exchange.upsert({
+    where: { code: 'NSE' },
+    update: { isActive: true, name: 'National Stock Exchange' },
+    create: { code: 'NSE', name: 'National Stock Exchange', isActive: true },
+  });
+
+  await prisma.exchange.upsert({
+    where: { code: 'BSE' },
+    update: { isActive: true, name: 'Bombay Stock Exchange' },
+    create: { code: 'BSE', name: 'Bombay Stock Exchange', isActive: true },
+  });
+
+  console.log('✅ DB INIT done: Groups + Roles + Exchanges are ready');
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });

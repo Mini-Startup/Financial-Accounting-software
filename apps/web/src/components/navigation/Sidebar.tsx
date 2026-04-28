@@ -9,8 +9,8 @@ export function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: '📊' },
-    { name: 'Brokers', path: '/brokers', icon: '🏦' },
-    { name: 'Clients', path: '/clients', icon: '👥' },
+    { name: 'Brokers (Sundry Creditors)', path: '/brokers', icon: '🏦' },
+    { name: 'Clients (Sundry Debtors)', path: '/clients', icon: '👥' },
     { name: 'Scripts', path: '/scripts', icon: '📄' },
     { name: 'Exchanges', path: '/exchanges', icon: '🏛️' },
     { name: 'Brokerage', path: '/brokerage', icon: '💰' },
