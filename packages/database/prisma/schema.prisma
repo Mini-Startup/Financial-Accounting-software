@@ -39,8 +39,8 @@ model Role {
 // ─────────────────────────────────────────────
 
 model Group {
-  id   Int    @id @default(autoincrement()) @map("fldGroupNo")
-  name String @unique @map("fldGroupName")
+  id   Int    @id @default(autoincrement())
+  name String @unique
   fldNo Int?
 
   accounts Account[]
@@ -55,25 +55,25 @@ model Group {
 model Account {
   id               String   @id @default(uuid())
 
-  code             String?  @map("fldClient")
-  name             String   @map("fldName")
+  code             String?
+  name             String
   fldAOD           String?
   fldType          String?
 
-  groupId          Int?     @map("fldGroupNo")
+  groupId          Int?     @map("group_id")
   fldGroupBusiness String?
   fldGroupFamily   String?
 
-  opening          Float?   @map("fldOpening")
-  debit            Float?   @map("fldDebit")
-  credit           Float?   @map("fldCredit")
-  closing          Float?   @map("fldClosing")
+  opening          Float?
+  debit            Float?
+  credit           Float?
+  closing          Float?
 
-  address          String?  @map("fldAddress")
-  mobileNumber     String?  @map("fldMobile")
-  officeNumber     String?  @map("fldPhoneO1")
+  address          String?
+  mobileNumber     String?  @map("mobile_number")
+  officeNumber     String?  @map("office_number")
   whatsappNumber   String?  @map("whatsapp_number")
-  email            String?  @map("fldEmail")
+  email            String?
 
   contactPersonName  String? @map("contact_person_name")
   contactPersonMobile String? @map("contact_person_mobile")
