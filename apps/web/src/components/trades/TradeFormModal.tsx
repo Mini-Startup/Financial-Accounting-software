@@ -40,6 +40,7 @@ export function TradeFormModal({
 
   const [clientRule, setClientRule] = useState<BrokerageRule | null>(null);
   const [brokerRule, setBrokerRule] = useState<BrokerageRule | null>(null);
+  const [brokerFallbackMode, setBrokerFallbackMode] = useState(false);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
   const [calc, setCalc] = useState<CalcResult | null>(null);
 
@@ -52,6 +53,7 @@ export function TradeFormModal({
     if (!exchangeId || !clientId || !brokerId) {
       setClientRule(null);
       setBrokerRule(null);
+      setBrokerFallbackMode(false);
       return;
     }
 
@@ -64,15 +66,33 @@ export function TradeFormModal({
           fetch(`http://localhost:4000/brokerages/resolve?accountId=${brokerId}&exchangeId=${exchangeId}&appliesTo=BROKER${scriptQuery}`),
         ]);
 
-        const clientData = await clientRes.json();
-        const brokerData = await brokerRes.json();
+        // Handle empty/non-JSON responses gracefully.
+        const parseSafe = async (res: Response) => {
+          const raw = await res.text();
+          if (!raw || !raw.trim()) return null;
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return null;
+          }
+        };
 
-        setClientRule(clientData && clientData.id ? clientData : null);
-        setBrokerRule(brokerData && brokerData.id ? brokerData : null);
+        const [clientData, brokerData] = await Promise.all([
+          parseSafe(clientRes),
+          parseSafe(brokerRes),
+        ]);
+
+        const resolvedClientRule = clientData && clientData.id ? clientData : null;
+        const resolvedBrokerRule = brokerData && brokerData.id ? brokerData : null;
+
+        setClientRule(resolvedClientRule);
+        setBrokerRule(resolvedBrokerRule);
+        setBrokerFallbackMode(Boolean(resolvedClientRule && !resolvedBrokerRule));
       } catch (e) {
         console.error(e);
         setClientRule(null);
         setBrokerRule(null);
+        setBrokerFallbackMode(false);
       } finally {
         setIsLoadingRules(false);
       }
@@ -82,7 +102,7 @@ export function TradeFormModal({
   }, [exchangeId, clientId, brokerId, scriptId]);
 
   useEffect(() => {
-    if (!clientRule || !brokerRule) {
+    if (!clientRule || (!brokerRule && !brokerFallbackMode)) {
       setCalc(null);
       return;
     }
@@ -95,19 +115,47 @@ export function TradeFormModal({
     }
 
     try {
+      if (brokerFallbackMode) {
+        const side: 'BUY' | 'SELL' = qtyNum >= 0 ? 'BUY' : 'SELL';
+        const absQuantity = Math.abs(qtyNum);
+        const tradeValue = Number((absQuantity * rateNum).toFixed(4));
+        const marketRounded = Number(rateNum.toFixed(4));
+
+        // Broker rule missing fallback:
+        // Keep both rates exactly market rate so user can proceed safely.
+        setCalc({
+          side,
+          absQuantity,
+          tradeValue,
+          clientBrokerage: 0,
+          clientPerUnit: 0,
+          clientRate: marketRounded,
+          clientIsFixed: true,
+          clientRuleType: clientRule.type,
+          brokerBrokerage: 0,
+          brokerPerUnit: 0,
+          brokerRate: marketRounded,
+          brokerIsFixed: true,
+          brokerRuleType: clientRule.type,
+          profit: 0,
+          totalProfit: 0,
+        });
+        return;
+      }
+
       // Segment not requested in the new UI; default to TRADING for now.
       setCalc(calculateTrade({
         quantity: qtyNum,
         marketRate: rateNum,
         segment: 'TRADING',
         clientRule,
-        brokerRule,
+        brokerRule: brokerRule as BrokerageRule,
       }));
     } catch (e) {
       console.error(e);
       setCalc(null);
     }
-  }, [quantity, marketRate, clientRule, brokerRule]);
+  }, [quantity, marketRate, clientRule, brokerRule, brokerFallbackMode]);
 
   const handleSave = () => {
     if (!exchange || !script || !client || !broker || !calc) return;
@@ -225,7 +273,13 @@ export function TradeFormModal({
                 </div>
                 <div className="text-xs text-gray-500 text-right">
                   <span className="font-semibold text-gray-700">Broker rule:</span>{' '}
-                  {isLoadingRules ? 'Loading…' : brokerRule ? (brokerRule.type === 'AMOUNT' ? 'Fixed amount (invoice)' : 'Percentage') : 'Not found'}
+                  {isLoadingRules
+                    ? 'Loading…'
+                    : brokerRule
+                      ? (brokerRule.type === 'AMOUNT' ? 'Fixed amount (invoice)' : 'Percentage')
+                      : brokerFallbackMode
+                        ? 'Not found (using client fallback)'
+                        : 'Not found'}
                 </div>
               </div>
             </div>
@@ -248,7 +302,7 @@ export function TradeFormModal({
                   </div>
                 ) : isLoadingRules ? (
                   <div className="text-sm text-gray-400 pt-8">Loading brokerage rules…</div>
-                ) : !clientRule || !brokerRule ? (
+                ) : !clientRule || (!brokerRule && !brokerFallbackMode) ? (
                   <div className="text-sm text-red-600 pt-8">
                     Missing brokerage rule for {(!clientRule && !brokerRule) ? 'client and broker' : !clientRule ? 'client' : 'broker'}.
                   </div>
