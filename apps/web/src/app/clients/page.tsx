@@ -15,6 +15,7 @@ export default async function ClientsPage(props: { searchParams: Promise<{ searc
   return (
     <EntityPageManager 
       title="Clients" 
+      entityLabel="Client"
       groupName="Sundry Debtors" 
       accounts={accounts} 
     />

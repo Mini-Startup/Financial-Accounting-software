@@ -1,7 +1,9 @@
 'use client';
 import { useState } from 'react';
+import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 
 export function ExchangeFormModal({ initialData, onClose }: { initialData?: any, onClose: () => void }) {
+  const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
     name: initialData?.name || '',
@@ -41,7 +43,7 @@ export function ExchangeFormModal({ initialData, onClose }: { initialData?: any,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[500px] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
+      <div ref={modalRef} className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[500px] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
         
         {/* Header */}
         <div className="px-6 py-4 flex justify-between items-center border-b border-[var(--color-border)]">

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { FormModal } from './FormModal';
 
-export function DataTable({ accounts, groupName }: { accounts: any[], groupName: string }) {
+export function DataTable({ accounts, groupName, entityLabel }: { accounts: any[], groupName: string, entityLabel: string }) {
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
 
   const handleDelete = async (id: string) => {
@@ -33,7 +33,7 @@ export function DataTable({ accounts, groupName }: { accounts: any[], groupName:
           <tbody className="bg-transparent divide-y divide-gray-100">
             {accounts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-medium">No active {groupName} recorded.</td>
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-medium">No {entityLabel.toLowerCase()} found.</td>
               </tr>
             ) : null}
             {accounts.map((acc) => (
@@ -66,6 +66,7 @@ export function DataTable({ accounts, groupName }: { accounts: any[], groupName:
     {editingAccount && (
       <FormModal 
         initialData={editingAccount} 
+        entityLabel={entityLabel}
         groupName={groupName}
         onClose={() => setEditingAccount(null)} 
       />

@@ -1,7 +1,19 @@
 'use client';
 import { useState } from 'react';
+import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 
-export function FormModal({ initialData, groupName, onClose }: { initialData?: any, groupName: string, onClose: () => void }) {
+export function FormModal({
+  initialData,
+  entityLabel,
+  groupName,
+  onClose,
+}: {
+  initialData?: any;
+  entityLabel: string;
+  groupName: string;
+  onClose: () => void;
+}) {
+  const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     code: initialData?.code || initialData?.fldClient || '',
     name: initialData?.name || initialData?.fldName || '',
@@ -67,13 +79,13 @@ export function FormModal({ initialData, groupName, onClose }: { initialData?: a
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[650px] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
+      <div ref={modalRef} className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[900px] max-w-[95vw] max-h-[92vh] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
         
         {/* Header */}
         <div className="px-6 py-4 flex justify-between items-center border-b border-[var(--color-border)]">
           <div className="flex items-center gap-2">
             <h2 className="text-heading-3">
-              {initialData ? `Edit ${groupName}` : `Create New ${groupName}`}
+              {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
             </h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
@@ -83,7 +95,7 @@ export function FormModal({ initialData, groupName, onClose }: { initialData?: a
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[85vh]">
+        <div className="p-6 overflow-y-auto">
           {initialData && (
             <div className="mb-6 pb-4 border-b border-gray-100 flex items-center justify-between">
               <div>

@@ -4,7 +4,17 @@ import { DataTable } from './DataTable';
 import { FormModal } from './FormModal';
 import { SearchBar } from './SearchBar';
 
-export function EntityPageManager({ title, groupName, accounts }: { title: string, groupName: string, accounts: any[] }) {
+export function EntityPageManager({
+  title,
+  entityLabel,
+  groupName,
+  accounts,
+}: {
+  title: string;
+  entityLabel: string;
+  groupName: string;
+  accounts: any[];
+}) {
   const [isAdding, setIsAdding] = useState(false);
 
   return (
@@ -21,15 +31,16 @@ export function EntityPageManager({ title, groupName, accounts }: { title: strin
             onClick={() => setIsAdding(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-sm shadow-blue-200 font-semibold transition"
           >
-            + Add New
+            + Add {entityLabel}
           </button>
         </div>
       </div>
 
-      <DataTable accounts={accounts} groupName={groupName} />
+      <DataTable accounts={accounts} groupName={groupName} entityLabel={entityLabel} />
 
       {isAdding && (
         <FormModal 
+          entityLabel={entityLabel}
           groupName={groupName}
           onClose={() => setIsAdding(false)} 
         />

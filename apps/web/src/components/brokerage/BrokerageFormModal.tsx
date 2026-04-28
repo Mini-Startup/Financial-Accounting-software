@@ -1,5 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
+import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 
 export function BrokerageFormModal({ 
   exchanges, 
@@ -12,6 +13,7 @@ export function BrokerageFormModal({
   scripts: any[], 
   onClose: () => void 
 }) {
+  const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     exchangeId: '',
     appliesTo: 'CLIENT',
@@ -89,7 +91,7 @@ export function BrokerageFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[600px] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] max-h-[90vh] overflow-hidden">
+      <div ref={modalRef} className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[900px] max-w-[95vw] max-h-[92vh] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
         
         <div className="px-6 py-4 flex justify-between items-center border-b border-[var(--color-border)]">
           <h2 className="text-heading-3">Create Brokerage Rule</h2>

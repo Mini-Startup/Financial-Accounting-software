@@ -3,21 +3,31 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
+import {
+  ArrowUpTrayIcon,
+  ArrowsRightLeftIcon,
+  BanknotesIcon,
+  BookOpenIcon,
+  BuildingLibraryIcon,
+  BuildingOffice2Icon,
+  DocumentTextIcon,
+  Squares2X2Icon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: '📊' },
-    { name: 'Brokers (Sundry Creditors)', path: '/brokers', icon: '🏦' },
-    { name: 'Clients (Sundry Debtors)', path: '/clients', icon: '👥' },
-    { name: 'Scripts', path: '/scripts', icon: '📄' },
-    { name: 'Exchanges', path: '/exchanges', icon: '🏛️' },
-    { name: 'Brokerage', path: '/brokerage', icon: '💰' },
-    { name: 'Ledger', path: '/ledger', icon: '📒' },
-    { name: 'Calculator', path: '/calculator', icon: '🧮' },
-    { name: 'Trades', path: '/trades', icon: '📈' },
-    { name: 'Trade Import', path: '/trades/import', icon: '📥' },
+    { name: 'Dashboard', path: '/', icon: Squares2X2Icon },
+    { name: 'Brokers', path: '/brokers', icon: BuildingOffice2Icon },
+    { name: 'Clients', path: '/clients', icon: UsersIcon },
+    { name: 'Scripts', path: '/scripts', icon: DocumentTextIcon },
+    { name: 'Exchanges', path: '/exchanges', icon: BuildingLibraryIcon },
+    { name: 'Brokerage', path: '/brokerage', icon: BanknotesIcon },
+    { name: 'Ledger', path: '/ledger', icon: BookOpenIcon },
+    { name: 'Trades', path: '/trades', icon: ArrowsRightLeftIcon },
+    { name: 'Trade Import', path: '/trades/import', icon: ArrowUpTrayIcon },
   ];
 
   return (
@@ -49,7 +59,9 @@ export function Sidebar() {
                   : 'text-[var(--color-secondary)] hover:bg-[var(--color-background)]'
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className={`shrink-0 p-1 rounded-md ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+                <item.icon className="w-5 h-5" />
+              </span>
               <span>{item.name}</span>
             </Link>
           );

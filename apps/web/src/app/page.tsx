@@ -1,4 +1,18 @@
+import {
+  ArrowTrendingUpIcon,
+  BanknotesIcon,
+  ChartBarSquareIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
+
 export default function Dashboard() {
+  const metrics = [
+    { label: 'Total Balance', value: '$124,563.00', delta: '+12.5%', positive: true, icon: BanknotesIcon },
+    { label: 'Monthly Revenue', value: '$43,120.50', delta: '+8.2%', positive: true, icon: ArrowTrendingUpIcon },
+    { label: 'Active Trades', value: '342', delta: '-2.4%', positive: false, icon: ChartBarSquareIcon },
+    { label: 'Total Clients', value: '1,204', delta: '+18.0%', positive: true, icon: UsersIcon },
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -14,53 +28,25 @@ export default function Dashboard() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="card flex flex-col gap-2 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">💰</span>
+        {metrics.map((metric) => (
+          <div key={metric.label} className="card border border-gray-100 hover:border-gray-200 transition-colors">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-caption">{metric.label}</p>
+                <p className="text-heading-3 mt-1">{metric.value}</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
+                <metric.icon className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${metric.positive ? 'text-[var(--color-success)] bg-green-100' : 'text-[var(--color-danger)] bg-red-100'}`}>
+                {metric.delta}
+              </span>
+              <span className="text-xs text-gray-500">vs last month</span>
+            </div>
           </div>
-          <span className="text-caption">Total Balance</span>
-          <span className="text-heading-3">$124,563.00</span>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs font-semibold text-[var(--color-success)] bg-green-100 px-2 py-1 rounded-full">+12.5%</span>
-            <span className="text-xs text-gray-500">vs last month</span>
-          </div>
-        </div>
-        
-        <div className="card flex flex-col gap-2 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">📈</span>
-          </div>
-          <span className="text-caption">Monthly Revenue</span>
-          <span className="text-heading-3">$43,120.50</span>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs font-semibold text-[var(--color-success)] bg-green-100 px-2 py-1 rounded-full">+8.2%</span>
-            <span className="text-xs text-gray-500">vs last month</span>
-          </div>
-        </div>
-
-        <div className="card flex flex-col gap-2 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">📉</span>
-          </div>
-          <span className="text-caption">Active Trades</span>
-          <span className="text-heading-3">342</span>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs font-semibold text-[var(--color-danger)] bg-red-100 px-2 py-1 rounded-full">-2.4%</span>
-            <span className="text-xs text-gray-500">vs last month</span>
-          </div>
-        </div>
-
-        <div className="card flex flex-col gap-2 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="text-6xl">👥</span>
-          </div>
-          <span className="text-caption">Total Clients</span>
-          <span className="text-heading-3">1,204</span>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs font-semibold text-[var(--color-success)] bg-green-100 px-2 py-1 rounded-full">+18.0%</span>
-            <span className="text-xs text-gray-500">vs last month</span>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Main Charts Area */}
