@@ -107,6 +107,8 @@ model Account {
 
   group Group? @relation(fields: [fldGroupNo], references: [fldGroupNo])
 
+  brokerages Brokerage[]
+
   @@index([fldName])
   @@index([fldGroupNo])
   @@map("accounts")
@@ -156,4 +158,83 @@ model Script {
 
   @@index([fldScriptName])
   @@map("scripts")
+
+  brokerages Brokerage[]
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum AppliesTo {
+  CLIENT
+  BROKER
+}
+
+enum BrokerageType {
+  AMOUNT
+  PERCENT
+}
+
+enum BrokerageScope {
+  DEFAULT
+  SCRIPT
+}
+
+// ─────────────────────────────────────────────
+// EXCHANGES
+// ─────────────────────────────────────────────
+
+model Exchange {
+  id       String  @id @default(uuid())
+  code     String  @unique
+  name     String?
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  brokerages Brokerage[]
+
+  @@map("exchanges")
+}
+
+// ─────────────────────────────────────────────
+// BROKERAGES
+// ─────────────────────────────────────────────
+
+model Brokerage {
+  id          String         @id @default(uuid())
+  accountId   String         @map("account_id")
+  exchangeId  String         @map("exchange_id")
+  appliesTo   AppliesTo      @map("applies_to")
+  type        BrokerageType
+  scope       BrokerageScope @default(DEFAULT)
+  scriptId    String?        @map("script_id")
+
+  // Amount-based fields
+  baseAmount  Float?         @map("base_amount")
+  flatFee     Float?         @map("flat_fee")
+
+  // Trading percentage fields
+  tradingBuyPct   Float?     @map("trading_buy_pct")
+  tradingSellPct  Float?     @map("trading_sell_pct")
+  tradingMinFee   Float?     @map("trading_min_fee")
+
+  // Delivery percentage fields
+  deliveryBuyPct  Float?     @map("delivery_buy_pct")
+  deliverySellPct Float?     @map("delivery_sell_pct")
+  deliveryMinFee  Float?     @map("delivery_min_fee")
+
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt      @map("updated_at")
+
+  account  Account  @relation(fields: [accountId],  references: [id])
+  exchange Exchange @relation(fields: [exchangeId], references: [id])
+  script   Script?  @relation(fields: [scriptId],   references: [id])
+
+  @@unique([accountId, exchangeId, appliesTo, scope, scriptId], name: "uq_brokerage_rule")
+  @@index([accountId])
+  @@index([exchangeId])
+  @@map("brokerages")
 }

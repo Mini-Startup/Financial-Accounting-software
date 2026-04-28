@@ -12,7 +12,10 @@ export function Sidebar() {
     { name: 'Brokers', path: '/brokers', icon: '🏦' },
     { name: 'Clients', path: '/clients', icon: '👥' },
     { name: 'Scripts', path: '/scripts', icon: '📄' },
+    { name: 'Exchanges', path: '/exchanges', icon: '🏛️' },
+    { name: 'Brokerage', path: '/brokerage', icon: '💰' },
     { name: 'Ledger', path: '/ledger', icon: '📒' },
+    { name: 'Calculator', path: '/calculator', icon: '🧮' },
     { name: 'Trades', path: '/trades', icon: '📈' },
     { name: 'Trade Import', path: '/trades/import', icon: '📥' },
   ];
@@ -55,7 +58,6 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-[var(--color-border)] flex items-center gap-3">
         <UserButton 
-          afterSignOutUrl="/"
           appearance={{
             elements: {
               avatarBox: "w-9 h-9"
