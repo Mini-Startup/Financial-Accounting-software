@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { FormModal } from './FormModal';
+import { cn } from '@/utils/cn';
+import { Edit2, Trash2 } from 'lucide-react';
 
 export function DataTable({ accounts, groupName, entityLabel }: { accounts: any[], groupName: string, entityLabel: string }) {
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
@@ -18,43 +20,47 @@ export function DataTable({ accounts, groupName, entityLabel }: { accounts: any[
 
   return (
     <>
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm overflow-hidden text-gray-800">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200/60">
-          <thead className="bg-gray-50/50">
+    <div className="card">
+      <div className="card__body p-0 overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Code / ID</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Contact</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Balance</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+              <th>Code / ID</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Balance</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-transparent divide-y divide-gray-100">
+          <tbody>
             {accounts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-medium">No {entityLabel.toLowerCase()} found.</td>
+                <td colSpan={5} className="py-8 text-center text-[var(--color-slate)] font-medium">No {entityLabel.toLowerCase()} found.</td>
               </tr>
             ) : null}
             {accounts.map((acc) => (
-              <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{acc.code || acc.fldClient || acc.id.substring(0, 8)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{acc.name || acc.fldName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{acc.mobileNumber || acc.whatsappNumber || acc.email || acc.fldMobile || acc.fldEmail || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{acc.closing || acc.opening || acc.fldClosing || acc.fldOpening ? `${acc.closing ?? acc.opening ?? acc.fldClosing ?? acc.fldOpening}` : '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button 
-                    onClick={() => setEditingAccount(acc)}
-                    className="text-blue-600 hover:text-blue-900 mr-4 font-semibold transition"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(acc.id)}
-                    className="text-red-500 hover:text-red-700 font-semibold transition"
-                  >
-                    Delete
-                  </button>
+              <tr key={acc.id}>
+                <td className="font-mono font-medium text-[var(--color-charcoal)]">{acc.code || acc.fldClient || acc.id.substring(0, 8)}</td>
+                <td className="font-medium text-[var(--color-charcoal)]">{acc.name || acc.fldName}</td>
+                <td className="text-[var(--color-slate)]">{acc.mobileNumber || acc.whatsappNumber || acc.email || acc.fldMobile || acc.fldEmail || 'N/A'}</td>
+                <td className="font-mono font-semibold text-[var(--color-charcoal)]">{acc.closing || acc.opening || acc.fldClosing || acc.fldOpening ? `${acc.closing ?? acc.opening ?? acc.fldClosing ?? acc.fldOpening}` : '-'}</td>
+                <td className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button 
+                      onClick={() => setEditingAccount(acc)}
+                      className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-emerald)] transition-colors rounded-md hover:bg-[var(--color-mist)]"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(acc.id)}
+                      className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

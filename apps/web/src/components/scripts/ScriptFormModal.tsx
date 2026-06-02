@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
+import { X } from 'lucide-react';
 
 export function ScriptFormModal({ initialData, onClose }: { initialData?: any, onClose: () => void }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
@@ -46,29 +47,27 @@ export function ScriptFormModal({ initialData, onClose }: { initialData?: any, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div ref={modalRef} className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl w-[650px] rounded-2xl flex flex-col font-sans text-[var(--color-text-main)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div ref={modalRef} className="card w-[650px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}
-        <div className="px-6 py-4 flex justify-between items-center border-b border-[var(--color-border)]">
+        <div className="card__header bg-[var(--color-snow)]">
           <div className="flex items-center gap-2">
-            <h2 className="text-heading-3">
+            <h2 className="card__title">
               {initialData ? `Edit Scrip` : `Create New Scrip`}
             </h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="card__body p-6">
           {initialData && (
-            <div className="mb-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="mb-6 pb-4 border-b border-[var(--color-border-light)] flex items-center justify-between">
               <div>
-                <p className="text-caption">Selected Record</p>
-                <p className="text-title text-[var(--color-primary)]">{formData.fldShortScript || formData.fldScriptName}</p>
+                <p className="text-xs text-[var(--color-slate)] uppercase tracking-wide font-semibold">Selected Record</p>
+                <p className="text-sm font-semibold text-[var(--color-forest)] mt-0.5">{formData.fldShortScript || formData.fldScriptName}</p>
               </div>
             </div>
           )}
@@ -76,52 +75,52 @@ export function ScriptFormModal({ initialData, onClose }: { initialData?: any, o
 
           <form id="scriptForm" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-[80px_100px_40px_100px_70px_1fr] gap-x-4 gap-y-4 items-center text-sm">
-              <label className="text-gray-600 font-medium">Short Name</label>
-              <input name="fldShortScript" value={formData.fldShortScript} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label">Short Name</label>
+              <input name="fldShortScript" value={formData.fldShortScript} onChange={handleChange} className="input" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">ISIN</label>
-              <input name="fldISIN" value={formData.fldISIN || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">ISIN</label>
+              <input name="fldISIN" value={formData.fldISIN || ''} onChange={handleChange} className="input" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">ASE code</label>
-              <input name="fldScriptASE" value={formData.fldScriptASE || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">ASE code</label>
+              <input name="fldScriptASE" value={formData.fldScriptASE || ''} onChange={handleChange} className="input" />
               
-              <label className="text-gray-600 font-medium">Full Name</label>
-              <input required name="fldScriptName" value={formData.fldScriptName} onChange={handleChange} className="col-span-3 w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label">Full Name</label>
+              <input required name="fldScriptName" value={formData.fldScriptName} onChange={handleChange} className="col-span-3 input" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">BSE code</label>
-              <input name="fldScriptBSE" value={formData.fldScriptBSE || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">BSE code</label>
+              <input name="fldScriptBSE" value={formData.fldScriptBSE || ''} onChange={handleChange} className="input" />
               
-              <label className="text-gray-600 font-medium">Multiplier</label>
-              <input type="number" step="0.0001" name="fldMultiplier" value={formData.fldMultiplier || '1.0000'} onChange={handleChange} className="bg-gray-100 px-2 text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label">Multiplier</label>
+              <input type="number" step="0.0001" name="fldMultiplier" value={formData.fldMultiplier || '1.0000'} onChange={handleChange} className="input text-right font-mono text-sm" />
 
-              <label className="text-right pr-1 text-gray-600 font-medium">Divider</label>
-              <input type="number" step="0.0001" name="fldDivider" value={formData.fldDivider || '1.0000'} onChange={handleChange} className="text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label text-right pr-1">Divider</label>
+              <input type="number" step="0.0001" name="fldDivider" value={formData.fldDivider || '1.0000'} onChange={handleChange} className="input text-right font-mono text-sm" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">NSE code</label>
-              <input name="fldScriptNSE" value={formData.fldScriptNSE || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">NSE code</label>
+              <input name="fldScriptNSE" value={formData.fldScriptNSE || ''} onChange={handleChange} className="input" />
               
-              <label className="text-gray-600 font-medium">LotSize</label>
-              <input type="number" name="fldLotSize" value={formData.fldLotSize || '1'} onChange={handleChange} className="text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label">LotSize</label>
+              <input type="number" name="fldLotSize" value={formData.fldLotSize || '1'} onChange={handleChange} className="input text-right font-mono text-sm" />
 
-              <label className="text-right pr-1 text-gray-600 font-medium">Fix Margin%</label>
-              <input type="number" step="0.0001" name="fldMargin" value={formData.fldMargin || '0.0000'} onChange={handleChange} className="text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label text-right pr-1">Fix Margin%</label>
+              <input type="number" step="0.0001" name="fldMargin" value={formData.fldMargin || '0.0000'} onChange={handleChange} className="input text-right font-mono text-sm" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">MCX code</label>
-              <input name="fldScriptMCX" value={formData.fldScriptMCX || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">MCX code</label>
+              <input name="fldScriptMCX" value={formData.fldScriptMCX || ''} onChange={handleChange} className="input" />
               
-              <label className="text-gray-600 font-medium">Tick-Price</label>
-              <input type="number" step="0.0001" name="fldTP" value={formData.fldTP || '1.0000'} onChange={handleChange} className="text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label">Tick-Price</label>
+              <input type="number" step="0.0001" name="fldTP" value={formData.fldTP || '1.0000'} onChange={handleChange} className="input text-right font-mono text-sm" />
 
-              <label className="text-right pr-1 whitespace-nowrap text-gray-600 font-medium">Closing rate</label>
-              <input type="number" step="0.0001" name="fldPrice" value={formData.fldPrice || '0.0000'} onChange={handleChange} className="text-right w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-mono text-sm" />
+              <label className="form-label text-right pr-1 whitespace-nowrap">Closing rate</label>
+              <input type="number" step="0.0001" name="fldPrice" value={formData.fldPrice || '0.0000'} onChange={handleChange} className="input text-right font-mono text-sm" />
               
-              <label className="text-right pr-1 text-gray-600 font-medium">NCDEX code</label>
-              <input name="fldScriptNCD" value={formData.fldScriptNCD || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all" />
+              <label className="form-label text-right pr-1">NCDEX code</label>
+              <input name="fldScriptNCD" value={formData.fldScriptNCD || ''} onChange={handleChange} className="input" />
             </div>
 
-            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-gray-100">
-               <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-               <button type="submit" form="scriptForm" className="btn-primary">Save Scrip</button>
+            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
+               <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
+               <button type="submit" form="scriptForm" className="btn btn--primary">Save Scrip</button>
             </div>
           </form>
         </div>

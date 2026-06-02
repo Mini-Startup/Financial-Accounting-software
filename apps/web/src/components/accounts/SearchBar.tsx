@@ -33,9 +33,9 @@ export function SearchBar() {
         placeholder="Search accounts..." 
         defaultValue={searchParams.get('search') || ''} 
         onChange={handleSearch} 
-        className="w-full sm:w-64 px-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-black bg-white"
+        className="input w-full sm:w-64"
       />
-      {isPending && <span className="absolute right-3 top-2.5 w-4 h-4 rounded-full border-2 border-gray-300 border-t-blue-600 animate-spin"></span>}
+      {isPending && <span className="absolute right-3 top-3 w-4 h-4 rounded-full border-2 border-[var(--color-mist)] border-t-[var(--color-emerald)] animate-spin"></span>}
     </div>
   );
 }

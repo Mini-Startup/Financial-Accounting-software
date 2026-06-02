@@ -18,37 +18,37 @@ export function ScriptDataTable({ accounts }: { accounts: any[] }) {
 
   return (
     <>
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm overflow-hidden text-gray-800">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200/60">
-          <thead className="bg-gray-50/50">
+    <div className="card">
+      <div className="card__body p-0 overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Short / ISIN</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Full Name</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Primary Exchange Code</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Lot Size</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+              <th>Short / ISIN</th>
+              <th>Full Name</th>
+              <th>Primary Exchange Code</th>
+              <th>Lot Size</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-transparent divide-y divide-gray-100">
+          <tbody>
             {accounts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-medium">No scripts recorded.</td>
+                <td colSpan={5} className="py-8 text-center text-[var(--color-slate)] font-medium">No scripts recorded.</td>
               </tr>
             ) : null}
             {accounts.map((acc) => (
-              <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+              <tr key={acc.id}>
+                <td className="font-mono text-[var(--color-slate)]">
                   {acc.fldShortScript} {acc.fldISIN ? `(${acc.fldISIN})` : ''}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{acc.fldScriptName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
+                <td className="font-medium text-[var(--color-charcoal)]">{acc.fldScriptName}</td>
+                <td className="font-mono text-[var(--color-slate)]">
                   {acc.fldScriptNSE || acc.fldScriptBSE || acc.fldScriptMCX || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{acc.fldLotSize || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => setEditingScript(acc)} className="text-blue-600 hover:text-blue-900 mr-4 font-semibold transition">Edit</button>
-                  <button onClick={() => handleDelete(acc.id)} className="text-red-500 hover:text-red-700 font-semibold transition">Delete</button>
+                <td className="font-semibold text-[var(--color-charcoal)]">{acc.fldLotSize || '-'}</td>
+                <td className="text-right">
+                  <button onClick={() => setEditingScript(acc)} className="text-[var(--color-forest)] hover:text-[var(--color-emerald)] mr-4 font-semibold transition text-sm">Edit</button>
+                  <button onClick={() => handleDelete(acc.id)} className="text-[var(--color-negative)] hover:opacity-80 font-semibold transition text-sm">Delete</button>
                 </td>
               </tr>
             ))}

@@ -1,84 +1,108 @@
 "use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { UserButton } from "@clerk/nextjs";
 import {
-  ArrowUpTrayIcon,
-  ArrowsRightLeftIcon,
+  Squares2X2Icon,
+  BuildingOffice2Icon,
+  UsersIcon,
+  DocumentTextIcon,
+  BuildingLibraryIcon,
   BanknotesIcon,
   BookOpenIcon,
-  BuildingLibraryIcon,
-  BuildingOffice2Icon,
-  DocumentTextIcon,
-  Squares2X2Icon,
-  UsersIcon,
-} from '@heroicons/react/24/outline';
+  ArrowsRightLeftIcon,
+  ArrowUpTrayIcon,
+} from "@heroicons/react/24/outline";
+import { cn } from "@/utils/cn";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: Squares2X2Icon },
-    { name: 'Brokers', path: '/brokers', icon: BuildingOffice2Icon },
-    { name: 'Clients', path: '/clients', icon: UsersIcon },
-    { name: 'Scripts', path: '/scripts', icon: DocumentTextIcon },
-    { name: 'Exchanges', path: '/exchanges', icon: BuildingLibraryIcon },
-    { name: 'Brokerage', path: '/brokerage', icon: BanknotesIcon },
-    { name: 'Ledger', path: '/ledger', icon: BookOpenIcon },
-    { name: 'Trades', path: '/trades', icon: ArrowsRightLeftIcon },
-    { name: 'Trade Import', path: '/trades/import', icon: ArrowUpTrayIcon },
+    { name: "Dashboard", path: "/", icon: Squares2X2Icon },
+    { name: "Brokers", path: "/brokers", icon: BuildingOffice2Icon },
+    { name: "Clients", path: "/clients", icon: UsersIcon },
+    { name: "Scripts", path: "/scripts", icon: DocumentTextIcon },
+    { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
+    { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
+    { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
+    { name: "Trades", path: "/trades", icon: ArrowsRightLeftIcon },
+    { name: "Trade Import", path: "/trades/import", icon: ArrowUpTrayIcon },
   ];
 
+  const isActive = (path: string) => {
+    if (path === "/") {
+      return pathname === "/";
+    }
+    return pathname?.startsWith(path);
+  };
+
   return (
-    <aside className="w-64 bg-surface border-r border-border flex flex-col h-screen fixed left-0 top-0">
-      <div className="h-16 flex items-center px-6 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg shadow-sm flex items-center justify-center">
-            <span className="text-white font-bold text-lg">B</span>
+    <aside className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] flex flex-col sticky top-0 shrink-0 select-none">
+      {/* Logo Area */}
+      <div className="h-16 flex items-center px-6 border-b border-[var(--sidebar-divider)] shrink-0 gap-3">
+        <span className="w-8 h-8 rounded-lg bg-[var(--color-leaf)] flex items-center justify-center text-[var(--color-forest)] font-extrabold text-lg shadow-sm">
+          B
+        </span>
+        <span className="text-[var(--color-white)] font-display font-bold text-lg tracking-tight">
+          BizzMate FAS
+        </span>
+      </div>
+
+      {/* Navigation List */}
+      <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-6">
+        <div>
+          <div className="text-[11px] font-semibold text-[var(--sidebar-text-muted)] uppercase tracking-wider mb-3 px-3">
+            Menu
           </div>
-          <span className="text-title text-(--color-secondary)">BizzMate FAS</span>
+          <nav className="flex flex-col gap-1.5">
+            {navItems.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-150 group",
+                    active
+                      ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm"
+                      : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]"
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "w-5 h-5 shrink-0 transition-colors",
+                      active
+                        ? "text-[var(--color-white)]"
+                        : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+                    )}
+                  />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1">
-        <div className="mb-4 px-2">
-          <p className="text-caption">Menu</p>
-        </div>
-        
-        {navItems.map((item) => {
-          const isActive = pathname === item.path || (item.path !== '/' && pathname?.startsWith(item.path));
-          
-          return (
-            <Link 
-              key={item.path} 
-              href={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-body-sm font-medium ${
-                isActive 
-                  ? 'bg-[var(--color-primary)] text-white' 
-                  : 'text-[var(--color-secondary)] hover:bg-[var(--color-background)]'
-              }`}
-            >
-              <span className={`shrink-0 p-1 rounded-md ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
-                <item.icon className="w-5 h-5" />
-              </span>
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="p-4 border-t border-[var(--color-border)] flex items-center gap-3">
-        <UserButton 
+      {/* Footer / User Profile */}
+      <div className="p-4 border-t border-[var(--sidebar-divider)] mt-auto flex items-center gap-3 bg-[var(--sidebar-bg)] shrink-0">
+        <UserButton
           appearance={{
             elements: {
-              avatarBox: "w-9 h-9"
+              avatarBox: "w-9 h-9 border border-[var(--sidebar-divider)] shadow-sm"
             }
           }}
         />
-        <div className="flex flex-col">
-          <span className="text-body-sm font-medium text-[var(--color-secondary)]">My Account</span>
-          <span className="text-caption">Settings & Profile</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
+            My Account
+          </span>
+          <span className="text-xs text-[var(--sidebar-text-muted)] truncate">
+            Settings & Profile
+          </span>
         </div>
       </div>
     </aside>

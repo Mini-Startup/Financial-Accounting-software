@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { TradeFormModal } from './TradeFormModal';
+import { cn } from '@/utils/cn';
 
 type TradeRow = {
   id: string;
@@ -39,55 +40,55 @@ export function TradesPageManager({
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Trades</h1>
-          <p className="text-gray-500 mt-1">Create internal trades and instantly see client rate, broker rate, and profit.</p>
+          <h1 className="text-h2 font-display">Trades</h1>
+          <p className="text-sm text-[var(--color-slate)] mt-1">Create internal trades and instantly see client rate, broker rate, and profit.</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => setIsAdding(true)} className="btn-primary">
+          <button onClick={() => setIsAdding(true)} className="btn btn--primary">
             + Add Trade
           </button>
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200/60">
-            <thead className="bg-gray-50/50">
+      <div className="card">
+        <div className="card__body p-0 overflow-x-auto">
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Exchange</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Script</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Qty</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Market</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client Rate</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Broker Rate</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Profit</th>
+                <th>Date</th>
+                <th>Exchange</th>
+                <th>Script</th>
+                <th>Qty</th>
+                <th>Market</th>
+                <th>Client Rate</th>
+                <th>Broker Rate</th>
+                <th>Profit</th>
               </tr>
             </thead>
-            <tbody className="bg-transparent divide-y divide-gray-100">
+            <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-gray-400 font-medium">
-                    No trades yet. Click “Add Trade” to calculate one.
+                  <td colSpan={8} className="py-10 text-center text-[var(--color-slate)] font-medium">
+                    No trades yet. Click "Add Trade" to calculate one.
                   </td>
                 </tr>
               ) : null}
               {rows.map(r => (
-                <tr key={r.id} className="hover:bg-blue-50/30 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.exchangeCode}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.scriptName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{r.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">₹{r.marketRate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.clientRate != null ? `₹${r.clientRate}` : '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.brokerRate != null ? `₹${r.brokerRate}` : '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                <tr key={r.id}>
+                  <td className="text-[var(--color-slate)]">{r.date}</td>
+                  <td className="font-medium text-[var(--color-charcoal)]">{r.exchangeCode}</td>
+                  <td className="font-medium text-[var(--color-charcoal)]">{r.scriptName}</td>
+                  <td className="font-mono font-semibold text-[var(--color-charcoal)]">{r.quantity}</td>
+                  <td className="font-mono text-[var(--color-slate)]">₹{r.marketRate}</td>
+                  <td className="font-mono text-[var(--color-charcoal)]">{r.clientRate != null ? `₹${r.clientRate}` : '-'}</td>
+                  <td className="font-mono text-[var(--color-charcoal)]">{r.brokerRate != null ? `₹${r.brokerRate}` : '-'}</td>
+                  <td className="font-mono font-semibold">
                     {r.profitTotal == null ? '-' : (
-                      <span className={r.profitTotal > 0 ? 'text-green-700' : r.profitTotal < 0 ? 'text-red-700' : 'text-gray-700'}>
+                      <span className={r.profitTotal > 0 ? 'text-[var(--color-positive)]' : r.profitTotal < 0 ? 'text-[var(--color-negative)]' : 'text-[var(--color-charcoal)]'}>
                         {r.profitTotal > 0 ? '+' : ''}₹{r.profitTotal}
                       </span>
                     )}
@@ -112,4 +113,3 @@ export function TradesPageManager({
     </div>
   );
 }
-

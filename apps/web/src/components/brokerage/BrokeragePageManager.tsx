@@ -25,16 +25,16 @@ export function BrokeragePageManager({
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Brokerage Rules</h1>
-          <p className="text-gray-500 mt-1">Configure trading and delivery brokerage rules for clients and brokers.</p>
+          <h1 className="text-h2 font-display">Brokerage Rules</h1>
+          <p className="text-sm text-[var(--color-slate)] mt-1">Configure trading and delivery brokerage rules for clients and brokers.</p>
         </div>
         
         <div className="flex items-center gap-3">
           <select 
-            className="border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] text-sm"
+            className="input w-auto text-sm"
             value={filterExchangeId}
             onChange={e => setFilterExchangeId(e.target.value)}
           >
@@ -43,7 +43,7 @@ export function BrokeragePageManager({
           </select>
 
           <select 
-            className="border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] text-sm"
+            className="input w-auto text-sm"
             value={filterAppliesTo}
             onChange={e => setFilterAppliesTo(e.target.value as any)}
           >
@@ -54,7 +54,7 @@ export function BrokeragePageManager({
 
           <button 
             onClick={() => setIsAdding(true)}
-            className="btn-primary ml-2"
+            className="btn btn--primary ml-2"
           >
             + Add Rule
           </button>

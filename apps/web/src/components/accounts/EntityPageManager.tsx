@@ -21,15 +21,15 @@ export function EntityPageManager({
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
-          <p className="text-gray-500 mt-1">Manage all {title.toLowerCase()} configured across the accounting framework.</p>
+          <h1 className="text-h2 font-display">{title}</h1>
+          <p className="text-sm text-[var(--color-slate)] mt-1">Manage all {title.toLowerCase()} configured across the accounting framework.</p>
         </div>
         
         <div className="flex items-center gap-3">
           <SearchBar />
           <button 
             onClick={() => setIsAdding(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-sm shadow-blue-200 font-semibold transition"
+            className="btn btn--primary"
           >
             + Add {entityLabel}
           </button>

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculateTrade, type BrokerageRule, type CalcResult } from 'utils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
+import { X } from 'lucide-react';
+import { cn } from '@/utils/cn';
 
 function todayISO() {
   const d = new Date();
@@ -66,7 +68,6 @@ export function TradeFormModal({
           fetch(`http://localhost:4000/brokerages/resolve?accountId=${brokerId}&exchangeId=${exchangeId}&appliesTo=BROKER${scriptQuery}`),
         ]);
 
-        // Handle empty/non-JSON responses gracefully.
         const parseSafe = async (res: Response) => {
           const raw = await res.text();
           if (!raw || !raw.trim()) return null;
@@ -121,8 +122,6 @@ export function TradeFormModal({
         const tradeValue = Number((absQuantity * rateNum).toFixed(4));
         const marketRounded = Number(rateNum.toFixed(4));
 
-        // Broker rule missing fallback:
-        // Keep both rates exactly market rate so user can proceed safely.
         setCalc({
           side,
           absQuantity,
@@ -143,7 +142,6 @@ export function TradeFormModal({
         return;
       }
 
-      // Segment not requested in the new UI; default to TRADING for now.
       setCalc(calculateTrade({
         quantity: qtyNum,
         marketRate: rateNum,
@@ -180,63 +178,62 @@ export function TradeFormModal({
   const canCalculate = Boolean(exchangeId && clientId && brokerId && scriptId && parseFloat(quantity || '0'));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-gray-900/40 backdrop-blur-sm">
-      <div ref={modalRef} className="bg-surface border border-border shadow-xl w-[980px] rounded-2xl flex flex-col font-sans text-(--color-text-main) overflow-hidden">
-        <div className="px-6 py-4 flex justify-between items-center border-b border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+      <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+        {/* Header */}
+        <div className="card__header bg-[var(--color-snow)]">
           <div>
-            <h2 className="text-heading-3">Add Trade</h2>
-            <p className="text-caption mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
+            <h2 className="card__title">Add Trade</h2>
+            <p className="text-sm text-[var(--color-slate)] mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="card__body p-6">
           <div className="grid grid-cols-12 gap-5">
             {/* Left: Inputs */}
             <div className="col-span-7 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Exchange *</label>
-                  <select value={exchangeId} onChange={e => setExchangeId(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <div className="form-field">
+                  <label className="form-label form-label--required">Exchange</label>
+                  <select value={exchangeId} onChange={e => setExchangeId(e.target.value)} className="input">
                     <option value="">Select Exchange</option>
                     {exchanges.map(ex => <option key={ex.id} value={ex.id}>{ex.code}</option>)}
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Type *</label>
-                  <select value={tradeType} onChange={e => setTradeType(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <div className="form-field">
+                  <label className="form-label form-label--required">Type</label>
+                  <select value={tradeType} onChange={e => setTradeType(e.target.value)} className="input">
                     <option value="INTERNAL">Internal Trades</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Date *</label>
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                <div className="form-field">
+                  <label className="form-label form-label--required">Date</label>
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input" />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Expiry date</label>
-                  <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                <div className="form-field">
+                  <label className="form-label">Expiry date</label>
+                  <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="input" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Quantity *</label>
-                  <input type="number" step="1" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="e.g. 100 or -50" className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
-                  <p className="text-[11px] text-gray-500">Positive = BUY, Negative = SELL</p>
+                <div className="form-field">
+                  <label className="form-label form-label--required">Quantity</label>
+                  <input type="number" step="1" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="e.g. 100 or -50" className="input" />
+                  <p className="form-hint">Positive = BUY, Negative = SELL</p>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Script *</label>
-                  <select value={scriptId} onChange={e => setScriptId(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <div className="form-field">
+                  <label className="form-label form-label--required">Script</label>
+                  <select value={scriptId} onChange={e => setScriptId(e.target.value)} className="input">
                     <option value="">Select Script</option>
                     {scripts.map(s => <option key={s.id} value={s.id}>{s.fldScriptName ?? s.name}</option>)}
                   </select>
@@ -244,35 +241,35 @@ export function TradeFormModal({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Client *</label>
-                  <select value={clientId} onChange={e => setClientId(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <div className="form-field">
+                  <label className="form-label form-label--required">Client</label>
+                  <select value={clientId} onChange={e => setClientId(e.target.value)} className="input">
                     <option value="">Select Client</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name || c.fldName}</option>)}
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Broker *</label>
-                  <select value={brokerId} onChange={e => setBrokerId(e.target.value)} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <div className="form-field">
+                  <label className="form-label form-label--required">Broker</label>
+                  <select value={brokerId} onChange={e => setBrokerId(e.target.value)} className="input">
                     <option value="">Select Broker</option>
                     {brokers.map(b => <option key={b.id} value={b.id}>{b.name || b.fldName}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Market rate *</label>
-                <input type="number" step="any" value={marketRate} onChange={e => setMarketRate(e.target.value)} placeholder="e.g. 250.50" className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <div className="form-field">
+                <label className="form-label form-label--required">Market rate</label>
+                <input type="number" step="any" value={marketRate} onChange={e => setMarketRate(e.target.value)} placeholder="e.g. 250.50" className="input" />
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-xs text-gray-500">
-                  <span className="font-semibold text-gray-700">Client rule:</span>{' '}
+                <div className="text-xs text-[var(--color-slate)]">
+                  <span className="font-semibold text-[var(--color-charcoal)]">Client rule:</span>{' '}
                   {isLoadingRules ? 'Loading…' : clientRule ? (clientRule.type === 'AMOUNT' ? 'Fixed amount (invoice)' : 'Percentage') : 'Not found'}
                 </div>
-                <div className="text-xs text-gray-500 text-right">
-                  <span className="font-semibold text-gray-700">Broker rule:</span>{' '}
+                <div className="text-xs text-[var(--color-slate)] text-right">
+                  <span className="font-semibold text-[var(--color-charcoal)]">Broker rule:</span>{' '}
                   {isLoadingRules
                     ? 'Loading…'
                     : brokerRule
@@ -286,68 +283,76 @@ export function TradeFormModal({
 
             {/* Right: Results */}
             <div className="col-span-5">
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4 h-full">
+              <div className="bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-2xl p-5 space-y-4 h-full">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">Live result</h3>
+                  <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Live result</h3>
                   {calc?.side ? (
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${calc.side === 'BUY' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={cn("badge badge--dot", calc.side === 'BUY' ? 'badge--success' : 'badge--error')}>
                       {calc.side}
                     </span>
                   ) : null}
                 </div>
 
                 {!canCalculate ? (
-                  <div className="text-sm text-gray-400 pt-8">
+                  <div className="text-sm text-[var(--color-fog)] pt-8">
                     Select exchange, script, client, broker and enter quantity to calculate.
                   </div>
                 ) : isLoadingRules ? (
-                  <div className="text-sm text-gray-400 pt-8">Loading brokerage rules…</div>
+                  <div className="text-sm text-[var(--color-fog)] pt-8">Loading brokerage rules…</div>
                 ) : !clientRule || (!brokerRule && !brokerFallbackMode) ? (
-                  <div className="text-sm text-red-600 pt-8">
+                  <div className="text-sm text-[var(--color-negative)] pt-8">
                     Missing brokerage rule for {(!clientRule && !brokerRule) ? 'client and broker' : !clientRule ? 'client' : 'broker'}.
                   </div>
                 ) : !calc ? (
-                  <div className="text-sm text-gray-400 pt-8">Enter market rate to see rates and profit.</div>
+                  <div className="text-sm text-[var(--color-fog)] pt-8">Enter market rate to see rates and profit.</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wide">Client</p>
+                      <div className="bg-[var(--bg-card)] border border-[var(--color-border-light)] rounded-xl p-4">
+                        <p className="text-[11px] text-[var(--color-slate)] font-semibold uppercase tracking-wide">Client</p>
                         <div className="mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Rate</span>
-                            <span className="font-mono font-semibold">₹{calc.clientRate.toFixed(4)}</span>
+                            <span className="text-[var(--color-slate)]">Rate</span>
+                            <span className="font-mono font-semibold text-[var(--color-charcoal)]">₹{calc.clientRate.toFixed(4)}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-gray-500">Brokerage</span>
-                            <span className="font-mono text-gray-700">{calc.clientIsFixed ? 'Fixed (invoice)' : `₹${calc.clientBrokerage.toFixed(4)}`}</span>
+                            <span className="text-[var(--color-fog)]">Brokerage</span>
+                            <span className="font-mono text-[var(--color-slate)]">{calc.clientIsFixed ? 'Fixed (invoice)' : `₹${calc.clientBrokerage.toFixed(4)}`}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wide">Broker</p>
+                      <div className="bg-[var(--bg-card)] border border-[var(--color-border-light)] rounded-xl p-4">
+                        <p className="text-[11px] text-[var(--color-slate)] font-semibold uppercase tracking-wide">Broker</p>
                         <div className="mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Rate</span>
-                            <span className="font-mono font-semibold">₹{calc.brokerRate.toFixed(4)}</span>
+                            <span className="text-[var(--color-slate)]">Rate</span>
+                            <span className="font-mono font-semibold text-[var(--color-charcoal)]">₹{calc.brokerRate.toFixed(4)}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-gray-500">Brokerage</span>
-                            <span className="font-mono text-gray-700">{calc.brokerIsFixed ? 'Fixed (invoice)' : `₹${calc.brokerBrokerage.toFixed(4)}`}</span>
+                            <span className="text-[var(--color-fog)]">Brokerage</span>
+                            <span className="font-mono text-[var(--color-slate)]">{calc.brokerIsFixed ? 'Fixed (invoice)' : `₹${calc.brokerBrokerage.toFixed(4)}`}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className={`border rounded-xl p-4 ${calc.totalProfit > 0 ? 'bg-green-50 border-green-200' : calc.totalProfit < 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className={cn("border rounded-xl p-4",
+                      calc.totalProfit > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
+                      calc.totalProfit < 0 ? 'bg-red-50 border-red-200' :
+                      'bg-[var(--color-snow)] border-[var(--color-border-light)]'
+                    )}>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-gray-700">Profit</span>
-                        <span className={`font-mono text-lg font-bold ${calc.totalProfit > 0 ? 'text-green-700' : calc.totalProfit < 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                        <span className="text-sm font-semibold text-[var(--color-charcoal)]">Profit</span>
+                        <span className={cn("font-mono text-lg font-bold",
+                          calc.totalProfit > 0 ? 'text-[var(--color-positive)]' :
+                          calc.totalProfit < 0 ? 'text-[var(--color-negative)]' :
+                          'text-[var(--color-charcoal)]'
+                        )}>
                           {calc.totalProfit > 0 ? '+' : ''}₹{calc.totalProfit.toFixed(4)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-1">
+                      <p className="text-[11px] text-[var(--color-slate)] mt-1">
                         Trade value ₹{calc.tradeValue.toFixed(4)} • per-unit ₹{calc.profit.toFixed(4)}
                       </p>
                     </div>
@@ -357,12 +362,12 @@ export function TradeFormModal({
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
-            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+          <div className="mt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)] pt-4">
+            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
             <button
               type="button"
               onClick={handleSave}
-              className="btn-primary"
+              className="btn btn--primary"
               disabled={!calc || !exchange || !script || !client || !broker}
             >
               Add Trade
@@ -373,4 +378,3 @@ export function TradeFormModal({
     </div>
   );
 }
-
