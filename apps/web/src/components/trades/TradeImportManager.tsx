@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileUploadZone } from './FileUploadZone';
 import { toast } from 'sonner';
 import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw, FileSpreadsheet } from 'lucide-react';
@@ -12,7 +12,7 @@ import './trades-import.css';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
 
-export function TradeImportManager() {
+export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const [step, setStep] = useState<ImportStep>('UPLOAD');
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState('');
@@ -31,6 +31,8 @@ export function TradeImportManager() {
   const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [scriptModalInitialData, setScriptModalInitialData] = useState<any>(null);
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Load exchanges and brokers on mount
   useEffect(() => {
@@ -63,6 +65,30 @@ export function TradeImportManager() {
     };
     fetchInitialData();
   }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    setFileName(file.name);
+    setIsProcessing(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        await handleFileRead(content, file.name);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read the file.');
+      setIsProcessing(false);
+    };
+    reader.readAsText(file);
+  };
 
   const handleFileRead = async (content: string, name: string) => {
     setIsProcessing(true);
@@ -135,7 +161,11 @@ export function TradeImportManager() {
       const res = await fetch(`${apiUrl}/trade-import/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: normalizedRows }),
+        body: JSON.stringify({
+          rows: normalizedRows,
+          brokerId: selectedBrokerId,
+          exchangeId: selectedExchangeId,
+        }),
       });
 
       if (!res.ok) {
@@ -161,6 +191,7 @@ export function TradeImportManager() {
     setNormalizedRows([]);
     setPreviewRows([]);
     setImportResult(null);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const handleClientDoubleClick = (clientCode: string) => {
@@ -194,8 +225,6 @@ export function TradeImportManager() {
     setShowScriptModal(true);
   };
 
-
-
   // Compute stats
   const totalRows = previewRows.length;
   const validRowsCount = previewRows.filter((r) => r.status === 'Valid').length;
@@ -214,86 +243,130 @@ export function TradeImportManager() {
           </p>
         </div>
 
-        {step === 'PREVIEW' && (
-          <div className="flex items-center gap-3">
-            <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Cancel
+        <div className="flex items-center gap-3">
+          {onBack && (step === 'UPLOAD' || step === 'RESULT') && (
+            <button onClick={onBack} className="btn btn--secondary flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" /> Back to Trades
             </button>
-            <button
-              onClick={handleConfirmImport}
-              disabled={validRowsCount === 0 || isProcessing}
-              className="btn btn--primary flex items-center gap-2"
+          )}
+          {step === 'PREVIEW' && (
+            <>
+              <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" /> Cancel
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={validRowsCount === 0 || isProcessing}
+                className="btn btn--primary flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
+                  </>
+                ) : (
+                  <>
+                    Import {validRowsCount} Valid Trades
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Top Selection & Browse Panel (Always Visible) */}
+      <div className="card shadow-md border border-[var(--color-border-light)] p-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+          <div className="form-field">
+            <label className="form-label form-label--required">Broker Selection</label>
+            <select
+              value={selectedBrokerId}
+              onChange={(e) => setSelectedBrokerId(e.target.value)}
+              className="input"
+              disabled={isProcessing}
             >
-              {isProcessing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
-                </>
-              ) : (
-                <>
-                  Import {validRowsCount} Valid Trades
-                </>
-              )}
-            </button>
+              <option value="" disabled>Select a Broker</option>
+              {brokers.map((broker) => (
+                <option key={broker.id} value={broker.id}>
+                  {broker.code} - {broker.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label form-label--required">Exchange Selection</label>
+            <select
+              value={selectedExchangeId}
+              onChange={(e) => setSelectedExchangeId(e.target.value)}
+              className="input"
+              disabled={isProcessing}
+            >
+              <option value="" disabled>Select an Exchange</option>
+              {exchanges.map((ex) => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.code} {ex.name ? `(${ex.name})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label form-label--required">Import Type</label>
+            <select
+              value={selectedImportType}
+              onChange={(e) => setSelectedImportType(e.target.value)}
+              className="input"
+              disabled={isProcessing}
+            >
+              <option value="trades_fno">Trades (F&O)</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label form-label--required">Trade File</label>
+            <div className="flex flex-col justify-end">
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".txt,.csv"
+                onChange={handleInputChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={isProcessing}
+                className="btn btn--secondary flex items-center gap-2 w-full justify-center h-[38px] text-xs font-semibold border-[var(--color-border)] hover:bg-[var(--color-snow)] transition-colors"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-[var(--color-primary)]" />
+                    Processing…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 text-[var(--color-primary)]" />
+                    {fileName ? 'Change File' : 'Browse File'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {fileName && (
+          <div className="text-xs text-[var(--color-slate)] font-semibold mt-4 bg-[var(--color-snow)] px-3 py-1.5 rounded-lg border border-[var(--color-border-light)] w-fit flex items-center gap-1.5">
+            <FileSpreadsheet className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+            Selected File: <span className="text-[var(--color-charcoal)] font-mono">{fileName}</span>
           </div>
         )}
       </div>
 
-      {/* Wizard Steps */}
+      {/* Wizard Steps Content (Rendered Below Dropdowns) */}
       {step === 'UPLOAD' && (
         <div className="max-w-3xl mx-auto py-6">
-          <div className="card shadow-md border border-[var(--color-border-light)] p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="form-field">
-                <label className="form-label form-label--required">Broker Selection</label>
-                <select
-                  value={selectedBrokerId}
-                  onChange={(e) => setSelectedBrokerId(e.target.value)}
-                  className="input"
-                  disabled={isProcessing}
-                >
-                  <option value="" disabled>Select a Broker</option>
-                  {brokers.map((broker) => (
-                    <option key={broker.id} value={broker.id}>
-                      {broker.code} - {broker.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-field">
-                <label className="form-label form-label--required">Exchange Selection</label>
-                <select
-                  value={selectedExchangeId}
-                  onChange={(e) => setSelectedExchangeId(e.target.value)}
-                  className="input"
-                  disabled={isProcessing}
-                >
-                  <option value="" disabled>Select an Exchange</option>
-                  {exchanges.map((ex) => (
-                    <option key={ex.id} value={ex.id}>
-                      {ex.code} {ex.name ? `(${ex.name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-field">
-                <label className="form-label form-label--required">Import Type</label>
-                <select
-                  value={selectedImportType}
-                  onChange={(e) => setSelectedImportType(e.target.value)}
-                  className="input"
-                  disabled={isProcessing}
-                >
-                  <option value="trades_fno">Trades (F&O)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="border-t border-[var(--color-border-light)] pt-6">
-              <FileUploadZone onFileRead={handleFileRead} isProcessing={isProcessing} />
-            </div>
-          </div>
+          <FileUploadZone onFileRead={handleFileRead} isProcessing={isProcessing} />
         </div>
       )}
 
@@ -467,9 +540,14 @@ export function TradeImportManager() {
             </div>
 
             <div className="flex gap-3 justify-center pt-2">
-              <button onClick={handleReset} className="btn btn--primary flex items-center gap-2">
-                <Upload className="w-4 h-4" /> Upload Another File
+              <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
+                <Upload className="w-4 h-4" /> Upload Another
               </button>
+              {onBack && (
+                <button onClick={onBack} className="btn btn--primary flex items-center gap-2">
+                  View Trades List
+                </button>
+              )}
             </div>
           </div>
         </div>

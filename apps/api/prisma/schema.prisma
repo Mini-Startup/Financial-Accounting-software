@@ -77,9 +77,10 @@ model Account {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt      @map("updated_at")
 
-  group      Group       @relation(fields: [groupId], references: [id])
-  brokerages Brokerage[]
-  trades     Trade[]
+  group        Group       @relation(fields: [groupId], references: [id])
+  brokerages   Brokerage[]
+  trades       Trade[]     @relation("AccountTrades")
+  brokerTrades Trade[]     @relation("BrokerTrades")
 
   @@index([name])
   @@index([groupId])
@@ -192,11 +193,21 @@ model Trade {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt      @map("updated_at")
 
-  account  Account  @relation(fields: [accountId],  references: [id], onDelete: Cascade)
+  // Calculations
+  brokerId        String?  @map("broker_id")
+  clientRate      Float?   @map("client_rate")
+  brokerRate      Float?   @map("broker_rate")
+  clientBrokerage Float?   @map("client_brokerage")
+  brokerBrokerage Float?   @map("broker_brokerage")
+  profitTotal     Float?   @map("profit_total")
+
+  account  Account  @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
+  broker   Account? @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
   script   Script   @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
   exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
+  @@index([brokerId])
   @@index([scriptId])
   @@index([exchangeId])
   @@map("trades")

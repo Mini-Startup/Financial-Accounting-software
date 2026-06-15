@@ -460,3 +460,8 @@
     border-bottom: none;
   }
 }
+
+select option {
+  color: var(--color-charcoal) !important;
+  background-color: var(--color-white) !important;
+}

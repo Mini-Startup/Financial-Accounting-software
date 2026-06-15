@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider, SignIn } from "@clerk/nextjs";
@@ -55,7 +56,9 @@ export default async function RootLayout({
             </div>
           ) : (
             <div className="flex min-h-screen bg-[var(--bg-page)]">
-              <Sidebar />
+              <Suspense fallback={<div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />}>
+                <Sidebar />
+              </Suspense>
               <div className="flex-1 flex flex-col min-h-screen min-w-0">
                 <main className="flex-1 p-6 md:p-8 overflow-y-auto">
                   <div className="max-w-7xl mx-auto">

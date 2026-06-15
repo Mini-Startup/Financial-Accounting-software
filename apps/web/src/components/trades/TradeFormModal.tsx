@@ -5,6 +5,7 @@ import { calculateTrade, type BrokerageRule, type CalcResult } from '@/utils/bro
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { toast } from 'sonner';
 
 function todayISO() {
   const d = new Date();
@@ -155,24 +156,41 @@ export function TradeFormModal({
     }
   }, [quantity, marketRate, clientRule, brokerRule, brokerFallbackMode]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!exchange || !script || !client || !broker || !calc) return;
     const qtyNum = parseFloat(quantity || '0');
     const rateNum = parseFloat(marketRate || '0');
-    onSave({
-      id: crypto.randomUUID(),
-      date,
-      exchangeCode: exchange.code,
-      scriptName: script.fldScriptName ?? script.name ?? 'Script',
-      quantity: qtyNum,
-      marketRate: rateNum,
-      clientName: client.name || client.fldName,
-      brokerName: broker.name || broker.fldName,
-      clientRate: Number(calc.clientRate.toFixed(4)),
-      brokerRate: Number(calc.brokerRate.toFixed(4)),
-      profitTotal: Number(calc.totalProfit.toFixed(4)),
-    });
-    onClose();
+
+    try {
+      const res = await fetch('http://localhost:4000/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tradeNumber: `TRD-${Date.now().toString().slice(-6)}`,
+          tradeDate: date,
+          accountId: clientId,
+          brokerId: brokerId,
+          scriptId: scriptId,
+          exchangeId: exchangeId,
+          transactionType: qtyNum >= 0 ? 'BUY' : 'SELL',
+          quantity: Math.abs(qtyNum),
+          rate: rateNum,
+          remarks: 'Manual Entry',
+          source: 'MANUAL',
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to save trade');
+      }
+
+      toast.success('Trade saved successfully');
+      onSave(await res.json());
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save trade');
+    }
   };
 
   const canCalculate = Boolean(exchangeId && clientId && brokerId && scriptId && parseFloat(quantity || '0'));
@@ -181,7 +199,7 @@ export function TradeFormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
       <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)]">
+        <div className="card__header bg-[var(--color-snow)] shrink-0">
           <div>
             <h2 className="card__title">Add Trade</h2>
             <p className="text-sm text-[var(--color-slate)] mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
@@ -191,7 +209,7 @@ export function TradeFormModal({
           </button>
         </div>
 
-        <div className="card__body p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-12 gap-5">
             {/* Left: Inputs */}
             <div className="col-span-7 space-y-5">
@@ -362,17 +380,19 @@ export function TradeFormModal({
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)] pt-4">
-            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="btn btn--primary"
-              disabled={!calc || !exchange || !script || !client || !broker}
-            >
-              Add Trade
-            </button>
-          </div>
+        </div>
+
+        {/* Fixed Footer */}
+        <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
+          <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="btn btn--primary"
+            disabled={!calc || !exchange || !script || !client || !broker}
+          >
+            Add Trade
+          </button>
         </div>
       </div>
     </div>

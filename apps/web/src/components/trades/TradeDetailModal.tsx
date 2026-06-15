@@ -1,0 +1,217 @@
+'use client';
+
+import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
+import { X, Calendar, User, TrendingUp, Cpu, Info } from 'lucide-react';
+import { cn } from '@/utils/cn';
+
+export function TradeDetailModal({
+  trade,
+  onClose,
+}: {
+  trade: any;
+  onClose: () => void;
+}) {
+  const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
+
+  const formattedDate = new Date(trade.tradeDate).toLocaleDateString();
+  const profit = trade.profitTotal ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+      <div
+        ref={modalRef}
+        className="card w-[780px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none"
+      >
+        {/* Header */}
+        <div className="card__header bg-[var(--color-snow)] shrink-0">
+          <div>
+            <span className="text-xs font-semibold text-[var(--color-primary)] bg-blue-50 border border-blue-100 rounded-full px-2.5 py-0.5 inline-block mb-1">
+              Trade ID: {trade.tradeNumber}
+            </span>
+            <h2 className="card__title">Trade Specifications</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Section 1: Core Trade Details */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
+            <h3 className="text-xs font-bold text-[var(--color-slate)] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
+              Core Execution Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Exchange</span>
+                <span className="font-bold text-[var(--color-charcoal)]">{trade.exchange?.code || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Script / Symbol</span>
+                <span className="font-semibold text-[var(--color-charcoal)]">{trade.script?.fullName || trade.script?.shortName || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Transaction</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center px-2 py-0.5 rounded text-xs font-bold mt-1',
+                    trade.transactionType === 'BUY'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  )}
+                >
+                  {trade.transactionType}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Quantity</span>
+                <span className="font-mono font-bold text-[var(--color-charcoal)]">{trade.quantity}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Calculations & Spreads */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Client Column */}
+            <div className="bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-xl p-5 space-y-3">
+              <h4 className="text-xs font-bold text-[var(--color-charcoal)] uppercase tracking-wider border-b pb-2 flex items-center justify-between">
+                <span>Client Side</span>
+                <span className="text-xs font-normal text-[var(--color-slate)] font-mono">{trade.account?.code || '—'}</span>
+              </h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-slate)]">Market Rate</span>
+                  <span className="font-mono">₹{trade.rate?.toFixed(4) || '0.0000'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-slate)]">Effective Client Rate</span>
+                  <span className="font-mono font-semibold text-[var(--color-charcoal)]">
+                    ₹{trade.clientRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                  <span className="text-[var(--color-slate)]">Computed Brokerage</span>
+                  <span className="font-mono text-emerald-600">
+                    {trade.clientBrokerage != null ? `₹${trade.clientBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Broker Column */}
+            <div className="bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-xl p-5 space-y-3">
+              <h4 className="text-xs font-bold text-[var(--color-charcoal)] uppercase tracking-wider border-b pb-2 flex items-center justify-between">
+                <span>Broker Side</span>
+                <span className="text-xs font-normal text-[var(--color-slate)] font-mono">{trade.broker?.code || '—'}</span>
+              </h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-slate)]">Market Rate</span>
+                  <span className="font-mono">₹{trade.rate?.toFixed(4) || '0.0000'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-slate)]">Effective Broker Rate</span>
+                  <span className="font-mono font-semibold text-[var(--color-charcoal)]">
+                    ₹{trade.brokerRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                  <span className="text-[var(--color-slate)]">Computed Brokerage</span>
+                  <span className="font-mono text-emerald-600">
+                    {trade.brokerBrokerage != null ? `₹${trade.brokerBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Spread Profit Container */}
+          <div
+            className={cn(
+              'border rounded-xl p-4',
+              profit > 0
+                ? 'bg-[var(--color-mist)] border-[var(--color-leaf)] text-[var(--color-forest)]'
+                : profit < 0
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-slate-50 border-slate-200 text-slate-700'
+            )}
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold flex items-center gap-1.5">
+                <Info className="w-4 h-4 shrink-0" />
+                Net Trade Spread Profit
+              </span>
+              <span className="font-mono text-xl font-bold">
+                {profit > 0 ? '+' : ''}₹{profit.toFixed(4)}
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--color-slate)] mt-1">
+              Spread value calculated as quantity ({trade.quantity}) multiplied by client-broker rate difference.
+            </p>
+          </div>
+
+          {/* Section 3: Technical / File Mappings */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
+            <h3 className="text-xs font-bold text-[var(--color-slate)] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <Cpu className="w-4 h-4 text-[var(--color-primary)]" />
+              Audit & System Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Data Source</span>
+                <span className="badge badge--neutral mt-1">{trade.source || 'MANUAL'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Date & Time</span>
+                <span className="font-mono text-xs">{formattedDate} {trade.tradeTime || ''}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Terminal Code</span>
+                <span className="font-mono text-xs">{trade.terminal || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text(--color-slate) block">Expiry Date</span>
+                <span className="font-mono text-xs">{trade.expiry || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Order ID</span>
+                <span className="font-mono text-xs">{trade.orderId || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Unique Trade ID</span>
+                <span className="font-mono text-xs">{trade.uniqueTradeId || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Exchange Time</span>
+                <span className="font-mono text-xs">{trade.exchangeTime || '—'}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Order Time</span>
+                <span className="font-mono text-xs">{trade.orderTime || '—'}</span>
+              </div>
+            </div>
+
+            {trade.remarks && (
+              <div className="mt-4 pt-3 border-t border-slate-200">
+                <span className="text-[11px] text-[var(--color-slate)] block">Remarks</span>
+                <p className="text-xs text-[var(--color-charcoal)] mt-0.5">{trade.remarks}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end shrink-0">
+          <button onClick={onClose} className="btn btn--secondary">
+            Close Panel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import {
   Squares2X2Icon,
@@ -27,7 +27,18 @@ interface NavItem {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [tradesOpen, setTradesOpen] = React.useState(true);
+
+  const isImportMode = (pathname === "/trades" && searchParams?.get("import") === "true") || pathname === "/trades/import";
+  const isTradesBase = pathname === "/trades" || pathname?.startsWith("/trades/");
+  const isListActive = isTradesBase && !isImportMode;
+
+  React.useEffect(() => {
+    if (isImportMode) {
+      setTradesOpen(true);
+    }
+  }, [isImportMode]);
 
   const navItems: NavItem[] = [
     { name: "Dashboard", path: "/", icon: Squares2X2Icon },
@@ -39,10 +50,10 @@ export function Sidebar() {
     { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
     {
       name: "Trades",
+      path: "/trades",
       icon: ArrowsRightLeftIcon,
       children: [
-        { name: "Manual Entry", path: "/trades" },
-        { name: "File Import", path: "/trades/import" },
+        { name: "Import File", path: "/trades?import=true" },
       ]
     }
   ];
@@ -56,6 +67,9 @@ export function Sidebar() {
   };
 
   const isParentActive = (item: NavItem) => {
+    if (item.name === "Trades") {
+      return isTradesBase;
+    }
     if (item.path) return isActive(item.path);
     if (item.children) {
       return item.children.some(child => pathname === child.path);
@@ -89,33 +103,52 @@ export function Sidebar() {
               if (hasChildren) {
                 return (
                   <div key={item.name} className="flex flex-col gap-1">
-                    <button
-                      onClick={() => setTradesOpen(!tradesOpen)}
+                    <div
                       className={cn(
-                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-150 group text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]",
-                        parentActive && "bg-[var(--sidebar-active-bg)]/10 text-[var(--color-leaf)]"
+                        "w-full flex items-center justify-between rounded-lg font-medium text-sm transition-all duration-150 group text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]",
+                        isListActive
+                          ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm"
+                          : parentActive && "bg-[var(--sidebar-active-bg)]/10 text-[var(--color-leaf)]"
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <Link
+                        href={item.path || "#"}
+                        className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-l-lg"
+                      >
                         <item.icon
                           className={cn(
                             "w-5 h-5 shrink-0 transition-colors",
-                            parentActive ? "text-[var(--color-leaf)]" : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+                            isListActive
+                              ? "text-[var(--sidebar-active-txt)]"
+                              : parentActive
+                              ? "text-[var(--color-leaf)]"
+                              : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
                           )}
                         />
                         <span>{item.name}</span>
-                      </div>
-                      {tradesOpen ? (
-                        <ChevronUpIcon className="w-4 h-4 text-[var(--sidebar-text-muted)]" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4 text-[var(--sidebar-text-muted)]" />
-                      )}
-                    </button>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setTradesOpen(!tradesOpen);
+                        }}
+                        className={cn(
+                          "px-3 py-3 rounded-r-lg hover:bg-[var(--color-emerald)]/30 text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-active-txt)] flex items-center justify-center shrink-0 border-l border-[var(--sidebar-divider)]/40",
+                          isListActive && "text-[var(--sidebar-active-txt)]/80 hover:bg-[var(--color-emerald)]/30"
+                        )}
+                      >
+                        {tradesOpen ? (
+                          <ChevronUpIcon className="w-4 h-4" />
+                        ) : (
+                          <ChevronDownIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
 
                     {tradesOpen && (
                       <div className="pl-6 flex flex-col gap-1 border-l border-[var(--sidebar-divider)] ml-5 mt-1">
                         {item.children!.map((child) => {
-                          const childActive = pathname === child.path;
+                          const childActive = child.path === "/trades?import=true" ? isImportMode : pathname === child.path;
                           return (
                             <Link
                               key={child.path}

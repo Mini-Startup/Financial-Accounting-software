@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { TradesPageManager } from '../../components/trades/TradesPageManager';
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +22,13 @@ export default async function TradesPage() {
   ]);
 
   return (
-    <TradesPageManager 
-      exchanges={exchanges} 
-      accounts={accounts} 
-      scripts={scripts} 
-      initialTrades={trades} 
-    />
+    <Suspense fallback={<div>Loading trades...</div>}>
+      <TradesPageManager 
+        exchanges={exchanges} 
+        accounts={accounts} 
+        scripts={scripts} 
+        initialTrades={trades} 
+      />
+    </Suspense>
   );
 }

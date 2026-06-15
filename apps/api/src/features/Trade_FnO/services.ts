@@ -1,4 +1,7 @@
 import { prisma } from '../../database';
+import { brokeragesService } from '../brokerages/services';
+import { calculateTrade } from '../../utils/brokerage';
+import type { BrokerageRule } from '../../utils/brokerage';
 
 export interface ParsedTrade {
   tradeNo: string;
@@ -211,7 +214,7 @@ export class TradeImportService {
   /**
    * Bulk save valid trades into the database.
    */
-  async confirmImport(rows: PreviewRow[]) {
+  async confirmImport(rows: PreviewRow[], brokerId?: string, exchangeId?: string) {
     // Re-verify items to make sure they are valid
     const parsed = rows.map((r) => ({
       tradeNo: r.tradeNumber,
@@ -230,7 +233,6 @@ export class TradeImportService {
       orderTime: r.orderTime || '',
     }));
 
-
     const preview = await this.previewRows(parsed);
     const validRows = preview.filter((r) => r.status === 'Valid');
 
@@ -238,10 +240,95 @@ export class TradeImportService {
       return { importedCount: 0, failedCount: rows.length };
     }
 
+    const toRule = (r: any): BrokerageRule => ({
+      type: r.type as 'AMOUNT' | 'PERCENT',
+      baseAmount: r.baseAmount,
+      flatFee: r.flatFee,
+      tradingBuyPct: r.tradingBuyPct,
+      tradingSellPct: r.tradingSellPct,
+      tradingMinFee: r.tradingMinFee,
+      deliveryBuyPct: r.deliveryBuyPct,
+      deliverySellPct: r.deliverySellPct,
+      deliveryMinFee: r.deliveryMinFee,
+    });
+
+    const validRowsWithCalcs = await Promise.all(
+      validRows.map(async (row) => {
+        const targetExchangeId = exchangeId || row.resolvedExchangeId!;
+        let clientRate = row.rate;
+        let brokerRate = row.rate;
+        let clientBrokerage = 0;
+        let brokerBrokerage = 0;
+        let profitTotal = 0;
+
+        try {
+          const clientRuleRow = await brokeragesService.resolve(
+            row.resolvedAccountId!,
+            targetExchangeId,
+            'CLIENT',
+            row.resolvedScriptId!
+          );
+
+          if (clientRuleRow) {
+            const clientRule = toRule(clientRuleRow);
+
+            let brokerRuleRow: any = null;
+            if (brokerId) {
+              brokerRuleRow = await brokeragesService.resolve(
+                brokerId,
+                targetExchangeId,
+                'BROKER',
+                row.resolvedScriptId!
+              );
+            }
+
+            const brokerFallbackMode = Boolean(clientRule && !brokerRuleRow);
+
+            if (!brokerFallbackMode && brokerId && brokerRuleRow) {
+              const brokerRule = toRule(brokerRuleRow);
+              const calc = calculateTrade({
+                quantity: row.quantity,
+                marketRate: row.rate,
+                segment: 'TRADING',
+                clientRule,
+                brokerRule,
+              });
+
+              clientRate = calc.clientRate;
+              brokerRate = calc.brokerRate;
+              clientBrokerage = calc.clientBrokerage;
+              brokerBrokerage = calc.brokerBrokerage;
+              profitTotal = calc.totalProfit;
+            } else {
+              // Fallback
+              const marketRounded = Number(row.rate.toFixed(4));
+              clientRate = marketRounded;
+              brokerRate = marketRounded;
+              clientBrokerage = 0;
+              brokerBrokerage = 0;
+              profitTotal = 0;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to calculate brokerage for imported row:', err);
+        }
+
+        return {
+          row,
+          targetExchangeId,
+          clientRate,
+          brokerRate,
+          clientBrokerage,
+          brokerBrokerage,
+          profitTotal,
+        };
+      })
+    );
+
     let importedCount = 0;
 
     await prisma.$transaction(
-      validRows.map((row) => {
+      validRowsWithCalcs.map(({ row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal }) => {
         importedCount++;
 
         const tradeDate = new Date(row.tradeDate);
@@ -253,8 +340,9 @@ export class TradeImportService {
             tradeDate,
             tradeTime: timePart,
             accountId: row.resolvedAccountId!,
+            brokerId: brokerId || null,
             scriptId: row.resolvedScriptId!,
-            exchangeId: row.resolvedExchangeId!,
+            exchangeId: targetExchangeId,
             transactionType: row.buySell,
             quantity: row.quantity,
             rate: row.rate,
@@ -266,6 +354,13 @@ export class TradeImportService {
             exchangeTime: row.exchangeTime || null,
             uniqueTradeId: row.uniqueTradeId || null,
             orderTime: row.orderTime || null,
+
+            // Calculated fields
+            clientRate,
+            brokerRate,
+            clientBrokerage,
+            brokerBrokerage,
+            profitTotal,
           },
         });
       })

@@ -21,7 +21,11 @@ router.post('/trade-import/confirm', async (req, res, next) => {
       res.status(400).json({ statusCode: 400, message: 'Rows are required in body' });
       return;
     }
-    const result = await tradeImportService.confirmImport(req.body.rows);
+    const result = await tradeImportService.confirmImport(
+      req.body.rows,
+      req.body.brokerId,
+      req.body.exchangeId
+    );
     res.json(result);
   } catch (err) { next(err); }
 });
