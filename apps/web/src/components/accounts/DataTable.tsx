@@ -28,22 +28,20 @@ export function DataTable({ accounts, groupName, entityLabel }: { accounts: any[
               <th>Code / ID</th>
               <th>Name</th>
               <th>Contact</th>
-              <th>Balance</th>
               <th className="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {accounts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[var(--color-slate)] font-medium">No {entityLabel.toLowerCase()} found.</td>
+                <td colSpan={4} className="py-8 text-center text-[var(--color-slate)] font-medium">No {entityLabel.toLowerCase()} found.</td>
               </tr>
             ) : null}
             {accounts.map((acc) => (
               <tr key={acc.id}>
-                <td className="font-mono font-medium text-[var(--color-charcoal)]">{acc.code || acc.fldClient || acc.id.substring(0, 8)}</td>
-                <td className="font-medium text-[var(--color-charcoal)]">{acc.name || acc.fldName}</td>
-                <td className="text-[var(--color-slate)]">{acc.mobileNumber || acc.whatsappNumber || acc.email || acc.fldMobile || acc.fldEmail || 'N/A'}</td>
-                <td className="font-mono font-semibold text-[var(--color-charcoal)]">{acc.closing || acc.opening || acc.fldClosing || acc.fldOpening ? `${acc.closing ?? acc.opening ?? acc.fldClosing ?? acc.fldOpening}` : '-'}</td>
+                <td className="font-mono font-medium text-[var(--color-charcoal)]">{acc.code || acc.id.substring(0, 8)}</td>
+                <td className="font-medium text-[var(--color-charcoal)]">{acc.name}</td>
+                <td className="text-[var(--color-slate)]">{acc.mobileNumber || acc.whatsappNumber || acc.email || 'N/A'}</td>
                 <td className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button 

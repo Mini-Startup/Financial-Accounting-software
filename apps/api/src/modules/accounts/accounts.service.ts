@@ -2,18 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma, Prisma } from 'database';
 
 function sanitizePayload(payload: any) {
-  const numberFields = [
-    'opening', 'closing', 'debit', 'credit',
-    'defaultCredit', 'interest',
-    'fldOpening', 'fldClosing', 'fldDebit', 'fldCredit',
-    'fldTranCharge', 'fldMrgnAmt', 'fldExposure', 'fldShare'
-  ];
-  for (const field of numberFields) {
-    if (payload[field] === "") {
-      payload[field] = null;
-    } else if (payload[field] !== undefined && payload[field] !== null) {
-      payload[field] = Number(payload[field]);
-    }
+  if (payload.groupId !== undefined && payload.groupId !== null && payload.groupId !== "") {
+    payload.groupId = Number(payload.groupId);
+  }
+  if (payload.isActive !== undefined && payload.isActive !== null) {
+    payload.isActive = payload.isActive === true || payload.isActive === 'true';
   }
   return payload;
 }
@@ -23,7 +16,7 @@ export class AccountsService {
   async create(data: Prisma.AccountUncheckedCreateInput & { groupName?: string }) {
     const payload = { ...data };
     
-    // Map groupName to fldGroupNo
+    // Map groupName to groupId
     if (payload.groupName) {
       const group = await prisma.group.upsert({
         where: { name: payload.groupName },
@@ -41,13 +34,23 @@ export class AccountsService {
     });
   }
 
-  async findAll(groupName?: string, search?: string) {
+  async findAll(groupName?: string, search?: string, excludeGroups?: string) {
     const where: Prisma.AccountWhereInput = {};
 
     if (groupName) {
       where.group = {
         name: {
           equals: groupName,
+          mode: 'insensitive'
+        }
+      };
+    }
+
+    if (excludeGroups) {
+      const excludedList = excludeGroups.split(',').map(g => g.trim());
+      where.group = {
+        name: {
+          notIn: excludedList,
           mode: 'insensitive'
         }
       };

@@ -1,14 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Put, Param, Delete, Query } from '@nestjs/common';
 import { ScriptsService } from './scripts.service';
-import { Prisma } from 'database';
 
 @Controller('scripts')
 export class ScriptsController {
   constructor(private readonly scriptsService: ScriptsService) {}
 
   @Post()
-  create(@Body() createScriptDto: Prisma.ScriptUncheckedCreateInput) {
-    return this.scriptsService.create(createScriptDto);
+  create(@Body() body: any) {
+    return this.scriptsService.create(body);
   }
 
   @Get()
@@ -22,8 +21,13 @@ export class ScriptsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateScriptDto: Prisma.ScriptUpdateInput) {
-    return this.scriptsService.update(id, updateScriptDto);
+  updatePatch(@Param('id') id: string, @Body() body: any) {
+    return this.scriptsService.update(id, body);
+  }
+
+  @Put(':id')
+  updatePut(@Param('id') id: string, @Body() body: any) {
+    return this.scriptsService.update(id, body);
   }
 
   @Delete(':id')

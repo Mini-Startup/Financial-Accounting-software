@@ -39,11 +39,10 @@ model Role {
 // ─────────────────────────────────────────────
 
 model Group {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-  fldNo Int?
-
-  accounts Account[]
+  id           Int       @id @default(autoincrement())
+  name         String    @unique
+  displayOrder Int?      @map("display_order")
+  accounts     Account[]
 
   @@map("groups")
 }
@@ -53,75 +52,34 @@ model Group {
 // ─────────────────────────────────────────────
 
 model Account {
-  id               String   @id @default(uuid())
+  id                  String   @id @default(uuid())
+  code                String   @unique
+  name                String
+  groupId             Int      @map("group_id")
+  address             String?
+  mobileNumber        String?  @map("mobile_number")
+  officeNumber        String?  @map("office_number")
+  whatsappNumber      String?  @map("whatsapp_number")
+  email               String?
+  contactPersonName   String?  @map("contact_person_name")
+  contactPersonMobile String?  @map("contact_person_mobile")
+  contactPersonEmail  String?  @map("contact_person_email")
+  referenceName       String?  @map("reference_name")
+  referenceMobile     String?  @map("reference_mobile")
+  referenceEmail      String?  @map("reference_email")
+  bankName            String?  @map("bank_name")
+  bankBranch          String?  @map("bank_branch")
+  ifscCode            String?  @map("ifsc_code")
+  micrCode            String?  @map("micr_code")
+  bankAccountNumber   String?  @map("bank_account_number")
+  upiId               String?  @map("upi_id")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt      @map("updated_at")
 
-  code             String?
-  name             String
-  fldAOD           String?
-  fldType          String?
-
-  groupId          Int?     @map("group_id")
-  fldGroupBusiness String?
-  fldGroupFamily   String?
-
-  opening          Float?
-  debit            Float?
-  credit           Float?
-  closing          Float?
-
-  address          String?
-  mobileNumber     String?  @map("mobile_number")
-  officeNumber     String?  @map("office_number")
-  whatsappNumber   String?  @map("whatsapp_number")
-  email            String?
-
-  contactPersonName  String? @map("contact_person_name")
-  contactPersonMobile String? @map("contact_person_mobile")
-  contactPersonEmail  String? @map("contact_person_email")
-
-  defaultCredit    Float?   @map("default_credit")
-  interest         Float?   @map("interest")
-
-  bankName         String?  @map("bank_name")
-  bankBranch       String?  @map("bank_branch")
-  ifscCode         String?  @map("ifsc_code")
-  accountNumber    String?  @map("bank_account_number")
-  upiId            String?  @map("upi_id")
-
-  referenceMobile  String?  @map("reference_mobile")
-  referenceEmail   String?  @map("reference_email")
-
-  fldClientID      String?
-  fldDPID          String?
-
-  fldServiceTax    Boolean?  @default(false)
-  fldTurnOverTax   Boolean?  @default(false)
-  fldStampDuty     Boolean?  @default(false)
-  fldDematCharge   Boolean?  @default(false)
-  fldPrintBill     Boolean?  @default(false)
-
-  fldTeleDir       String?
-  fldAddBook       String?
-
-  fldTranCharge    Float?
-  fldMrgnAmt       Float?
-  fldExposure      Float?
-  fldShare         Float?
-
-  fldPAN           String?
-  fldMICR          String?
-  fldBankAccNo     String?
-
-  fldTB            String?
-  fldL             String?
-  fldPT            String?
-
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt      @map("updated_at")
-
-  group Group? @relation(fields: [groupId], references: [id])
-
+  group      Group       @relation(fields: [groupId], references: [id])
   brokerages Brokerage[]
+  trades     Trade[]
 
   @@index([name])
   @@index([groupId])
@@ -133,47 +91,21 @@ model Account {
 // ─────────────────────────────────────────────
 
 model Script {
-  id               String   @id @default(uuid())
+  id        String   @id @default(uuid())
+  shortName String   @map("short_name")
+  fullName  String   @map("full_name")
+  isin      String?  @map("isin")
+  lotSize   Int      @map("lot_size")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
 
-  fldShortScript   String?
-  fldScriptName    String
+  brokerages             Brokerage[]
+  scriptExchangeMappings ScriptExchangeMapping[]
+  trades                 Trade[]
 
-  fldScriptASE     String?
-  fldScriptBSE     String?
-  fldScriptNSE     String?
-  fldScriptNMC     String?
-  fldScriptNCD     String?
-  fldScriptMCX     String?
-  fldScriptICE     String?
-
-  fldType          String?
-  fldISIN          String?
-
-  fldMargin        Float?
-  fldMultiplier    Float?
-  fldPrice         Float?
-  fldDivider       Float?
-
-  fldUoQ           String?
-  fldPU            String?
-  fldDC            String?
-
-  fldScriptACE     String?
-  fldScriptUSE     String?
-  fldScriptDGC     String?
-  fldScriptACX     String?
-  fldScriptUCX     String?
-
-  fldLotSize       Int?
-  fldTP            Float?
-
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt      @map("updated_at")
-
-  @@index([fldScriptName])
+  @@index([fullName])
   @@map("scripts")
-
-  brokerages Brokerage[]
 }
 
 // ─────────────────────────────────────────────
@@ -208,9 +140,60 @@ model Exchange {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  brokerages Brokerage[]
+  brokerages             Brokerage[]
+  scriptExchangeMappings ScriptExchangeMapping[]
+  trades                 Trade[]
 
   @@map("exchanges")
+}
+
+// ─────────────────────────────────────────────
+// SCRIPT EXCHANGE MAPPING
+// ─────────────────────────────────────────────
+
+model ScriptExchangeMapping {
+  id                 String   @id @default(uuid())
+  scriptId           String   @map("script_id")
+  exchangeId         String   @map("exchange_id")
+  exchangeScriptCode String   @map("exchange_script_code")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt      @map("updated_at")
+
+  script   Script   @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, exchangeId])
+  @@map("script_exchange_mappings")
+}
+
+// ─────────────────────────────────────────────
+// TRADES
+// ─────────────────────────────────────────────
+
+model Trade {
+  id              String   @id @default(uuid())
+  tradeNumber     String   @map("trade_number")
+  tradeDate       DateTime @map("trade_date")
+  tradeTime       String?  @map("trade_time")
+  accountId       String   @map("account_id")
+  scriptId        String   @map("script_id")
+  exchangeId      String   @map("exchange_id")
+  transactionType String   @map("transaction_type") // BUY or SELL
+  quantity        Float    @map("quantity")
+  rate            Float    @map("rate")
+  remarks         String?  @map("remarks")
+  source          String   @map("source") // MANUAL or IMPORT
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt      @map("updated_at")
+
+  account  Account  @relation(fields: [accountId],  references: [id], onDelete: Cascade)
+  script   Script   @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([scriptId])
+  @@index([exchangeId])
+  @@map("trades")
 }
 
 // ─────────────────────────────────────────────
@@ -252,3 +235,4 @@ model Brokerage {
   @@index([exchangeId])
   @@map("brokerages")
 }
+

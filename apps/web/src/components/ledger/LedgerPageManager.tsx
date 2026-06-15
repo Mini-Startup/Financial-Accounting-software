@@ -2,24 +2,39 @@
 
 import { useState } from 'react';
 import { LedgerFormModal } from './LedgerFormModal';
+import { Edit2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
-export function LedgerPageManager() {
-  const [rows, setRows] = useState<any[]>([]);
+export function LedgerPageManager({
+  initialAccounts,
+  groups,
+}: {
+  initialAccounts: any[];
+  groups: any[];
+}) {
+  const [accounts, setAccounts] = useState<any[]>(initialAccounts);
   const [isAdding, setIsAdding] = useState(false);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
 
-  const upsertRow = (row: any) => {
-    setRows(prev => {
-      const index = prev.findIndex(p => p.id === row.id);
-      if (index === -1) return [row, ...prev];
-      const copy = [...prev];
-      copy[index] = row;
-      return copy;
-    });
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this ledger account?')) return;
+    try {
+      const res = await fetch(`http://localhost:4000/accounts/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setAccounts(prev => prev.filter(acc => acc.id !== id));
+        toast.success('Ledger account deleted successfully');
+      } else {
+        toast.error('Failed to delete ledger account');
+      }
+    } catch {
+      toast.error('Failed to delete ledger account');
+    }
   };
 
-  const deleteRow = (id: string) => {
-    setRows(prev => prev.filter(p => p.id !== id));
+  const handleSave = () => {
+    window.location.reload(); // Refresh to sync data
   };
 
   return (
@@ -27,7 +42,7 @@ export function LedgerPageManager() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-display">Ledger</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Frontend-only ledger form as per your required layout. No API or DB save.</p>
+          <p className="text-sm text-[var(--color-slate)] mt-1">Manage standard and banking ledger accounts cross-referenced with your journal.</p>
         </div>
         <button onClick={() => setIsAdding(true)} className="btn btn--primary">+ Add Ledger</button>
       </div>
@@ -37,32 +52,58 @@ export function LedgerPageManager() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Account Code</th>
-                <th>Account Name</th>
-                <th>Opening</th>
-                <th>Closing</th>
-                <th>Account Group</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Group</th>
+                <th>Contact</th>
+                <th>UPI / Bank Info</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {accounts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-[var(--color-slate)] font-medium">
-                    No ledger entries yet.
+                    No ledger entries found. Click "+ Add Ledger" to create one.
                   </td>
                 </tr>
               ) : null}
-              {rows.map(row => (
-                <tr key={row.id}>
-                  <td className="text-[var(--color-slate)]">{row.accountCode}</td>
-                  <td className="font-medium text-[var(--color-charcoal)]">{row.accountName}</td>
-                  <td className="font-mono text-[var(--color-slate)]">{row.openingBalance}</td>
-                  <td className="font-mono text-[var(--color-slate)]">{row.closingBalance}</td>
-                  <td className="text-[var(--color-slate)]">{row.accountGroup}</td>
+              {accounts.map(acc => (
+                <tr key={acc.id}>
+                  <td className="font-mono font-medium text-[var(--color-charcoal)]">{acc.code}</td>
+                  <td className="font-medium text-[var(--color-charcoal)]">{acc.name}</td>
+                  <td className="text-[var(--color-slate)]">{acc.group?.name || 'N/A'}</td>
+                  <td className="text-[var(--color-slate)] text-xs">
+                    {acc.mobileNumber && <div>Mob: {acc.mobileNumber}</div>}
+                    {acc.email && <div className="truncate max-w-[150px]">{acc.email}</div>}
+                  </td>
+                  <td className="text-[var(--color-slate)] text-xs">
+                    {acc.group?.name === 'Bank Accounts' ? (
+                      <div>
+                        {acc.bankName && <div>{acc.bankName} - {acc.bankAccountNumber}</div>}
+                        {acc.upiId && <div>UPI: {acc.upiId}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-[var(--color-slate)]/40">-</span>
+                    )}
+                  </td>
                   <td className="text-right">
-                    <button className="text-[var(--color-forest)] hover:text-[var(--color-emerald)] mr-4 font-semibold transition text-sm" onClick={() => setEditingRow(row)}>Edit</button>
-                    <button className="text-[var(--color-negative)] hover:opacity-80 font-semibold transition text-sm" onClick={() => deleteRow(row.id)}>Delete</button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => setEditingAccount(acc)}
+                        className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-emerald)] transition-colors rounded-md hover:bg-[var(--color-mist)]"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(acc.id)}
+                        className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -73,16 +114,18 @@ export function LedgerPageManager() {
 
       {isAdding && (
         <LedgerFormModal
+          groups={groups}
           onClose={() => setIsAdding(false)}
-          onSave={upsertRow}
+          onSave={handleSave}
         />
       )}
 
-      {editingRow && (
+      {editingAccount && (
         <LedgerFormModal
-          initialData={editingRow}
-          onClose={() => setEditingRow(null)}
-          onSave={upsertRow}
+          initialData={editingAccount}
+          groups={groups}
+          onClose={() => setEditingAccount(null)}
+          onSave={handleSave}
         />
       )}
     </div>

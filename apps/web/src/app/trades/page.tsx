@@ -13,14 +13,19 @@ async function safeFetch(url: string) {
 }
 
 export default async function TradesPage() {
-  const [exchanges, accounts, scripts] = await Promise.all([
+  const [exchanges, accounts, scripts, trades] = await Promise.all([
     safeFetch('http://localhost:4000/exchanges?active=true'),
     safeFetch('http://localhost:4000/accounts'),
     safeFetch('http://localhost:4000/scripts'),
+    safeFetch('http://localhost:4000/trades'),
   ]);
 
   return (
-    <TradesPageManager exchanges={exchanges} accounts={accounts} scripts={scripts} />
+    <TradesPageManager 
+      exchanges={exchanges} 
+      accounts={accounts} 
+      scripts={scripts} 
+      initialTrades={trades} 
+    />
   );
 }
-

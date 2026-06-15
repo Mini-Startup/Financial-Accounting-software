@@ -35,7 +35,7 @@ export function BrokerageDataTable({ brokerages }: { brokerages: any[] }) {
             ) : null}
             {brokerages.map((rule) => {
               const typeStr = rule.type === 'AMOUNT' ? 'Flat Amount' : 'Percentage';
-              const scopeStr = rule.scope === 'DEFAULT' ? 'Default' : `Script: ${rule.script?.fldScriptName || 'Unknown'}`;
+              const scopeStr = rule.scope === 'DEFAULT' ? 'Default' : `Script: ${rule.script?.fullName || 'Unknown'}`;
               
               let valueStr = '';
               if (rule.type === 'AMOUNT') {

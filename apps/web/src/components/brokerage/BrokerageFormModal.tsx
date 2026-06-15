@@ -158,7 +158,7 @@ export function BrokerageFormModal({
                 <label className="text-sm font-medium text-gray-700">Select Script *</label>
                 <select required name="scriptId" value={formData.scriptId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] bg-blue-50/30">
                   <option value="">Select Script...</option>
-                  {scripts.map(s => <option key={s.id} value={s.id}>{s.fldScriptName}</option>)}
+                  {scripts.map(s => <option key={s.id} value={s.id}>{s.fullName || s.fldScriptName}</option>)}
                 </select>
               </div>
             )}
@@ -222,7 +222,7 @@ export function BrokerageFormModal({
 
         <div className="px-6 py-4 flex justify-end gap-3 border-t border-[var(--color-border)] bg-gray-50/50">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-          <button type="submit" form="brokerageForm" className="btn-primary">Save Rule</button>
+          <button type="submit" form="brokerageForm" className="btn-primary">Save</button>
         </div>
         
       </div>

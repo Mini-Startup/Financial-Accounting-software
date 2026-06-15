@@ -1,29 +1,47 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma, Prisma } from 'database';
 
-function sanitizeScriptPayload(payload: any) {
-  const numberFields = [
-    'fldMargin', 'fldMultiplier', 'fldPrice', 'fldDivider', 
-    'fldLotSize', 'fldTP'
-  ];
-  for (const field of numberFields) {
-    if (payload[field] === "") {
-      payload[field] = null;
-    } else if (payload[field] !== undefined && payload[field] !== null) {
-      payload[field] = Number(payload[field]);
-    }
-  }
-  return payload;
-}
-
 @Injectable()
 export class ScriptsService {
-  async create(data: Prisma.ScriptUncheckedCreateInput) {
-    const payload = { ...data };
-    sanitizeScriptPayload(payload);
+  async create(data: {
+    shortName: string;
+    fullName: string;
+    isin?: string | null;
+    lotSize: number;
+    isActive?: boolean;
+    exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
+  }) {
+    const { exchangeMappings, ...scriptData } = data;
 
-    return prisma.script.create({
-      data: payload as Prisma.ScriptUncheckedCreateInput,
+    return prisma.$transaction(async (tx) => {
+      const script = await tx.script.create({
+        data: {
+          shortName: scriptData.shortName.trim(),
+          fullName: scriptData.fullName.trim(),
+          isin: scriptData.isin?.trim() || null,
+          lotSize: Number(scriptData.lotSize),
+          isActive: scriptData.isActive ?? true,
+        },
+      });
+
+      if (exchangeMappings && exchangeMappings.length > 0) {
+        await tx.scriptExchangeMapping.createMany({
+          data: exchangeMappings.map((m) => ({
+            scriptId: script.id,
+            exchangeId: m.exchangeId,
+            exchangeScriptCode: m.exchangeScriptCode.trim(),
+          })),
+        });
+      }
+
+      return tx.script.findUnique({
+        where: { id: script.id },
+        include: {
+          scriptExchangeMappings: {
+            include: { exchange: true },
+          },
+        },
+      });
     });
   }
 
@@ -31,7 +49,7 @@ export class ScriptsService {
     const where: Prisma.ScriptWhereInput = {};
 
     if (search) {
-      where.fldScriptName = {
+      where.fullName = {
         contains: search,
         mode: 'insensitive',
       };
@@ -40,26 +58,84 @@ export class ScriptsService {
     return prisma.script.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        scriptExchangeMappings: {
+          include: { exchange: true },
+        },
+      },
     });
   }
 
   async findOne(id: string) {
-    const script = await prisma.script.findUnique({ where: { id } });
+    const script = await prisma.script.findUnique({
+      where: { id },
+      include: {
+        scriptExchangeMappings: {
+          include: { exchange: true },
+        },
+      },
+    });
     if (!script) throw new NotFoundException(`Script ${id} not found`);
     return script;
   }
 
-  async update(id: string, data: Prisma.ScriptUpdateInput) {
-    const payload = { ...data };
-    sanitizeScriptPayload(payload);
-    
-    return prisma.script.update({
-      where: { id },
-      data: payload as Prisma.ScriptUpdateInput,
+  async update(
+    id: string,
+    data: {
+      shortName?: string;
+      fullName?: string;
+      isin?: string | null;
+      lotSize?: number;
+      isActive?: boolean;
+      exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
+    },
+  ) {
+    await this.findOne(id); // ensure exists
+
+    const { exchangeMappings, ...scriptData } = data;
+
+    return prisma.$transaction(async (tx) => {
+      const script = await tx.script.update({
+        where: { id },
+        data: {
+          ...(scriptData.shortName !== undefined && { shortName: scriptData.shortName.trim() }),
+          ...(scriptData.fullName !== undefined && { fullName: scriptData.fullName.trim() }),
+          ...(scriptData.isin !== undefined && { isin: scriptData.isin?.trim() || null }),
+          ...(scriptData.lotSize !== undefined && { lotSize: Number(scriptData.lotSize) }),
+          ...(scriptData.isActive !== undefined && { isActive: scriptData.isActive }),
+        },
+      });
+
+      if (exchangeMappings !== undefined) {
+        // Sync exchange mappings: clear existing and insert new
+        await tx.scriptExchangeMapping.deleteMany({
+          where: { scriptId: id },
+        });
+
+        if (exchangeMappings.length > 0) {
+          await tx.scriptExchangeMapping.createMany({
+            data: exchangeMappings.map((m) => ({
+              scriptId: id,
+              exchangeId: m.exchangeId,
+              exchangeScriptCode: m.exchangeScriptCode.trim(),
+            })),
+          });
+        }
+      }
+
+      return tx.script.findUnique({
+        where: { id },
+        include: {
+          scriptExchangeMappings: {
+            include: { exchange: true },
+          },
+        },
+      });
     });
   }
 
   async remove(id: string) {
+    await this.findOne(id);
     return prisma.script.delete({
       where: { id },
     });

@@ -13,14 +13,23 @@ import {
   BanknotesIcon,
   BookOpenIcon,
   ArrowsRightLeftIcon,
-  ArrowUpTrayIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@/utils/cn";
 
+interface NavItem {
+  name: string;
+  path?: string;
+  icon: React.ComponentType<any>;
+  children?: Array<{ name: string; path: string }>;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const [tradesOpen, setTradesOpen] = React.useState(true);
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { name: "Dashboard", path: "/", icon: Squares2X2Icon },
     { name: "Brokers", path: "/brokers", icon: BuildingOffice2Icon },
     { name: "Clients", path: "/clients", icon: UsersIcon },
@@ -28,15 +37,30 @@ export function Sidebar() {
     { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
     { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
     { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
-    { name: "Trades", path: "/trades", icon: ArrowsRightLeftIcon },
-    { name: "Trade Import", path: "/trades/import", icon: ArrowUpTrayIcon },
+    {
+      name: "Trades",
+      icon: ArrowsRightLeftIcon,
+      children: [
+        { name: "Manual Entry", path: "/trades" },
+        { name: "File Import", path: "/trades/import" },
+      ]
+    }
   ];
 
-  const isActive = (path: string) => {
+  const isActive = (path?: string) => {
+    if (!path) return false;
     if (path === "/") {
       return pathname === "/";
     }
-    return pathname?.startsWith(path);
+    return pathname === path || pathname?.startsWith(path + "/");
+  };
+
+  const isParentActive = (item: NavItem) => {
+    if (item.path) return isActive(item.path);
+    if (item.children) {
+      return item.children.some(child => pathname === child.path);
+    }
+    return false;
   };
 
   return (
@@ -59,11 +83,65 @@ export function Sidebar() {
           </div>
           <nav className="flex flex-col gap-1.5">
             {navItems.map((item) => {
+              const hasChildren = !!item.children;
+              const parentActive = isParentActive(item);
+
+              if (hasChildren) {
+                return (
+                  <div key={item.name} className="flex flex-col gap-1">
+                    <button
+                      onClick={() => setTradesOpen(!tradesOpen)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-150 group text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]",
+                        parentActive && "bg-[var(--sidebar-active-bg)]/10 text-[var(--color-leaf)]"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon
+                          className={cn(
+                            "w-5 h-5 shrink-0 transition-colors",
+                            parentActive ? "text-[var(--color-leaf)]" : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+                          )}
+                        />
+                        <span>{item.name}</span>
+                      </div>
+                      {tradesOpen ? (
+                        <ChevronUpIcon className="w-4 h-4 text-[var(--sidebar-text-muted)]" />
+                      ) : (
+                        <ChevronDownIcon className="w-4 h-4 text-[var(--sidebar-text-muted)]" />
+                      )}
+                    </button>
+
+                    {tradesOpen && (
+                      <div className="pl-6 flex flex-col gap-1 border-l border-[var(--sidebar-divider)] ml-5 mt-1">
+                        {item.children!.map((child) => {
+                          const childActive = pathname === child.path;
+                          return (
+                            <Link
+                              key={child.path}
+                              href={child.path}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-xs transition-all duration-150",
+                                childActive
+                                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
+                                  : "text-[var(--sidebar-text-muted)] hover:bg-[var(--color-emerald)]/10 hover:text-[var(--sidebar-active-txt)]"
+                              )}
+                            >
+                              <span>{child.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const active = isActive(item.path);
               return (
                 <Link
                   key={item.path}
-                  href={item.path}
+                  href={item.path!}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-150 group",
                     active

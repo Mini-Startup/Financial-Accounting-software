@@ -24,14 +24,15 @@ async function upsertAccountByCode(data) {
 
 async function findOrCreateScript(scriptName, shortName) {
   const existing = await prisma.script.findFirst({
-    where: { fldScriptName: scriptName },
+    where: { fullName: scriptName },
   });
   if (existing) return existing;
 
   return prisma.script.create({
     data: {
-      fldScriptName: scriptName,
-      fldShortScript: shortName,
+      fullName: scriptName,
+      shortName: shortName,
+      lotSize: 1,
     },
   });
 }

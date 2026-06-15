@@ -30,15 +30,14 @@ export function FormModal({
     contactPersonMobile: initialData?.contactPersonMobile || '',
     contactPersonEmail: initialData?.contactPersonEmail || '',
 
-    defaultCredit: initialData?.defaultCredit ?? '',
-    interest: initialData?.interest ?? '',
-
     bankName: initialData?.bankName || '',
     bankBranch: initialData?.bankBranch || '',
     ifscCode: initialData?.ifscCode || '',
-    accountNumber: initialData?.accountNumber || '',
+    micrCode: initialData?.micrCode || '',
+    bankAccountNumber: initialData?.bankAccountNumber || '',
     upiId: initialData?.upiId || '',
 
+    referenceName: initialData?.referenceName || '',
     referenceMobile: initialData?.referenceMobile || '',
     referenceEmail: initialData?.referenceEmail || '',
     ...initialData // Keep ID if passing through
@@ -178,20 +177,6 @@ export function FormModal({
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Credit</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="form-label">Default credit (optional)</label>
-                  <input name="defaultCredit" type="number" step="any" value={formData.defaultCredit} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Interest</label>
-                  <input name="interest" type="number" step="any" value={formData.interest} onChange={handleChange} className="input" />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
               <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Banking details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
@@ -207,10 +192,14 @@ export function FormModal({
                   <input name="ifscCode" value={formData.ifscCode} onChange={handleChange} className="input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Account number</label>
-                  <input name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="input" />
+                  <label className="form-label">MICR code</label>
+                  <input name="micrCode" value={formData.micrCode} onChange={handleChange} className="input" />
                 </div>
-                <div className="form-group col-span-2">
+                <div className="form-group">
+                  <label className="form-label">Account number</label>
+                  <input name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} className="input" />
+                </div>
+                <div className="form-group">
                   <label className="form-label">UPI ID</label>
                   <input name="upiId" value={formData.upiId} onChange={handleChange} className="input" />
                 </div>
@@ -220,6 +209,10 @@ export function FormModal({
             <div className="space-y-3">
               <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Referred by</h3>
               <div className="grid grid-cols-2 gap-4">
+                <div className="form-group col-span-2">
+                  <label className="form-label">Reference Name</label>
+                  <input name="referenceName" value={formData.referenceName} onChange={handleChange} className="input" />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Reference mobile number</label>
                   <input name="referenceMobile" value={formData.referenceMobile} onChange={handleChange} className="input" />
@@ -233,7 +226,7 @@ export function FormModal({
             
             <div className="mt-8 pt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
                <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-               <button type="submit" form="accountForm" className="btn btn--primary">Save {groupName}</button>
+               <button type="submit" form="accountForm" className="btn btn--primary">Save</button>
             </div>
           </form>
         </div>

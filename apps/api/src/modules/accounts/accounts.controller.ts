@@ -15,8 +15,9 @@ export class AccountsController {
   findAll(
     @Query('group') group?: string,
     @Query('search') search?: string,
+    @Query('excludeGroups') excludeGroups?: string,
   ) {
-    return this.accountsService.findAll(group, search);
+    return this.accountsService.findAll(group, search, excludeGroups);
   }
 
   @Get(':id')
