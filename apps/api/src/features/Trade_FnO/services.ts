@@ -13,12 +13,16 @@ export interface ParsedTrade {
   tradeTime: string;
   orderId: string;
   uniqueTradeId: string;
+  exchangeTime: string;
+  orderTime: string;
 }
 
 export interface PreviewRow {
   tradeNumber: string;
   clientCode: string;
   scriptCode: string;
+  scriptShortName: string;
+  scriptFullName: string;
   exchange: string;
   buySell: 'BUY' | 'SELL';
   quantity: number;
@@ -29,7 +33,15 @@ export interface PreviewRow {
   resolvedAccountId?: string;
   resolvedScriptId?: string;
   resolvedExchangeId?: string;
+  terminal: string;
+  expiry: string;
+  orderId?: string;
+  exchangeTime?: string;
+  uniqueTradeId?: string;
+  orderTime?: string;
 }
+
+
 
 export class TradeImportService {
   /**
@@ -86,10 +98,11 @@ export class TradeImportService {
           resolvedExchangeId = cachedMapping.exchangeId;
           exchangeCode = cachedMapping.exchange?.code || '';
         } else {
+          // 2.1 Try to resolve via ScriptExchangeMapping first (matching either fullScript or script code)
           const mapping = await prisma.scriptExchangeMapping.findFirst({
             where: {
               exchangeScriptCode: {
-                equals: scriptCode,
+                in: [row.script, row.fullScript].filter(Boolean) as string[],
                 mode: 'insensitive',
               },
             },
@@ -97,14 +110,55 @@ export class TradeImportService {
               exchange: true,
             },
           });
+
           if (mapping) {
             mappingCache.set(cacheKey, mapping);
             resolvedScriptId = mapping.scriptId;
             resolvedExchangeId = mapping.exchangeId;
             exchangeCode = mapping.exchange?.code || '';
           } else {
-            mappingCache.set(cacheKey, null);
-            errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
+            // 2.2 Fallback: Try to resolve by matching Script table's short_name or full_name directly
+            const script = await prisma.script.findFirst({
+              where: {
+                OR: [
+                  { shortName: { equals: row.script, mode: 'insensitive' } },
+                  { shortName: { equals: row.fullScript, mode: 'insensitive' } },
+                  { fullName: { equals: row.script, mode: 'insensitive' } },
+                  { fullName: { equals: row.fullScript, mode: 'insensitive' } },
+                ],
+              },
+              include: {
+                scriptExchangeMappings: {
+                  include: { exchange: true },
+                },
+              },
+            });
+
+            if (script) {
+              resolvedScriptId = script.id;
+              // If it has mappings, use the first mapping's exchange
+              if (script.scriptExchangeMappings && script.scriptExchangeMappings.length > 0) {
+                const firstMap = script.scriptExchangeMappings[0];
+                resolvedExchangeId = firstMap.exchangeId;
+                exchangeCode = firstMap.exchange?.code || '';
+              } else {
+                // Default to first exchange in DB
+                const defaultExchange = await prisma.exchange.findFirst();
+                if (defaultExchange) {
+                  resolvedExchangeId = defaultExchange.id;
+                  exchangeCode = defaultExchange.code;
+                }
+              }
+              // Cache a dummy mapping object so we don't hit DB again
+              mappingCache.set(cacheKey, {
+                scriptId: resolvedScriptId,
+                exchangeId: resolvedExchangeId,
+                exchange: { code: exchangeCode },
+              });
+            } else {
+              mappingCache.set(cacheKey, null);
+              errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
+            }
           }
         }
       }
@@ -128,6 +182,8 @@ export class TradeImportService {
         tradeNumber: row.tradeNo,
         clientCode: row.clientCode,
         scriptCode: row.fullScript || row.script,
+        scriptShortName: row.script,
+        scriptFullName: row.fullScript,
         exchange: exchangeCode,
         buySell: row.type,
         quantity: row.qty,
@@ -138,8 +194,16 @@ export class TradeImportService {
         resolvedAccountId,
         resolvedScriptId,
         resolvedExchangeId,
+        terminal: row.terminal,
+        expiry: row.expiry,
+        orderId: row.orderId,
+        exchangeTime: row.exchangeTime,
+        uniqueTradeId: row.uniqueTradeId,
+        orderTime: row.orderTime,
       });
     }
+
+
 
     return preview;
   }
@@ -152,17 +216,20 @@ export class TradeImportService {
     const parsed = rows.map((r) => ({
       tradeNo: r.tradeNumber,
       clientCode: r.clientCode,
-      script: r.scriptCode,
-      fullScript: r.scriptCode,
-      expiry: '',
-      terminal: '',
+      script: r.scriptShortName,
+      fullScript: r.scriptFullName,
+      expiry: r.expiry || '',
+      terminal: r.terminal || '',
       type: r.buySell,
       qty: r.quantity,
       rate: r.rate,
       tradeTime: r.tradeDate,
-      orderId: '',
-      uniqueTradeId: '',
+      orderId: r.orderId || '',
+      uniqueTradeId: r.uniqueTradeId || '',
+      exchangeTime: r.exchangeTime || '',
+      orderTime: r.orderTime || '',
     }));
+
 
     const preview = await this.previewRows(parsed);
     const validRows = preview.filter((r) => r.status === 'Valid');
@@ -193,6 +260,12 @@ export class TradeImportService {
             rate: row.rate,
             source: 'IMPORT',
             remarks: 'Imported via Trade_FnO wizard',
+            terminal: row.terminal || null,
+            expiry: row.expiry || null,
+            orderId: row.orderId || null,
+            exchangeTime: row.exchangeTime || null,
+            uniqueTradeId: row.uniqueTradeId || null,
+            orderTime: row.orderTime || null,
           },
         });
       })
@@ -203,6 +276,7 @@ export class TradeImportService {
       failedCount: rows.length - importedCount,
     };
   }
+
 }
 
 export const tradeImportService = new TradeImportService();

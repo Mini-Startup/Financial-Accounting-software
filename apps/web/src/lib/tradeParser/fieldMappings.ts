@@ -33,6 +33,8 @@ export const DEFAULT_MAPPING: FieldMapping = {
   orderId: 17,
   tradeTime: 19,
   uniqueTradeId: 21,
+  exchangeTime: 20,
+  orderTime: 23,
 };
 
 // ──────────────────────────────────────────

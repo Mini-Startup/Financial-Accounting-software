@@ -183,6 +183,12 @@ model Trade {
   rate            Float    @map("rate")
   remarks         String?  @map("remarks")
   source          String   @map("source") // MANUAL or IMPORT
+  terminal        String?  @map("terminal")
+  expiry          String?  @map("expiry")
+  orderId         String?  @map("order_id")
+  exchangeTime    String?  @map("exchange_time")
+  uniqueTradeId   String?  @map("unique_trade_id")
+  orderTime       String?  @map("order_time")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt      @map("updated_at")
 

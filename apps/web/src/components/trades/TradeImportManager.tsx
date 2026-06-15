@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileUploadZone } from './FileUploadZone';
 import { toast } from 'sonner';
-import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { parseTradeFile } from '../../lib/tradeParser';
+import { FormModal } from '../accounts/FormModal';
+import { ScriptFormModal } from '../scripts/ScriptFormModal';
 import './trades-import.css';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
@@ -14,9 +16,53 @@ export function TradeImportManager() {
   const [step, setStep] = useState<ImportStep>('UPLOAD');
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [parsedTrades, setParsedTrades] = useState<any[]>([]);
   const [normalizedRows, setNormalizedRows] = useState<any[]>([]);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [importResult, setImportResult] = useState<{ importedCount: number; failedCount: number } | null>(null);
+
+  // Auto-creation modal states
+  const [exchanges, setExchanges] = useState<any[]>([]);
+  const [brokers, setBrokers] = useState<any[]>([]);
+  const [selectedExchangeId, setSelectedExchangeId] = useState<string>('');
+  const [selectedBrokerId, setSelectedBrokerId] = useState<string>('');
+  const [selectedImportType, setSelectedImportType] = useState<string>('trades_fno');
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
+  const [showScriptModal, setShowScriptModal] = useState(false);
+  const [scriptModalInitialData, setScriptModalInitialData] = useState<any>(null);
+
+  // Load exchanges and brokers on mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        
+        // 1. Fetch Exchanges
+        const exRes = await fetch(`${apiUrl}/exchanges`);
+        if (exRes.ok) {
+          const exData = await exRes.json();
+          setExchanges(exData);
+          if (exData.length > 0) {
+            setSelectedExchangeId(exData[0].id);
+          }
+        }
+
+        // 2. Fetch Brokers (Sundry Creditors)
+        const brRes = await fetch(`${apiUrl}/accounts?group=Sundry Creditors`);
+        if (brRes.ok) {
+          const brData = await brRes.json();
+          setBrokers(brData);
+          if (brData.length > 0) {
+            setSelectedBrokerId(brData[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial data:', err);
+      }
+    };
+    fetchInitialData();
+  }, []);
 
   const handleFileRead = async (content: string, name: string) => {
     setIsProcessing(true);
@@ -27,6 +73,7 @@ export function TradeImportManager() {
       if (parseResult.trades.length === 0) {
         throw new Error('No valid trade rows found in the file structure.');
       }
+      setParsedTrades(parseResult.trades);
 
       // 2. Fetch preview validations from the backend
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -49,6 +96,33 @@ export function TradeImportManager() {
     } catch (err: any) {
       toast.error(err.message || 'Error uploading file');
       setFileName('');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRevalidate = async () => {
+    if (parsedTrades.length === 0) return;
+    setIsProcessing(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: parsedTrades }),
+      });
+
+      if (!previewRes.ok) {
+        const err = await previewRes.json();
+        throw new Error(err.message || 'Failed to re-validate rows');
+      }
+
+      const previewData = await previewRes.json();
+      setPreviewRows(previewData);
+      setNormalizedRows(previewData);
+      toast.success('Validation updated with latest database records.');
+    } catch (err: any) {
+      toast.error(err.message || 'Error re-validating trades');
     } finally {
       setIsProcessing(false);
     }
@@ -83,14 +157,48 @@ export function TradeImportManager() {
   const handleReset = () => {
     setStep('UPLOAD');
     setFileName('');
+    setParsedTrades([]);
     setNormalizedRows([]);
     setPreviewRows([]);
     setImportResult(null);
   };
 
+  const handleClientDoubleClick = (clientCode: string) => {
+    setClientModalInitialData({
+      code: clientCode,
+      name: clientCode,
+    });
+    setShowClientModal(true);
+  };
+
+  const handleScriptDoubleClick = (shortName: string, fullName: string, exchangeCode: string) => {
+    let foundExchange = exchanges.find(
+      (ex) => ex.code.toUpperCase() === (exchangeCode || '').toUpperCase()
+    );
+    // Fallback to the user-selected exchange from the dropdown if the row doesn't have it resolved yet
+    if (!foundExchange && selectedExchangeId) {
+      foundExchange = exchanges.find((ex) => ex.id === selectedExchangeId);
+    }
+    setScriptModalInitialData({
+      shortName: shortName,
+      fullName: fullName,
+      scriptExchangeMappings: foundExchange
+        ? [
+            {
+              exchangeId: foundExchange.id,
+              exchangeScriptCode: fullName,
+            },
+          ]
+        : [],
+    });
+    setShowScriptModal(true);
+  };
+
+
+
   // Compute stats
   const totalRows = previewRows.length;
-  const validRowsCount = previewRows.filter(r => r.status === 'Valid').length;
+  const validRowsCount = previewRows.filter((r) => r.status === 'Valid').length;
   const invalidRowsCount = totalRows - validRowsCount;
 
   return (
@@ -132,9 +240,59 @@ export function TradeImportManager() {
 
       {/* Wizard Steps */}
       {step === 'UPLOAD' && (
-        <div className="max-w-2xl mx-auto py-10">
-          <div className="card p-8">
-            <FileUploadZone onFileRead={handleFileRead} isProcessing={isProcessing} />
+        <div className="max-w-3xl mx-auto py-6">
+          <div className="card shadow-md border border-[var(--color-border-light)] p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="form-field">
+                <label className="form-label form-label--required">Broker Selection</label>
+                <select
+                  value={selectedBrokerId}
+                  onChange={(e) => setSelectedBrokerId(e.target.value)}
+                  className="input"
+                  disabled={isProcessing}
+                >
+                  <option value="" disabled>Select a Broker</option>
+                  {brokers.map((broker) => (
+                    <option key={broker.id} value={broker.id}>
+                      {broker.code} - {broker.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label className="form-label form-label--required">Exchange Selection</label>
+                <select
+                  value={selectedExchangeId}
+                  onChange={(e) => setSelectedExchangeId(e.target.value)}
+                  className="input"
+                  disabled={isProcessing}
+                >
+                  <option value="" disabled>Select an Exchange</option>
+                  {exchanges.map((ex) => (
+                    <option key={ex.id} value={ex.id}>
+                      {ex.code} {ex.name ? `(${ex.name})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label className="form-label form-label--required">Import Type</label>
+                <select
+                  value={selectedImportType}
+                  onChange={(e) => setSelectedImportType(e.target.value)}
+                  className="input"
+                  disabled={isProcessing}
+                >
+                  <option value="trades_fno">Trades (F&O)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--color-border-light)] pt-6">
+              <FileUploadZone onFileRead={handleFileRead} isProcessing={isProcessing} />
+            </div>
           </div>
         </div>
       )}
@@ -145,7 +303,9 @@ export function TradeImportManager() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="card bg-[var(--color-snow)]">
               <div className="card__body p-4 flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">📂</div>
+                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
                 <div>
                   <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Total Rows</div>
                   <div className="text-lg font-bold text-[var(--color-charcoal)]">{totalRows}</div>
@@ -178,6 +338,13 @@ export function TradeImportManager() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between text-xs text-[var(--color-slate)] italic bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+            <span>💡 Tip: Double-click on any red client or script code to automatically create and map it in the database.</span>
+            <button onClick={handleRevalidate} disabled={isProcessing} className="flex items-center gap-1 text-[var(--color-emerald)] font-semibold hover:underline">
+              <RefreshCw className={cn("w-3 h-3", isProcessing && "animate-spin")} /> Re-run validation
+            </button>
+          </div>
+
           {/* Table Container */}
           <div className="card">
             <div className="card__body p-0 overflow-x-auto">
@@ -185,14 +352,15 @@ export function TradeImportManager() {
                 <thead>
                   <tr>
                     <th>Trade No</th>
-                    <th>Client</th>
+                    <th>Date</th>
                     <th>Script</th>
-                    <th>Exchange</th>
-                    <th>Buy/Sell</th>
-                    <th className="text-right">Quantity</th>
+                    <th>BS</th>
+                    <th className="text-right">Qty</th>
                     <th className="text-right">Rate</th>
+                    <th>Client</th>
+                    <th>Terminal</th>
+                    <th>Close Out</th>
                     <th>Status</th>
-                    <th>Errors</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -204,9 +372,19 @@ export function TradeImportManager() {
                       )}
                     >
                       <td className="font-mono text-xs">{row.tradeNumber}</td>
-                      <td className="font-mono text-xs">{row.clientCode}</td>
-                      <td className="font-semibold text-xs">{row.scriptCode}</td>
-                      <td className="font-bold text-xs">{row.exchange}</td>
+                      <td className="text-xs">{row.tradeDate}</td>
+                      <td
+                        className={cn(
+                          'text-xs cursor-pointer select-none transition-colors hover:bg-slate-100/50 p-2 rounded',
+                          !row.resolvedScriptId
+                            ? 'text-[var(--color-negative)] font-bold hover:underline decoration-red-500'
+                            : 'font-semibold'
+                        )}
+                        onDoubleClick={() => handleScriptDoubleClick(row.scriptShortName, row.scriptFullName, row.exchange)}
+                        title={!row.resolvedScriptId ? 'Double-click to create script mapping' : 'Script resolved'}
+                      >
+                        {row.scriptShortName}
+                      </td>
                       <td>
                         <span
                           className={cn(
@@ -221,6 +399,20 @@ export function TradeImportManager() {
                       </td>
                       <td className="text-right font-mono font-semibold text-xs">{row.quantity}</td>
                       <td className="text-right font-mono font-semibold text-xs">₹{row.rate.toFixed(2)}</td>
+                      <td
+                        className={cn(
+                          'font-mono text-xs cursor-pointer select-none transition-colors hover:bg-slate-100/50 p-2 rounded',
+                          !row.resolvedAccountId
+                            ? 'text-[var(--color-negative)] font-bold hover:underline decoration-red-500'
+                            : ''
+                        )}
+                        onDoubleClick={() => handleClientDoubleClick(row.clientCode)}
+                        title={!row.resolvedAccountId ? 'Double-click to create client' : 'Client resolved'}
+                      >
+                        {row.clientCode}
+                      </td>
+                      <td className="text-xs">{row.terminal}</td>
+                      <td className="text-xs">{row.expiry}</td>
                       <td>
                         <span
                           className={cn(
@@ -240,9 +432,6 @@ export function TradeImportManager() {
                             </>
                           )}
                         </span>
-                      </td>
-                      <td className="text-xs text-[var(--color-negative)] max-w-[250px] truncate" title={row.errors.join(', ')}>
-                        {row.errors.length > 0 ? row.errors.join(', ') : <span className="text-gray-300">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -284,6 +473,32 @@ export function TradeImportManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Auto-Creation Modals */}
+      {showClientModal && (
+        <FormModal
+          entityLabel="Client"
+          groupName="Sundry Debtors"
+          initialData={clientModalInitialData}
+          onClose={() => setShowClientModal(false)}
+          onSuccess={() => {
+            setShowClientModal(false);
+            handleRevalidate();
+          }}
+        />
+      )}
+
+      {showScriptModal && (
+        <ScriptFormModal
+          initialData={scriptModalInitialData}
+          exchanges={exchanges}
+          onClose={() => setShowScriptModal(false)}
+          onSuccess={() => {
+            setShowScriptModal(false);
+            handleRevalidate();
+          }}
+        />
       )}
     </div>
   );

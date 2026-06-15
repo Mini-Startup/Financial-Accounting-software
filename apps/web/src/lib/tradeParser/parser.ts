@@ -95,6 +95,8 @@ function extractFields(fields: string[], mapping: FieldMapping) {
     orderId: safeGet(mapping.orderId),
     tradeTime: safeGet(mapping.tradeTime),
     uniqueTradeId: safeGet(mapping.uniqueTradeId),
+    exchangeTime: safeGet(mapping.exchangeTime),
+    orderTime: safeGet(mapping.orderTime),
   };
 }
 
@@ -149,6 +151,8 @@ function validateAndTransform(
       tradeTime,
       orderId: raw.orderId,
       uniqueTradeId: raw.uniqueTradeId,
+      exchangeTime: raw.exchangeTime,
+      orderTime: raw.orderTime,
     },
   };
 }

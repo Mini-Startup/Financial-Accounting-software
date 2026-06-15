@@ -1,3 +1,55 @@
+-- CreateTable exchanges
+CREATE TABLE "exchanges" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "exchanges_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "exchanges_code_key" ON "exchanges"("code");
+
+-- Create enums
+CREATE TYPE "AppliesTo" AS ENUM ('CLIENT', 'BROKER');
+CREATE TYPE "BrokerageType" AS ENUM ('AMOUNT', 'PERCENT');
+CREATE TYPE "BrokerageScope" AS ENUM ('DEFAULT', 'SCRIPT');
+
+-- CreateTable brokerages
+CREATE TABLE "brokerages" (
+    "id" TEXT NOT NULL,
+    "account_id" TEXT NOT NULL,
+    "exchange_id" TEXT NOT NULL,
+    "applies_to" "AppliesTo" NOT NULL,
+    "type" "BrokerageType" NOT NULL,
+    "scope" "BrokerageScope" NOT NULL DEFAULT 'DEFAULT',
+    "script_id" TEXT,
+    "base_amount" DOUBLE PRECISION,
+    "flat_fee" DOUBLE PRECISION,
+    "trading_buy_pct" DOUBLE PRECISION,
+    "trading_sell_pct" DOUBLE PRECISION,
+    "trading_min_fee" DOUBLE PRECISION,
+    "delivery_buy_pct" DOUBLE PRECISION,
+    "delivery_sell_pct" DOUBLE PRECISION,
+    "delivery_min_fee" DOUBLE PRECISION,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "brokerages_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX "brokerages_account_id_idx" ON "brokerages"("account_id");
+CREATE INDEX "brokerages_exchange_id_idx" ON "brokerages"("exchange_id");
+CREATE UNIQUE INDEX "brokerages_account_id_exchange_id_applies_to_scope_script_id_key" ON "brokerages"("account_id", "exchange_id", "applies_to", "scope", "script_id");
+
+-- AddForeignKey
+ALTER TABLE "brokerages" ADD CONSTRAINT "brokerages_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "brokerages" ADD CONSTRAINT "brokerages_exchange_id_fkey" FOREIGN KEY ("exchange_id") REFERENCES "exchanges"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "brokerages" ADD CONSTRAINT "brokerages_script_id_fkey" FOREIGN KEY ("script_id") REFERENCES "scripts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Drop old ClientBrokerage table
+DROP TABLE IF EXISTS "ClientBrokerage";
+
 -- Wipe existing data first to allow adding required columns without defaults
 DELETE FROM "brokerages";
 DELETE FROM "scripts";

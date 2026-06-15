@@ -9,11 +9,13 @@ export function FormModal({
   entityLabel,
   groupName,
   onClose,
+  onSuccess,
 }: {
   initialData?: any;
   entityLabel: string;
   groupName: string;
   onClose: () => void;
+  onSuccess?: () => void;
 }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
@@ -61,12 +63,21 @@ export function FormModal({
         groupName: initialData?.fldGroupNo ? undefined : groupName, 
       };
       
-      await fetch(url, {
+      const res = await fetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      window.location.reload();
+      if (res.ok) {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.reload();
+        }
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Save failed.');
+      }
     } catch(err) {
       console.error(err);
       alert('Save failed.');

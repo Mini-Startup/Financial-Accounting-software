@@ -9,10 +9,12 @@ export function ScriptFormModal({
   initialData,
   exchanges,
   onClose,
+  onSuccess,
 }: {
   initialData?: any;
   exchanges: any[];
   onClose: () => void;
+  onSuccess?: () => void;
 }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
 
@@ -80,7 +82,11 @@ export function ScriptFormModal({
 
       if (res.ok) {
         toast.success(initialData ? 'Script updated' : 'Script created');
-        window.location.reload();
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.reload();
+        }
       } else {
         const err = await res.json();
         toast.error(err.message || 'Failed to save script');

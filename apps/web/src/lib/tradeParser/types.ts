@@ -19,6 +19,8 @@ export interface ParsedTrade {
   tradeTime: string;
   orderId: string;
   uniqueTradeId: string;
+  exchangeTime: string;
+  orderTime: string;
 }
 
 /** Error captured during parsing — one per problematic row */
@@ -54,4 +56,6 @@ export interface FieldMapping {
   orderId: number;
   tradeTime: number;
   uniqueTradeId: number;
+  exchangeTime: number;
+  orderTime: number;
 }
