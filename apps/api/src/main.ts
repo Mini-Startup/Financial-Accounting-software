@@ -6,9 +6,11 @@ import { errorHandler } from './errors';
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
-
+const FRONTEND_URL=process.env.FRONTEND_URL || "https://finance-frontend-weld.vercel.app"
 // ─── Middleware ──────────────────────────────────────
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", FRONTEND_URL]
+}));
 app.use(express.json());
 
 // ─── Routes ─────────────────────────────────────────
