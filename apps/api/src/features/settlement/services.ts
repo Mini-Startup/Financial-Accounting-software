@@ -94,6 +94,26 @@ export class SettlementService {
       groups.get(key)!.push(leg);
     }
 
+    // Fetch closing rates on the toDate
+    const rateDateStart = new Date(toDate);
+    rateDateStart.setHours(0, 0, 0, 0);
+    const rateDateEnd = new Date(toDate);
+    rateDateEnd.setHours(23, 59, 59, 999);
+
+    const closingRates = await prisma.closingRate.findMany({
+      where: {
+        rateDate: {
+          gte: rateDateStart,
+          lte: rateDateEnd,
+        },
+      },
+    });
+
+    const closingRateMap = new Map<string, number>();
+    for (const cr of closingRates) {
+      closingRateMap.set(`${cr.exchangeId}_${cr.scriptId}`, cr.rate);
+    }
+
     const summary: Array<{
       accountId: string;
       accountCode: string;
@@ -115,6 +135,7 @@ export class SettlementService {
       netVal: number;
       netAvgRate: number;
       realizedPnL: number;
+      closingRate: number | null;
     }> = [];
 
     for (const [_, groupLegs] of groups.entries()) {
@@ -155,6 +176,8 @@ export class SettlementService {
         netAvgRate = Math.abs(netVal / netQty);
       }
 
+      const closingRate = closingRateMap.get(`${firstLeg.exchangeId}_${firstLeg.scriptId}`) ?? null;
+
       summary.push({
         accountId: firstLeg.accountId,
         accountCode: firstLeg.accountCode,
@@ -176,6 +199,7 @@ export class SettlementService {
         netVal,
         netAvgRate: Number(netAvgRate.toFixed(4)),
         realizedPnL: Number(realizedPnL.toFixed(4)),
+        closingRate,
       });
     }
 

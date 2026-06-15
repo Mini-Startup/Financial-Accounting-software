@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Search, Calculator, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { Search, Calculator, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 
 interface SettlementItem {
   accountId: string;
@@ -14,6 +14,7 @@ interface SettlementItem {
   scriptFullName: string;
   exchangeId: string;
   exchangeCode: string;
+  expiry: string | null;
   buyQty: number;
   buyVal: number;
   buyAvgRate: number;
@@ -24,6 +25,7 @@ interface SettlementItem {
   netVal: number;
   netAvgRate: number;
   realizedPnL: number;
+  closingRate: number | null;
 }
 
 export default function SettlementPage() {
@@ -32,6 +34,7 @@ export default function SettlementPage() {
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<SettlementItem[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [showAutoCalculated, setShowAutoCalculated] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,6 +58,7 @@ export default function SettlementPage() {
     }
 
     setLoading(true);
+    setShowAutoCalculated(false); // Reset auto-calculation state on new generate
     try {
       const url = `http://localhost:4000/settlement?fromDate=${fromDate}&toDate=${toDate}`;
       const res = await fetch(url);
@@ -99,6 +103,34 @@ export default function SettlementPage() {
   const totalRealizedPnL = filteredData.reduce((sum, item) => sum + item.realizedPnL, 0);
   const totalVolume = filteredData.reduce((sum, item) => sum + item.buyQty + item.sellQty, 0);
   const openPositionsCount = filteredData.filter(item => item.netQty !== 0).length;
+
+  // Carry Forward and Back Forward Date calculations
+  const formatDateStr = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
+  const getNextDayStr = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      d.setDate(d.getDate() + 1);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
+  const carryForwardDateFormatted = formatDateStr(toDate);
+  const backForwardDateFormatted = getNextDayStr(toDate);
+
+  // Filter positions that have open balances to be carry/back forwarded
+  const openPositions = filteredData.filter(item => item.netQty !== 0);
 
   return (
     <div className="space-y-8">
@@ -220,7 +252,7 @@ export default function SettlementPage() {
                 />
               </div>
 
-              {/* Dropdowns */}
+              {/* Action Buttons & Dropdowns */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[var(--color-slate)] font-medium">Role:</span>
@@ -247,6 +279,25 @@ export default function SettlementPage() {
                     <option value="CLOSED">Closed Positions</option>
                   </select>
                 </div>
+
+                {openPositions.length > 0 && (
+                  <button
+                    onClick={() => setShowAutoCalculated(!showAutoCalculated)}
+                    className="btn btn--secondary flex items-center justify-center gap-2 text-xs py-1.5 px-4"
+                  >
+                    {showAutoCalculated ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5" />
+                        Hide Auto-Calculated Trades
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5" />
+                        Show Auto Calculated Trades
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -332,6 +383,173 @@ export default function SettlementPage() {
               </div>
             </div>
           </div>
+
+          {/* Auto-Calculated Forwarding Tables */}
+          {showAutoCalculated && openPositions.length > 0 && (
+            <div className="space-y-8 animate-fadeIn pt-4">
+              <hr className="border-[var(--sidebar-divider)]" />
+              
+              {/* Carry Forward Section */}
+              <div className="space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--color-charcoal)]">Carry Forwarded Trades</h3>
+                    <p className="text-xs text-[var(--color-slate)]">
+                      These closing trades invert the remaining open quantity. Will be added on date: <span className="font-semibold text-[var(--color-charcoal)]">{carryForwardDateFormatted}</span>.
+                    </p>
+                  </div>
+                  <span className="badge badge--neutral text-xs">Closing Rate Valuation</span>
+                </div>
+
+                <div className="card">
+                  <div className="card__body p-0 overflow-x-auto">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Party Code & Name</th>
+                          <th>Role</th>
+                          <th>Script (Exchange)</th>
+                          <th>Expiry</th>
+                          <th>Action</th>
+                          <th className="text-right">Quantity</th>
+                          <th className="text-right">Valuation Rate</th>
+                          <th className="text-right">Valuation Amount</th>
+                          <th>Add Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {openPositions.map((item, index) => {
+                          const action = item.netQty > 0 ? 'SELL' : 'BUY';
+                          const qty = Math.abs(item.netQty);
+                          const rate = item.closingRate ?? 0;
+                          const hasNoRate = item.closingRate === null;
+
+                          return (
+                            <tr key={`cf_${item.accountId}_${item.scriptId}_${index}`}>
+                              <td>
+                                <div className="font-mono font-medium text-[var(--color-charcoal)]">{item.accountCode}</div>
+                                <div className="text-xs text-[var(--color-slate)] truncate max-w-[200px]">{item.accountName}</div>
+                              </td>
+                              <td>
+                                <span className={`badge ${item.role === 'CLIENT' ? 'badge--success' : 'badge--warning'}`}>
+                                  {item.role}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="font-semibold text-[var(--color-charcoal)]">{item.scriptShortName}</div>
+                                <div className="text-[10px] text-[var(--color-slate)]">{item.exchangeCode}</div>
+                              </td>
+                              <td className="font-mono text-xs text-[var(--color-slate)]">{item.expiry || '—'}</td>
+                              <td>
+                                <span className={`badge ${action === 'BUY' ? 'badge--success' : 'badge--warning'} font-bold`}>
+                                  {action}
+                                </span>
+                              </td>
+                              <td className="text-right font-mono font-medium">{qty.toLocaleString('en-IN')}</td>
+                              <td className="text-right font-mono">
+                                {hasNoRate ? (
+                                  <span className="text-amber-600 flex items-center justify-end gap-1 text-xs font-semibold" title="Please add a closing rate for this script in the database.">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    ₹0.00 (Missing)
+                                  </span>
+                                ) : (
+                                  `₹${rate.toFixed(2)}`
+                                )}
+                              </td>
+                              <td className="text-right font-mono font-semibold">
+                                ₹{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="text-xs font-medium text-[var(--color-charcoal)]">{carryForwardDateFormatted}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back Forward Section */}
+              <div className="space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--color-charcoal)]">Back Forwarded Trades</h3>
+                    <p className="text-xs text-[var(--color-slate)]">
+                      These opening trades re-establish the positions on the next day. Will be added on date: <span className="font-semibold text-[var(--color-charcoal)]">{backForwardDateFormatted}</span>.
+                    </p>
+                  </div>
+                  <span className="badge badge--neutral text-xs">Opening Position Re-entry</span>
+                </div>
+
+                <div className="card">
+                  <div className="card__body p-0 overflow-x-auto">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Party Code & Name</th>
+                          <th>Role</th>
+                          <th>Script (Exchange)</th>
+                          <th>Expiry</th>
+                          <th>Action</th>
+                          <th className="text-right">Quantity</th>
+                          <th className="text-right">Valuation Rate</th>
+                          <th className="text-right">Valuation Amount</th>
+                          <th>Add Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {openPositions.map((item, index) => {
+                          const action = item.netQty > 0 ? 'BUY' : 'SELL';
+                          const qty = Math.abs(item.netQty);
+                          const rate = item.closingRate ?? 0;
+                          const hasNoRate = item.closingRate === null;
+
+                          return (
+                            <tr key={`bf_${item.accountId}_${item.scriptId}_${index}`}>
+                              <td>
+                                <div className="font-mono font-medium text-[var(--color-charcoal)]">{item.accountCode}</div>
+                                <div className="text-xs text-[var(--color-slate)] truncate max-w-[200px]">{item.accountName}</div>
+                              </td>
+                              <td>
+                                <span className={`badge ${item.role === 'CLIENT' ? 'badge--success' : 'badge--warning'}`}>
+                                  {item.role}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="font-semibold text-[var(--color-charcoal)]">{item.scriptShortName}</div>
+                                <div className="text-[10px] text-[var(--color-slate)]">{item.exchangeCode}</div>
+                              </td>
+                              <td className="font-mono text-xs text-[var(--color-slate)]">{item.expiry || '—'}</td>
+                              <td>
+                                <span className={`badge ${action === 'BUY' ? 'badge--success' : 'badge--warning'} font-bold`}>
+                                  {action}
+                                </span>
+                              </td>
+                              <td className="text-right font-mono font-medium">{qty.toLocaleString('en-IN')}</td>
+                              <td className="text-right font-mono">
+                                {hasNoRate ? (
+                                  <span className="text-amber-600 flex items-center justify-end gap-1 text-xs font-semibold" title="Please add a closing rate for this script in the database.">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    ₹0.00 (Missing)
+                                  </span>
+                                ) : (
+                                  `₹${rate.toFixed(2)}`
+                                )}
+                              </td>
+                              <td className="text-right font-mono font-semibold">
+                                ₹{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="text-xs font-medium text-[var(--color-charcoal)]">{backForwardDateFormatted}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
