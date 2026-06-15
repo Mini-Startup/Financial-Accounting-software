@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { calculateTrade, type BrokerageRule, type CalcResult } from 'utils';
+import { calculateTrade, type BrokerageRule, type CalcResult } from '@/utils/brokerage';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';

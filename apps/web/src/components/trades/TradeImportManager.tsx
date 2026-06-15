@@ -5,6 +5,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { toast } from 'sonner';
 import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import './trades-import.css';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
 

@@ -1,5 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server';
-import { prisma } from 'database';
+import { prisma } from '@/database';
 
 export async function syncUser(): Promise<void> {
   const user = await currentUser();

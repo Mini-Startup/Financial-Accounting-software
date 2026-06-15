@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TradeFormModal } from './TradeFormModal';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +19,9 @@ export function TradesPageManager({
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [trades, setTrades] = useState<any[]>(initialTrades);
+
+  const clients = useMemo(() => accounts.filter(a => a.group?.name === 'Sundry Debtors'), [accounts]);
+  const brokers = useMemo(() => accounts.filter(a => a.group?.name === 'Sundry Creditors'), [accounts]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this trade?')) return;
@@ -140,7 +143,8 @@ export function TradesPageManager({
         <TradeFormModal
           exchanges={exchanges}
           scripts={scripts}
-          accounts={accounts}
+          clients={clients}
+          brokers={brokers}
           onClose={() => setIsAdding(false)}
           onSave={handleSave}
         />
