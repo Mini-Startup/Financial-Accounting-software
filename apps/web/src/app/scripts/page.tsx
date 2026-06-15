@@ -17,8 +17,8 @@ export default async function ScriptsPage(props: { searchParams: Promise<{ searc
   const query = searchParams?.search ? `?search=${encodeURIComponent(searchParams.search)}` : '';
   
   const [scripts, exchanges] = await Promise.all([
-    safeFetch(`http://localhost:4000/scripts${query}`),
-    safeFetch('http://localhost:4000/exchanges?active=true'),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts${query}`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges?active=true`),
   ]);
 
   return (

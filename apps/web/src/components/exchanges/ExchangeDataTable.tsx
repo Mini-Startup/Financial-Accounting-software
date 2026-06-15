@@ -8,7 +8,7 @@ export function ExchangeDataTable({ exchanges }: { exchanges: any[] }) {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to deactivate this exchange?')) return;
     try {
-      await fetch(`http://localhost:4000/exchanges/${id}`, { method: 'DELETE' });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges/${id}`, { method: 'DELETE' });
       window.location.reload();
     } catch(e) {
       console.error(e);

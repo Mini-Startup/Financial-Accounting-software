@@ -19,7 +19,7 @@ export function LedgerPageManager({
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this ledger account?')) return;
     try {
-      const res = await fetch(`http://localhost:4000/accounts/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

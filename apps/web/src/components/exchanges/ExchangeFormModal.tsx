@@ -16,8 +16,8 @@ export function ExchangeFormModal({ initialData, onClose }: { initialData?: any,
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `http://localhost:4000/exchanges/${initialData.id}` 
-        : `http://localhost:4000/exchanges`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/exchanges/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/exchanges`;
       
       const payload = {
         code: formData.code,

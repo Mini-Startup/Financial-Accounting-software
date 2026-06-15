@@ -66,7 +66,7 @@ export function BrokerageFormModal({
         payload.deliveryMinFee = parseFloat(formData.deliveryMinFee || '0');
       }
 
-      const res = await fetch(`http://localhost:4000/brokerages`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

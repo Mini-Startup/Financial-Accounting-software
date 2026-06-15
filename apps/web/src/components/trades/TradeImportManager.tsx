@@ -38,7 +38,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         
         // 1. Fetch Exchanges
         const exRes = await fetch(`${apiUrl}/exchanges`);
@@ -102,7 +102,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       setParsedTrades(parseResult.trades);
 
       // 2. Fetch preview validations from the backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,7 +131,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     if (parsedTrades.length === 0) return;
     setIsProcessing(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,7 +157,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const handleConfirmImport = async () => {
     setIsProcessing(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${apiUrl}/trade-import/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

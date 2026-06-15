@@ -15,10 +15,10 @@ async function safeFetch(url: string) {
 
 export default async function TradesPage() {
   const [exchanges, accounts, scripts, trades] = await Promise.all([
-    safeFetch('http://localhost:4000/exchanges?active=true'),
-    safeFetch('http://localhost:4000/accounts'),
-    safeFetch('http://localhost:4000/scripts'),
-    safeFetch('http://localhost:4000/trades'),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges?active=true`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/trades`),
   ]);
 
   return (

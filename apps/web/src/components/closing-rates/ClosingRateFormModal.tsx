@@ -31,8 +31,8 @@ export function ClosingRateFormModal({
     }
     try {
       const url = initialData?.id 
-        ? `http://localhost:4000/closing-rates/${initialData.id}` 
-        : `http://localhost:4000/closing-rates`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/closing-rates/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/closing-rates`;
       
       const payload = {
         exchangeId: formData.exchangeId,

@@ -47,7 +47,7 @@ export function TradeFormModal({
 
   const fetchExpiryDates = async (selectLatestDate?: string) => {
     try {
-      const res = await fetch('http://localhost:4000/expiry-dates');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates`);
       if (res.ok) {
         const data = await res.json();
         const activeOnly = data.filter((item: any) => item.isActive);
@@ -89,8 +89,8 @@ export function TradeFormModal({
       try {
         const scriptQuery = scriptId ? `&scriptId=${scriptId}` : '';
         const [clientRes, brokerRes] = await Promise.all([
-          fetch(`http://localhost:4000/brokerages/resolve?accountId=${clientId}&exchangeId=${exchangeId}&appliesTo=CLIENT${scriptQuery}`),
-          fetch(`http://localhost:4000/brokerages/resolve?accountId=${brokerId}&exchangeId=${exchangeId}&appliesTo=BROKER${scriptQuery}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${clientId}&exchangeId=${exchangeId}&appliesTo=CLIENT${scriptQuery}`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${brokerId}&exchangeId=${exchangeId}&appliesTo=BROKER${scriptQuery}`),
         ]);
 
         const parseSafe = async (res: Response) => {
@@ -186,7 +186,7 @@ export function TradeFormModal({
     const rateNum = parseFloat(marketRate || '0');
 
     try {
-      const res = await fetch('http://localhost:4000/trades', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

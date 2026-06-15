@@ -60,7 +60,7 @@ export default function SettlementPage() {
     setLoading(true);
     setShowAutoCalculated(false); // Reset auto-calculation state on new generate
     try {
-      const url = `http://localhost:4000/settlement?fromDate=${fromDate}&toDate=${toDate}`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?fromDate=${fromDate}&toDate=${toDate}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();

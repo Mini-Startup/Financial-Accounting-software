@@ -9,7 +9,7 @@ export function ExpiryDateDataTable({ expiryDates }: { expiryDates: any[] }) {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this expiry date?')) return;
     try {
-      await fetch(`http://localhost:4000/expiry-dates/${id}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates/${id}`, {
         method: 'DELETE',
       });
       window.location.reload();

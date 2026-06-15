@@ -61,8 +61,8 @@ export function LedgerFormModal({
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `http://localhost:4000/accounts/${initialData.id}` 
-        : `http://localhost:4000/accounts`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/accounts/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/accounts`;
       
       const payload = {
         ...formData,

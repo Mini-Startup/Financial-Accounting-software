@@ -17,7 +17,7 @@ export function ClosingRateDataTable({
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this closing rate?')) return;
     try {
-      await fetch(`http://localhost:4000/closing-rates/${id}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/closing-rates/${id}`, {
         method: 'DELETE',
       });
       window.location.reload();

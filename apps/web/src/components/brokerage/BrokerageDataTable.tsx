@@ -6,7 +6,7 @@ export function BrokerageDataTable({ brokerages }: { brokerages: any[] }) {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this brokerage rule?')) return;
     try {
-      await fetch(`http://localhost:4000/brokerages/${id}`, { method: 'DELETE' });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/${id}`, { method: 'DELETE' });
       window.location.reload();
     } catch(e) {
       console.error(e);

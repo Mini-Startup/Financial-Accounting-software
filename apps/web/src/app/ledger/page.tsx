@@ -14,8 +14,8 @@ async function safeFetch(url: string) {
 
 export default async function LedgerPage() {
   const [accounts, groups] = await Promise.all([
-    safeFetch('http://localhost:4000/accounts?excludeGroups=Sundry%20Debtors,Sundry%20Creditors'),
-    safeFetch('http://localhost:4000/groups'),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts?excludeGroups=Sundry%20Debtors,Sundry%20Creditors`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/groups`),
   ]);
 
   return <LedgerPageManager initialAccounts={accounts} groups={groups} />;

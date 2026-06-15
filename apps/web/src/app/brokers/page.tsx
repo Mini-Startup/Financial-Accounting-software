@@ -6,7 +6,7 @@ export default async function BrokersPage(props: { searchParams: Promise<{ searc
   
   let accounts = [];
   try {
-    const res = await fetch(`http://localhost:4000/accounts?group=Sundry%20Creditors${query}`, { cache: 'no-store' });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts?group=Sundry%20Creditors${query}`, { cache: 'no-store' });
     if (res.ok) accounts = await res.json();
   } catch (e) {
     console.error("Failed to fetch brokers from API");

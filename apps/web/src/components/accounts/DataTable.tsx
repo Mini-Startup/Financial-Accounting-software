@@ -10,7 +10,7 @@ export function DataTable({ accounts, groupName, entityLabel }: { accounts: any[
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this specific record?')) return;
     try {
-      await fetch(`http://localhost:4000/accounts/${id}`, { method: 'DELETE' });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/${id}`, { method: 'DELETE' });
       window.location.reload(); // Hard reload syncs layout with DB easily
     } catch(e) {
       console.error(e);

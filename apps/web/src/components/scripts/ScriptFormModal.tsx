@@ -65,8 +65,8 @@ export function ScriptFormModal({
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `http://localhost:4000/scripts/${initialData.id}` 
-        : `http://localhost:4000/scripts`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/scripts/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/scripts`;
       
       const payload = {
         ...formData,

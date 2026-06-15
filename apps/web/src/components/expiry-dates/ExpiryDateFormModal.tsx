@@ -15,8 +15,8 @@ export function ExpiryDateFormModal({ initialData, onClose, onSaveSuccess }: { i
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `http://localhost:4000/expiry-dates/${initialData.id}` 
-        : `http://localhost:4000/expiry-dates`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/expiry-dates/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/expiry-dates`;
       
       const payload = {
         date: new Date(formData.date).toISOString(),

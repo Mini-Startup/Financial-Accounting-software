@@ -13,6 +13,6 @@ async function safeFetch(url: string) {
 }
 
 export default async function ExpiryDatesPage() {
-  const expiryDates = await safeFetch('http://localhost:4000/expiry-dates');
+  const expiryDates = await safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates`);
   return <ExpiryDatePageManager initialExpiryDates={expiryDates} />;
 }

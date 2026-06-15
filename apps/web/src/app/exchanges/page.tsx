@@ -13,6 +13,6 @@ async function safeFetch(url: string) {
 }
 
 export default async function ExchangesPage() {
-  const exchanges = await safeFetch('http://localhost:4000/exchanges');
+  const exchanges = await safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges`);
   return <ExchangePageManager initialExchanges={exchanges} />;
 }
