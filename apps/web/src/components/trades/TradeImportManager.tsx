@@ -5,6 +5,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { toast } from 'sonner';
 import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { parseTradeFile } from '../../lib/tradeParser';
 import './trades-import.css';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
@@ -21,26 +22,18 @@ export function TradeImportManager() {
     setIsProcessing(true);
     setFileName(name);
     try {
-      // 1. Upload to parse CSV
-      const uploadRes = await fetch('http://localhost:4000/trade-import/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json();
-        throw new Error(err.message || 'Failed to parse CSV file');
+      // 1. Parse CSV locally on the frontend
+      const parseResult = parseTradeFile(content);
+      if (parseResult.trades.length === 0) {
+        throw new Error('No valid trade rows found in the file structure.');
       }
 
-      const rows = await uploadRes.json();
-      setNormalizedRows(rows);
-
-      // 2. Fetch preview validations
-      const previewRes = await fetch('http://localhost:4000/trade-import/preview', {
+      // 2. Fetch preview validations from the backend
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ rows: parseResult.trades }),
       });
 
       if (!previewRes.ok) {
@@ -50,6 +43,7 @@ export function TradeImportManager() {
 
       const previewData = await previewRes.json();
       setPreviewRows(previewData);
+      setNormalizedRows(previewData); // store valid rows for confirm
       setStep('PREVIEW');
       toast.success('File parsed successfully. Review your trades below.');
     } catch (err: any) {
@@ -63,7 +57,8 @@ export function TradeImportManager() {
   const handleConfirmImport = async () => {
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:4000/trade-import/confirm', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${apiUrl}/trade-import/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: normalizedRows }),

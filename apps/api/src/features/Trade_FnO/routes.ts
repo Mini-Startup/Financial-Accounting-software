@@ -3,16 +3,6 @@ import { tradeImportService } from './services';
 
 const router = Router();
 
-router.post('/trade-import/upload', async (req, res, next) => {
-  try {
-    if (!req.body || !req.body.content) {
-      res.status(400).json({ statusCode: 400, message: 'Content is required in body' });
-      return;
-    }
-    const result = tradeImportService.parseFile(req.body.content);
-    res.json(result);
-  } catch (err) { next(err); }
-});
 
 router.post('/trade-import/preview', async (req, res, next) => {
   try {
