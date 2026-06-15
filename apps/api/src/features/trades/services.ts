@@ -18,6 +18,7 @@ export class TradesService {
     rate: number;
     remarks?: string | null;
     source: string;
+    expiry?: string | null;
   }) {
     await this.validateTradeData(data);
 
@@ -44,6 +45,7 @@ export class TradesService {
         rate: Number(data.rate),
         remarks: data.remarks?.trim() || null,
         source: data.source || 'MANUAL',
+        expiry: data.expiry || null,
         clientRate: calcs.clientRate,
         brokerRate: calcs.brokerRate,
         clientBrokerage: calcs.clientBrokerage,
@@ -99,6 +101,7 @@ export class TradesService {
     rate: number;
     remarks?: string | null;
     source: string;
+    expiry?: string | null;
   }>) {
     const existing = await this.findOne(id);
     const updatedData = { ...existing, ...data };
@@ -128,6 +131,7 @@ export class TradesService {
         ...(data.rate !== undefined && { rate: Number(data.rate) }),
         ...(data.remarks !== undefined && { remarks: data.remarks?.trim() || null }),
         ...(data.source !== undefined && { source: data.source }),
+        ...(data.expiry !== undefined && { expiry: data.expiry || null }),
         clientRate: calcs.clientRate,
         brokerRate: calcs.brokerRate,
         clientBrokerage: calcs.clientBrokerage,

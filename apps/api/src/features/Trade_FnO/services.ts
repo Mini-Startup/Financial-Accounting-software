@@ -325,16 +325,104 @@ export class TradeImportService {
       })
     );
 
+function parseAndNormalizeExpiry(expiryStr: string | null | undefined): Date | null {
+  if (!expiryStr) return null;
+  const cleaned = expiryStr.trim();
+  if (!cleaned) return null;
+
+  // Check YYYY-MM-DD
+  const ymdMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1; // 0-indexed
+    const day = parseInt(ymdMatch[3], 10);
+    return new Date(Date.UTC(year, month, day));
+  }
+
+  // Check YYYY/MM/DD
+  const ymdSlashMatch = cleaned.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (ymdSlashMatch) {
+    const year = parseInt(ymdSlashMatch[1], 10);
+    const month = parseInt(ymdSlashMatch[2], 10) - 1; // 0-indexed
+    const day = parseInt(ymdSlashMatch[3], 10);
+    return new Date(Date.UTC(year, month, day));
+  }
+
+  // Handle DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-26, 28-APR-2026)
+  const regex = /^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})$/;
+  const match = cleaned.match(regex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const monthStr = match[2].toUpperCase();
+    let year = parseInt(match[3], 10);
+
+    const months: Record<string, number> = {
+      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+    };
+
+    if (monthStr in months) {
+      const month = months[monthStr];
+      if (year < 100) {
+        year += 2000;
+      }
+      return new Date(Date.UTC(year, month, day));
+    }
+  }
+
+  // Fallback to standard Date parsing if possible
+  const date = new Date(cleaned);
+  if (!isNaN(date.getTime())) {
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  }
+
+  return null;
+}
+
     let importedCount = 0;
 
-    await prisma.$transaction(
-      validRowsWithCalcs.map(({ row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal }) => {
+    await prisma.$transaction(async (tx) => {
+      // 1. Collect all unique valid expiry dates from rows
+      const uniqueExpiryStrings = Array.from(
+        new Set(
+          validRowsWithCalcs
+            .map(({ row }) => row.expiry?.trim())
+            .filter(Boolean)
+        )
+      );
+
+      // 2. Ensure each parsed expiry date exists in the database
+      for (const expiryStr of uniqueExpiryStrings) {
+        const parsedDate = parseAndNormalizeExpiry(expiryStr);
+        if (parsedDate) {
+          const existing = await tx.expiryDate.findUnique({
+            where: { date: parsedDate },
+          });
+          if (!existing) {
+            await tx.expiryDate.create({
+              data: {
+                date: parsedDate,
+                isActive: true,
+              },
+            });
+          }
+        }
+      }
+
+      // 3. Insert the trades
+      for (const { row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal } of validRowsWithCalcs) {
         importedCount++;
 
         const tradeDate = new Date(row.tradeDate);
         const timePart = row.tradeDate.includes(' ') ? row.tradeDate.split(' ')[1] : null;
 
-        return prisma.trade.create({
+        // Normalize the stored expiry date string to YYYY-MM-DD
+        const parsedExpiry = parseAndNormalizeExpiry(row.expiry);
+        const normalizedExpiryStr = parsedExpiry
+          ? parsedExpiry.toISOString().split('T')[0]
+          : (row.expiry || null);
+
+        await tx.trade.create({
           data: {
             tradeNumber: row.tradeNumber,
             tradeDate,
@@ -349,7 +437,7 @@ export class TradeImportService {
             source: 'IMPORT',
             remarks: 'Imported via Trade_FnO wizard',
             terminal: row.terminal || null,
-            expiry: row.expiry || null,
+            expiry: normalizedExpiryStr,
             orderId: row.orderId || null,
             exchangeTime: row.exchangeTime || null,
             uniqueTradeId: row.uniqueTradeId || null,
@@ -363,8 +451,8 @@ export class TradeImportService {
             profitTotal,
           },
         });
-      })
-    );
+      }
+    });
 
     return {
       importedCount,
@@ -375,3 +463,4 @@ export class TradeImportService {
 }
 
 export const tradeImportService = new TradeImportService();
+

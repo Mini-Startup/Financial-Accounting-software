@@ -14,7 +14,9 @@ import {
   BookOpenIcon,
   ArrowsRightLeftIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  ArrowTrendingUpIcon,
+  CalendarDaysIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@/utils/cn";
 
@@ -29,16 +31,27 @@ export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [tradesOpen, setTradesOpen] = React.useState(true);
+  const [closingRatesOpen, setClosingRatesOpen] = React.useState(true);
 
-  const isImportMode = (pathname === "/trades" && searchParams?.get("import") === "true") || pathname === "/trades/import";
+  const isTradesImportMode = (pathname === "/trades" && searchParams?.get("import") === "true") || pathname === "/trades/import";
   const isTradesBase = pathname === "/trades" || pathname?.startsWith("/trades/");
-  const isListActive = isTradesBase && !isImportMode;
+  const isTradesListActive = isTradesBase && !isTradesImportMode;
+
+  const isClosingRatesImportMode = (pathname === "/closing-rates" && searchParams?.get("import") === "true") || pathname === "/closing-rates/import";
+  const isClosingRatesBase = pathname === "/closing-rates" || pathname?.startsWith("/closing-rates/");
+  const isClosingRatesListActive = isClosingRatesBase && !isClosingRatesImportMode;
 
   React.useEffect(() => {
-    if (isImportMode) {
+    if (isTradesImportMode) {
       setTradesOpen(true);
     }
-  }, [isImportMode]);
+  }, [isTradesImportMode]);
+
+  React.useEffect(() => {
+    if (isClosingRatesImportMode) {
+      setClosingRatesOpen(true);
+    }
+  }, [isClosingRatesImportMode]);
 
   const navItems: NavItem[] = [
     { name: "Dashboard", path: "/", icon: Squares2X2Icon },
@@ -48,6 +61,15 @@ export function Sidebar() {
     { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
     { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
     { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
+    {
+      name: "Closing Rates",
+      path: "/closing-rates",
+      icon: ArrowTrendingUpIcon,
+      children: [
+        { name: "Import File", path: "/closing-rates?import=true" },
+      ]
+    },
+    { name: "Expiry Dates", path: "/expiry-dates", icon: CalendarDaysIcon },
     {
       name: "Trades",
       path: "/trades",
@@ -69,6 +91,9 @@ export function Sidebar() {
   const isParentActive = (item: NavItem) => {
     if (item.name === "Trades") {
       return isTradesBase;
+    }
+    if (item.name === "Closing Rates") {
+      return isClosingRatesBase;
     }
     if (item.path) return isActive(item.path);
     if (item.children) {
@@ -99,6 +124,12 @@ export function Sidebar() {
             {navItems.map((item) => {
               const hasChildren = !!item.children;
               const parentActive = isParentActive(item);
+              
+              const isOpen = item.name === "Trades" ? tradesOpen : item.name === "Closing Rates" ? closingRatesOpen : false;
+              const setOpen = item.name === "Trades" ? setTradesOpen : item.name === "Closing Rates" ? setClosingRatesOpen : () => {};
+              
+              const isItemImportMode = item.name === "Trades" ? isTradesImportMode : item.name === "Closing Rates" ? isClosingRatesImportMode : false;
+              const isItemListActive = item.name === "Trades" ? isTradesListActive : item.name === "Closing Rates" ? isClosingRatesListActive : false;
 
               if (hasChildren) {
                 return (
@@ -106,7 +137,7 @@ export function Sidebar() {
                     <div
                       className={cn(
                         "w-full flex items-center justify-between rounded-lg font-medium text-sm transition-all duration-150 group text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]",
-                        isListActive
+                        isItemListActive
                           ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm"
                           : parentActive && "bg-[var(--sidebar-active-bg)]/10 text-[var(--color-leaf)]"
                       )}
@@ -118,7 +149,7 @@ export function Sidebar() {
                         <item.icon
                           className={cn(
                             "w-5 h-5 shrink-0 transition-colors",
-                            isListActive
+                            isItemListActive
                               ? "text-[var(--sidebar-active-txt)]"
                               : parentActive
                               ? "text-[var(--color-leaf)]"
@@ -130,14 +161,14 @@ export function Sidebar() {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          setTradesOpen(!tradesOpen);
+                          setOpen(!isOpen);
                         }}
                         className={cn(
                           "px-3 py-3 rounded-r-lg hover:bg-[var(--color-emerald)]/30 text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-active-txt)] flex items-center justify-center shrink-0 border-l border-[var(--sidebar-divider)]/40",
-                          isListActive && "text-[var(--sidebar-active-txt)]/80 hover:bg-[var(--color-emerald)]/30"
+                          isItemListActive && "text-[var(--sidebar-active-txt)]/80 hover:bg-[var(--color-emerald)]/30"
                         )}
                       >
-                        {tradesOpen ? (
+                        {isOpen ? (
                           <ChevronUpIcon className="w-4 h-4" />
                         ) : (
                           <ChevronDownIcon className="w-4 h-4" />
@@ -145,10 +176,10 @@ export function Sidebar() {
                       </button>
                     </div>
 
-                    {tradesOpen && (
+                    {isOpen && (
                       <div className="pl-6 flex flex-col gap-1 border-l border-[var(--sidebar-divider)] ml-5 mt-1">
                         {item.children!.map((child) => {
-                          const childActive = child.path === "/trades?import=true" ? isImportMode : pathname === child.path;
+                          const childActive = (child.path.includes("import=true") || child.path.endsWith("/import")) ? isItemImportMode : pathname === child.path;
                           return (
                             <Link
                               key={child.path}

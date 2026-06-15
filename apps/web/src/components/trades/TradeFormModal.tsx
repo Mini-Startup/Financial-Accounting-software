@@ -6,6 +6,7 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
+import { ExpiryDateFormModal } from '../expiry-dates/ExpiryDateFormModal';
 
 function todayISO() {
   const d = new Date();
@@ -40,6 +41,29 @@ export function TradeFormModal({
   const [clientId, setClientId] = useState('');
   const [brokerId, setBrokerId] = useState('');
   const [marketRate, setMarketRate] = useState<string>('');
+
+  const [expiryDatesList, setExpiryDatesList] = useState<any[]>([]);
+  const [isAddingExpiry, setIsAddingExpiry] = useState(false);
+
+  const fetchExpiryDates = async (selectLatestDate?: string) => {
+    try {
+      const res = await fetch('http://localhost:4000/expiry-dates');
+      if (res.ok) {
+        const data = await res.json();
+        const activeOnly = data.filter((item: any) => item.isActive);
+        setExpiryDatesList(activeOnly);
+        if (selectLatestDate) {
+          setExpiryDate(selectLatestDate);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpiryDates();
+  }, []);
 
   const [clientRule, setClientRule] = useState<BrokerageRule | null>(null);
   const [brokerRule, setBrokerRule] = useState<BrokerageRule | null>(null);
@@ -168,6 +192,7 @@ export function TradeFormModal({
         body: JSON.stringify({
           tradeNumber: `TRD-${Date.now().toString().slice(-6)}`,
           tradeDate: date,
+          expiry: expiryDate || null,
           accountId: clientId,
           brokerId: brokerId,
           scriptId: scriptId,
@@ -236,9 +261,34 @@ export function TradeFormModal({
                   <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input" />
                 </div>
 
-                <div className="form-field">
+                 <div className="form-field">
                   <label className="form-label">Expiry date</label>
-                  <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="input" />
+                  <select
+                    value={expiryDate}
+                    onChange={e => {
+                      if (e.target.value === "ADD_NEW_EXPIRY") {
+                        setIsAddingExpiry(true);
+                      } else {
+                        setExpiryDate(e.target.value);
+                      }
+                    }}
+                    className="input w-full text-slate-900"
+                    style={{ color: 'var(--color-charcoal)' }}
+                  >
+                    <option value="" className="text-slate-900">Select Expiry</option>
+                    {expiryDatesList.map(item => {
+                      const dateStr = new Date(item.date).toISOString().split('T')[0];
+                      const displayStr = new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      return (
+                        <option key={item.id} value={dateStr} className="text-slate-900">
+                          {displayStr}
+                        </option>
+                      );
+                    })}
+                    <option value="ADD_NEW_EXPIRY" className="text-[var(--color-forest)] font-semibold bg-emerald-50">
+                      + Add New Expiry Date
+                    </option>
+                  </select>
                 </div>
               </div>
 
@@ -251,9 +301,9 @@ export function TradeFormModal({
 
                 <div className="form-field">
                   <label className="form-label form-label--required">Script</label>
-                  <select value={scriptId} onChange={e => setScriptId(e.target.value)} className="input">
-                    <option value="">Select Script</option>
-                    {scripts.map(s => <option key={s.id} value={s.id}>{s.fldScriptName ?? s.name}</option>)}
+                  <select value={scriptId} onChange={e => setScriptId(e.target.value)} className="input text-slate-900" style={{ color: 'var(--color-charcoal)' }}>
+                    <option value="" className="text-slate-900">Select Script</option>
+                    {scripts.map(s => <option key={s.id} value={s.id} className="text-slate-900">{s.shortName}</option>)}
                   </select>
                 </div>
               </div>
@@ -261,17 +311,17 @@ export function TradeFormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Client</label>
-                  <select value={clientId} onChange={e => setClientId(e.target.value)} className="input">
-                    <option value="">Select Client</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name || c.fldName}</option>)}
+                  <select value={clientId} onChange={e => setClientId(e.target.value)} className="input text-slate-900" style={{ color: 'var(--color-charcoal)' }}>
+                    <option value="" className="text-slate-900">Select Client</option>
+                    {clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.code} - {c.name}</option>)}
                   </select>
                 </div>
 
                 <div className="form-field">
                   <label className="form-label form-label--required">Broker</label>
-                  <select value={brokerId} onChange={e => setBrokerId(e.target.value)} className="input">
-                    <option value="">Select Broker</option>
-                    {brokers.map(b => <option key={b.id} value={b.id}>{b.name || b.fldName}</option>)}
+                  <select value={brokerId} onChange={e => setBrokerId(e.target.value)} className="input text-slate-900" style={{ color: 'var(--color-charcoal)' }}>
+                    <option value="" className="text-slate-900">Select Broker</option>
+                    {brokers.map(b => <option key={b.id} value={b.id} className="text-slate-900">{b.code} - {b.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -395,6 +445,19 @@ export function TradeFormModal({
           </button>
         </div>
       </div>
+
+      {isAddingExpiry && (
+        <ExpiryDateFormModal
+          onClose={() => {
+            setIsAddingExpiry(false);
+            setExpiryDate('');
+          }}
+          onSaveSuccess={(newDate?: string) => {
+            setIsAddingExpiry(false);
+            fetchExpiryDates(newDate);
+          }}
+        />
+      )}
     </div>
   );
 }

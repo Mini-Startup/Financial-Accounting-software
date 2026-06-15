@@ -104,6 +104,7 @@ model Script {
   brokerages             Brokerage[]
   scriptExchangeMappings ScriptExchangeMapping[]
   trades                 Trade[]
+  closingRates           ClosingRate[]
 
   @@index([fullName])
   @@map("scripts")
@@ -144,6 +145,7 @@ model Exchange {
   brokerages             Brokerage[]
   scriptExchangeMappings ScriptExchangeMapping[]
   trades                 Trade[]
+  closingRates           ClosingRate[]
 
   @@map("exchanges")
 }
@@ -251,5 +253,41 @@ model Brokerage {
   @@index([accountId])
   @@index([exchangeId])
   @@map("brokerages")
+}
+
+// ─────────────────────────────────────────────
+// CLOSING RATES
+// ─────────────────────────────────────────────
+
+model ClosingRate {
+  id         String   @id @default(uuid())
+  exchangeId String   @map("exchange_id")
+  scriptId   String   @map("script_id")
+  rateDate   DateTime @map("rate_date")
+  rate       Float    @map("rate")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt      @map("updated_at")
+
+  exchange   Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  script     Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([exchangeId, scriptId, rateDate])
+  @@index([exchangeId])
+  @@index([scriptId])
+  @@map("closing_rates")
+}
+
+// ─────────────────────────────────────────────
+// EXPIRY DATES
+// ─────────────────────────────────────────────
+
+model ExpiryDate {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("expiry_dates")
 }
 
