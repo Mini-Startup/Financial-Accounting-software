@@ -237,6 +237,29 @@ export default function SettlementPage() {
             </div>
           </div>
 
+          {/* Settlement Summary Header with Toggle Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+            <h3 className="text-lg font-bold text-[var(--color-charcoal)]">Settlement Summary</h3>
+            {openPositions.length > 0 && (
+              <button
+                onClick={() => setShowAutoCalculated(!showAutoCalculated)}
+                className={`btn ${showAutoCalculated ? 'btn--primary' : 'btn--secondary'} flex items-center justify-center gap-2 text-xs py-2 px-4 shadow-sm`}
+              >
+                {showAutoCalculated ? (
+                  <>
+                    <EyeOff className="w-4 h-4" />
+                    Hide Auto-Calculated Trades
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    Show Auto Calculated Trades
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
           {/* Filters and List */}
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-mist)] p-4 rounded-xl border border-[var(--sidebar-divider)]">
@@ -279,25 +302,6 @@ export default function SettlementPage() {
                     <option value="CLOSED">Closed Positions</option>
                   </select>
                 </div>
-
-                {openPositions.length > 0 && (
-                  <button
-                    onClick={() => setShowAutoCalculated(!showAutoCalculated)}
-                    className="btn btn--secondary flex items-center justify-center gap-2 text-xs py-1.5 px-4"
-                  >
-                    {showAutoCalculated ? (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5" />
-                        Hide Auto-Calculated Trades
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3.5 h-3.5" />
-                        Show Auto Calculated Trades
-                      </>
-                    )}
-                  </button>
-                )}
               </div>
             </div>
 

@@ -3,10 +3,10 @@ import { prisma } from '../../database';
 export class SettlementService {
   async generateSummary(fromDate: string, toDate: string) {
     const start = new Date(fromDate);
-    start.setHours(0, 0, 0, 0);
+    start.setUTCHours(0, 0, 0, 0);
 
     const end = new Date(toDate);
-    end.setHours(23, 59, 59, 999);
+    end.setUTCHours(23, 59, 59, 999);
 
     // Fetch all trades in the date range
     const trades = await prisma.trade.findMany({
@@ -96,9 +96,9 @@ export class SettlementService {
 
     // Fetch closing rates on the toDate
     const rateDateStart = new Date(toDate);
-    rateDateStart.setHours(0, 0, 0, 0);
+    rateDateStart.setUTCHours(0, 0, 0, 0);
     const rateDateEnd = new Date(toDate);
-    rateDateEnd.setHours(23, 59, 59, 999);
+    rateDateEnd.setUTCHours(23, 59, 59, 999);
 
     const closingRates = await prisma.closingRate.findMany({
       where: {
