@@ -16,7 +16,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ArrowTrendingUpIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  ScaleIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@/utils/cn";
 
@@ -61,6 +62,7 @@ export function Sidebar() {
     { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
     { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
     { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
+    { name: "Settlement", path: "/settlement", icon: ScaleIcon },
     {
       name: "Closing Rates",
       path: "/closing-rates",
@@ -117,9 +119,6 @@ export function Sidebar() {
       {/* Navigation List */}
       <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-6">
         <div>
-          <div className="text-[11px] font-semibold text-[var(--sidebar-text-muted)] uppercase tracking-wider mb-3 px-3">
-            Menu
-          </div>
           <nav className="flex flex-col gap-1.5">
             {navItems.map((item) => {
               const hasChildren = !!item.children;
