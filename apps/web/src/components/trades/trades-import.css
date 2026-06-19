@@ -650,3 +650,20 @@
   width: 100%;
 }
 
+/* Dense styling for date and datetime pickers */
+.edit-cell-input[type="date"],
+.edit-cell-input[type="datetime-local"] {
+  height: 26px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+
+/* Custom styling for calendar icons to keep it clean and matching the emerald theme */
+.edit-cell-input[type="date"]::-webkit-calendar-picker-indicator,
+.edit-cell-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: opacity(0.6) sepia(100%) hue-rotate(90deg) saturate(300%);
+  padding: 0;
+  margin: 0;
+}

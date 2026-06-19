@@ -11,6 +11,79 @@ import { ScriptFormModal } from '../scripts/ScriptFormModal';
 import { useTradeImport } from './TradeImportContext';
 import './trades-import.css';
 
+// Helper to convert normalized datetime string (e.g. "2026-04-10 15:11:56") 
+// to input datetime-local format "2026-04-10T15:11:56"
+function formatDateTimeForInput(dateTimeStr: string | null | undefined): string {
+  if (!dateTimeStr) return '';
+  const cleaned = dateTimeStr.trim();
+  if (cleaned.includes('T')) {
+    return cleaned;
+  }
+  return cleaned.replace(' ', 'T');
+}
+
+// Helper to convert input datetime-local value (e.g. "2026-04-10T15:11:56")
+// back to normalized datetime string "2026-04-10 15:11:56"
+function parseDateTimeFromInput(value: string): string {
+  if (!value) return '';
+  let cleaned = value.trim().replace('T', ' ');
+  if (cleaned.length === 16) { // YYYY-MM-DD HH:MM
+    cleaned += ':00';
+  }
+  return cleaned;
+}
+
+// Helper to convert different expiry string formats to "YYYY-MM-DD"
+// so that the HTML date picker can display it.
+function formatExpiryForInput(expiryStr: string | null | undefined): string {
+  if (!expiryStr) return '';
+  const cleaned = expiryStr.trim();
+  if (!cleaned) return '';
+
+  // Check if already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  // Check YYYY/MM/DD
+  const ymdSlash = cleaned.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (ymdSlash) {
+    return `${ymdSlash[1]}-${ymdSlash[2]}-${ymdSlash[3]}`;
+  }
+
+  // Check DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-26, 28-APR-2026)
+  const regex = /^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})$/;
+  const match = cleaned.match(regex);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const monthStr = match[2].toUpperCase();
+    let yearStr = match[3];
+    let year = parseInt(yearStr, 10);
+    if (yearStr.length === 2) {
+      year += 2000;
+    }
+    
+    const months: Record<string, string> = {
+      JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+      JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12'
+    };
+    if (monthStr in months) {
+      return `${year}-${months[monthStr]}-${day}`;
+    }
+  }
+
+  // Fallback to native Date parsing if possible
+  const date = new Date(cleaned);
+  if (!isNaN(date.getTime())) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return '';
+}
+
 export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const {
     step,
@@ -624,18 +697,18 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             </h3>
             <div className="card">
               <div className="card__body p-0 overflow-x-auto">
-                <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '900px' }}>
+                <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '960px' }}>
                   <colgroup>
                     <col style={{ width: '80px' }} />
-                    <col style={{ width: '140px' }} />
+                    <col style={{ width: '185px' }} />
                     <col style={{ width: '100px' }} />
                     <col style={{ width: '60px' }} />
                     <col style={{ width: '70px' }} />
                     <col style={{ width: '80px' }} />
                     <col style={{ width: '140px' }} />
-                    <col style={{ width: '60px' }} />
-                    <col style={{ width: '90px' }} />
-                    <col style={{ width: '40px' }} />
+                    <col style={{ width: '70px' }} />
+                    <col style={{ width: '125px' }} />
+                    <col style={{ width: '45px' }} />
                   </colgroup>
                   <thead>
                     <tr>
@@ -679,10 +752,19 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                             </td>
                             <td>
                               <input
-                                type="text"
+                                type="datetime-local"
+                                step="1"
                                 className="edit-cell-input w-date text-xs"
-                                value={row.tradeDate}
-                                onChange={(e) => handleCellChange(idx, 'tradeDate', e.target.value)}
+                                value={formatDateTimeForInput(row.tradeDate)}
+                                onChange={(e) => {
+                                  const newVal = parseDateTimeFromInput(e.target.value);
+                                  handleCellChange(idx, 'tradeDate', newVal);
+                                  if (newVal) {
+                                    const updated = [...previewRows];
+                                    updated[idx] = { ...updated[idx], tradeDate: newVal };
+                                    triggerRevalidation(updated);
+                                  }
+                                }}
                                 onBlur={handleBlur}
                               />
                             </td>
@@ -775,10 +857,18 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                             </td>
                             <td>
                               <input
-                                type="text"
+                                type="date"
                                 className="edit-cell-input w-date text-xs"
-                                value={row.expiry || ''}
-                                onChange={(e) => handleCellChange(idx, 'expiry', e.target.value)}
+                                value={formatExpiryForInput(row.expiry)}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  handleCellChange(idx, 'expiry', newVal);
+                                  if (newVal) {
+                                    const updated = [...previewRows];
+                                    updated[idx] = { ...updated[idx], expiry: newVal };
+                                    triggerRevalidation(updated);
+                                  }
+                                }}
                                 onBlur={handleBlur}
                               />
                             </td>
@@ -830,18 +920,18 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               </h3>
               <div className="card border-slate-200 bg-slate-50/20 opacity-80">
                 <div className="card__body p-0 overflow-x-auto">
-                  <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '900px' }}>
+                  <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '960px' }}>
                     <colgroup>
                       <col style={{ width: '80px' }} />
-                      <col style={{ width: '140px' }} />
+                      <col style={{ width: '185px' }} />
                       <col style={{ width: '100px' }} />
                       <col style={{ width: '60px' }} />
                       <col style={{ width: '70px' }} />
                       <col style={{ width: '80px' }} />
                       <col style={{ width: '140px' }} />
-                      <col style={{ width: '60px' }} />
-                      <col style={{ width: '90px' }} />
-                      <col style={{ width: '40px' }} />
+                      <col style={{ width: '70px' }} />
+                      <col style={{ width: '125px' }} />
+                      <col style={{ width: '45px' }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100/50">

@@ -6,27 +6,28 @@ type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
 
 interface TradeImportContextType {
   step: ImportStep;
-  setStep: (step: ImportStep) => void;
+  setStep: React.Dispatch<React.SetStateAction<ImportStep>>;
   isProcessing: boolean;
-  setIsProcessing: (isProcessing: boolean) => void;
+  setIsProcessing: React.Dispatch<React.SetStateAction<boolean>>;
   fileName: string;
-  setFileName: (fileName: string) => void;
+  setFileName: React.Dispatch<React.SetStateAction<string>>;
   parsedTrades: any[];
-  setParsedTrades: (trades: any[]) => void;
+  setParsedTrades: React.Dispatch<React.SetStateAction<any[]>>;
   normalizedRows: any[];
-  setNormalizedRows: (rows: any[]) => void;
+  setNormalizedRows: React.Dispatch<React.SetStateAction<any[]>>;
   previewRows: any[];
-  setPreviewRows: (rows: any[]) => void;
+  setPreviewRows: React.Dispatch<React.SetStateAction<any[]>>;
   importResult: { importedCount: number; failedCount: number } | null;
-  setImportResult: (result: { importedCount: number; failedCount: number } | null) => void;
+  setImportResult: React.Dispatch<React.SetStateAction<{ importedCount: number; failedCount: number } | null>>;
   selectedExchangeId: string;
-  setSelectedExchangeId: (id: string) => void;
+  setSelectedExchangeId: React.Dispatch<React.SetStateAction<string>>;
   selectedBrokerId: string;
-  setSelectedBrokerId: (id: string) => void;
+  setSelectedBrokerId: React.Dispatch<React.SetStateAction<string>>;
   selectedImportType: string;
-  setSelectedImportType: (type: string) => void;
+  setSelectedImportType: React.Dispatch<React.SetStateAction<string>>;
   resetImportState: () => void;
 }
+
 
 const TradeImportContext = createContext<TradeImportContextType | undefined>(undefined);
 
