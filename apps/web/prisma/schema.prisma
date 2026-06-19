@@ -48,7 +48,7 @@ model Group {
 }
 
 // ─────────────────────────────────────────────
-// ACCOUNTS (Client + Broker + Ledger)
+// ACCOUNTS (Client + Broker + Account Master)
 // ─────────────────────────────────────────────
 
 model Account {

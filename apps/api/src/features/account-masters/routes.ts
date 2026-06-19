@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { accountsService } from './services';
+import { accountMastersService } from './services';
 
 const router = Router();
 
 router.post('/', async (req, res, next) => {
   try {
-    const result = await accountsService.create(req.body);
+    const result = await accountMastersService.create(req.body);
     res.status(201).json(result);
   } catch (err) { next(err); }
 });
@@ -13,7 +13,7 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { group, search, excludeGroups } = req.query;
-    const result = await accountsService.findAll(
+    const result = await accountMastersService.findAll(
       group as string | undefined,
       search as string | undefined,
       excludeGroups as string | undefined,
@@ -24,21 +24,21 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const result = await accountsService.findOne(req.params.id);
+    const result = await accountMastersService.findOne(req.params.id);
     res.json(result);
   } catch (err) { next(err); }
 });
 
 router.patch('/:id', async (req, res, next) => {
   try {
-    const result = await accountsService.update(req.params.id, req.body);
+    const result = await accountMastersService.update(req.params.id, req.body);
     res.json(result);
   } catch (err) { next(err); }
 });
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const result = await accountsService.remove(req.params.id);
+    const result = await accountMastersService.remove(req.params.id);
     res.json(result);
   } catch (err) { next(err); }
 });

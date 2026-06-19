@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "BizzMate Financial UI",
-  description: "Next Generation Accounting Ledger",
+  description: "Next Generation Accounting System",
 };
 
 export default async function RootLayout({

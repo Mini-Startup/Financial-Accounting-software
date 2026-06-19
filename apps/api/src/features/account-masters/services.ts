@@ -11,7 +11,7 @@ function sanitizePayload(payload: any) {
   return payload;
 }
 
-export class AccountsService {
+export class AccountMastersService {
   async create(data: Prisma.AccountUncheckedCreateInput & { groupName?: string }) {
     const payload = { ...data };
     
@@ -98,4 +98,4 @@ export class AccountsService {
   }
 }
 
-export const accountsService = new AccountsService();
+export const accountMastersService = new AccountMastersService();

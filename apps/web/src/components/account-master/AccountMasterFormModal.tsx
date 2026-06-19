@@ -5,7 +5,7 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function LedgerFormModal({
+export function AccountMasterFormModal({
   initialData,
   groups,
   onClose,
@@ -61,8 +61,8 @@ export function LedgerFormModal({
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/accounts/${initialData.id}` 
-        : `${process.env.NEXT_PUBLIC_API_URL}/accounts`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/account-masters/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/account-masters`;
       
       const payload = {
         ...formData,
@@ -76,15 +76,15 @@ export function LedgerFormModal({
       });
 
       if (res.ok) {
-        toast.success(initialData ? 'Ledger account updated' : 'Ledger account created');
+        toast.success(initialData ? 'Account master updated' : 'Account master created');
         onSave();
         onClose();
       } else {
         const errData = await res.json();
-        toast.error(errData.message || 'Failed to save ledger account');
+        toast.error(errData.message || 'Failed to save account master');
       }
     } catch {
-      toast.error('Failed to save ledger account');
+      toast.error('Failed to save account master');
     }
   };
 
@@ -92,14 +92,14 @@ export function LedgerFormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
       <div ref={modalRef} className="card w-[750px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         <div className="card__header bg-[var(--color-snow)]">
-          <h2 className="card__title">{initialData ? 'Edit Ledger' : 'Create New Ledger'}</h2>
+          <h2 className="card__title">{initialData ? 'Edit Account Master' : 'Create New Account Master'}</h2>
           <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="card__body p-6 space-y-6 overflow-y-auto">
-          {/* Basic Ledger Section */}
+          {/* Basic Account Master Section */}
           <div className="space-y-4">
             <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">

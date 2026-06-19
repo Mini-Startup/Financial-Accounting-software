@@ -130,7 +130,7 @@ export function ClosingRatePageManager({
         <div>
           <h1 className="text-h2 font-display">Closing Rates</h1>
           <p className="text-sm text-[var(--color-slate)] mt-1">
-            Manage daily closing rates used for calculating portfolios, profit/loss, and ledger balances.
+            Manage daily closing rates used for calculating portfolios, profit/loss, and account balances.
           </p>
         </div>
         

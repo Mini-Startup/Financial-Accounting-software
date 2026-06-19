@@ -1,4 +1,4 @@
-import { LedgerPageManager } from '../../components/ledger/LedgerPageManager';
+import { AccountMasterPageManager } from '../../components/account-master/AccountMasterPageManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,11 +12,11 @@ async function safeFetch(url: string) {
   }
 }
 
-export default async function LedgerPage() {
+export default async function AccountMasterPage() {
   const [accounts, groups] = await Promise.all([
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts?excludeGroups=Sundry%20Debtors,Sundry%20Creditors`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?excludeGroups=Sundry%20Debtors,Sundry%20Creditors`),
     safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/groups`),
   ]);
 
-  return <LedgerPageManager initialAccounts={accounts} groups={groups} />;
+  return <AccountMasterPageManager initialAccounts={accounts} groups={groups} />;
 }

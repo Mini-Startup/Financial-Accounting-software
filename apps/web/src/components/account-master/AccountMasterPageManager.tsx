@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { LedgerFormModal } from './LedgerFormModal';
+import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function LedgerPageManager({
+export function AccountMasterPageManager({
   initialAccounts,
   groups,
 }: {
@@ -17,19 +17,19 @@ export function LedgerPageManager({
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this ledger account?')) return;
+    if (!confirm('Are you sure you want to delete this account master?')) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
         setAccounts(prev => prev.filter(acc => acc.id !== id));
-        toast.success('Ledger account deleted successfully');
+        toast.success('Account master deleted successfully');
       } else {
-        toast.error('Failed to delete ledger account');
+        toast.error('Failed to delete account master');
       }
     } catch {
-      toast.error('Failed to delete ledger account');
+      toast.error('Failed to delete account master');
     }
   };
 
@@ -41,10 +41,10 @@ export function LedgerPageManager({
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-h2 font-display">Ledger</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage standard and banking ledger accounts cross-referenced with your journal.</p>
+          <h1 className="text-h2 font-display">Account Master</h1>
+          <p className="text-sm text-[var(--color-slate)] mt-1">Manage standard and banking account masters.</p>
         </div>
-        <button onClick={() => setIsAdding(true)} className="btn btn--primary">+ Add Ledger</button>
+        <button onClick={() => setIsAdding(true)} className="btn btn--primary">+ Add Account Master</button>
       </div>
 
       <div className="card">
@@ -64,7 +64,7 @@ export function LedgerPageManager({
               {accounts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-[var(--color-slate)] font-medium">
-                    No ledger entries found. Click "+ Add Ledger" to create one.
+                    No account master entries found. Click "+ Add Account Master" to create one.
                   </td>
                 </tr>
               ) : null}
@@ -113,7 +113,7 @@ export function LedgerPageManager({
       </div>
 
       {isAdding && (
-        <LedgerFormModal
+        <AccountMasterFormModal
           groups={groups}
           onClose={() => setIsAdding(false)}
           onSave={handleSave}
@@ -121,7 +121,7 @@ export function LedgerPageManager({
       )}
 
       {editingAccount && (
-        <LedgerFormModal
+        <AccountMasterFormModal
           initialData={editingAccount}
           groups={groups}
           onClose={() => setEditingAccount(null)}

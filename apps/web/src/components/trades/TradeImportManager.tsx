@@ -151,7 +151,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         }
 
         // 2. Fetch Brokers (Sundry Creditors)
-        const brRes = await fetch(`${apiUrl}/accounts?group=Sundry Creditors`);
+        const brRes = await fetch(`${apiUrl}/account-masters?group=Sundry Creditors`);
         if (brRes.ok) {
           const brData = await brRes.json();
           setBrokers(brData);
@@ -161,7 +161,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         }
 
         // 3. Fetch Clients (Sundry Debtors)
-        const clRes = await fetch(`${apiUrl}/accounts?group=Sundry Debtors`);
+        const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
         if (clRes.ok) {
           const clData = await clRes.json();
           setClients(clData);
@@ -269,7 +269,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const fetchClients = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const clRes = await fetch(`${apiUrl}/accounts?group=Sundry Debtors`);
+      const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
       if (clRes.ok) {
         const clData = await clRes.json();
         setClients(clData);

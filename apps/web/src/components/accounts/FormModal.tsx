@@ -49,8 +49,8 @@ export function FormModal({
     e.preventDefault();
     try {
       const url = initialData?.id 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/accounts/${initialData.id}` 
-        : `${process.env.NEXT_PUBLIC_API_URL}/accounts`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/account-masters/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/account-masters`;
       
       const payloadForm = { ...formData };
       if (payloadForm.isWhatsappSameAsMobile) {

@@ -61,7 +61,7 @@ export function Sidebar() {
     { name: "Scripts", path: "/scripts", icon: DocumentTextIcon },
     { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
     { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
-    { name: "Ledger", path: "/ledger", icon: BookOpenIcon },
+    { name: "Account Master", path: "/account-master", icon: BookOpenIcon },
     { name: "Settlement", path: "/settlement", icon: ScaleIcon },
     {
       name: "Closing Rates",
