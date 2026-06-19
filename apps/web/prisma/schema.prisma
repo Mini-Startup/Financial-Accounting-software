@@ -81,6 +81,7 @@ model Account {
   brokerages   Brokerage[]
   trades       Trade[]     @relation("AccountTrades")
   brokerTrades Trade[]     @relation("BrokerTrades")
+  voucherLines VoucherLine[]
 
   @@index([name])
   @@index([groupId])
@@ -289,5 +290,44 @@ model ExpiryDate {
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   @@map("expiry_dates")
+}
+
+// ─────────────────────────────────────────────
+// VOUCHERS
+// ─────────────────────────────────────────────
+
+enum VoucherType {
+  PAYMENT
+  RECEIPT
+  JOURNAL
+  CONTRA
+}
+
+model Voucher {
+  id            String        @id @default(uuid())
+  voucherNumber String?       @map("voucher_number")
+  date          DateTime      @map("date")
+  type          VoucherType   @map("type")
+  remarks       String?       @map("remarks")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt      @map("updated_at")
+  
+  lines         VoucherLine[]
+
+  @@map("vouchers")
+}
+
+model VoucherLine {
+  id        String   @id @default(uuid())
+  voucherId String   @map("voucher_id")
+  accountId String   @map("account_id")
+  amount    Float    @map("amount")
+
+  voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@index([accountId])
+  @@map("voucher_lines")
 }
 

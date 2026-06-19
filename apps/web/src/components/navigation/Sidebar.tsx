@@ -17,7 +17,9 @@ import {
   ChevronUpIcon,
   ArrowTrendingUpIcon,
   CalendarDaysIcon,
-  ScaleIcon
+  ScaleIcon,
+  ClipboardIcon,
+  WalletIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@/utils/cn";
 
@@ -58,10 +60,12 @@ export function Sidebar() {
     { name: "Dashboard", path: "/", icon: Squares2X2Icon },
     { name: "Brokers", path: "/brokers", icon: BuildingOffice2Icon },
     { name: "Clients", path: "/clients", icon: UsersIcon },
+    { name: "Account Master", path: "/account-master", icon: ClipboardIcon },
+    { name: "Voucher Entry", path: "/vouchers", icon: WalletIcon },
+    { name: "Ledger Report", path: "/ledger", icon: BookOpenIcon },
     { name: "Scripts", path: "/scripts", icon: DocumentTextIcon },
     { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
     { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
-    { name: "Account Master", path: "/account-master", icon: BookOpenIcon },
     { name: "Settlement", path: "/settlement", icon: ScaleIcon },
     {
       name: "Closing Rates",
