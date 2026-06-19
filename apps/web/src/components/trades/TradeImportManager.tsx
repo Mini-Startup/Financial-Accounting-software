@@ -128,14 +128,43 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setIsProcessing(true);
     setFileName(name);
     try {
-      // 1. Parse CSV locally on the frontend
+      // ── Phase 1: Instant local parse (runs in ~10-50ms) ──────
       const parseResult = parseTradeFile(content);
       if (parseResult.trades.length === 0) {
         throw new Error('No valid trade rows found in the file structure.');
       }
       setParsedTrades(parseResult.trades);
 
-      // 2. Fetch preview validations from the backend
+      // Build an immediate preview from local data so the table renders instantly.
+      // Status is 'Validating' until the backend confirms.
+      const instantPreview = parseResult.trades.map((t) => ({
+        tradeNumber: t.tradeNo,
+        clientCode: t.clientCode,
+        scriptCode: t.fullScript || t.script,
+        scriptShortName: t.script,
+        scriptFullName: t.fullScript,
+        exchange: '',
+        buySell: t.type,
+        quantity: t.qty,
+        rate: t.rate,
+        tradeDate: t.tradeTime,
+        status: 'Validating' as const,
+        errors: [] as string[],
+        terminal: t.terminal,
+        expiry: t.expiry,
+        orderId: t.orderId,
+        exchangeTime: t.exchangeTime,
+        uniqueTradeId: t.uniqueTradeId,
+        orderTime: t.orderTime,
+        instrumentType: t.instrumentType,
+      }));
+
+      setPreviewRows(instantPreview);
+      setNormalizedRows(instantPreview);
+      setStep('PREVIEW');
+      toast.success(`Parsed ${parseResult.trades.length} rows. Validating against database…`);
+
+      // ── Phase 2: Background validation (runs async) ──────────
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
         method: 'POST',
@@ -150,12 +179,15 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
       const previewData = await previewRes.json();
       setPreviewRows(previewData);
-      setNormalizedRows(previewData); // store valid rows for confirm
-      setStep('PREVIEW');
-      toast.success('File parsed successfully. Review your trades below.');
+      setNormalizedRows(previewData);
+      toast.success('Validation complete.');
     } catch (err: any) {
       toast.error(err.message || 'Error uploading file');
-      setFileName('');
+      // If we already moved to PREVIEW, stay there with the local data
+      // Otherwise reset
+      if (step === 'UPLOAD') {
+        setFileName('');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -362,13 +394,15 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   };
 
   // Compute stats and split rows
+  const isValidating = previewRows.some((r) => r.status === 'Validating');
   const futureRows = previewRows.filter((r) => r.instrumentType?.toUpperCase().startsWith('FUT'));
   const optionRows = previewRows.filter((r) => !r.instrumentType?.toUpperCase().startsWith('FUT'));
 
   const totalRows = previewRows.length;
   const validRowsCount = previewRows.filter((r) => r.status === 'Valid').length;
   const validFuturesCount = futureRows.filter((r) => r.status === 'Valid').length;
-  const invalidFuturesCount = futureRows.length - validFuturesCount;
+  const invalidFuturesCount = futureRows.filter((r) => r.status === 'Invalid').length;
+  const validatingCount = futureRows.filter((r) => r.status === 'Validating').length;
   const skippedOptionsCount = optionRows.length;
 
   return (
@@ -402,12 +436,16 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               </button>
               <button
                 onClick={handleConfirmImport}
-                disabled={validRowsCount === 0 || isProcessing}
+                disabled={validRowsCount === 0 || isProcessing || isValidating}
                 className="btn btn--primary flex items-center gap-2"
               >
                 {isProcessing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
+                  </>
+                ) : isValidating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Validating…
                   </>
                 ) : (
                   <>
@@ -750,12 +788,22 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                                   'inline-flex items-center gap-1 text-xs font-semibold cursor-help',
                                   row.status === 'Valid'
                                     ? 'text-[var(--color-positive)]'
+                                    : row.status === 'Validating'
+                                    ? 'text-blue-500'
                                     : 'text-[var(--color-negative)]'
                                 )}
-                                title={row.errors && row.errors.length > 0 ? row.errors.join(', ') : 'No errors'}
+                                title={
+                                  row.status === 'Validating'
+                                    ? 'Validating against database…'
+                                    : row.errors && row.errors.length > 0
+                                    ? row.errors.join(', ')
+                                    : 'No errors'
+                                }
                               >
                                 {row.status === 'Valid' ? (
                                   <CheckCircle2 className="w-4 h-4" />
+                                ) : row.status === 'Validating' ? (
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
                                 ) : (
                                   <AlertTriangle className="w-4 h-4" />
                                 )}

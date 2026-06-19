@@ -51,12 +51,109 @@ export interface PreviewRow {
 export class TradeImportService {
   /**
    * Validate parsed trades against the database.
+   * Uses batch queries to resolve all accounts and scripts upfront,
+   * then iterates rows with in-memory lookups only — no per-row DB hits.
    */
   async previewRows(rows: ParsedTrade[]): Promise<PreviewRow[]> {
-    const preview: PreviewRow[] = [];
+    // ── 1. Collect unique lookup keys ────────────────────────────
+    const uniqueClientCodes = new Set<string>();
+    const uniqueScriptCodes = new Set<string>(); // for exchange mapping lookup
+    const uniqueScriptNames = new Set<string>(); // for fallback script lookup
 
-    const accountCache = new Map<string, any>();
-    const mappingCache = new Map<string, any>();
+    for (const row of rows) {
+      if (row.clientCode?.trim()) {
+        uniqueClientCodes.add(row.clientCode.trim());
+      }
+      const fullCode = (row.fullScript || row.script || '').trim();
+      const shortCode = (row.script || '').trim();
+      if (fullCode) uniqueScriptCodes.add(fullCode.toUpperCase());
+      if (shortCode) uniqueScriptCodes.add(shortCode.toUpperCase());
+      if (fullCode) uniqueScriptNames.add(fullCode.toUpperCase());
+      if (shortCode) uniqueScriptNames.add(shortCode.toUpperCase());
+    }
+
+    // ── 2. Batch fetch accounts ─────────────────────────────────
+    const accountMap = new Map<string, { id: string }>();
+    if (uniqueClientCodes.size > 0) {
+      const accounts = await prisma.account.findMany({
+        where: { code: { in: Array.from(uniqueClientCodes) } },
+        select: { id: true, code: true },
+      });
+      for (const acc of accounts) {
+        accountMap.set(acc.code, { id: acc.id });
+      }
+    }
+
+    // ── 3. Batch fetch script-exchange mappings ─────────────────
+    const mappingMap = new Map<string, { scriptId: string; exchangeId: string; exchangeCode: string }>();
+    if (uniqueScriptCodes.size > 0) {
+      const mappings = await prisma.scriptExchangeMapping.findMany({
+        where: {
+          exchangeScriptCode: { in: Array.from(uniqueScriptCodes), mode: 'insensitive' },
+        },
+        include: { exchange: { select: { code: true } } },
+      });
+      for (const m of mappings) {
+        const key = m.exchangeScriptCode.toUpperCase();
+        if (!mappingMap.has(key)) {
+          mappingMap.set(key, {
+            scriptId: m.scriptId,
+            exchangeId: m.exchangeId,
+            exchangeCode: m.exchange?.code || '',
+          });
+        }
+      }
+    }
+
+    // ── 4. Batch fallback: scripts by name (only for codes not resolved above) ──
+    const unresolvedScriptNames: string[] = [];
+    for (const name of uniqueScriptNames) {
+      if (!mappingMap.has(name)) {
+        unresolvedScriptNames.push(name);
+      }
+    }
+
+    const scriptFallbackMap = new Map<string, { scriptId: string; exchangeId: string; exchangeCode: string }>();
+    if (unresolvedScriptNames.length > 0) {
+      const scripts = await prisma.script.findMany({
+        where: {
+          OR: [
+            { shortName: { in: unresolvedScriptNames, mode: 'insensitive' } },
+            { fullName: { in: unresolvedScriptNames, mode: 'insensitive' } },
+          ],
+        },
+        include: {
+          scriptExchangeMappings: {
+            include: { exchange: { select: { code: true } } },
+            take: 1,
+          },
+        },
+      });
+
+      // If any scripts found have no exchange mapping, we might need a default exchange
+      let defaultExchange: { id: string; code: string } | null = null;
+      const needsDefault = scripts.some(
+        (s) => !s.scriptExchangeMappings || s.scriptExchangeMappings.length === 0
+      );
+      if (needsDefault) {
+        const ex = await prisma.exchange.findFirst({ select: { id: true, code: true } });
+        if (ex) defaultExchange = ex;
+      }
+
+      for (const script of scripts) {
+        const entry = {
+          scriptId: script.id,
+          exchangeId: script.scriptExchangeMappings?.[0]?.exchangeId || defaultExchange?.id || '',
+          exchangeCode: script.scriptExchangeMappings?.[0]?.exchange?.code || defaultExchange?.code || '',
+        };
+        // Index by both shortName and fullName
+        if (script.shortName) scriptFallbackMap.set(script.shortName.toUpperCase(), entry);
+        if (script.fullName) scriptFallbackMap.set(script.fullName.toUpperCase(), entry);
+      }
+    }
+
+    // ── 5. Build preview rows using in-memory maps only ─────────
+    const preview: PreviewRow[] = [];
 
     for (const row of rows) {
       const errors: string[] = [];
@@ -69,101 +166,36 @@ export class TradeImportService {
       if (!row.clientCode || row.clientCode.trim() === '') {
         errors.push('Client Code is required');
       } else {
-        const cachedAccount = accountCache.get(row.clientCode);
-        if (cachedAccount === null) {
-          errors.push(`Client '${row.clientCode}' not found`);
-        } else if (cachedAccount) {
-          resolvedAccountId = cachedAccount.id;
+        const acc = accountMap.get(row.clientCode.trim());
+        if (acc) {
+          resolvedAccountId = acc.id;
         } else {
-          const account = await prisma.account.findFirst({
-            where: { code: row.clientCode },
-          });
-          if (account) {
-            accountCache.set(row.clientCode, account);
-            resolvedAccountId = account.id;
-          } else {
-            accountCache.set(row.clientCode, null);
-            errors.push(`Client '${row.clientCode}' not found`);
-          }
+          errors.push(`Client '${row.clientCode}' not found`);
         }
       }
 
-      // 2. Resolve Script & Exchange mapping
-      const scriptCode = row.fullScript || row.script;
-      if (!scriptCode || scriptCode.trim() === '') {
+      // 2. Resolve Script & Exchange
+      const scriptCode = (row.fullScript || row.script || '').trim();
+      const shortCode = (row.script || '').trim();
+
+      if (!scriptCode) {
         errors.push('Script/Symbol Code is required');
       } else {
-        const cacheKey = scriptCode.toUpperCase();
-        const cachedMapping = mappingCache.get(cacheKey);
-
-        if (cachedMapping === null) {
-          errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
-        } else if (cachedMapping) {
-          resolvedScriptId = cachedMapping.scriptId;
-          resolvedExchangeId = cachedMapping.exchangeId;
-          exchangeCode = cachedMapping.exchange?.code || '';
+        // Try exchange mapping first (most common)
+        const mapped = mappingMap.get(scriptCode.toUpperCase()) || mappingMap.get(shortCode.toUpperCase());
+        if (mapped) {
+          resolvedScriptId = mapped.scriptId;
+          resolvedExchangeId = mapped.exchangeId;
+          exchangeCode = mapped.exchangeCode;
         } else {
-          // 2.1 Try to resolve via ScriptExchangeMapping first (matching either fullScript or script code)
-          const mapping = await prisma.scriptExchangeMapping.findFirst({
-            where: {
-              exchangeScriptCode: {
-                in: [row.script, row.fullScript].filter(Boolean) as string[],
-                mode: 'insensitive',
-              },
-            },
-            include: {
-              exchange: true,
-            },
-          });
-
-          if (mapping) {
-            mappingCache.set(cacheKey, mapping);
-            resolvedScriptId = mapping.scriptId;
-            resolvedExchangeId = mapping.exchangeId;
-            exchangeCode = mapping.exchange?.code || '';
+          // Fallback: script name lookup
+          const fallback = scriptFallbackMap.get(scriptCode.toUpperCase()) || scriptFallbackMap.get(shortCode.toUpperCase());
+          if (fallback) {
+            resolvedScriptId = fallback.scriptId;
+            resolvedExchangeId = fallback.exchangeId;
+            exchangeCode = fallback.exchangeCode;
           } else {
-            // 2.2 Fallback: Try to resolve by matching Script table's short_name or full_name directly
-            const script = await prisma.script.findFirst({
-              where: {
-                OR: [
-                  { shortName: { equals: row.script, mode: 'insensitive' } },
-                  { shortName: { equals: row.fullScript, mode: 'insensitive' } },
-                  { fullName: { equals: row.script, mode: 'insensitive' } },
-                  { fullName: { equals: row.fullScript, mode: 'insensitive' } },
-                ],
-              },
-              include: {
-                scriptExchangeMappings: {
-                  include: { exchange: true },
-                },
-              },
-            });
-
-            if (script) {
-              resolvedScriptId = script.id;
-              // If it has mappings, use the first mapping's exchange
-              if (script.scriptExchangeMappings && script.scriptExchangeMappings.length > 0) {
-                const firstMap = script.scriptExchangeMappings[0];
-                resolvedExchangeId = firstMap.exchangeId;
-                exchangeCode = firstMap.exchange?.code || '';
-              } else {
-                // Default to first exchange in DB
-                const defaultExchange = await prisma.exchange.findFirst();
-                if (defaultExchange) {
-                  resolvedExchangeId = defaultExchange.id;
-                  exchangeCode = defaultExchange.code;
-                }
-              }
-              // Cache a dummy mapping object so we don't hit DB again
-              mappingCache.set(cacheKey, {
-                scriptId: resolvedScriptId,
-                exchangeId: resolvedExchangeId,
-                exchange: { code: exchangeCode },
-              });
-            } else {
-              mappingCache.set(cacheKey, null);
-              errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
-            }
+            errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
           }
         }
       }

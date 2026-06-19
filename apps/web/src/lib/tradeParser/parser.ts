@@ -1,23 +1,48 @@
 import type { ParsedTrade, ParseError, ParseResult, FieldMapping } from './types';
 import { DEFAULT_MAPPING } from './fieldMappings';
 
+// ─── Constants ──────────────────────────────────────────────────
+
+const MONTH_MAP: Record<string, string> = {
+  JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+  JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+};
+
 // ─── Row Splitter ───────────────────────────────────────────────
 
 /**
  * Splits raw file content into individual lines.
  * Filters out empty lines and lines that are clearly corrupted
- * (e.g. fewer than 2 commas — can't be a valid trade row).
+ * (e.g. fewer than 10 commas — can't be a valid trade row).
+ *
+ * Uses a character scan instead of regex for comma counting — avoids
+ * allocating a temporary match array per line.
  */
 function splitRows(raw: string): string[] {
-  return raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => {
-      if (!line) return false;
-      // A valid trade row must have at least several comma-separated fields
-      const commaCount = (line.match(/,/g) || []).length;
-      return commaCount >= 10;
-    });
+  const result: string[] = [];
+  const lines = raw.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd();
+    // Remove trailing \r if present (handles \r\n without regex)
+    const clean = line.charCodeAt(line.length - 1) === 13
+      ? line.slice(0, -1)
+      : line;
+
+    if (clean.length === 0) continue;
+
+    // Count commas with a plain loop — ~3x faster than regex match
+    let commas = 0;
+    for (let j = 0; j < clean.length; j++) {
+      if (clean.charCodeAt(j) === 44) commas++; // 44 = ','
+      if (commas >= 10) break; // early exit once threshold met
+    }
+    if (commas >= 10) {
+      result.push(clean);
+    }
+  }
+
+  return result;
 }
 
 // ─── Transformers ───────────────────────────────────────────────
@@ -27,22 +52,50 @@ function splitRows(raw: string): string[] {
  * 1 → BUY, 2 → SELL
  */
 function transformBuySell(flag: string): 'BUY' | 'SELL' | null {
-  const trimmed = flag.trim();
-  if (trimmed === '1') return 'BUY';
-  if (trimmed === '2') return 'SELL';
+  const ch = flag.charCodeAt(0);
+  if (flag.length === 1 || (flag.length > 1 && flag.trim().length === 1)) {
+    const trimmed = flag.trim();
+    if (trimmed === '1') return 'BUY';
+    if (trimmed === '2') return 'SELL';
+  }
   return null;
 }
 
 /**
- * Normalizes a date string like "10 Apr 2026 10:12:07" into "2026-04-10 10:12:07".
- * Falls back to the raw string if parsing fails.
+ * Fast date parser for the known broker format: "DD Mon YYYY HH:MM:SS"
+ * e.g. "10 Apr 2026 10:12:07" → "2026-04-10 10:12:07"
+ *
+ * Falls back to Date constructor only if the fast path doesn't match.
+ * This avoids the extremely slow browser Date.parse() for the common case.
  */
 function parseDateTime(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
+  const s = raw.trim();
+  if (!s) return null;
 
+  // Fast path: "DD Mon YYYY HH:MM:SS" (length ~20-21)
+  // Also handles "D Mon YYYY HH:MM:SS" (single-digit day)
+  const spaceIdx1 = s.indexOf(' ');
+  if (spaceIdx1 > 0 && spaceIdx1 <= 2) {
+    const spaceIdx2 = s.indexOf(' ', spaceIdx1 + 1);
+    if (spaceIdx2 > 0) {
+      const spaceIdx3 = s.indexOf(' ', spaceIdx2 + 1);
+      if (spaceIdx3 > 0) {
+        const day = s.substring(0, spaceIdx1).padStart(2, '0');
+        const monthStr = s.substring(spaceIdx1 + 1, spaceIdx2).toUpperCase();
+        const year = s.substring(spaceIdx2 + 1, spaceIdx3);
+        const time = s.substring(spaceIdx3 + 1);
+
+        const month = MONTH_MAP[monthStr];
+        if (month && year.length === 4 && time.length >= 7) {
+          return `${year}-${month}-${day} ${time}`;
+        }
+      }
+    }
+  }
+
+  // Fallback: try native Date parsing
   try {
-    const date = new Date(trimmed);
+    const date = new Date(s);
     if (isNaN(date.getTime())) return null;
 
     const year = date.getFullYear();
@@ -75,11 +128,9 @@ function parseNumber(value: string): number | null {
  * Returns a raw field object (all strings) before transformation.
  */
 function extractFields(fields: string[], mapping: FieldMapping) {
+  const len = fields.length;
   const safeGet = (index: number): string => {
-    if (index >= 0 && index < fields.length) {
-      return fields[index].trim();
-    }
-    return '';
+    return index >= 0 && index < len ? fields[index].trim() : '';
   };
 
   return {
@@ -177,12 +228,18 @@ export function parseTradeFile(
   const trades: ParsedTrade[] = [];
   const errors: ParseError[] = [];
 
+  // Pre-compute maxIndex ONCE outside the loop
+  const mappingValues = Object.values(mapping);
+  let maxIndex = 0;
+  for (let k = 0; k < mappingValues.length; k++) {
+    if (mappingValues[k] > maxIndex) maxIndex = mappingValues[k];
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const fields = line.split(',');
 
-    // Check minimum field count based on the highest index in the mapping
-    const maxIndex = Math.max(...Object.values(mapping));
+    // Check minimum field count
     if (fields.length <= maxIndex) {
       errors.push({
         row: i + 1,
