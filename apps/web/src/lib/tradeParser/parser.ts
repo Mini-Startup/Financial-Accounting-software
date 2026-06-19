@@ -97,6 +97,7 @@ function extractFields(fields: string[], mapping: FieldMapping) {
     uniqueTradeId: safeGet(mapping.uniqueTradeId),
     exchangeTime: safeGet(mapping.exchangeTime),
     orderTime: safeGet(mapping.orderTime),
+    instrumentType: safeGet(mapping.instrumentType),
   };
 }
 
@@ -153,6 +154,7 @@ function validateAndTransform(
       uniqueTradeId: raw.uniqueTradeId,
       exchangeTime: raw.exchangeTime,
       orderTime: raw.orderTime,
+      instrumentType: raw.instrumentType,
     },
   };
 }

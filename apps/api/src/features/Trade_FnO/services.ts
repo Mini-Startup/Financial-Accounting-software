@@ -18,6 +18,7 @@ export interface ParsedTrade {
   uniqueTradeId: string;
   exchangeTime: string;
   orderTime: string;
+  instrumentType?: string;
 }
 
 export interface PreviewRow {
@@ -42,6 +43,7 @@ export interface PreviewRow {
   exchangeTime?: string;
   uniqueTradeId?: string;
   orderTime?: string;
+  instrumentType?: string;
 }
 
 
@@ -181,6 +183,11 @@ export class TradeImportService {
         errors.push('Rate cannot be negative');
       }
 
+      // 6. Instrument type check (must start with FUT, case-insensitive)
+      if (!row.instrumentType || !row.instrumentType.toUpperCase().startsWith('FUT')) {
+        errors.push('Not a valid future trade');
+      }
+
       preview.push({
         tradeNumber: row.tradeNo,
         clientCode: row.clientCode,
@@ -203,10 +210,9 @@ export class TradeImportService {
         exchangeTime: row.exchangeTime,
         uniqueTradeId: row.uniqueTradeId,
         orderTime: row.orderTime,
+        instrumentType: row.instrumentType,
       });
     }
-
-
 
     return preview;
   }
@@ -231,6 +237,7 @@ export class TradeImportService {
       uniqueTradeId: r.uniqueTradeId || '',
       exchangeTime: r.exchangeTime || '',
       orderTime: r.orderTime || '',
+      instrumentType: r.instrumentType || '',
     }));
 
     const preview = await this.previewRows(parsed);

@@ -574,3 +574,79 @@
 .trade-processing {
   animation: tradePulse 1.2s ease-in-out infinite;
 }
+
+/* Editable cell inputs */
+.edit-cell-input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--grid-text);
+  transition: all 0.15s ease;
+}
+
+.edit-cell-input:hover {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--color-border-light);
+}
+
+.edit-cell-input:focus {
+  background: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15); /* matching Emerald/Forest theme colors */
+  outline: none;
+}
+
+/* Number inputs should align right if inside a right-aligned column */
+.edit-cell-input.text-right {
+  text-align: right;
+}
+
+/* Select element styling */
+.edit-cell-select {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--grid-text);
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.15s ease;
+}
+
+.edit-cell-select:hover {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--color-border-light);
+}
+
+.edit-cell-select:focus {
+  background: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  outline: none;
+}
+
+/* Width limits to keep table structured */
+.edit-cell-input.w-number {
+  width: 100%;
+}
+.edit-cell-input.w-date {
+  width: 100%;
+}
+.edit-cell-select.w-client {
+  width: 100%;
+}
+.edit-cell-input.w-script {
+  width: 100%;
+}
+.edit-cell-input.w-tradenum {
+  width: 100%;
+}
+.edit-cell-input.w-terminal {
+  width: 100%;
+}
+

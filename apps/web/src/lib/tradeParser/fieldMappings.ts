@@ -35,6 +35,7 @@ export const DEFAULT_MAPPING: FieldMapping = {
   uniqueTradeId: 21,
   exchangeTime: 20,
   orderTime: 23,
+  instrumentType: 2,
 };
 
 // ──────────────────────────────────────────

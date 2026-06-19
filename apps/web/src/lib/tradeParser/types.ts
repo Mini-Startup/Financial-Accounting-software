@@ -21,6 +21,7 @@ export interface ParsedTrade {
   uniqueTradeId: string;
   exchangeTime: string;
   orderTime: string;
+  instrumentType?: string;
 }
 
 /** Error captured during parsing — one per problematic row */
@@ -58,4 +59,5 @@ export interface FieldMapping {
   uniqueTradeId: number;
   exchangeTime: number;
   orderTime: number;
+  instrumentType: number;
 }
