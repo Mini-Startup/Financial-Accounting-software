@@ -99,10 +99,27 @@ export default function SettlementPage() {
     return matchesSearch && matchesRole && matchesPosition;
   });
 
+  // Calculate settled data (realized for closed positions, valuation at closing rate for open positions)
+  const settledData = filteredData.map(item => {
+    const finalPnL = item.netQty === 0
+      ? item.realizedPnL
+      : item.closingRate !== null
+        ? item.netQty * (item.closingRate - item.netAvgRate)
+        : 0;
+    return {
+      ...item,
+      finalPnL
+    };
+  });
+
+
   // Calculate high-level metrics for the filtered view
-  const totalRealizedPnL = filteredData.reduce((sum, item) => sum + item.realizedPnL, 0);
   const totalVolume = filteredData.reduce((sum, item) => sum + item.buyQty + item.sellQty, 0);
   const openPositionsCount = filteredData.filter(item => item.netQty !== 0).length;
+
+  const totalPositivePnL = settledData.reduce((sum, item) => item.finalPnL > 0 ? sum + item.finalPnL : sum, 0);
+  const totalNegativePnL = settledData.reduce((sum, item) => item.finalPnL < 0 ? sum + item.finalPnL : sum, 0);
+  const netTotalPnL = totalPositivePnL + totalNegativePnL;
 
   // Carry Forward and Back Forward Date calculations
   const formatDateStr = (dateStr: string) => {
@@ -197,13 +214,13 @@ export default function SettlementPage() {
             <div className="card">
               <div className="card__body flex items-center justify-between p-6">
                 <div>
-                  <p className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Realized P&L</p>
-                  <h3 className={`text-h2 font-display mt-2 font-bold ${totalRealizedPnL >= 0 ? 'text-[var(--color-forest)]' : 'text-[var(--color-negative)]'}`}>
-                    ₹{totalRealizedPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Settled P&L</p>
+                  <h3 className={`text-h2 font-display mt-2 font-bold ${netTotalPnL >= 0 ? 'text-[var(--color-forest)]' : 'text-[var(--color-negative)]'}`}>
+                    ₹{netTotalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                 </div>
-                <div className={`p-3 rounded-xl ${totalRealizedPnL >= 0 ? 'bg-emerald-50 text-[var(--color-forest)]' : 'bg-red-50 text-[var(--color-negative)]'}`}>
-                  {totalRealizedPnL >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                <div className={`p-3 rounded-xl ${netTotalPnL >= 0 ? 'bg-emerald-50 text-[var(--color-forest)]' : 'bg-red-50 text-[var(--color-negative)]'}`}>
+                  {netTotalPnL >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
                 </div>
               </div>
             </div>
@@ -321,18 +338,19 @@ export default function SettlementPage() {
                       <th className="text-right">Sell Avg Price</th>
                       <th className="text-right">Net Qty</th>
                       <th className="text-right">Net Avg Price</th>
-                      <th className="text-right">Realized P&L</th>
+                      <th className="text-right">Closing Rate</th>
+                      <th className="text-right">Profit & Loss</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.length === 0 ? (
+                    {settledData.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                        <td colSpan={12} className="py-12 text-center text-[var(--color-slate)] font-medium">
                           No matching settlement summary rows found.
                         </td>
                       </tr>
                     ) : (
-                      filteredData.map((item, index) => {
+                      settledData.map((item, index) => {
                         const isNetLong = item.netQty > 0;
                         const isNetShort = item.netQty < 0;
                         const isClosed = item.netQty === 0;
@@ -373,9 +391,18 @@ export default function SettlementPage() {
                             <td className="text-right font-mono font-medium">
                               {isClosed ? '—' : `₹${item.netAvgRate.toFixed(2)}`}
                             </td>
+                            <td className="text-right font-mono font-medium">
+                              {isClosed ? (
+                                <span className="text-[var(--color-slate)]/40">—</span>
+                              ) : item.closingRate === null ? (
+                                <span className="text-amber-600 font-semibold" title="Missing closing rate in DB">Missing</span>
+                              ) : (
+                                `₹${item.closingRate.toFixed(2)}`
+                              )}
+                            </td>
                             <td className={`text-right font-mono font-semibold`}>
-                              <span className={item.realizedPnL > 0 ? 'text-[var(--color-forest)]' : item.realizedPnL < 0 ? 'text-[var(--color-negative)]' : 'text-[var(--color-slate)]'}>
-                                {item.realizedPnL > 0 ? '+' : ''}₹{item.realizedPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className={item.finalPnL > 0 ? 'text-[var(--color-forest)]' : item.finalPnL < 0 ? 'text-[var(--color-negative)]' : 'text-[var(--color-slate)]'}>
+                                {item.finalPnL > 0 ? '+' : ''}₹{item.finalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </td>
                           </tr>
@@ -383,6 +410,26 @@ export default function SettlementPage() {
                       })
                     )}
                   </tbody>
+                  {settledData.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-slate-100/60 font-semibold border-t-2 border-slate-200">
+                        <td colSpan={11} className="text-right py-3 px-4 font-bold text-[var(--color-charcoal)]">
+                          Totals (incl. Valuation):
+                        </td>
+                        <td className="text-right py-3 px-4 font-mono">
+                          <div className="text-[var(--color-forest)] font-semibold" title="Total Positive P&L">
+                            +₹{totalPositivePnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[var(--color-negative)] font-semibold" title="Total Negative P&L">
+                            -₹{Math.abs(totalNegativePnL).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className={`border-t border-slate-300 pt-1 mt-1 font-bold ${netTotalPnL >= 0 ? 'text-[var(--color-forest)]' : 'text-[var(--color-negative)]'}`} title="Net P&L">
+                            {netTotalPnL >= 0 ? '+' : ''}₹{netTotalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </div>
