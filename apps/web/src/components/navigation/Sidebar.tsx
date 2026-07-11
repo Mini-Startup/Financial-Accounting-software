@@ -5,251 +5,493 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import {
-  Squares2X2Icon,
-  BuildingOffice2Icon,
-  UsersIcon,
-  DocumentTextIcon,
-  BuildingLibraryIcon,
-  BanknotesIcon,
-  BookOpenIcon,
-  ArrowsRightLeftIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ArrowTrendingUpIcon,
-  CalendarDaysIcon,
-  ScaleIcon,
-  ClipboardIcon,
-  WalletIcon
-} from "@heroicons/react/24/outline";
+  LayoutDashboard,
+  Users,
+  ScrollText,
+  Globe,
+  Percent,
+  Layers,
+  ArrowUpDown,
+  TrendingUp,
+  CalendarDays,
+  FileSpreadsheet,
+  FolderOpen,
+  Scale,
+  Coins,
+  GitFork,
+  Shuffle,
+  Filter,
+  Wallet,
+  Receipt,
+  BookText,
+  CircleDollarSign,
+  Building2,
+  GitCompare,
+  AlertTriangle,
+  PieChart,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Lock,
+  Unlock,
+  Sliders,
+  DollarSign
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 
-interface NavItem {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ChildItem {
   name: string;
-  path?: string;
+  path: string;
+  upcoming?: boolean;
   icon: React.ComponentType<any>;
-  children?: Array<{ name: string; path: string }>;
+  /** true when this child is itself an expandable sub-group */
+  subGroup?: boolean;
+  children?: Array<{ name: string; path: string; upcoming?: boolean; icon: React.ComponentType<any> }>;
 }
+
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  children: ChildItem[];
+}
+
+// ─── Upcoming helper ──────────────────────────────────────────────────────────
+
+function comingSoon(feature: string) {
+  return `/coming-soon?feature=${feature}`;
+}
+
+// ─── Nav Structure with Custom Icons ──────────────────────────────────────────
+
+const sections: NavSection[] = [
+  {
+    id: "master",
+    label: "Master",
+    icon: Sliders,
+    children: [
+      { name: "Broker",    path: "/brokers",       icon: ShieldCheckIcon },
+      { name: "Clients",   path: "/clients",       icon: Users },
+      { name: "Scripts",   path: "/scripts",       icon: ScrollText },
+      { name: "Exchanges", path: "/exchanges",     icon: Globe },
+      { name: "Brokerage", path: "/brokerage",     icon: Percent },
+      { name: "Others",    path: "/account-master", icon: Layers },
+    ],
+  },
+  {
+    id: "data",
+    label: "Data",
+    icon: FolderOpen,
+    children: [
+      { name: "Trades",        path: "/trades",        icon: ArrowUpDown },
+      { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp },
+      { name: "Expiry Dates",  path: "/expiry-dates",   icon: CalendarDays },
+      {
+        name: "Import Files",
+        path: "#",
+        icon: FileSpreadsheet,
+        subGroup: true,
+        children: [
+          { name: "Trade Import",          path: "/trades?import=true",                 icon: FileSpreadsheet },
+          { name: "Closing Rates Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
+          { name: "Margine File Imports",  path: comingSoon("margine-file-imports"),  icon: DollarSign, upcoming: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: Coins,
+    children: [
+      { name: "Sattelment Reports",     path: "/settlement",                         icon: Scale },
+      { name: "Brokerage Report",       path: comingSoon("brokerage-report"),        icon: Coins, upcoming: true },
+      { name: "Cleint wise / Script Wise", path: comingSoon("client-wise-script-wise"), icon: GitFork, upcoming: true },
+      { name: "Broker wise / Script Wise", path: comingSoon("broker-wise-script-wise"), icon: Shuffle, upcoming: true },
+      { name: "Script Wise / Cleint",   path: comingSoon("script-wise-client"),      icon: Filter, upcoming: true },
+      { name: "Script Wise / Broker",   path: comingSoon("script-wise-broker"),      icon: FolderOpen, upcoming: true },
+    ],
+  },
+  {
+    id: "financial",
+    label: "Financial",
+    icon: Wallet,
+    children: [
+      { name: "Ledger Report",             path: "/ledger",                               icon: BookText },
+      { name: "Voucher Entry",             path: "/vouchers",                             icon: Receipt },
+      { name: "Collection Book",           path: comingSoon("collection-book"),           icon: BookText, upcoming: true },
+      { name: "Cash Book",                 path: comingSoon("cash-book"),                 icon: CircleDollarSign, upcoming: true },
+      { name: "Bank Book",                 path: comingSoon("bank-book"),                 icon: Building2, upcoming: true },
+      { name: "JV / Contra Register",      path: comingSoon("jv-contra-register"),        icon: GitCompare, upcoming: true },
+      { name: "Payment / Receipt Register",path: comingSoon("payment-receipt-register"),  icon: Scale, upcoming: true },
+      { name: "Margine Report",            path: comingSoon("margine-report"),            icon: AlertTriangle, upcoming: true },
+      { name: "Expance Register",          path: comingSoon("expance-register"),          icon: Receipt, upcoming: true },
+      { name: "Trial Balance",             path: comingSoon("trial-balance"),             icon: Scale, upcoming: true },
+      { name: "Profit & Loss",             path: comingSoon("profit-loss"),               icon: Percent, upcoming: true },
+      { name: "Balancesheet",              path: comingSoon("balancesheet"),              icon: PieChart, upcoming: true },
+    ],
+  },
+];
+
+// Helper icon to avoid dynamic Lucide imports
+function ShieldCheckIcon(props: React.ComponentProps<"svg">) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      {...props}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"
+      />
+    </svg>
+  );
+}
+
+// ─── Sidebar Component ────────────────────────────────────────────────────────
 
 export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [tradesOpen, setTradesOpen] = React.useState(true);
-  const [closingRatesOpen, setClosingRatesOpen] = React.useState(true);
 
-  const isTradesImportMode = (pathname === "/trades" && searchParams?.get("import") === "true") || pathname === "/trades/import";
-  const isTradesBase = pathname === "/trades" || pathname?.startsWith("/trades/");
-  const isTradesListActive = isTradesBase && !isTradesImportMode;
+  // Collapsible logic state
+  const [isLocked, setIsLocked] = React.useState(true);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
-  const isClosingRatesImportMode = (pathname === "/closing-rates" && searchParams?.get("import") === "true") || pathname === "/closing-rates/import";
-  const isClosingRatesBase = pathname === "/closing-rates" || pathname?.startsWith("/closing-rates/");
-  const isClosingRatesListActive = isClosingRatesBase && !isClosingRatesImportMode;
-
-  React.useEffect(() => {
-    if (isTradesImportMode) {
-      setTradesOpen(true);
-    }
-  }, [isTradesImportMode]);
+  // Track open/closed state per section and sub-group
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
+    master: true,
+    data: true,
+    reports: true,
+    financial: true,
+    "import-files": true,
+  });
 
   React.useEffect(() => {
-    if (isClosingRatesImportMode) {
-      setClosingRatesOpen(true);
+    const saved = localStorage.getItem("sidebar-locked");
+    if (saved !== null) {
+      setIsLocked(saved === "true");
     }
-  }, [isClosingRatesImportMode]);
+    setMounted(true);
+  }, []);
 
-  const navItems: NavItem[] = [
-    { name: "Dashboard", path: "/", icon: Squares2X2Icon },
-    { name: "Brokers", path: "/brokers", icon: BuildingOffice2Icon },
-    { name: "Clients", path: "/clients", icon: UsersIcon },
-    { name: "Account Master", path: "/account-master", icon: ClipboardIcon },
-    { name: "Voucher Entry", path: "/vouchers", icon: WalletIcon },
-    { name: "Ledger Report", path: "/ledger", icon: BookOpenIcon },
-    { name: "Scripts", path: "/scripts", icon: DocumentTextIcon },
-    { name: "Exchanges", path: "/exchanges", icon: BuildingLibraryIcon },
-    { name: "Brokerage", path: "/brokerage", icon: BanknotesIcon },
-    { name: "Settlement", path: "/settlement", icon: ScaleIcon },
-    {
-      name: "Closing Rates",
-      path: "/closing-rates",
-      icon: ArrowTrendingUpIcon,
-      children: [
-        { name: "Import File", path: "/closing-rates?import=true" },
-      ]
+  const toggleLock = () => {
+    const nextVal = !isLocked;
+    setIsLocked(nextVal);
+    localStorage.setItem("sidebar-locked", String(nextVal));
+  };
+
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Sidebar is fully expanded if locked OR hovered (overlay mode)
+  const isExpanded = isLocked || isHovered;
+
+  // ── Active detection helpers ──────────────────────────────────────────────
+
+  const isImportMode = React.useCallback(
+    (basePath: string) => {
+      const base = pathname === basePath;
+      const importParam = searchParams?.get("import") === "true";
+      return base && importParam;
     },
-    { name: "Expiry Dates", path: "/expiry-dates", icon: CalendarDaysIcon },
-    {
-      name: "Trades",
-      path: "/trades",
-      icon: ArrowsRightLeftIcon,
-      children: [
-        { name: "Import File", path: "/trades?import=true" },
-      ]
-    }
-  ];
+    [pathname, searchParams]
+  );
 
-  const isActive = (path?: string) => {
-    if (!path) return false;
-    if (path === "/") {
-      return pathname === "/";
-    }
-    return pathname === path || pathname?.startsWith(path + "/");
-  };
+  const isActive = React.useCallback(
+    (path: string): boolean => {
+      if (!path || path === "#") return false;
+      if (path.includes("?import=true")) {
+        const base = path.split("?")[0];
+        return isImportMode(base);
+      }
+      if (path.includes("/coming-soon")) {
+        if (pathname !== "/coming-soon") return false;
+        const pathFeature = new URL(path, "http://x").searchParams.get("feature");
+        const currentFeature = searchParams?.get("feature");
+        return pathFeature === currentFeature;
+      }
+      if (path === "/") return pathname === "/";
+      return pathname === path || pathname?.startsWith(path + "/");
+    },
+    [pathname, searchParams, isImportMode]
+  );
 
-  const isParentActive = (item: NavItem) => {
-    if (item.name === "Trades") {
-      return isTradesBase;
+  const isSectionActive = React.useCallback(
+    (section: NavSection): boolean => {
+      return section.children.some((child) => {
+        if (child.subGroup && child.children) {
+          return child.children.some((c) => isActive(c.path));
+        }
+        return isActive(child.path);
+      });
+    },
+    [isActive]
+  );
+
+  // Auto-open section if a child is active
+  React.useEffect(() => {
+    const updates: Record<string, boolean> = {};
+    sections.forEach((sec) => {
+      if (isSectionActive(sec)) updates[sec.id] = true;
+      sec.children.forEach((child) => {
+        if (child.subGroup && child.children) {
+          const key = child.name.toLowerCase().replace(/\s+/g, "-");
+          if (child.children.some((c) => isActive(c.path))) {
+            updates[key] = true;
+          }
+        }
+      });
+    });
+    if (Object.keys(updates).length > 0) {
+      setOpenSections((prev) => ({ ...prev, ...updates }));
     }
-    if (item.name === "Closing Rates") {
-      return isClosingRatesBase;
-    }
-    if (item.path) return isActive(item.path);
-    if (item.children) {
-      return item.children.some(child => pathname === child.path);
-    }
-    return false;
-  };
+  }, [pathname, isSectionActive, isActive]);
+
+  if (!mounted) {
+    return (
+      <div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />
+    );
+  }
 
   return (
-    <aside className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] flex flex-col sticky top-0 shrink-0 select-none">
-      {/* Logo Area */}
-      <div className="h-16 flex items-center px-6 border-b border-[var(--sidebar-divider)] shrink-0 gap-3">
-        <span className="w-8 h-8 rounded-lg bg-[var(--color-leaf)] flex items-center justify-center text-[var(--color-forest)] font-extrabold text-lg shadow-sm">
-          B
-        </span>
-        <span className="text-[var(--color-white)] font-display font-bold text-lg tracking-tight">
-          BizzMate FAS
-        </span>
-      </div>
+    <>
+      {/* Space holder: sits in layout grid/flex, matches width of current locked/collapsed state */}
+      <div
+        className={cn(
+          "h-screen shrink-0 hidden md:block transition-all duration-300 ease-in-out",
+          isLocked ? "w-64" : "w-16"
+        )}
+      />
 
-      {/* Navigation List */}
-      <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-6">
-        <div>
-          <nav className="flex flex-col gap-1.5">
-            {navItems.map((item) => {
-              const hasChildren = !!item.children;
-              const parentActive = isParentActive(item);
-              
-              const isOpen = item.name === "Trades" ? tradesOpen : item.name === "Closing Rates" ? closingRatesOpen : false;
-              const setOpen = item.name === "Trades" ? setTradesOpen : item.name === "Closing Rates" ? setClosingRatesOpen : () => {};
-              
-              const isItemImportMode = item.name === "Trades" ? isTradesImportMode : item.name === "Closing Rates" ? isClosingRatesImportMode : false;
-              const isItemListActive = item.name === "Trades" ? isTradesListActive : item.name === "Closing Rates" ? isClosingRatesListActive : false;
+      {/* Floating Panel Sidebar */}
+      <aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={cn(
+          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] select-none transition-all duration-300 ease-in-out",
+          isExpanded ? "w-64 shadow-2xl" : "w-16"
+        )}
+      >
+        {/* Top Header / Logo Area */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--sidebar-divider)] shrink-0 overflow-hidden">
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="w-8 h-8 rounded-lg bg-[var(--color-leaf)] flex items-center justify-center text-[var(--color-forest)] font-extrabold text-lg shadow-sm shrink-0">
+              B
+            </span>
+            {isExpanded && (
+              <span className="text-[var(--color-white)] font-display font-black text-lg tracking-tight transition-all duration-200">
+                BizzMate FAS
+              </span>
+            )}
+          </div>
+          
+          {/* Lock / Toggle button */}
+          {isExpanded && (
+            <button
+              onClick={toggleLock}
+              className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--color-emerald)]/30 transition-all shrink-0"
+              title={isLocked ? "Collapse sidebar" : "Pin/Lock sidebar"}
+            >
+              {isLocked ? (
+                <ChevronLeft className="w-4 h-4 stroke-[2]" />
+              ) : (
+                <ChevronRight className="w-4 h-4 stroke-[2]" />
+              )}
+            </button>
+          )}
+        </div>
 
-              if (hasChildren) {
-                return (
-                  <div key={item.name} className="flex flex-col gap-1">
-                    <div
+        {/* Scrollable Navigation links */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-0.5 scrollbar-thin">
+          
+          {/* Standalone Dashboard */}
+          <Link
+            href="/"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 group mb-1 shrink-0",
+              pathname === "/"
+                ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
+                : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]"
+            )}
+          >
+            <LayoutDashboard
+              className={cn(
+                "w-[18px] h-[18px] shrink-0 stroke-[1.75] transition-colors",
+                pathname === "/"
+                  ? "text-[var(--sidebar-active-txt)]"
+                  : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+              )}
+            />
+            {isExpanded && (
+              <span className="transition-all duration-200">Dashboard</span>
+            )}
+          </Link>
+
+          {/* Collapsible Sections */}
+          {sections.map((section) => {
+            const sectionOpen = openSections[section.id];
+            const sectionActive = isSectionActive(section);
+
+            return (
+              <div key={section.id} className="flex flex-col mt-2.5 shrink-0">
+                
+                {/* Section Header Title */}
+                <button
+                  onClick={() => isExpanded && toggleSection(section.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between rounded-lg transition-all duration-150 shrink-0",
+                    isExpanded ? "px-3 py-2 text-[10px] font-bold tracking-widest uppercase" : "px-3 py-2 text-center",
+                    sectionActive
+                      ? "text-[var(--color-leaf)] bg-[var(--color-leaf)]/5"
+                      : "text-[var(--sidebar-text-muted)] hover:text-[var(--color-leaf)] hover:bg-[var(--color-leaf)]/5"
+                  )}
+                  disabled={!isExpanded}
+                >
+                  <div className={cn("flex items-center gap-2", !isExpanded && "mx-auto")}>
+                    <section.icon className="w-4 h-4 shrink-0 stroke-[2]" />
+                    {isExpanded && <span>{section.label}</span>}
+                  </div>
+                  {isExpanded && (
+                    <ChevronDown
                       className={cn(
-                        "w-full flex items-center justify-between rounded-lg font-medium text-sm transition-all duration-150 group text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]",
-                        isItemListActive
-                          ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm"
-                          : parentActive && "bg-[var(--sidebar-active-bg)]/10 text-[var(--color-leaf)]"
+                        "w-3 h-3 transition-transform duration-200",
+                        sectionOpen ? "rotate-180" : "rotate-0"
                       )}
-                    >
-                      <Link
-                        href={item.path || "#"}
-                        className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-l-lg"
-                      >
-                        <item.icon
-                          className={cn(
-                            "w-5 h-5 shrink-0 transition-colors",
-                            isItemListActive
-                              ? "text-[var(--sidebar-active-txt)]"
-                              : parentActive
-                              ? "text-[var(--color-leaf)]"
-                              : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
-                          )}
-                        />
-                        <span>{item.name}</span>
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setOpen(!isOpen);
-                        }}
-                        className={cn(
-                          "px-3 py-3 rounded-r-lg hover:bg-[var(--color-emerald)]/30 text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-active-txt)] flex items-center justify-center shrink-0 border-l border-[var(--sidebar-divider)]/40",
-                          isItemListActive && "text-[var(--sidebar-active-txt)]/80 hover:bg-[var(--color-emerald)]/30"
-                        )}
-                      >
-                        {isOpen ? (
-                          <ChevronUpIcon className="w-4 h-4" />
-                        ) : (
-                          <ChevronDownIcon className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
+                    />
+                  )}
+                </button>
 
-                    {isOpen && (
-                      <div className="pl-6 flex flex-col gap-1 border-l border-[var(--sidebar-divider)] ml-5 mt-1">
-                        {item.children!.map((child) => {
-                          const childActive = (child.path.includes("import=true") || child.path.endsWith("/import")) ? isItemImportMode : pathname === child.path;
-                          return (
-                            <Link
-                              key={child.path}
-                              href={child.path}
+                {/* Section Children list */}
+                {isExpanded && sectionOpen && (
+                  <div className="flex flex-col gap-1 mt-1 ml-3.5 pl-3.5 border-l border-[var(--sidebar-divider)]/40">
+                    {section.children.map((child) => {
+                      
+                      // ── Sub-group element (Import Files) ────────────────
+                      if (child.subGroup && child.children) {
+                        const subKey = child.name.toLowerCase().replace(/\s+/g, "-");
+                        const subOpen = openSections[subKey];
+                        const subGroupActive = child.children.some((c) => isActive(c.path));
+
+                        return (
+                          <div key={child.name} className="flex flex-col gap-1">
+                            <button
+                              onClick={() => toggleSection(subKey)}
                               className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-xs transition-all duration-150",
-                                childActive
-                                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                                  : "text-[var(--sidebar-text-muted)] hover:bg-[var(--color-emerald)]/10 hover:text-[var(--sidebar-active-txt)]"
+                                "w-full flex items-center justify-between px-2.5 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 group shrink-0",
+                                subGroupActive
+                                  ? "text-[var(--sidebar-active-txt)] bg-[var(--sidebar-active-bg)]"
+                                  : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
                               )}
                             >
-                              <span>{child.name}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
+                              <div className="flex items-center gap-2">
+                                <child.icon className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                <span>{child.name}</span>
+                              </div>
+                              <ChevronDown
+                                className={cn(
+                                  "w-3.5 h-3.5 transition-transform duration-200",
+                                  subOpen ? "rotate-180" : "rotate-0"
+                                )}
+                              />
+                            </button>
+
+                            {subOpen && (
+                              <div className="flex flex-col gap-1 mt-0.5 ml-3 pl-3 border-l border-[var(--sidebar-divider)]/30">
+                                {child.children.map((sub) => {
+                                  const subActive = isActive(sub.path);
+                                  return (
+                                    <Link
+                                      key={sub.path}
+                                      href={sub.path}
+                                      className={cn(
+                                        "flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 shrink-0",
+                                        subActive
+                                          ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
+                                          : "text-[var(--sidebar-text-muted)] hover:bg-[var(--color-emerald)]/10 hover:text-[var(--sidebar-active-txt)]"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <sub.icon className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                                        <span>{sub.name}</span>
+                                      </div>
+                                      {sub.upcoming && (
+                                        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                                          Soon
+                                        </span>
+                                      )}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // ── Regular child link element ──────────────────────
+                      const active = isActive(child.path);
+                      return (
+                        <Link
+                          key={child.path + child.name}
+                          href={child.path}
+                          className={cn(
+                            "flex items-center justify-between gap-2 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 shrink-0",
+                            active
+                              ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
+                              : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <child.icon className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                            <span>{child.name}</span>
+                          </div>
+                          {child.upcoming && (
+                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                              Soon
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
                   </div>
-                );
-              }
-
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path!}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-150 group",
-                    active
-                      ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm"
-                      : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]"
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "w-5 h-5 shrink-0 transition-colors",
-                      active
-                        ? "text-[var(--color-white)]"
-                        : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
-                    )}
-                  />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Footer / User Profile */}
-      <div className="p-4 border-t border-[var(--sidebar-divider)] mt-auto flex items-center gap-3 bg-[var(--sidebar-bg)] shrink-0">
-        <UserButton
-          appearance={{
-            elements: {
-              avatarBox: "w-9 h-9 border border-[var(--sidebar-divider)] shadow-sm"
-            }
-          }}
-        />
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
-            My Account
-          </span>
-          <span className="text-xs text-[var(--sidebar-text-muted)] truncate">
-            Settings & Profile
-          </span>
+        {/* Footer Area with User Profile info */}
+        <div className="p-3 border-t border-[var(--sidebar-divider)] mt-auto flex items-center gap-3 bg-[var(--sidebar-bg)] shrink-0 overflow-hidden">
+          <div className="shrink-0">
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-9 h-9 border border-[var(--sidebar-divider)] shadow-sm",
+                },
+              }}
+            />
+          </div>
+          {isExpanded && (
+            <div className="flex flex-col min-w-0 transition-all duration-200">
+              <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
+                My Account
+              </span>
+              <span className="text-xs text-[var(--sidebar-text-muted)] truncate">
+                Settings & Profile
+              </span>
+            </div>
+          )}
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
