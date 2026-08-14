@@ -74,6 +74,8 @@ model Account {
   bankAccountNumber   String?  @map("bank_account_number")
   upiId               String?  @map("upi_id")
   isActive            Boolean  @default(true) @map("is_active")
+  isDirectClient      Boolean  @default(true) @map("is_direct_client")
+  dealerCode          String?  @map("dealer_code")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt      @map("updated_at")
 
@@ -93,15 +95,19 @@ model Account {
 // ─────────────────────────────────────────────
 
 model Script {
-  id        String   @id @default(uuid())
-  shortName String   @map("short_name")
-  fullName  String   @map("full_name")
-  isin      String?  @map("isin")
-  lotSize   Int      @map("lot_size")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  id         String    @id @default(uuid())
+  shortName  String    @map("short_name")
+  fullName   String    @map("full_name")
+  isin       String?   @map("isin")
+  lotSize    Int       @map("lot_size")
+  exchangeId String?   @map("exchange_id")
+  currencyId String?   @map("currency_id")
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt      @map("updated_at")
 
+  exchange               Exchange?               @relation(fields: [exchangeId], references: [id])
+  currency               Currency?               @relation(fields: [currencyId], references: [id])
   brokerages             Brokerage[]
   scriptExchangeMappings ScriptExchangeMapping[]
   trades                 Trade[]
@@ -147,8 +153,27 @@ model Exchange {
   scriptExchangeMappings ScriptExchangeMapping[]
   trades                 Trade[]
   closingRates           ClosingRate[]
+  scripts                Script[]
 
   @@map("exchanges")
+}
+
+// ─────────────────────────────────────────────
+// CURRENCIES
+// ─────────────────────────────────────────────
+
+model Currency {
+  id        String   @id @default(uuid())
+  code      String   @unique              // e.g. "USD", "AED", "INR"
+  name      String?                        // e.g. "US Dollar"
+  symbol    String?                        // e.g. "$", "₹", "د.إ"
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  scripts   Script[]
+
+  @@map("currencies")
 }
 
 // ─────────────────────────────────────────────
@@ -193,6 +218,23 @@ model Trade {
   exchangeTime    String?  @map("exchange_time")
   uniqueTradeId   String?  @map("unique_trade_id")
   orderTime       String?  @map("order_time")
+
+  // Additional fields for Dubai FnO & trade imports
+  dealerCode      String?  @map("dealer_code")
+  currencyCode    String?  @map("currency_code")
+  securityName    String?  @map("security_name")
+  delMonth        String?  @map("del_month")
+  marketLot       Float?   @map("market_lot")
+  callPut         String?  @map("call_put")
+  strikePrice     Float?   @map("strike_price")
+  bloombergCode   String?  @map("bloomberg_code")
+  mktValue        Float?   @map("mkt_value")
+  clnCommission   Float?   @map("cln_commission")
+  clnExCharges    Float?   @map("cln_ex_charges")
+  clnCharges1     Float?   @map("cln_charges1")
+  clnCharges2     Float?   @map("cln_charges2")
+  vat             Float?   @map("vat")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt      @map("updated_at")
 
@@ -261,20 +303,30 @@ model Brokerage {
 // ─────────────────────────────────────────────
 
 model ClosingRate {
-  id         String   @id @default(uuid())
-  exchangeId String   @map("exchange_id")
-  scriptId   String   @map("script_id")
-  rateDate   DateTime @map("rate_date")
-  rate       Float    @map("rate")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt      @map("updated_at")
+  id            String   @id @default(uuid())
+  exchangeId    String   @map("exchange_id")
+  scriptId      String?  @map("script_id")
+  securityName  String   @map("security_name")
+  rateDate      DateTime @map("rate_date")
+  rate          Float    @map("rate")
 
-  exchange   Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
-  script     Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  expiry        String?  @map("expiry")
+  delMonth      String?  @map("del_month")
+  callPut       String?  @map("call_put")
+  strikePrice   Float?   @map("strike_price")
+  bloombergCode String?  @map("bloomberg_code")
+  currencyCode  String?  @map("currency_code")
 
-  @@unique([exchangeId, scriptId, rateDate])
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt      @map("updated_at")
+
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  script   Script?  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([exchangeId, securityName, rateDate])
   @@index([exchangeId])
   @@index([scriptId])
+  @@index([securityName])
   @@map("closing_rates")
 }
 

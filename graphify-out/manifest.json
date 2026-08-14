@@ -1,0 +1,652 @@
+{
+  ".agent/skills/ui-ux-pro-max/scripts/core.py": {
+    "mtime": 1781519776.8615847,
+    "ast_hash": "50e4dec705c13cc69d328c15dfbed37b",
+    "semantic_hash": "50e4dec705c13cc69d328c15dfbed37b"
+  },
+  ".agent/skills/ui-ux-pro-max/scripts/design_system.py": {
+    "mtime": 1781519776.8641355,
+    "ast_hash": "5b7a5311730aead50b242164e6f95858",
+    "semantic_hash": "5b7a5311730aead50b242164e6f95858"
+  },
+  ".agent/skills/ui-ux-pro-max/scripts/search.py": {
+    "mtime": 1781519776.8646626,
+    "ast_hash": "8c7e35426fe8f6f3ed91e9dce0ed7af1",
+    "semantic_hash": "8c7e35426fe8f6f3ed91e9dce0ed7af1"
+  },
+  "apps/api/eslint.config.mjs": {
+    "mtime": 1781519519.7886584,
+    "ast_hash": "069d66f3fd2af0b03d917cf51a1f4c42",
+    "semantic_hash": "069d66f3fd2af0b03d917cf51a1f4c42"
+  },
+  "apps/api/package.json": {
+    "mtime": 1781539218.4210052,
+    "ast_hash": "53b2fdea951b5a29500e14160bf8f8d0",
+    "semantic_hash": "53b2fdea951b5a29500e14160bf8f8d0"
+  },
+  "apps/api/prisma.config.ts": {
+    "mtime": 1781523252.3587306,
+    "ast_hash": "444647e41040b623b99346e28373e2b7",
+    "semantic_hash": "444647e41040b623b99346e28373e2b7"
+  },
+  "apps/api/prisma/migrations/20260413184554_init/migration.sql": {
+    "mtime": 1781519776.8676913,
+    "ast_hash": "fb6a431ada2f0b9854573c4e7e3d3592",
+    "semantic_hash": "fb6a431ada2f0b9854573c4e7e3d3592"
+  },
+  "apps/api/prisma/migrations/20260602053200_phase1_refactor/migration.sql": {
+    "mtime": 1781523665.5036464,
+    "ast_hash": "cae9416214b7ca7a8d220714f880e816",
+    "semantic_hash": "cae9416214b7ca7a8d220714f880e816"
+  },
+  "apps/api/prisma/migrations/20260615120000_add_trade_import_fields/migration.sql": {
+    "mtime": 1781523813.2664905,
+    "ast_hash": "52e430f1a7be5d0df0db5eda07fab1d8",
+    "semantic_hash": "52e430f1a7be5d0df0db5eda07fab1d8"
+  },
+  "apps/api/prisma/migrations/20260615130000_add_broker_and_brokerage_fields/migration.sql": {
+    "mtime": 1781526349.7330317,
+    "ast_hash": "4e1d973be393d39fb19dfd2b92729402",
+    "semantic_hash": "4e1d973be393d39fb19dfd2b92729402"
+  },
+  "apps/api/prisma/seed.js": {
+    "mtime": 1781531409.5149117,
+    "ast_hash": "3099c9e455fc9cc29f342d340f8245e2",
+    "semantic_hash": "3099c9e455fc9cc29f342d340f8245e2"
+  },
+  "apps/api/src/database/index.ts": {
+    "mtime": 1781519776.8736973,
+    "ast_hash": "5f6135e6d3aa0c71e0e21049df5e36c9",
+    "semantic_hash": "5f6135e6d3aa0c71e0e21049df5e36c9"
+  },
+  "apps/api/src/errors.ts": {
+    "mtime": 1781519776.8736973,
+    "ast_hash": "c07ba3d2b304628a55f4168e9eef1886",
+    "semantic_hash": "c07ba3d2b304628a55f4168e9eef1886"
+  },
+  "apps/api/src/features/Trade_FnO/routes.ts": {
+    "mtime": 1784697627.9453497,
+    "ast_hash": "05916a628b3f463776d2f52620fb4ba2",
+    "semantic_hash": "05916a628b3f463776d2f52620fb4ba2"
+  },
+  "apps/api/src/features/Trade_FnO/services.ts": {
+    "mtime": 1784694615.550624,
+    "ast_hash": "285c4406d15863e37bbf4c20dc4de1fd",
+    "semantic_hash": "285c4406d15863e37bbf4c20dc4de1fd"
+  },
+  "apps/api/src/features/account-masters/routes.ts": {
+    "mtime": 1783759494.8403203,
+    "ast_hash": "2a21e21dc957944d900ee77f3bb31743",
+    "semantic_hash": "2a21e21dc957944d900ee77f3bb31743"
+  },
+  "apps/api/src/features/account-masters/services.ts": {
+    "mtime": 1783759488.7789543,
+    "ast_hash": "e97eeec13d39145a561e5553f240db66",
+    "semantic_hash": "e97eeec13d39145a561e5553f240db66"
+  },
+  "apps/api/src/features/brokerages/routes.ts": {
+    "mtime": 1781519776.879766,
+    "ast_hash": "38a712511ea42f6561e908cbd0ead4ac",
+    "semantic_hash": "38a712511ea42f6561e908cbd0ead4ac"
+  },
+  "apps/api/src/features/brokerages/services.ts": {
+    "mtime": 1781519776.879766,
+    "ast_hash": "d9a4fe3a9aa5336f9e2abc0698b95088",
+    "semantic_hash": "d9a4fe3a9aa5336f9e2abc0698b95088"
+  },
+  "apps/api/src/features/closing-rates/routes.ts": {
+    "mtime": 1781529180.765909,
+    "ast_hash": "d6ea00ac0a6d0dd739588b60f887004c",
+    "semantic_hash": "d6ea00ac0a6d0dd739588b60f887004c"
+  },
+  "apps/api/src/features/closing-rates/services.ts": {
+    "mtime": 1781529176.404662,
+    "ast_hash": "853643241df09bbc38ac404330aaccf7",
+    "semantic_hash": "853643241df09bbc38ac404330aaccf7"
+  },
+  "apps/api/src/features/currencies/routes.ts": {
+    "mtime": 1783758040.8441563,
+    "ast_hash": "ef28a997aa7771b2578c986711e0a1c0",
+    "semantic_hash": "ef28a997aa7771b2578c986711e0a1c0"
+  },
+  "apps/api/src/features/currencies/services.ts": {
+    "mtime": 1783758038.7847903,
+    "ast_hash": "b8aea1698e3f1993c295a61fe66f2a3d",
+    "semantic_hash": "b8aea1698e3f1993c295a61fe66f2a3d"
+  },
+  "apps/api/src/features/exchanges/routes.ts": {
+    "mtime": 1781519776.881053,
+    "ast_hash": "1d2462aa212bae001d16b99fb32cdb9a",
+    "semantic_hash": "1d2462aa212bae001d16b99fb32cdb9a"
+  },
+  "apps/api/src/features/exchanges/services.ts": {
+    "mtime": 1781519776.881053,
+    "ast_hash": "f2b6debc430c5de08b47da35b00d5f68",
+    "semantic_hash": "f2b6debc430c5de08b47da35b00d5f68"
+  },
+  "apps/api/src/features/expiry-dates/routes.ts": {
+    "mtime": 1781529190.6808653,
+    "ast_hash": "7efa542aee6311682773801366d82ff9",
+    "semantic_hash": "7efa542aee6311682773801366d82ff9"
+  },
+  "apps/api/src/features/expiry-dates/services.ts": {
+    "mtime": 1781529186.246762,
+    "ast_hash": "f31e3b497710ba65a8ab02db9b2015a4",
+    "semantic_hash": "f31e3b497710ba65a8ab02db9b2015a4"
+  },
+  "apps/api/src/features/groups/routes.ts": {
+    "mtime": 1781519776.8824682,
+    "ast_hash": "97b8c98ed18275a6e654afd777de6626",
+    "semantic_hash": "97b8c98ed18275a6e654afd777de6626"
+  },
+  "apps/api/src/features/groups/services.ts": {
+    "mtime": 1781519776.883674,
+    "ast_hash": "79a37424512d7962a1df210a47f46d56",
+    "semantic_hash": "79a37424512d7962a1df210a47f46d56"
+  },
+  "apps/api/src/features/ledger-report/routes.ts": {
+    "mtime": 1781889515.2592535,
+    "ast_hash": "d83d1a9ec1bb22cac36509f4ae6ef908",
+    "semantic_hash": "d83d1a9ec1bb22cac36509f4ae6ef908"
+  },
+  "apps/api/src/features/ledger-report/services.ts": {
+    "mtime": 1781889511.1324887,
+    "ast_hash": "e410c00b2fb4ae74d448062b99d4a986",
+    "semantic_hash": "e410c00b2fb4ae74d448062b99d4a986"
+  },
+  "apps/api/src/features/scripts/routes.ts": {
+    "mtime": 1781519776.8857007,
+    "ast_hash": "748565873ffe978cf993135f3127a177",
+    "semantic_hash": "748565873ffe978cf993135f3127a177"
+  },
+  "apps/api/src/features/scripts/services.ts": {
+    "mtime": 1784693695.2343853,
+    "ast_hash": "6acb2e2f7d409c1692be23512d3060fb",
+    "semantic_hash": "6acb2e2f7d409c1692be23512d3060fb"
+  },
+  "apps/api/src/features/settlement/routes.ts": {
+    "mtime": 1781530107.3190367,
+    "ast_hash": "75dbafc86a9405b946ab43f916a7ab81",
+    "semantic_hash": "75dbafc86a9405b946ab43f916a7ab81"
+  },
+  "apps/api/src/features/settlement/services.ts": {
+    "mtime": 1784695007.49911,
+    "ast_hash": "0e99d61cda2e5a6d3085347ca480a1c9",
+    "semantic_hash": "0e99d61cda2e5a6d3085347ca480a1c9"
+  },
+  "apps/api/src/features/trades/routes.ts": {
+    "mtime": 1781519776.8871772,
+    "ast_hash": "ae3a41a29f5f8b02d26529455491147a",
+    "semantic_hash": "ae3a41a29f5f8b02d26529455491147a"
+  },
+  "apps/api/src/features/trades/services.ts": {
+    "mtime": 1784694254.740823,
+    "ast_hash": "5af8f1decb6641565bcc99ae06dda3e9",
+    "semantic_hash": "5af8f1decb6641565bcc99ae06dda3e9"
+  },
+  "apps/api/src/features/vouchers/routes.ts": {
+    "mtime": 1781889504.4428449,
+    "ast_hash": "83799466280bf4218745de2d4492de59",
+    "semantic_hash": "83799466280bf4218745de2d4492de59"
+  },
+  "apps/api/src/features/vouchers/services.ts": {
+    "mtime": 1781889500.228447,
+    "ast_hash": "2185423ea63d8370f6a27d4d65339e8c",
+    "semantic_hash": "2185423ea63d8370f6a27d4d65339e8c"
+  },
+  "apps/api/src/main.ts": {
+    "mtime": 1781541825.4911294,
+    "ast_hash": "0dbb5f68b30e3545981a473752ac5ac5",
+    "semantic_hash": "0dbb5f68b30e3545981a473752ac5ac5"
+  },
+  "apps/api/src/routes.ts": {
+    "mtime": 1783758052.570281,
+    "ast_hash": "3660761c380d48ef617f794c0082df11",
+    "semantic_hash": "3660761c380d48ef617f794c0082df11"
+  },
+  "apps/api/src/utils/brokerage.ts": {
+    "mtime": 1781519776.8941271,
+    "ast_hash": "f2d3c570bf6440600874beb12cb72e37",
+    "semantic_hash": "f2d3c570bf6440600874beb12cb72e37"
+  },
+  "apps/api/tsconfig.json": {
+    "mtime": 1781539224.9614758,
+    "ast_hash": "938f467c1a0bb88f779e49c1555bdfa8",
+    "semantic_hash": "938f467c1a0bb88f779e49c1555bdfa8"
+  },
+  "apps/api/vercel.json": {
+    "mtime": 1781539253.8529117,
+    "ast_hash": "fcd6a362b0318aeb0f04edd109826280",
+    "semantic_hash": "fcd6a362b0318aeb0f04edd109826280"
+  },
+  "apps/web/components.json": {
+    "mtime": 1781519776.898762,
+    "ast_hash": "519f93133ded707d8847caceca85dbac",
+    "semantic_hash": "519f93133ded707d8847caceca85dbac"
+  },
+  "apps/web/eslint.config.mjs": {
+    "mtime": 1781519519.8176012,
+    "ast_hash": "6c4307ffa009658f5c97f5629094c0c2",
+    "semantic_hash": "6c4307ffa009658f5c97f5629094c0c2"
+  },
+  "apps/web/next.config.ts": {
+    "mtime": 1781519519.8185992,
+    "ast_hash": "1d0eb7d28f2ac80b1af591b5c7630da2",
+    "semantic_hash": "1d0eb7d28f2ac80b1af591b5c7630da2"
+  },
+  "apps/web/package.json": {
+    "mtime": 1784697567.253821,
+    "ast_hash": "4a470f3b173971cda8c107bf6b85b027",
+    "semantic_hash": "4a470f3b173971cda8c107bf6b85b027"
+  },
+  "apps/web/postcss.config.mjs": {
+    "mtime": 1781519519.8700752,
+    "ast_hash": "481fac0fdecd70e1821cc30b86030c1a",
+    "semantic_hash": "481fac0fdecd70e1821cc30b86030c1a"
+  },
+  "apps/web/src/app/account-master/page.tsx": {
+    "mtime": 1781885198.5753431,
+    "ast_hash": "e24e45e49616fd0a01790422a66b9fab",
+    "semantic_hash": "e24e45e49616fd0a01790422a66b9fab"
+  },
+  "apps/web/src/app/brokerage/page.tsx": {
+    "mtime": 1781885262.3620355,
+    "ast_hash": "f09e72f9c7f4b9a314d05f4ba2d12de1",
+    "semantic_hash": "f09e72f9c7f4b9a314d05f4ba2d12de1"
+  },
+  "apps/web/src/app/brokers/page.tsx": {
+    "mtime": 1781885265.6240585,
+    "ast_hash": "546ff0c0e9960297ff9b9eb70277a75b",
+    "semantic_hash": "546ff0c0e9960297ff9b9eb70277a75b"
+  },
+  "apps/web/src/app/clients/page.tsx": {
+    "mtime": 1781885257.5908442,
+    "ast_hash": "7a88faedd73200ae44ca089488f60681",
+    "semantic_hash": "7a88faedd73200ae44ca089488f60681"
+  },
+  "apps/web/src/app/closing-rates/page.tsx": {
+    "mtime": 1781540507.2084832,
+    "ast_hash": "5a9c1c69831cfffff1d3eb8bd0d1bc3f",
+    "semantic_hash": "5a9c1c69831cfffff1d3eb8bd0d1bc3f"
+  },
+  "apps/web/src/app/coming-soon/page.tsx": {
+    "mtime": 1783751221.9207852,
+    "ast_hash": "c63e4a056bf66e740b7cd53a529b9519",
+    "semantic_hash": "c63e4a056bf66e740b7cd53a529b9519"
+  },
+  "apps/web/src/app/currencies/page.tsx": {
+    "mtime": 1783758106.714009,
+    "ast_hash": "eb3bc7ad5a7ce739907fb4166d21efed",
+    "semantic_hash": "eb3bc7ad5a7ce739907fb4166d21efed"
+  },
+  "apps/web/src/app/exchanges/page.tsx": {
+    "mtime": 1781540507.2114828,
+    "ast_hash": "af210bd36cc41910d10798e039041132",
+    "semantic_hash": "af210bd36cc41910d10798e039041132"
+  },
+  "apps/web/src/app/expiry-dates/page.tsx": {
+    "mtime": 1781540507.259646,
+    "ast_hash": "f321248b1d1d5251f9a0111507a38e94",
+    "semantic_hash": "f321248b1d1d5251f9a0111507a38e94"
+  },
+  "apps/web/src/app/layout.tsx": {
+    "mtime": 1781885218.8173127,
+    "ast_hash": "cf60314a1c4898283502f14f65620028",
+    "semantic_hash": "cf60314a1c4898283502f14f65620028"
+  },
+  "apps/web/src/app/ledger/page.tsx": {
+    "mtime": 1781889555.6238153,
+    "ast_hash": "65b162eeb94eef63cac8313a299f857b",
+    "semantic_hash": "65b162eeb94eef63cac8313a299f857b"
+  },
+  "apps/web/src/app/page.tsx": {
+    "mtime": 1783751221.9222255,
+    "ast_hash": "35f4c1851b16ce1955164fb9101ba9f1",
+    "semantic_hash": "35f4c1851b16ce1955164fb9101ba9f1"
+  },
+  "apps/web/src/app/scripts/page.tsx": {
+    "mtime": 1781540507.3091023,
+    "ast_hash": "dc6d0e8b10259c918c2989ff23d3dd4f",
+    "semantic_hash": "dc6d0e8b10259c918c2989ff23d3dd4f"
+  },
+  "apps/web/src/app/settlement/page.tsx": {
+    "mtime": 1784695058.4072585,
+    "ast_hash": "c57b6f7475af0888896bc937536017ab",
+    "semantic_hash": "c57b6f7475af0888896bc937536017ab"
+  },
+  "apps/web/src/app/trades/import/page.tsx": {
+    "mtime": 1781519519.8851025,
+    "ast_hash": "dc7940ab10a665e6d3c7d80d6a413b59",
+    "semantic_hash": "dc7940ab10a665e6d3c7d80d6a413b59"
+  },
+  "apps/web/src/app/trades/page.tsx": {
+    "mtime": 1781885254.337523,
+    "ast_hash": "b8d3e60aee3bbd4b99ef5dd86f8d1e99",
+    "semantic_hash": "b8d3e60aee3bbd4b99ef5dd86f8d1e99"
+  },
+  "apps/web/src/app/vouchers/page.tsx": {
+    "mtime": 1781889541.5302856,
+    "ast_hash": "dcd4088002dfdd5ac30932347fa43cac",
+    "semantic_hash": "dcd4088002dfdd5ac30932347fa43cac"
+  },
+  "apps/web/src/components/account-master/AccountMasterFormModal.tsx": {
+    "mtime": 1781885207.553214,
+    "ast_hash": "e6de7dc008e5bd967c55f295dc53d0e3",
+    "semantic_hash": "e6de7dc008e5bd967c55f295dc53d0e3"
+  },
+  "apps/web/src/components/account-master/AccountMasterPageManager.tsx": {
+    "mtime": 1781885204.1893158,
+    "ast_hash": "3845556b09c44d3b052617513ad0eb06",
+    "semantic_hash": "3845556b09c44d3b052617513ad0eb06"
+  },
+  "apps/web/src/components/accounts/DataTable.tsx": {
+    "mtime": 1781885239.17472,
+    "ast_hash": "b38c71686678958e9cbcecdd6f718fae",
+    "semantic_hash": "b38c71686678958e9cbcecdd6f718fae"
+  },
+  "apps/web/src/components/accounts/EntityPageManager.tsx": {
+    "mtime": 1781519776.9294693,
+    "ast_hash": "67f31630df0d7973d76e1c8896cf35c2",
+    "semantic_hash": "67f31630df0d7973d76e1c8896cf35c2"
+  },
+  "apps/web/src/components/accounts/FormModal.tsx": {
+    "mtime": 1783759513.2975926,
+    "ast_hash": "42a8f7f59d6172109ae72e1fc769b70f",
+    "semantic_hash": "42a8f7f59d6172109ae72e1fc769b70f"
+  },
+  "apps/web/src/components/accounts/SearchBar.tsx": {
+    "mtime": 1781519776.931477,
+    "ast_hash": "1b67fb716311e80d3f809ca4d7656c78",
+    "semantic_hash": "1b67fb716311e80d3f809ca4d7656c78"
+  },
+  "apps/web/src/components/brokerage/BrokerageDataTable.tsx": {
+    "mtime": 1781540507.374885,
+    "ast_hash": "bd16f95bd429c9e36024e473573db876",
+    "semantic_hash": "bd16f95bd429c9e36024e473573db876"
+  },
+  "apps/web/src/components/brokerage/BrokerageFormModal.tsx": {
+    "mtime": 1781540507.3779573,
+    "ast_hash": "838ba35eab80dc0120177356ae652d9a",
+    "semantic_hash": "838ba35eab80dc0120177356ae652d9a"
+  },
+  "apps/web/src/components/brokerage/BrokeragePageManager.tsx": {
+    "mtime": 1781519776.933972,
+    "ast_hash": "e3e3ab3caa23b6b877d26946ab8a6292",
+    "semantic_hash": "e3e3ab3caa23b6b877d26946ab8a6292"
+  },
+  "apps/web/src/components/closing-rates/ClosingRateDataTable.tsx": {
+    "mtime": 1781540507.382097,
+    "ast_hash": "d42027b879cca143f714c0d035064f16",
+    "semantic_hash": "d42027b879cca143f714c0d035064f16"
+  },
+  "apps/web/src/components/closing-rates/ClosingRateFormModal.tsx": {
+    "mtime": 1781540507.3850932,
+    "ast_hash": "0aba1ceafbbda49bfff0eded0a2cd517",
+    "semantic_hash": "0aba1ceafbbda49bfff0eded0a2cd517"
+  },
+  "apps/web/src/components/closing-rates/ClosingRatePageManager.tsx": {
+    "mtime": 1781885225.5300865,
+    "ast_hash": "e212ab530f2ca8e5651778dcc1036f57",
+    "semantic_hash": "e212ab530f2ca8e5651778dcc1036f57"
+  },
+  "apps/web/src/components/currencies/CurrencyDataTable.tsx": {
+    "mtime": 1783758102.7938724,
+    "ast_hash": "919fef565e4fe6dddbe317f7f6e109a4",
+    "semantic_hash": "919fef565e4fe6dddbe317f7f6e109a4"
+  },
+  "apps/web/src/components/currencies/CurrencyFormModal.tsx": {
+    "mtime": 1783758097.9388487,
+    "ast_hash": "ef2548dd2e16277bff44eb2391f1dbe8",
+    "semantic_hash": "ef2548dd2e16277bff44eb2391f1dbe8"
+  },
+  "apps/web/src/components/currencies/CurrencyPageManager.tsx": {
+    "mtime": 1783758105.2196488,
+    "ast_hash": "ebb214b0f24d4925643c2d204da26e84",
+    "semantic_hash": "ebb214b0f24d4925643c2d204da26e84"
+  },
+  "apps/web/src/components/exchanges/ExchangeDataTable.tsx": {
+    "mtime": 1781540507.3873277,
+    "ast_hash": "913fa8d5543b7827ef001d7117742156",
+    "semantic_hash": "913fa8d5543b7827ef001d7117742156"
+  },
+  "apps/web/src/components/exchanges/ExchangeFormModal.tsx": {
+    "mtime": 1783761141.8203368,
+    "ast_hash": "833648432bc803191bae11d16f4c50f7",
+    "semantic_hash": "833648432bc803191bae11d16f4c50f7"
+  },
+  "apps/web/src/components/exchanges/ExchangePageManager.tsx": {
+    "mtime": 1781519776.936491,
+    "ast_hash": "ed3a803fe0b5e210237c0a696952cb8a",
+    "semantic_hash": "ed3a803fe0b5e210237c0a696952cb8a"
+  },
+  "apps/web/src/components/expiry-dates/ExpiryDateDataTable.tsx": {
+    "mtime": 1781540507.3916216,
+    "ast_hash": "22706e51c5387716da89a8003582fbed",
+    "semantic_hash": "22706e51c5387716da89a8003582fbed"
+  },
+  "apps/web/src/components/expiry-dates/ExpiryDateFormModal.tsx": {
+    "mtime": 1781540507.392146,
+    "ast_hash": "6dd1c43a261f9dcb940fa3921aff548c",
+    "semantic_hash": "6dd1c43a261f9dcb940fa3921aff548c"
+  },
+  "apps/web/src/components/expiry-dates/ExpiryDatePageManager.tsx": {
+    "mtime": 1781529232.276946,
+    "ast_hash": "59154421503799dec39b0399ec092471",
+    "semantic_hash": "59154421503799dec39b0399ec092471"
+  },
+  "apps/web/src/components/icons/AppIcons.tsx": {
+    "mtime": 1781519776.9375017,
+    "ast_hash": "c883794e155fa13ffc3977226d92810e",
+    "semantic_hash": "c883794e155fa13ffc3977226d92810e"
+  },
+  "apps/web/src/components/ledger/LedgerReportManager.tsx": {
+    "mtime": 1781889913.3618343,
+    "ast_hash": "b54ba3612d2fcce5cc4f2876af82dc85",
+    "semantic_hash": "b54ba3612d2fcce5cc4f2876af82dc85"
+  },
+  "apps/web/src/components/navigation/NavBar.tsx": {
+    "mtime": 1781519519.891625,
+    "ast_hash": "220d9bef3c088572858505ceb8e94fef",
+    "semantic_hash": "220d9bef3c088572858505ceb8e94fef"
+  },
+  "apps/web/src/components/navigation/Sidebar.tsx": {
+    "mtime": 1784303075.5502188,
+    "ast_hash": "b15253d24db2c632844ee190be0d999a",
+    "semantic_hash": "b15253d24db2c632844ee190be0d999a"
+  },
+  "apps/web/src/components/scripts/ScriptDataTable.tsx": {
+    "mtime": 1781540507.3977613,
+    "ast_hash": "62bca78ce4db0644b5b4dcf88ba508d1",
+    "semantic_hash": "62bca78ce4db0644b5b4dcf88ba508d1"
+  },
+  "apps/web/src/components/scripts/ScriptFormModal.tsx": {
+    "mtime": 1783757830.5018578,
+    "ast_hash": "c93677daa4f98e0b0c12a8b260d00362",
+    "semantic_hash": "c93677daa4f98e0b0c12a8b260d00362"
+  },
+  "apps/web/src/components/scripts/ScriptPageManager.tsx": {
+    "mtime": 1781519776.9994953,
+    "ast_hash": "49fc85af5bf6cec7f91923baf1801d3f",
+    "semantic_hash": "49fc85af5bf6cec7f91923baf1801d3f"
+  },
+  "apps/web/src/components/trades/DubaiPreviewTable.tsx": {
+    "mtime": 1784979817.597526,
+    "ast_hash": "52d4fb6ed03c0b975d80eb646bf69a43",
+    "semantic_hash": "52d4fb6ed03c0b975d80eb646bf69a43"
+  },
+  "apps/web/src/components/trades/FileUploadZone.tsx": {
+    "mtime": 1784976531.2005203,
+    "ast_hash": "292bca5ad3087c7524bf21019425432e",
+    "semantic_hash": "292bca5ad3087c7524bf21019425432e"
+  },
+  "apps/web/src/components/trades/ImportFilterBar.tsx": {
+    "mtime": 1784979319.6936688,
+    "ast_hash": "f65494395b0e1d88ab6e578b251a4493",
+    "semantic_hash": "f65494395b0e1d88ab6e578b251a4493"
+  },
+  "apps/web/src/components/trades/ImportResultPanel.tsx": {
+    "mtime": 1784979292.5201786,
+    "ast_hash": "73b95e619f3887372b174d15cbcb7df9",
+    "semantic_hash": "73b95e619f3887372b174d15cbcb7df9"
+  },
+  "apps/web/src/components/trades/NormalPreviewTable.tsx": {
+    "mtime": 1784979824.9970162,
+    "ast_hash": "eee05adc03b9bf2a7d511b9265114287",
+    "semantic_hash": "eee05adc03b9bf2a7d511b9265114287"
+  },
+  "apps/web/src/components/trades/SearchableSelect.tsx": {
+    "mtime": 1784979277.4470563,
+    "ast_hash": "e33d8e6b75e775fcc1198c25d124441b",
+    "semantic_hash": "e33d8e6b75e775fcc1198c25d124441b"
+  },
+  "apps/web/src/components/trades/TradeDataGrid.tsx": {
+    "mtime": 1781519519.8964994,
+    "ast_hash": "8add3a5f68beda5b3e9110581b25bf0a",
+    "semantic_hash": "8add3a5f68beda5b3e9110581b25bf0a"
+  },
+  "apps/web/src/components/trades/TradeDetailModal.tsx": {
+    "mtime": 1784695041.9025795,
+    "ast_hash": "8d30ad35b2c7f192dd4b77f4f287e020",
+    "semantic_hash": "8d30ad35b2c7f192dd4b77f4f287e020"
+  },
+  "apps/web/src/components/trades/TradeErrorPanel.tsx": {
+    "mtime": 1781519519.8974988,
+    "ast_hash": "642389b9940ddb49601ec7f36942aa9d",
+    "semantic_hash": "642389b9940ddb49601ec7f36942aa9d"
+  },
+  "apps/web/src/components/trades/TradeFormModal.tsx": {
+    "mtime": 1781540507.4008443,
+    "ast_hash": "7171625413b386469086519b67cccbc1",
+    "semantic_hash": "7171625413b386469086519b67cccbc1"
+  },
+  "apps/web/src/components/trades/TradeImportContext.tsx": {
+    "mtime": 1783757907.9688935,
+    "ast_hash": "0f3db54a45006a56b566e38f73f457be",
+    "semantic_hash": "0f3db54a45006a56b566e38f73f457be"
+  },
+  "apps/web/src/components/trades/TradeImportManager.tsx": {
+    "mtime": 1784979536.3377557,
+    "ast_hash": "0f185eaa0e130fa04eda476ed4e65601",
+    "semantic_hash": "0f185eaa0e130fa04eda476ed4e65601"
+  },
+  "apps/web/src/components/trades/TradeRowDrawer.tsx": {
+    "mtime": 1784979511.0590405,
+    "ast_hash": "fe52e98367e40ba8a150bd2d40d90c52",
+    "semantic_hash": "fe52e98367e40ba8a150bd2d40d90c52"
+  },
+  "apps/web/src/components/trades/TradeStatsBar.tsx": {
+    "mtime": 1781519519.8990068,
+    "ast_hash": "ba8eb7f2956ec20128d841ca6338687c",
+    "semantic_hash": "ba8eb7f2956ec20128d841ca6338687c"
+  },
+  "apps/web/src/components/trades/TradesPageManager.tsx": {
+    "mtime": 1784695084.5139382,
+    "ast_hash": "8a120fc18a93947939df9bcb5e326d1f",
+    "semantic_hash": "8a120fc18a93947939df9bcb5e326d1f"
+  },
+  "apps/web/src/components/trades/tradeImportHelpers.ts": {
+    "mtime": 1784979256.2674632,
+    "ast_hash": "2e78284348a640c9f05aa6d7821166da",
+    "semantic_hash": "2e78284348a640c9f05aa6d7821166da"
+  },
+  "apps/web/src/components/ui/badge.tsx": {
+    "mtime": 1781519777.006517,
+    "ast_hash": "dfc2b8f7b11f84493a174b35a393216c",
+    "semantic_hash": "dfc2b8f7b11f84493a174b35a393216c"
+  },
+  "apps/web/src/components/ui/button.tsx": {
+    "mtime": 1781519777.0075161,
+    "ast_hash": "8c79e24d7c047cf5b02fda72bf1a04e1",
+    "semantic_hash": "8c79e24d7c047cf5b02fda72bf1a04e1"
+  },
+  "apps/web/src/components/ui/card.tsx": {
+    "mtime": 1781519777.0075161,
+    "ast_hash": "610d060667eecd9458cb9a5bc8066297",
+    "semantic_hash": "610d060667eecd9458cb9a5bc8066297"
+  },
+  "apps/web/src/components/ui/input.tsx": {
+    "mtime": 1781519777.0098796,
+    "ast_hash": "c34e019cd367be85f4438ebc2cbd218d",
+    "semantic_hash": "c34e019cd367be85f4438ebc2cbd218d"
+  },
+  "apps/web/src/components/vouchers/VoucherForm.tsx": {
+    "mtime": 1781890615.1290462,
+    "ast_hash": "3f3d2c860eddf383081a0f2e6f1aab16",
+    "semantic_hash": "3f3d2c860eddf383081a0f2e6f1aab16"
+  },
+  "apps/web/src/database/index.ts": {
+    "mtime": 1781519777.0108817,
+    "ast_hash": "5f6135e6d3aa0c71e0e21049df5e36c9",
+    "semantic_hash": "5f6135e6d3aa0c71e0e21049df5e36c9"
+  },
+  "apps/web/src/hooks/useOutsideClickClose.ts": {
+    "mtime": 1781519777.011882,
+    "ast_hash": "0e0ee9f53bfa0196d6c34c17272c5e0f",
+    "semantic_hash": "0e0ee9f53bfa0196d6c34c17272c5e0f"
+  },
+  "apps/web/src/lib/tradeParser/dubaiTradeParser.ts": {
+    "mtime": 1784979222.4029555,
+    "ast_hash": "dbd9feaf7e2e79fcbd787042546682fb",
+    "semantic_hash": "dbd9feaf7e2e79fcbd787042546682fb"
+  },
+  "apps/web/src/lib/tradeParser/fieldMappings.ts": {
+    "mtime": 1781858930.157444,
+    "ast_hash": "8fd3f55e5d18f53baa5ac9952b2b9fe3",
+    "semantic_hash": "8fd3f55e5d18f53baa5ac9952b2b9fe3"
+  },
+  "apps/web/src/lib/tradeParser/index.ts": {
+    "mtime": 1783757889.6048126,
+    "ast_hash": "bb89b72e9966bb2a58e1f495aa939338",
+    "semantic_hash": "bb89b72e9966bb2a58e1f495aa939338"
+  },
+  "apps/web/src/lib/tradeParser/parser.ts": {
+    "mtime": 1781883550.349657,
+    "ast_hash": "65345bcd353b888e5153fb8f83a75680",
+    "semantic_hash": "65345bcd353b888e5153fb8f83a75680"
+  },
+  "apps/web/src/lib/tradeParser/types.ts": {
+    "mtime": 1784697599.8712678,
+    "ast_hash": "dd38bd71f6e8f58feee8723def86c3b3",
+    "semantic_hash": "dd38bd71f6e8f58feee8723def86c3b3"
+  },
+  "apps/web/src/proxy.ts": {
+    "mtime": 1781519519.9102972,
+    "ast_hash": "6f38f02c933790af7fd3b929c24c5528",
+    "semantic_hash": "6f38f02c933790af7fd3b929c24c5528"
+  },
+  "apps/web/src/utils/brokerage.ts": {
+    "mtime": 1781519777.012882,
+    "ast_hash": "f2d3c570bf6440600874beb12cb72e37",
+    "semantic_hash": "f2d3c570bf6440600874beb12cb72e37"
+  },
+  "apps/web/src/utils/cn.ts": {
+    "mtime": 1781519777.0138803,
+    "ast_hash": "e3f848f1b39f863e6164cf58b5a8e752",
+    "semantic_hash": "e3f848f1b39f863e6164cf58b5a8e752"
+  },
+  "apps/web/src/utils/syncUser.ts": {
+    "mtime": 1781519777.0148807,
+    "ast_hash": "2dabe265d959bfb0853b4e92816135e0",
+    "semantic_hash": "2dabe265d959bfb0853b4e92816135e0"
+  },
+  "apps/web/tsconfig.json": {
+    "mtime": 1781519519.9114234,
+    "ast_hash": "0a2f4ed9289b65cd3feb4fb4ab3a4fcd",
+    "semantic_hash": "0a2f4ed9289b65cd3feb4fb4ab3a4fcd"
+  },
+  "package.json": {
+    "mtime": 1781519519.9154334,
+    "ast_hash": "84b489142ee675c8802d1f5dc5f1acc0",
+    "semantic_hash": "84b489142ee675c8802d1f5dc5f1acc0"
+  },
+  "tsconfig.json": {
+    "mtime": 1781519519.9294424,
+    "ast_hash": "0749f92ed71dee2b536f68c2e9135fd2",
+    "semantic_hash": "0749f92ed71dee2b536f68c2e9135fd2"
+  },
+  "turbo.json": {
+    "mtime": 1781519519.9304397,
+    "ast_hash": "39cb2f6f64c6af36c3bb9eed9b0f34fa",
+    "semantic_hash": "39cb2f6f64c6af36c3bb9eed9b0f34fa"
+  }
+}

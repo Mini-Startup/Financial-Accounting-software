@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 
-export function ExchangeFormModal({ initialData, onClose }: { initialData?: any, onClose: () => void }) {
+import { useScrollLock } from '../../hooks/useScrollLock';
+
+export function ExchangeFormModal({ initialData, onClose, onSuccess }: { initialData?: any, onClose: () => void, onSuccess?: (saved?: any) => void }) {
+  useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
@@ -25,12 +28,22 @@ export function ExchangeFormModal({ initialData, onClose }: { initialData?: any,
         isActive: formData.isActive
       };
       
-      await fetch(url, {
+      const res = await fetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      window.location.reload();
+      if (res.ok) {
+        const saved = await res.json();
+        if (onSuccess) {
+          onSuccess(saved);
+        } else {
+          window.location.reload();
+        }
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Save failed.');
+      }
     } catch(err) {
       console.error(err);
       alert('Save failed.');
@@ -43,7 +56,10 @@ export function ExchangeFormModal({ initialData, onClose }: { initialData?: any,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div
+      onMouseDown={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+    >
       <div ref={modalRef} className="card w-[500px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}

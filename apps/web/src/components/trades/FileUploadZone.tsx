@@ -4,11 +4,11 @@ import { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileSpreadsheet, Loader2 } from 'lucide-react';
 
 interface FileUploadZoneProps {
-  onFileRead: (content: string, fileName: string) => void;
+  onFileSelected: (file: File) => void;
   isProcessing: boolean;
 }
 
-export function FileUploadZone({ onFileRead, isProcessing }: FileUploadZoneProps) {
+export function FileUploadZone({ onFileSelected, isProcessing }: FileUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: number } | null>(null);
@@ -21,37 +21,18 @@ export function FileUploadZone({ onFileRead, isProcessing }: FileUploadZoneProps
 
   const processFile = useCallback(
     (file: File) => {
-      // Validate file type
-      const validTypes = [
-        'text/plain',
-        'text/csv',
-        'application/csv',
-        'application/vnd.ms-excel',
-      ];
-      const validExtensions = ['.txt', '.csv'];
       const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      const validExtensions = ['.txt', '.csv', '.xlsx', '.xls'];
 
-      if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
-        alert('Please upload a .txt or .csv file only.');
+      if (!validExtensions.includes(ext)) {
+        alert('Please upload a .txt, .csv, or Excel (.xlsx, .xls) file.');
         return;
       }
 
       setSelectedFile({ name: file.name, size: file.size });
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (content) {
-          onFileRead(content, file.name);
-        }
-      };
-      reader.onerror = () => {
-        alert('Failed to read the file. Please try again.');
-        setSelectedFile(null);
-      };
-      reader.readAsText(file);
+      onFileSelected(file);
     },
-    [onFileRead]
+    [onFileSelected]
   );
 
   const handleDrop = useCallback(
@@ -101,7 +82,7 @@ export function FileUploadZone({ onFileRead, isProcessing }: FileUploadZoneProps
       <input
         ref={inputRef}
         type="file"
-        accept=".txt,.csv"
+        accept=".txt,.csv,.xlsx,.xls"
         onChange={handleInputChange}
         className="hidden"
         aria-hidden="true"
@@ -122,12 +103,12 @@ export function FileUploadZone({ onFileRead, isProcessing }: FileUploadZoneProps
             {isDragging ? 'Drop your file here' : 'Upload Trade File'}
           </span>
           <span className="trade-upload-subtitle text-sm text-[var(--color-slate)] mt-1 max-w-sm">
-            Drag & drop a CSV or text file, or <span className="text-[var(--color-primary)] font-medium underline">browse your files</span>
+            Drag & drop a CSV, text, or Excel file, or <span className="text-[var(--color-primary)] font-medium underline">browse your files</span>
           </span>
 
           <div className="trade-upload-filetag flex items-center gap-1.5 mt-4 bg-[var(--color-snow)] px-3 py-1 rounded-md border border-[var(--color-border-light)] text-xs text-[var(--color-slate)] font-medium">
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            .csv or .txt file format
+            Excel, .csv or .txt file format
           </div>
 
           {selectedFile && (

@@ -40,13 +40,124 @@ export interface PreviewRow {
   terminal: string;
   expiry: string;
   orderId?: string;
+  exchOrderId?: string;
   exchangeTime?: string;
   uniqueTradeId?: string;
   orderTime?: string;
   instrumentType?: string;
+
+  // New fields for Dubai FnO & trade imports
+  dealerCode?: string;
+  currencyCode?: string;
+  securityName?: string;
+  delMonth?: string;
+  marketLot?: number;
+  callPut?: string;
+  strikePrice?: number;
+  bloombergCode?: string;
+  mktValue?: number;
+  clnCommission?: number;
+  clnExCharges?: number;
+  clnCharges1?: number;
+  clnCharges2?: number;
+  vat?: number;
 }
 
+export function parseFlexibleDate(dateVal: string | Date | null | undefined): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? new Date() : dateVal;
+  }
+  const cleaned = dateVal.trim();
+  if (!cleaned) return new Date();
 
+  // 1. DD/MM/YYYY [HH:MM:SS] or DD-MM-YYYY [HH:MM:SS]
+  const dmyMatch = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed
+    const year = parseInt(dmyMatch[3], 10);
+    const hours = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
+    const minutes = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
+    const seconds = dmyMatch[6] ? parseInt(dmyMatch[6], 10) : 0;
+    const d = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 2. YYYY-MM-DD [HH:MM:SS] or YYYY/MM/DD [HH:MM:SS]
+  const ymdMatch = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const hours = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+    const minutes = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+    const seconds = ymdMatch[6] ? parseInt(ymdMatch[6], 10) : 0;
+    const d = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 3. Standard JS Date fallback if valid
+  const d = new Date(cleaned);
+  if (!isNaN(d.getTime())) return d;
+
+  // 4. Default to current Date
+  return new Date();
+}
+
+function parseAndNormalizeExpiry(expiryStr: string | null | undefined): Date | null {
+  if (!expiryStr) return null;
+  const cleaned = expiryStr.trim();
+  if (!cleaned) return null;
+
+  // 1. DD/MM/YYYY or DD-MM-YYYY (with optional time)
+  const dmyMatch = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    return new Date(Date.UTC(year, month, day));
+  }
+
+  // 2. YYYY-MM-DD or YYYY/MM/DD (with optional time)
+  const ymdMatch = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    return new Date(Date.UTC(year, month, day));
+  }
+
+  // 3. Handle DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-26, 28-APR-2026)
+  const regex = /^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})/;
+  const match = cleaned.match(regex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const monthStr = match[2].toUpperCase();
+    let year = parseInt(match[3], 10);
+
+    const months: Record<string, number> = {
+      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+    };
+
+    if (monthStr in months) {
+      const month = months[monthStr];
+      if (year < 100) {
+        year += 2000;
+      }
+      return new Date(Date.UTC(year, month, day));
+    }
+  }
+
+  // Fallback to standard Date parsing if possible
+  const date = new Date(cleaned);
+  if (!isNaN(date.getTime())) {
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  }
+
+  return null;
+}
 
 export class TradeImportService {
   /**
@@ -76,11 +187,11 @@ export class TradeImportService {
     const accountMap = new Map<string, { id: string }>();
     if (uniqueClientCodes.size > 0) {
       const accounts = await prisma.account.findMany({
-        where: { code: { in: Array.from(uniqueClientCodes) } },
+        where: { code: { in: Array.from(uniqueClientCodes), mode: 'insensitive' } },
         select: { id: true, code: true },
       });
       for (const acc of accounts) {
-        accountMap.set(acc.code, { id: acc.id });
+        accountMap.set(acc.code.trim().toUpperCase(), { id: acc.id });
       }
     }
 
@@ -123,28 +234,24 @@ export class TradeImportService {
           ],
         },
         include: {
+          exchange: { select: { id: true, code: true } },
           scriptExchangeMappings: {
-            include: { exchange: { select: { code: true } } },
+            include: { exchange: { select: { id: true, code: true } } },
             take: 1,
           },
         },
       });
 
-      // If any scripts found have no exchange mapping, we might need a default exchange
-      let defaultExchange: { id: string; code: string } | null = null;
-      const needsDefault = scripts.some(
-        (s) => !s.scriptExchangeMappings || s.scriptExchangeMappings.length === 0
-      );
-      if (needsDefault) {
-        const ex = await prisma.exchange.findFirst({ select: { id: true, code: true } });
-        if (ex) defaultExchange = ex;
-      }
-
       for (const script of scripts) {
+        const exId = script.exchangeId || script.exchange?.id || script.scriptExchangeMappings?.[0]?.exchangeId;
+        const exCode = script.exchange?.code || script.scriptExchangeMappings?.[0]?.exchange?.code;
+
+        if (!exId) continue;
+
         const entry = {
           scriptId: script.id,
-          exchangeId: script.scriptExchangeMappings?.[0]?.exchangeId || defaultExchange?.id || '',
-          exchangeCode: script.scriptExchangeMappings?.[0]?.exchange?.code || defaultExchange?.code || '',
+          exchangeId: exId,
+          exchangeCode: exCode || '',
         };
         // Index by both shortName and fullName
         if (script.shortName) scriptFallbackMap.set(script.shortName.toUpperCase(), entry);
@@ -166,7 +273,7 @@ export class TradeImportService {
       if (!row.clientCode || row.clientCode.trim() === '') {
         errors.push('Client Code is required');
       } else {
-        const acc = accountMap.get(row.clientCode.trim());
+        const acc = accountMap.get(row.clientCode.trim().toUpperCase());
         if (acc) {
           resolvedAccountId = acc.id;
         } else {
@@ -273,7 +380,28 @@ export class TradeImportService {
     }));
 
     const preview = await this.previewRows(parsed);
-    const validRows = preview.filter((r) => r.status === 'Valid');
+
+    // Merge pre-resolved IDs from frontend rows with backend preview results
+    const resolvedRows: PreviewRow[] = rows.map((incomingRow, idx) => {
+      const revalidated = preview[idx];
+
+      const resolvedAccountId = incomingRow.resolvedAccountId || revalidated?.resolvedAccountId;
+      const resolvedScriptId = incomingRow.resolvedScriptId || revalidated?.resolvedScriptId;
+      // Per-row exchange is the source of truth; only use global exchangeId as last resort for NSE-style single-exchange imports
+      const resolvedExchangeId = incomingRow.resolvedExchangeId || revalidated?.resolvedExchangeId || exchangeId;
+
+      const isValid = Boolean(resolvedAccountId && resolvedScriptId && resolvedExchangeId);
+
+      return {
+        ...incomingRow,
+        resolvedAccountId,
+        resolvedScriptId,
+        resolvedExchangeId,
+        status: isValid ? 'Valid' : 'Invalid',
+      };
+    });
+
+    const validRows = resolvedRows.filter((r) => r.status === 'Valid');
 
     if (validRows.length === 0) {
       return { importedCount: 0, failedCount: rows.length };
@@ -291,214 +419,198 @@ export class TradeImportService {
       deliveryMinFee: r.deliveryMinFee,
     });
 
-    const validRowsWithCalcs = await Promise.all(
-      validRows.map(async (row) => {
-        const targetExchangeId = exchangeId || row.resolvedExchangeId!;
-        let clientRate = row.rate;
-        let brokerRate = row.rate;
-        let clientBrokerage = 0;
-        let brokerBrokerage = 0;
-        let profitTotal = 0;
+    const accountIds = Array.from(
+      new Set(
+        validRows
+          .map((r) => r.resolvedAccountId!)
+          .concat(brokerId ? [brokerId] : [])
+          .filter(Boolean)
+      )
+    );
 
-        try {
-          const clientRuleRow = await brokeragesService.resolve(
-            row.resolvedAccountId!,
-            targetExchangeId,
-            'CLIENT',
-            row.resolvedScriptId!
-          );
+    const allBrokerageRules = await prisma.brokerage.findMany({
+      where: { accountId: { in: accountIds } },
+    });
 
-          if (clientRuleRow) {
-            const clientRule = toRule(clientRuleRow);
+    const brokerageMap = new Map<string, any>();
+    for (const rule of allBrokerageRules) {
+      const key = `${rule.accountId}:${rule.exchangeId}:${rule.scriptId || 'ALL'}:${rule.scope}`;
+      brokerageMap.set(key, rule);
+    }
 
-            let brokerRuleRow: any = null;
-            if (brokerId) {
-              brokerRuleRow = await brokeragesService.resolve(
-                brokerId,
-                targetExchangeId,
-                'BROKER',
-                row.resolvedScriptId!
-              );
-            }
+    const resolveRuleFast = (accId: string, exchId: string, scope: 'CLIENT' | 'BROKER', scriptId: string) => {
+      return (
+        brokerageMap.get(`${accId}:${exchId}:${scriptId}:SCRIPT`) ||
+        brokerageMap.get(`${accId}:${exchId}:ALL:DEFAULT`) ||
+        brokerageMap.get(`${accId}:${exchId}:ALL:SCRIPT`) ||
+        null
+      );
+    };
 
-            const brokerFallbackMode = Boolean(clientRule && !brokerRuleRow);
+    const validRowsWithCalcs = validRows.map((row) => {
+      const targetExchangeId = row.resolvedExchangeId || '';
+      let clientRate = row.rate;
+      let brokerRate = row.rate;
+      let clientBrokerage = 0;
+      let brokerBrokerage = 0;
+      let profitTotal = 0;
 
-            if (!brokerFallbackMode && brokerId && brokerRuleRow) {
-              const brokerRule = toRule(brokerRuleRow);
-              const calc = calculateTrade({
-                quantity: row.quantity,
-                marketRate: row.rate,
-                segment: 'TRADING',
-                clientRule,
-                brokerRule,
-              });
+      try {
+        const clientRuleRow = resolveRuleFast(
+          row.resolvedAccountId!,
+          targetExchangeId,
+          'CLIENT',
+          row.resolvedScriptId!
+        );
 
-              clientRate = calc.clientRate;
-              brokerRate = calc.brokerRate;
-              clientBrokerage = calc.clientBrokerage;
-              brokerBrokerage = calc.brokerBrokerage;
-              profitTotal = calc.totalProfit;
-            } else {
-              // Fallback
-              const marketRounded = Number(row.rate.toFixed(4));
-              clientRate = marketRounded;
-              brokerRate = marketRounded;
-              clientBrokerage = 0;
-              brokerBrokerage = 0;
-              profitTotal = 0;
-            }
+        if (clientRuleRow) {
+          const clientRule = toRule(clientRuleRow);
+
+          let brokerRuleRow: any = null;
+          if (brokerId) {
+            brokerRuleRow = resolveRuleFast(
+              brokerId,
+              targetExchangeId,
+              'BROKER',
+              row.resolvedScriptId!
+            );
           }
-        } catch (err) {
-          console.error('Failed to calculate brokerage for imported row:', err);
+
+          const brokerFallbackMode = Boolean(clientRule && !brokerRuleRow);
+
+          if (!brokerFallbackMode && brokerId && brokerRuleRow) {
+            const brokerRule = toRule(brokerRuleRow);
+            const calc = calculateTrade({
+              quantity: row.quantity,
+              marketRate: row.rate,
+              segment: 'TRADING',
+              clientRule,
+              brokerRule,
+            });
+
+            clientRate = calc.clientRate;
+            brokerRate = calc.brokerRate;
+            clientBrokerage = calc.clientBrokerage;
+            brokerBrokerage = calc.brokerBrokerage;
+            profitTotal = calc.totalProfit;
+          } else {
+            const marketRounded = Number(row.rate.toFixed(4));
+            clientRate = marketRounded;
+            brokerRate = marketRounded;
+            clientBrokerage = 0;
+            brokerBrokerage = 0;
+            profitTotal = 0;
+          }
         }
+      } catch (err) {
+        console.error('Failed to calculate brokerage for imported row:', err);
+      }
+
+      return {
+        row,
+        targetExchangeId,
+        clientRate,
+        brokerRate,
+        clientBrokerage,
+        brokerBrokerage,
+        profitTotal,
+      };
+    });
+
+    let importedCount = 0;
+
+    // Batch insertion in chunks of 2000 for high performance
+    const BATCH_SIZE = 2000;
+    
+    // 1. Pre-process and collect all unique expiry dates
+    const uniqueExpiryDates = new Set<string>();
+    for (const { row } of validRowsWithCalcs) {
+      if (row.expiry?.trim()) {
+        const parsed = parseAndNormalizeExpiry(row.expiry);
+        if (parsed) {
+          uniqueExpiryDates.add(parsed.toISOString());
+        }
+      }
+    }
+
+    if (uniqueExpiryDates.size > 0) {
+      const datesToInsert = Array.from(uniqueExpiryDates).map((isoStr) => ({
+        date: new Date(isoStr),
+        isActive: true,
+      }));
+      await prisma.expiryDate.createMany({
+        data: datesToInsert,
+        skipDuplicates: true,
+      });
+    }
+
+    // 2. Perform bulk insertion using createMany in batches
+    for (let i = 0; i < validRowsWithCalcs.length; i += BATCH_SIZE) {
+      const chunk = validRowsWithCalcs.slice(i, i + BATCH_SIZE);
+      const tradesData = chunk.map(({ row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal }) => {
+        const tradeDate = parseFlexibleDate(row.tradeDate);
+        const timePart = row.tradeDate.includes(' ') ? row.tradeDate.split(' ')[1] : null;
+
+        const parsedExpiry = parseAndNormalizeExpiry(row.expiry);
+        const normalizedExpiryStr = parsedExpiry
+          ? parsedExpiry.toISOString().split('T')[0]
+          : (row.expiry || null);
 
         return {
-          row,
-          targetExchangeId,
+          tradeNumber: row.tradeNumber,
+          tradeDate,
+          tradeTime: timePart,
+          accountId: row.resolvedAccountId!,
+          brokerId: brokerId || null,
+          scriptId: row.resolvedScriptId!,
+          exchangeId: targetExchangeId,
+          transactionType: row.buySell,
+          quantity: row.quantity,
+          rate: row.rate,
+          source: 'IMPORT',
+          remarks: 'Imported via Trade_FnO wizard',
+          terminal: row.terminal || null,
+          expiry: normalizedExpiryStr,
+          orderId: row.exchOrderId || row.orderId || null,
+          exchangeTime: row.exchangeTime || null,
+          uniqueTradeId: row.uniqueTradeId || null,
+          orderTime: row.orderTime || null,
+
+          dealerCode: row.dealerCode || null,
+          currencyCode: row.currencyCode || null,
+          securityName: row.securityName || null,
+          delMonth: row.delMonth || null,
+          marketLot: row.marketLot ? Number(row.marketLot) : null,
+          callPut: row.callPut || null,
+          strikePrice: row.strikePrice ? Number(row.strikePrice) : null,
+          bloombergCode: row.bloombergCode || null,
+          mktValue: row.mktValue ? Number(row.mktValue) : null,
+          clnCommission: row.clnCommission ? Number(row.clnCommission) : null,
+          clnExCharges: row.clnExCharges ? Number(row.clnExCharges) : null,
+          clnCharges1: row.clnCharges1 ? Number(row.clnCharges1) : null,
+          clnCharges2: row.clnCharges2 ? Number(row.clnCharges2) : null,
+          vat: row.vat ? Number(row.vat) : null,
+
           clientRate,
           brokerRate,
           clientBrokerage,
           brokerBrokerage,
           profitTotal,
         };
-      })
-    );
+      });
 
-function parseAndNormalizeExpiry(expiryStr: string | null | undefined): Date | null {
-  if (!expiryStr) return null;
-  const cleaned = expiryStr.trim();
-  if (!cleaned) return null;
+      const res = await prisma.trade.createMany({
+        data: tradesData,
+      });
 
-  // Check YYYY-MM-DD
-  const ymdMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (ymdMatch) {
-    const year = parseInt(ymdMatch[1], 10);
-    const month = parseInt(ymdMatch[2], 10) - 1; // 0-indexed
-    const day = parseInt(ymdMatch[3], 10);
-    return new Date(Date.UTC(year, month, day));
-  }
-
-  // Check YYYY/MM/DD
-  const ymdSlashMatch = cleaned.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
-  if (ymdSlashMatch) {
-    const year = parseInt(ymdSlashMatch[1], 10);
-    const month = parseInt(ymdSlashMatch[2], 10) - 1; // 0-indexed
-    const day = parseInt(ymdSlashMatch[3], 10);
-    return new Date(Date.UTC(year, month, day));
-  }
-
-  // Handle DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-26, 28-APR-2026)
-  const regex = /^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})$/;
-  const match = cleaned.match(regex);
-  if (match) {
-    const day = parseInt(match[1], 10);
-    const monthStr = match[2].toUpperCase();
-    let year = parseInt(match[3], 10);
-
-    const months: Record<string, number> = {
-      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
-      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
-    };
-
-    if (monthStr in months) {
-      const month = months[monthStr];
-      if (year < 100) {
-        year += 2000;
-      }
-      return new Date(Date.UTC(year, month, day));
+      importedCount += res.count;
     }
-  }
-
-  // Fallback to standard Date parsing if possible
-  const date = new Date(cleaned);
-  if (!isNaN(date.getTime())) {
-    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  }
-
-  return null;
-}
-
-    let importedCount = 0;
-
-    await prisma.$transaction(async (tx) => {
-      // 1. Collect all unique valid expiry dates from rows
-      const uniqueExpiryStrings = Array.from(
-        new Set(
-          validRowsWithCalcs
-            .map(({ row }) => row.expiry?.trim())
-            .filter(Boolean)
-        )
-      );
-
-      // 2. Ensure each parsed expiry date exists in the database
-      for (const expiryStr of uniqueExpiryStrings) {
-        const parsedDate = parseAndNormalizeExpiry(expiryStr);
-        if (parsedDate) {
-          const existing = await tx.expiryDate.findUnique({
-            where: { date: parsedDate },
-          });
-          if (!existing) {
-            await tx.expiryDate.create({
-              data: {
-                date: parsedDate,
-                isActive: true,
-              },
-            });
-          }
-        }
-      }
-
-      // 3. Insert the trades
-      for (const { row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal } of validRowsWithCalcs) {
-        importedCount++;
-
-        const tradeDate = new Date(row.tradeDate);
-        const timePart = row.tradeDate.includes(' ') ? row.tradeDate.split(' ')[1] : null;
-
-        // Normalize the stored expiry date string to YYYY-MM-DD
-        const parsedExpiry = parseAndNormalizeExpiry(row.expiry);
-        const normalizedExpiryStr = parsedExpiry
-          ? parsedExpiry.toISOString().split('T')[0]
-          : (row.expiry || null);
-
-        await tx.trade.create({
-          data: {
-            tradeNumber: row.tradeNumber,
-            tradeDate,
-            tradeTime: timePart,
-            accountId: row.resolvedAccountId!,
-            brokerId: brokerId || null,
-            scriptId: row.resolvedScriptId!,
-            exchangeId: targetExchangeId,
-            transactionType: row.buySell,
-            quantity: row.quantity,
-            rate: row.rate,
-            source: 'IMPORT',
-            remarks: 'Imported via Trade_FnO wizard',
-            terminal: row.terminal || null,
-            expiry: normalizedExpiryStr,
-            orderId: row.orderId || null,
-            exchangeTime: row.exchangeTime || null,
-            uniqueTradeId: row.uniqueTradeId || null,
-            orderTime: row.orderTime || null,
-
-            // Calculated fields
-            clientRate,
-            brokerRate,
-            clientBrokerage,
-            brokerBrokerage,
-            profitTotal,
-          },
-        });
-      }
-    });
 
     return {
       importedCount,
       failedCount: rows.length - importedCount,
     };
   }
-
 }
 
 export const tradeImportService = new TradeImportService();

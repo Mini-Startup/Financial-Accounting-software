@@ -76,6 +76,7 @@ const sections: NavSection[] = [
       { name: "Clients",   path: "/clients",       icon: Users },
       { name: "Scripts",   path: "/scripts",       icon: ScrollText },
       { name: "Exchanges", path: "/exchanges",     icon: Globe },
+      { name: "Currencies", path: "/currencies",   icon: Coins },
       { name: "Brokerage", path: "/brokerage",     icon: Percent },
       { name: "Others",    path: "/account-master", icon: Layers },
     ],
@@ -95,7 +96,7 @@ const sections: NavSection[] = [
         subGroup: true,
         children: [
           { name: "Trade Import",          path: "/trades?import=true",                 icon: FileSpreadsheet },
-          { name: "Closing Rates Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
+          { name: "Open Position Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
           { name: "Margine File Imports",  path: comingSoon("margine-file-imports"),  icon: DollarSign, upcoming: true },
         ],
       },
@@ -218,6 +219,10 @@ export function Sidebar() {
         const pathFeature = new URL(path, "http://x").searchParams.get("feature");
         const currentFeature = searchParams?.get("feature");
         return pathFeature === currentFeature;
+      }
+      const importParam = searchParams?.get("import") === "true";
+      if (importParam && (path === "/trades" || path === "/closing-rates")) {
+        return false;
       }
       if (path === "/") return pathname === "/";
       return pathname === path || pathname?.startsWith(path + "/");

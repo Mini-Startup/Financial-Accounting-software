@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
+import type { DubaiParsedTrade } from '../../lib/tradeParser';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
 
@@ -25,6 +26,9 @@ interface TradeImportContextType {
   setSelectedBrokerId: React.Dispatch<React.SetStateAction<string>>;
   selectedImportType: string;
   setSelectedImportType: React.Dispatch<React.SetStateAction<string>>;
+  // Dubai-specific
+  dubaiPreviewRows: DubaiParsedTrade[];
+  setDubaiPreviewRows: React.Dispatch<React.SetStateAction<DubaiParsedTrade[]>>;
   resetImportState: () => void;
 }
 
@@ -42,6 +46,7 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
   const [selectedExchangeId, setSelectedExchangeId] = useState<string>('');
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('');
   const [selectedImportType, setSelectedImportType] = useState<string>('trades_fno');
+  const [dubaiPreviewRows, setDubaiPreviewRows] = useState<DubaiParsedTrade[]>([]);
 
   const resetImportState = () => {
     setStep('UPLOAD');
@@ -50,6 +55,7 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
     setNormalizedRows([]);
     setPreviewRows([]);
     setImportResult(null);
+    setDubaiPreviewRows([]);
   };
 
   return (
@@ -75,6 +81,8 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
         setSelectedBrokerId,
         selectedImportType,
         setSelectedImportType,
+        dubaiPreviewRows,
+        setDubaiPreviewRows,
         resetImportState,
       }}
     >

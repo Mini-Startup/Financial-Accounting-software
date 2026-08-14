@@ -1,6 +1,7 @@
 import { Express } from 'express';
 import accountMastersRouter from './features/account-masters/routes';
 import brokeragesRouter from './features/brokerages/routes';
+import currenciesRouter from './features/currencies/routes';
 import exchangesRouter from './features/exchanges/routes';
 import groupsRouter from './features/groups/routes';
 import scriptsRouter from './features/scripts/routes';
@@ -21,6 +22,7 @@ export function registerRoutes(app: Express) {
   // Feature routes
   app.use('/account-masters', accountMastersRouter);
   app.use('/brokerages', brokeragesRouter);
+  app.use('/currencies', currenciesRouter);
   app.use('/exchanges', exchangesRouter);
   app.use('/groups', groupsRouter);
   app.use('/scripts', scriptsRouter);

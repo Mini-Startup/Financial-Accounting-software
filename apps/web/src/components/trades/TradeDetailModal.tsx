@@ -1,15 +1,17 @@
 'use client';
 
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, Calendar, User, TrendingUp, Cpu, Info } from 'lucide-react';
+import { X, Calendar, User, TrendingUp, Cpu, Info, Pencil } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export function TradeDetailModal({
   trade,
   onClose,
+  onEdit,
 }: {
   trade: any;
   onClose: () => void;
+  onEdit?: () => void;
 }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
 
@@ -30,12 +32,27 @@ export function TradeDetailModal({
             </span>
             <h2 className="card__title">Trade Specifications</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit();
+                }}
+                className="btn btn--secondary flex items-center gap-1.5 py-1 px-3 text-xs"
+                title="Edit this trade"
+              >
+                <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                Edit
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -155,7 +172,69 @@ export function TradeDetailModal({
             </p>
           </div>
 
-          {/* Section 3: Technical / File Mappings */}
+          {/* Section 3: Extended Specifications (Dubai / FnO Import Details) */}
+          {(trade.securityName || trade.dealerCode || trade.currencyCode || trade.delMonth || trade.bloombergCode || trade.mktValue != null) && (
+            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5">
+              <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-blue-600" />
+                Extended Trade Specifications
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6">
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Security Name</span>
+                  <span className="font-semibold text-slate-800 text-xs">{trade.securityName || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Dealer Code</span>
+                  <span className="font-mono text-xs font-semibold text-slate-800">{trade.dealerCode || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Currency</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.currencyCode || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Delivery Month</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.delMonth || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Market Lot</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.marketLot != null ? trade.marketLot : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Call / Put</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.callPut || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Strike Price</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.strikePrice != null ? trade.strikePrice : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Bloomberg Code</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.bloombergCode || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Mkt Value</span>
+                  <span className="font-mono text-xs font-semibold text-slate-800">{trade.mktValue != null ? `₹${trade.mktValue.toFixed(2)}` : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Commission</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.clnCommission != null ? `₹${trade.clnCommission.toFixed(2)}` : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Ex Charges</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.clnExCharges != null ? `₹${trade.clnExCharges.toFixed(2)}` : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Charges 1 / 2 / VAT</span>
+                  <span className="font-mono text-xs text-slate-800">
+                    {`₹${((trade.clnCharges1 || 0) + (trade.clnCharges2 || 0) + (trade.vat || 0)).toFixed(2)}`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section 4: Technical / File Mappings */}
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
             <h3 className="text-xs font-bold text-[var(--color-slate)] uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <Cpu className="w-4 h-4 text-[var(--color-primary)]" />
@@ -175,7 +254,7 @@ export function TradeDetailModal({
                 <span className="font-mono text-xs">{trade.terminal || '—'}</span>
               </div>
               <div>
-                <span className="text-[11px] text(--color-slate) block">Expiry Date</span>
+                <span className="text-[11px] text-[var(--color-slate)] block">Expiry Date</span>
                 <span className="font-mono text-xs">{trade.expiry || '—'}</span>
               </div>
               <div>

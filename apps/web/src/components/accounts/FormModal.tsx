@@ -1,8 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
+
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 export function FormModal({
   initialData,
@@ -17,6 +19,7 @@ export function FormModal({
   onClose: () => void;
   onSuccess?: () => void;
 }) {
+  useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     code: initialData?.code || initialData?.fldClient || '',
@@ -42,8 +45,31 @@ export function FormModal({
     referenceName: initialData?.referenceName || '',
     referenceMobile: initialData?.referenceMobile || '',
     referenceEmail: initialData?.referenceEmail || '',
+    isDirectClient: initialData?.isDirectClient ?? true,
+    dealerCode: initialData?.dealerCode || '',
     ...initialData // Keep ID if passing through
   });
+
+  const [directClients, setDirectClients] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (groupName === 'Sundry Debtors') {
+      const fetchDirectClients = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?group=Sundry Debtors&directOnly=true`);
+          if (res.ok) {
+            const data = await res.json();
+            // Filter out current client if editing
+            const filtered = data.filter((c: any) => c.id !== initialData?.id);
+            setDirectClients(filtered);
+          }
+        } catch (err) {
+          console.error('Failed to fetch direct clients:', err);
+        }
+      };
+      fetchDirectClients();
+    }
+  }, [groupName, initialData?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,11 +112,20 @@ export function FormModal({
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setFormData((prev: any) => {
+      const updated = { ...prev, [name]: type === 'checkbox' ? checked : value };
+      if (updated.isDirectClient) {
+        updated.dealerCode = updated.code;
+      }
+      return updated;
+    });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div
+      onMouseDown={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+    >
       <div ref={modalRef} className="card w-[900px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}
@@ -126,6 +161,50 @@ export function FormModal({
                   <label className="form-label">Name *</label>
                   <input required name="name" value={formData.name} onChange={handleChange} className="input" />
                 </div>
+                
+                {groupName === 'Sundry Debtors' && (
+                  <>
+                    <div className="form-group flex items-center h-full pt-6">
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
+                        <input
+                          type="checkbox"
+                          name="isDirectClient"
+                          checked={formData.isDirectClient}
+                          onChange={handleChange}
+                          className="rounded text-[var(--color-emerald)] focus:ring-[var(--color-emerald)]"
+                        />
+                        Is Direct Client
+                      </label>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Dealer Code *</label>
+                      {formData.isDirectClient ? (
+                        <input
+                          disabled
+                          value={formData.code}
+                          placeholder="Same as Client Code"
+                          className="input opacity-60 bg-[var(--color-snow)]"
+                        />
+                      ) : (
+                        <select
+                          required
+                          name="dealerCode"
+                          value={formData.dealerCode}
+                          onChange={handleChange}
+                          className="input"
+                        >
+                          <option value="">-- Select Direct Client --</option>
+                          {directClients.map(c => (
+                            <option key={c.id} value={c.code}>
+                              {c.code} - {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

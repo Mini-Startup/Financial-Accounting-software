@@ -7,6 +7,8 @@ export class ScriptsService {
     fullName: string;
     isin?: string | null;
     lotSize: number;
+    exchangeId?: string | null;
+    currencyId?: string | null;
     isActive?: boolean;
     exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
   }) {
@@ -19,6 +21,8 @@ export class ScriptsService {
           fullName: scriptData.fullName.trim(),
           isin: scriptData.isin?.trim() || null,
           lotSize: Number(scriptData.lotSize),
+          exchangeId: scriptData.exchangeId || null,
+          currencyId: scriptData.currencyId || null,
           isActive: scriptData.isActive ?? true,
         },
       });
@@ -36,12 +40,14 @@ export class ScriptsService {
       return tx.script.findUnique({
         where: { id: script.id },
         include: {
+          exchange: true,
+          currency: true,
           scriptExchangeMappings: {
             include: { exchange: true },
           },
         },
       });
-    });
+    }, { maxWait: 10000, timeout: 30000 });
   }
 
   async findAll(search?: string) {
@@ -58,6 +64,8 @@ export class ScriptsService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        exchange: true,
+        currency: true,
         scriptExchangeMappings: {
           include: { exchange: true },
         },
@@ -69,6 +77,8 @@ export class ScriptsService {
     const script = await prisma.script.findUnique({
       where: { id },
       include: {
+        exchange: true,
+        currency: true,
         scriptExchangeMappings: {
           include: { exchange: true },
         },
@@ -85,6 +95,8 @@ export class ScriptsService {
       fullName?: string;
       isin?: string | null;
       lotSize?: number;
+      exchangeId?: string | null;
+      currencyId?: string | null;
       isActive?: boolean;
       exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
     },
@@ -94,13 +106,15 @@ export class ScriptsService {
     const { exchangeMappings, ...scriptData } = data;
 
     return prisma.$transaction(async (tx) => {
-      const script = await tx.script.update({
+      await tx.script.update({
         where: { id },
         data: {
           ...(scriptData.shortName !== undefined && { shortName: scriptData.shortName.trim() }),
           ...(scriptData.fullName !== undefined && { fullName: scriptData.fullName.trim() }),
           ...(scriptData.isin !== undefined && { isin: scriptData.isin?.trim() || null }),
           ...(scriptData.lotSize !== undefined && { lotSize: Number(scriptData.lotSize) }),
+          ...(scriptData.exchangeId !== undefined && { exchangeId: scriptData.exchangeId || null }),
+          ...(scriptData.currencyId !== undefined && { currencyId: scriptData.currencyId || null }),
           ...(scriptData.isActive !== undefined && { isActive: scriptData.isActive }),
         },
       });
@@ -125,6 +139,8 @@ export class ScriptsService {
       return tx.script.findUnique({
         where: { id },
         include: {
+          exchange: true,
+          currency: true,
           scriptExchangeMappings: {
             include: { exchange: true },
           },

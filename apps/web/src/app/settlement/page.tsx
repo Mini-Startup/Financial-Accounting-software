@@ -1,19 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { Search, Calculator, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { 
+  Search, Calculator, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, 
+  Eye, EyeOff, FileSpreadsheet, CheckCircle2, ChevronDown, ChevronUp, PlusCircle, Plus 
+} from 'lucide-react';
+import { parseOpenPositionCSV, processOpenPositionClosingRates, type ParsedClosingRateItem, type OpenPositionParsedRow } from '../../lib/tradeParser/openPositionParser';
+import { OpenPositionVerificationPanel, type PositionVerificationItem } from '../../components/trades/OpenPositionVerificationPanel';
+import { generateDubaiSecurityName, cleanScriptFullName } from '../../components/trades/tradeImportHelpers';
+import { ScriptFormModal } from '../../components/scripts/ScriptFormModal';
 
 interface SettlementItem {
   accountId: string;
   accountCode: string;
   accountName: string;
   role: 'CLIENT' | 'BROKER';
+  securityName: string;
   scriptId: string;
   scriptShortName: string;
   scriptFullName: string;
   exchangeId: string;
   exchangeCode: string;
+  currencyCode?: string;
+  currencySymbol?: string;
   expiry: string | null;
   buyQty: number;
   buyVal: number;
@@ -28,54 +39,355 @@ interface SettlementItem {
   closingRate: number | null;
 }
 
+interface PositionDiscrepancy {
+  clientCode: string;
+  securityName: string;
+  systemNetQty: number;
+  csvNetQty: number;
+  diff: number;
+  reason: string;
+}
+
 export default function SettlementPage() {
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [reportDate, setReportDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<SettlementItem[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showAutoCalculated, setShowAutoCalculated] = useState(false);
+
+  // System reference data for parsing
+  const [exchanges, setExchanges] = useState<any[]>([]);
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
+
+  // Script Creation Modal States
+  const [showScriptModal, setShowScriptModal] = useState(false);
+  const [scriptModalInitialData, setScriptModalInitialData] = useState<any>(null);
+
+  // Open Position File verification states
+  const [openPositionFileName, setOpenPositionFileName] = useState('');
+  const [openPositionRows, setOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
+  const [parsedRates, setParsedRates] = useState<ParsedClosingRateItem[]>([]);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false); // Closed by default
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
+  // Accordion pagination
+  const [filePage, setFilePage] = useState(1);
+  const [filePageSize, setFilePageSize] = useState(20);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'CLIENT' | 'BROKER'>('ALL');
   const [positionFilter, setPositionFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchScripts = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts`);
+      if (res.ok) {
+        const data = await res.json();
+        setScripts(data);
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to fetch scripts:', err);
+    }
+  };
+
+  const handleOpenScriptModal = (commodityCode: string, securityName?: string, exchangeCode?: string) => {
+    let foundExchange = exchanges.find(
+      (ex) => ex.code.toUpperCase() === (exchangeCode || '').toUpperCase()
+    );
+    const cleanedFullName = securityName ? cleanScriptFullName(securityName) : commodityCode;
+
+    setScriptModalInitialData({
+      shortName: commodityCode.toUpperCase(),
+      fullName: cleanedFullName,
+      lotSize: 1,
+      exchangeId: foundExchange ? foundExchange.id : (exchanges[0]?.id || ''),
+      currencyId: (currencies[0]?.id || ''),
+    });
+    setShowScriptModal(true);
+  };
+
+  const handleScriptCreated = async () => {
+    setShowScriptModal(false);
+    const updatedScripts = await fetchScripts();
+    if (updatedScripts && openPositionRows.length > 0) {
+      const processed = processOpenPositionClosingRates(openPositionRows, exchanges, updatedScripts);
+      setParsedRates(processed);
+    }
+    toast.success('Script added! Open position verification updated.');
+  };
+
   useEffect(() => {
-    // Set default date range to current month
+    // Set default date to today
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    setFromDate(firstDay.toISOString().split('T')[0]);
-    setToDate(today.toISOString().split('T')[0]);
+    setReportDate(today.toISOString().split('T')[0]);
+
+    // Fetch exchanges & scripts & currencies for Open Position parsing
+    const loadRefData = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const [exRes, scRes, curRes] = await Promise.all([
+          fetch(`${apiUrl}/exchanges`),
+          fetch(`${apiUrl}/scripts`),
+          fetch(`${apiUrl}/currencies`),
+        ]);
+        if (exRes.ok) setExchanges(await exRes.json());
+        if (scRes.ok) setScripts(await scRes.json());
+        if (curRes.ok) setCurrencies(await curRes.json());
+      } catch (err) {
+        console.error('Failed to load reference data:', err);
+      }
+    };
+    loadRefData();
   }, []);
+
+  const fetchSettlementSummary = async (date: string) => {
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?date=${date}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      setSummaryData(data);
+      setHasGenerated(true);
+      return data;
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to generate settlement summary');
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fromDate || !toDate) {
-      toast.error('Please select both From and To dates');
+    if (!reportDate) {
+      toast.error('Please select a Date');
       return;
     }
 
     setLoading(true);
-    setShowAutoCalculated(false); // Reset auto-calculation state on new generate
+    setShowAutoCalculated(false);
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?fromDate=${fromDate}&toDate=${toDate}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setSummaryData(data);
-        setHasGenerated(true);
-        toast.success(`Generated settlement summary successfully`);
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        toast.error(errData.error || 'Failed to generate settlement summary');
-      }
-    } catch (err) {
+      await fetchSettlementSummary(reportDate);
+      toast.success(`Generated settlement summary for ${reportDate}`);
+    } catch (err: any) {
       console.error(err);
-      toast.error('Failed to connect to the backend server');
+      toast.error(err.message || 'Failed to connect to the backend server');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Open Position CSV Upload Handler
+  const handleOpenPositionFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setOpenPositionFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const rawRows = parseOpenPositionCSV(text);
+        if (rawRows.length === 0) {
+          toast.error('No valid rows found in Open Position CSV.');
+          return;
+        }
+
+        setOpenPositionRows(rawRows);
+        const processed = processOpenPositionClosingRates(rawRows, exchanges, scripts);
+        setParsedRates(processed);
+        toast.success(`Parsed ${rawRows.length} open position rows from ${file.name}`);
+      } catch (err: any) {
+        console.error(err);
+        toast.error('Error reading Open Position CSV file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Compute Open Position Verification against generated Settlement Summary
+  const performVerification = () => {
+    if (openPositionRows.length === 0 || !hasGenerated) {
+      return { status: 'NO_FILE' as const, discrepancies: [] };
+    }
+
+    // 1. Group CSV open net lots by ClientCode + SecurityName (constructed using full script name)
+    const csvClientMap = new Map<string, {
+      netLots: number;
+      isScriptMissing: boolean;
+      commodityCode: string;
+      exchangeCode: string;
+      securityName: string;
+    }>();
+
+    for (const row of openPositionRows) {
+      const clientCode = row.clientCode.trim().toUpperCase();
+      if (!clientCode) continue;
+
+      const scriptObj = scripts.find(
+        (s) => (s.shortName && s.shortName.toUpperCase() === row.commodityCode.toUpperCase()) ||
+               (s.fullName && s.fullName.toUpperCase() === row.commodityCode.toUpperCase())
+      );
+
+      const baseName = scriptObj?.fullName || scriptObj?.shortName || row.commodityCode;
+      
+      const secName = (
+        generateDubaiSecurityName(
+          {
+            delMonth: row.delMonth,
+            expiryDate: row.expiryDate,
+            callPut: row.callPut,
+            strikePrice: row.strikePrice,
+            rawCallPut: row.callPut,
+          } as any,
+          scriptObj || { fullName: baseName, shortName: baseName }
+        ) || `${baseName} ${row.expiryDate || row.delMonth}`.trim()
+      ).toUpperCase();
+
+      // Net lots in row
+      const bought = parseFloat(row.rawRow['BOUGHT_LOTS'] || '0') || 0;
+      const sold = parseFloat(row.rawRow['SOLD_LOTS'] || '0') || 0;
+      const netLotsFromCols = bought - sold;
+      const netLotsFromCol = parseFloat(row.rawRow['NET_LOTS'] || '0');
+      const netLots = !isNaN(netLotsFromCol) && netLotsFromCol !== 0 ? netLotsFromCol : netLotsFromCols;
+
+      const key = `${clientCode}_${secName}`;
+      const existing = csvClientMap.get(key);
+      if (existing) {
+        existing.netLots += netLots;
+        if (!scriptObj) existing.isScriptMissing = true;
+      } else {
+        csvClientMap.set(key, {
+          netLots,
+          isScriptMissing: !scriptObj,
+          commodityCode: row.commodityCode,
+          exchangeCode: row.exchange,
+          securityName: secName,
+        });
+      }
+    }
+
+    // 2. Map System Client open positions
+    const systemClientMap = new Map<string, { item: SettlementItem; netQty: number }>();
+    const clientSummaryItems = summaryData.filter((i) => i.role === 'CLIENT' && i.netQty !== 0);
+
+    for (const item of clientSummaryItems) {
+      const key = `${item.accountCode.trim().toUpperCase()}_${item.securityName.trim().toUpperCase()}`;
+      systemClientMap.set(key, { item, netQty: item.netQty });
+    }
+
+    // 3. Compare All Positions (Valid + Discrepancies)
+    const items: PositionVerificationItem[] = [];
+    const allKeys = new Set([...Array.from(csvClientMap.keys()), ...Array.from(systemClientMap.keys())]);
+
+    for (const key of Array.from(allKeys)) {
+      const csvData = csvClientMap.get(key);
+      const csvQty = csvData ? csvData.netLots : 0;
+      const sysObj = systemClientMap.get(key);
+      const sysQty = sysObj ? sysObj.netQty : 0;
+      const diff = sysQty - csvQty;
+      const isQtyMatched = Math.abs(diff) <= 0.001;
+      const isUnmapped = !!csvData?.isScriptMissing;
+
+      const isValid = isQtyMatched && !isUnmapped;
+
+      const parts = key.split('_');
+      const clientCode = parts[0];
+      const securityName = parts.slice(1).join('_');
+
+      let reason = 'Matched';
+      if (isUnmapped) {
+        reason = `Script '${csvData?.commodityCode}' not found in database. Please create script.`;
+      } else if (!isQtyMatched) {
+        reason = sysQty === 0
+          ? 'Position present in CSV but missing in system trades'
+          : csvQty === 0
+          ? 'Position present in system trades but missing in CSV'
+          : 'Open quantity mismatch between system and CSV';
+      }
+
+      items.push({
+        clientCode,
+        securityName,
+        commodityCode: csvData?.commodityCode,
+        exchangeCode: csvData?.exchangeCode,
+        systemNetQty: sysQty,
+        csvNetQty: csvQty,
+        diff,
+        isValid,
+        isUnmappedScript: isUnmapped,
+        reason,
+      });
+    }
+
+    const discrepancies = items.filter((i) => !i.isValid);
+    const isValidated = discrepancies.length === 0;
+
+    return {
+      status: isValidated ? ('VALIDATED' as const) : ('FAILED' as const),
+      items,
+      discrepancies,
+    };
+  };
+
+  const verification = performVerification();
+  const isValidated = verification.status === 'VALIDATED';
+
+  // Handle Add or Adjust Trades button click
+  const handleAddAdjustTrades = async () => {
+    if (!isValidated) {
+      toast.error('Open Position validation must pass before adding or adjusting trades.');
+      return;
+    }
+
+    const openPositions = summaryData.filter((i) => i.netQty !== 0);
+    if (openPositions.length === 0) {
+      toast.error('No open positions available to adjust.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to add Carry Forward and Back Forward trades for ${openPositions.length} open positions on ${reportDate}?`)) {
+      return;
+    }
+
+    setIsAdjusting(true);
+    try {
+      const adjustments = openPositions.map((item) => ({
+        accountId: item.accountId,
+        scriptId: item.scriptId,
+        exchangeId: item.exchangeId,
+        netQty: item.netQty,
+        closingRate: item.closingRate ?? 0,
+        securityName: item.securityName,
+        expiry: item.expiry,
+      }));
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/adjust-trades`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportDate,
+          adjustments,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create adjustment trades');
+      }
+
+      const result = await res.json();
+      toast.success(`Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`);
+      
+      // Re-fetch settlement summary
+      await fetchSettlementSummary(reportDate);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Error executing trade adjustments');
+    } finally {
+      setIsAdjusting(false);
     }
   };
 
@@ -99,7 +411,6 @@ export default function SettlementPage() {
     return matchesSearch && matchesRole && matchesPosition;
   });
 
-  // Calculate settled data (realized for closed positions, valuation at closing rate for open positions)
   const settledData = filteredData.map(item => {
     const finalPnL = item.netQty === 0
       ? item.realizedPnL
@@ -112,16 +423,25 @@ export default function SettlementPage() {
     };
   });
 
+  const getSym = (item: { currencySymbol?: string; currencyCode?: string }) =>
+    item.currencySymbol || (item.currencyCode === 'INR' ? '₹' : '$');
 
-  // Calculate high-level metrics for the filtered view
   const totalVolume = filteredData.reduce((sum, item) => sum + item.buyQty + item.sellQty, 0);
   const openPositionsCount = filteredData.filter(item => item.netQty !== 0).length;
+  const netTotalPnL = settledData.reduce((sum, item) => sum + item.finalPnL, 0);
 
-  const totalPositivePnL = settledData.reduce((sum, item) => item.finalPnL > 0 ? sum + item.finalPnL : sum, 0);
-  const totalNegativePnL = settledData.reduce((sum, item) => item.finalPnL < 0 ? sum + item.finalPnL : sum, 0);
-  const netTotalPnL = totalPositivePnL + totalNegativePnL;
+  const pnlByCurrency = settledData.reduce((acc, item) => {
+    const symbol = getSym(item);
+    acc[symbol] = (acc[symbol] || 0) + item.finalPnL;
+    return acc;
+  }, {} as Record<string, number>);
 
-  // Carry Forward and Back Forward Date calculations
+  const pnlDisplayStr = Object.keys(pnlByCurrency).length === 0
+    ? '$0.00'
+    : Object.entries(pnlByCurrency)
+        .map(([symbol, val]) => `${val >= 0 ? '+' : '-'}${symbol}${Math.abs(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+        .join(' / ');
+
   const formatDateStr = (dateStr: string) => {
     if (!dateStr) return '';
     try {
@@ -143,11 +463,17 @@ export default function SettlementPage() {
     }
   };
 
-  const carryForwardDateFormatted = formatDateStr(toDate);
-  const backForwardDateFormatted = getNextDayStr(toDate);
-
-  // Filter positions that have open balances to be carry/back forwarded
+  const carryForwardDateFormatted = formatDateStr(reportDate);
+  const backForwardDateFormatted = getNextDayStr(reportDate);
   const openPositions = filteredData.filter(item => item.netQty !== 0);
+
+  // Accordion pagination slicing
+  const totalFilePages = Math.max(1, Math.ceil(openPositionRows.length / filePageSize));
+  const safeFilePage = Math.min(filePage, totalFilePages);
+  const paginatedFileRows = openPositionRows.slice(
+    (safeFilePage - 1) * filePageSize,
+    safeFilePage * filePageSize
+  );
 
   return (
     <div className="space-y-8">
@@ -155,35 +481,45 @@ export default function SettlementPage() {
         <div>
           <h1 className="text-h2 font-display">Settlement</h1>
           <p className="text-sm text-[var(--color-slate)] mt-1">
-            Generate and analyze summarized trade positions, average rates, and realized profit/losses for clients and brokers.
+            Generate daily summarized trade positions, average rates, and verify against Open Position files.
           </p>
         </div>
       </div>
 
-      {/* Date Range Selection Card */}
+      {/* Date & Open Position Upload Form Card */}
       <div className="card">
-        <div className="card__body">
+        <div className="card__body p-6">
           <form onSubmit={handleGenerate} className="flex flex-col md:flex-row items-end gap-6">
-            <div className="form-field flex-1">
-              <label className="form-label form-label--required">From Date</label>
+            <div className="form-field flex-1 max-w-xs">
+              <label className="form-label form-label--required">Select Date (Daily Settlement)</label>
               <input 
                 type="date" 
-                value={fromDate} 
-                onChange={e => setFromDate(e.target.value)} 
+                value={reportDate} 
+                onChange={e => setReportDate(e.target.value)} 
                 className="input w-full"
                 required 
               />
             </div>
-            
-            <div className="form-field flex-1">
-              <label className="form-label form-label--required">To Date</label>
-              <input 
-                type="date" 
-                value={toDate} 
-                onChange={e => setToDate(e.target.value)} 
-                className="input w-full"
-                required 
-              />
+
+            <div className="form-field flex-1 max-w-sm">
+              <label className="form-label">Upload Open Position CSV (Optional)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleOpenPositionFileUpload}
+                  accept=".csv, .txt"
+                  className="hidden"
+                  id="open-pos-csv-settlement"
+                />
+                <label 
+                  htmlFor="open-pos-csv-settlement"
+                  className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 text-xs"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span className="truncate">{openPositionFileName ? openPositionFileName : 'Upload Open Position CSV'}</span>
+                </label>
+              </div>
             </div>
 
             <button 
@@ -207,6 +543,154 @@ export default function SettlementPage() {
         </div>
       </div>
 
+      {/* Verification Status & Adjust Trades Bar */}
+      {hasGenerated && (
+        <div className="card p-5 bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Validation Status:</span>
+            {verification.status === 'VALIDATED' ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                Open Position Verified
+              </span>
+            ) : verification.status === 'FAILED' ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                Open Position Not Validated ({verification.discrepancies.length} mismatches)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                No Open Position File Uploaded
+              </span>
+            )}
+          </div>
+
+          {/* Add or Adjust Trades Button */}
+          <button
+            onClick={handleAddAdjustTrades}
+            disabled={!isValidated || isAdjusting || openPositions.length === 0}
+            className={`btn flex items-center gap-2 py-2 px-5 text-xs font-bold transition-all shadow-sm ${
+              isValidated && openPositions.length > 0 && !isAdjusting
+                ? 'btn--primary bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+            }`}
+            title={!isValidated ? 'Validation must pass to enable Add / Adjust Trades' : 'Create Carry Forward & Back Forward trades'}
+          >
+            {isAdjusting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" /> Adding / Adjusting Trades…
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-4 h-4" /> Add / Adjust Trades
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Open Position Verification Panel with Search & Filters */}
+      {hasGenerated && openPositionRows.length > 0 && verification.items && verification.items.length > 0 && (
+        <OpenPositionVerificationPanel
+          items={verification.items}
+          isValidated={isValidated}
+          onAddScript={handleOpenScriptModal}
+        />
+      )}
+
+      {/* Collapsible Accordion for Open Position File (Closed by Default) */}
+      {openPositionRows.length > 0 && (
+        <div className="card shadow-sm border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => setIsAccordionOpen(!isAccordionOpen)}
+            className="w-full p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+              <span>Uploaded Open Position File ({openPositionFileName}) — {openPositionRows.length} rows</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-500">
+              <span>{isAccordionOpen ? 'Hide File Content' : 'View File Content'}</span>
+              {isAccordionOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </button>
+
+          {isAccordionOpen && (
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                      <th className="p-3">#</th>
+                      <th className="p-3">Client Code</th>
+                      <th className="p-3">Exchange</th>
+                      <th className="p-3">Commodity Code</th>
+                      <th className="p-3">Expiry / DelMonth</th>
+                      <th className="p-3">Type / Strike</th>
+                      <th className="p-3 text-right">Closing Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedFileRows.map((r, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-3 font-mono text-slate-400">{(safeFilePage - 1) * filePageSize + idx + 1}</td>
+                        <td className="p-3 font-mono font-bold text-slate-800">{r.clientCode}</td>
+                        <td className="p-3 font-bold text-slate-700">{r.exchange}</td>
+                        <td className="p-3 font-mono text-blue-700">{r.commodityCode}</td>
+                        <td className="p-3 font-mono text-slate-600">{r.delMonth || r.expiryDate || '—'}</td>
+                        <td className="p-3 text-slate-600">{r.futureOption} {r.callPut} {r.strikePrice}</td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900">₹{r.closingPrice.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Accordion Pagination */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 border-t border-slate-200 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-600 font-semibold">Rows per page:</span>
+                  <select
+                    value={filePageSize}
+                    onChange={(e) => {
+                      setFilePageSize(Number(e.target.value));
+                      setFilePage(1);
+                    }}
+                    className="input py-1 px-2 text-xs w-[70px]"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-600">
+                    Page {safeFilePage} of {totalFilePages} ({openPositionRows.length} total rows)
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      disabled={safeFilePage === 1}
+                      onClick={() => setFilePage((prev) => Math.max(prev - 1, 1))}
+                      className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      disabled={safeFilePage === totalFilePages}
+                      onClick={() => setFilePage((prev) => Math.min(prev + 1, totalFilePages))}
+                      className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {hasGenerated && (
         <>
           {/* Dashboard Summary Cards */}
@@ -216,7 +700,7 @@ export default function SettlementPage() {
                 <div>
                   <p className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Settled P&L</p>
                   <h3 className={`text-h2 font-display mt-2 font-bold ${netTotalPnL >= 0 ? 'text-[var(--color-forest)]' : 'text-[var(--color-negative)]'}`}>
-                    ₹{netTotalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {pnlDisplayStr}
                   </h3>
                 </div>
                 <div className={`p-3 rounded-xl ${netTotalPnL >= 0 ? 'bg-emerald-50 text-[var(--color-forest)]' : 'bg-red-50 text-[var(--color-negative)]'}`}>
@@ -330,7 +814,7 @@ export default function SettlementPage() {
                     <tr>
                       <th>Party Code & Name</th>
                       <th>Role</th>
-                      <th>Script (Exchange)</th>
+                      <th>Security Name (Exchange)</th>
                       <th>Expiry</th>
                       <th className="text-right">Buy Qty</th>
                       <th className="text-right">Buy Avg Price</th>
@@ -352,11 +836,12 @@ export default function SettlementPage() {
                     ) : (
                       settledData.map((item, index) => {
                         const isNetLong = item.netQty > 0;
-                        const isNetShort = item.netQty < 0;
                         const isClosed = item.netQty === 0;
+                        const secName = item.securityName || item.scriptShortName || '—';
+                        const s = getSym(item);
 
                         return (
-                          <tr key={`${item.accountId}_${item.scriptId}_${item.exchangeId}_${index}`}>
+                          <tr key={`${item.accountId}_${item.securityName}_${item.exchangeId}_${index}`}>
                             <td>
                               <div className="font-mono font-medium text-[var(--color-charcoal)]">{item.accountCode}</div>
                               <div className="text-xs text-[var(--color-slate)] truncate max-w-[200px]">{item.accountName}</div>
@@ -367,18 +852,18 @@ export default function SettlementPage() {
                               </span>
                             </td>
                             <td>
-                              <div className="font-semibold text-[var(--color-charcoal)]">{item.scriptShortName}</div>
-                              <div className="text-[10px] text-[var(--color-slate)]">
-                                {item.exchangeCode} - {item.scriptFullName}
+                              <div className="font-semibold text-[var(--color-charcoal)]">{secName}</div>
+                              <div className="text-[10px] text-[var(--color-slate)] font-mono">
+                                {item.exchangeCode}{item.scriptShortName && item.scriptShortName !== secName ? ` • ${item.scriptShortName}` : ''}
                               </div>
                             </td>
                             <td className="font-mono text-xs text-[var(--color-slate)]">
                               {item.expiry || '—'}
                             </td>
                             <td className="text-right font-mono">{item.buyQty.toLocaleString('en-IN')}</td>
-                            <td className="text-right font-mono">₹{item.buyAvgRate.toFixed(2)}</td>
+                            <td className="text-right font-mono">{s}{item.buyAvgRate.toFixed(2)}</td>
                             <td className="text-right font-mono">{item.sellQty.toLocaleString('en-IN')}</td>
-                            <td className="text-right font-mono">₹{item.sellAvgRate.toFixed(2)}</td>
+                            <td className="text-right font-mono">{s}{item.sellAvgRate.toFixed(2)}</td>
                             <td className={`text-right font-mono font-semibold`}>
                               {isClosed ? (
                                 <span className="text-[var(--color-slate)]/50">CLOSED</span>
@@ -389,7 +874,7 @@ export default function SettlementPage() {
                               )}
                             </td>
                             <td className="text-right font-mono font-medium">
-                              {isClosed ? '—' : `₹${item.netAvgRate.toFixed(2)}`}
+                              {isClosed ? '—' : `${s}${item.netAvgRate.toFixed(2)}`}
                             </td>
                             <td className="text-right font-mono font-medium">
                               {isClosed ? (
@@ -397,12 +882,12 @@ export default function SettlementPage() {
                               ) : item.closingRate === null ? (
                                 <span className="text-amber-600 font-semibold" title="Missing closing rate in DB">Missing</span>
                               ) : (
-                                `₹${item.closingRate.toFixed(2)}`
+                                `${s}${item.closingRate.toFixed(2)}`
                               )}
                             </td>
                             <td className={`text-right font-mono font-semibold`}>
                               <span className={item.finalPnL > 0 ? 'text-[var(--color-forest)]' : item.finalPnL < 0 ? 'text-[var(--color-negative)]' : 'text-[var(--color-slate)]'}>
-                                {item.finalPnL > 0 ? '+' : ''}₹{item.finalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {item.finalPnL > 0 ? '+' : ''}{s}{Math.abs(item.finalPnL).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </td>
                           </tr>
@@ -410,26 +895,6 @@ export default function SettlementPage() {
                       })
                     )}
                   </tbody>
-                  {settledData.length > 0 && (
-                    <tfoot>
-                      <tr className="bg-slate-100/60 font-semibold border-t-2 border-slate-200">
-                        <td colSpan={11} className="text-right py-3 px-4 font-bold text-[var(--color-charcoal)]">
-                          Totals (incl. Valuation):
-                        </td>
-                        <td className="text-right py-3 px-4 font-mono">
-                          <div className="text-[var(--color-forest)] font-semibold" title="Total Positive P&L">
-                            +₹{totalPositivePnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-[var(--color-negative)] font-semibold" title="Total Negative P&L">
-                            -₹{Math.abs(totalNegativePnL).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                          <div className={`border-t border-slate-300 pt-1 mt-1 font-bold ${netTotalPnL >= 0 ? 'text-[var(--color-forest)]' : 'text-[var(--color-negative)]'}`} title="Net P&L">
-                            {netTotalPnL >= 0 ? '+' : ''}₹{netTotalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
                 </table>
               </div>
             </div>
@@ -496,19 +961,18 @@ export default function SettlementPage() {
                                   {action}
                                 </span>
                               </td>
-                              <td className="text-right font-mono font-medium">{qty.toLocaleString('en-IN')}</td>
                               <td className="text-right font-mono">
                                 {hasNoRate ? (
                                   <span className="text-amber-600 flex items-center justify-end gap-1 text-xs font-semibold" title="Please add a closing rate for this script in the database.">
                                     <AlertTriangle className="w-3.5 h-3.5" />
-                                    ₹0.00 (Missing)
+                                    {getSym(item)}0.00 (Missing)
                                   </span>
                                 ) : (
-                                  `₹${rate.toFixed(2)}`
+                                  `${getSym(item)}${rate.toFixed(2)}`
                                 )}
                               </td>
                               <td className="text-right font-mono font-semibold">
-                                ₹{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {getSym(item)}{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="text-xs font-medium text-[var(--color-charcoal)]">{carryForwardDateFormatted}</td>
                             </tr>
@@ -581,14 +1045,14 @@ export default function SettlementPage() {
                                 {hasNoRate ? (
                                   <span className="text-amber-600 flex items-center justify-end gap-1 text-xs font-semibold" title="Please add a closing rate for this script in the database.">
                                     <AlertTriangle className="w-3.5 h-3.5" />
-                                    ₹0.00 (Missing)
+                                    {getSym(item)}0.00 (Missing)
                                   </span>
                                 ) : (
-                                  `₹${rate.toFixed(2)}`
+                                  `${getSym(item)}${rate.toFixed(2)}`
                                 )}
                               </td>
                               <td className="text-right font-mono font-semibold">
-                                ₹{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {getSym(item)}{(qty * rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="text-xs font-medium text-[var(--color-charcoal)]">{backForwardDateFormatted}</td>
                             </tr>
@@ -603,6 +1067,19 @@ export default function SettlementPage() {
           )}
         </>
       )}
+
+      {showScriptModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <ScriptFormModal
+            initialData={scriptModalInitialData}
+            exchanges={exchanges}
+            currencies={currencies}
+            onClose={() => setShowScriptModal(false)}
+            onSuccess={handleScriptCreated}
+          />,
+          document.body
+        )}
     </div>
   );
 }

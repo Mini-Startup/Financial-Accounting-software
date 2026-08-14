@@ -4,6 +4,8 @@ import { brokeragesService } from '../brokerages/services';
 import { calculateTrade } from '../../utils/brokerage';
 import type { BrokerageRule } from '../../utils/brokerage';
 
+import { parseFlexibleDate } from '../Trade_FnO/services';
+
 export class TradesService {
   async create(data: {
     tradeNumber: string;
@@ -34,7 +36,7 @@ export class TradesService {
     return prisma.trade.create({
       data: {
         tradeNumber: data.tradeNumber.trim(),
-        tradeDate: new Date(data.tradeDate),
+        tradeDate: parseFlexibleDate(data.tradeDate),
         tradeTime: data.tradeTime?.trim() || null,
         accountId: data.accountId,
         brokerId: data.brokerId || null,
@@ -120,7 +122,7 @@ export class TradesService {
       where: { id },
       data: {
         ...(data.tradeNumber !== undefined && { tradeNumber: data.tradeNumber.trim() }),
-        ...(data.tradeDate !== undefined && { tradeDate: new Date(data.tradeDate) }),
+        ...(data.tradeDate !== undefined && { tradeDate: parseFlexibleDate(data.tradeDate) }),
         ...(data.tradeTime !== undefined && { tradeTime: data.tradeTime?.trim() || null }),
         ...(data.accountId !== undefined && { accountId: data.accountId }),
         ...(data.brokerId !== undefined && { brokerId: data.brokerId || null }),

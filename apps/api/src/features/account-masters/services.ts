@@ -8,6 +8,9 @@ function sanitizePayload(payload: any) {
   if (payload.isActive !== undefined && payload.isActive !== null) {
     payload.isActive = payload.isActive === true || payload.isActive === 'true';
   }
+  if (payload.isDirectClient !== undefined && payload.isDirectClient !== null) {
+    payload.isDirectClient = payload.isDirectClient === true || payload.isDirectClient === 'true';
+  }
   return payload;
 }
 
@@ -28,12 +31,16 @@ export class AccountMastersService {
     
     sanitizePayload(payload);
 
+    if (payload.isDirectClient) {
+      payload.dealerCode = payload.code;
+    }
+
     return prisma.account.create({
       data: payload as Prisma.AccountUncheckedCreateInput,
     });
   }
 
-  async findAll(groupName?: string, search?: string, excludeGroups?: string) {
+  async findAll(groupName?: string, search?: string, excludeGroups?: string, directOnly?: boolean) {
     const where: Prisma.AccountWhereInput = {};
 
     if (groupName) {
@@ -62,6 +69,10 @@ export class AccountMastersService {
       };
     }
 
+    if (directOnly) {
+      where.isDirectClient = true;
+    }
+
     return prisma.account.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -85,6 +96,16 @@ export class AccountMastersService {
   async update(id: string, data: Prisma.AccountUpdateInput) {
     const payload = { ...data };
     sanitizePayload(payload);
+
+    if (payload.isDirectClient === true) {
+      if (payload.code) {
+        payload.dealerCode = payload.code as string;
+      } else {
+        const current = await this.findOne(id);
+        payload.dealerCode = current.code;
+      }
+    }
+
     return prisma.account.update({
       where: { id },
       data: payload as Prisma.AccountUpdateInput,

@@ -1,88 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { FileUploadZone } from './FileUploadZone';
 import { toast } from 'sonner';
-import { CheckCircle2, AlertTriangle, ArrowLeft, Upload, RefreshCw, FileSpreadsheet } from 'lucide-react';
-import { cn } from '@/utils/cn';
-import { parseTradeFile } from '../../lib/tradeParser';
+import { ArrowLeft, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { parseTradeFile, parseDubaiTradeFile } from '../../lib/tradeParser';
+import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import * as XLSX from 'xlsx';
 import { FormModal } from '../accounts/FormModal';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
+import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
+import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useTradeImport } from './TradeImportContext';
+import { generateDubaiSecurityName, cleanScriptFullName } from './tradeImportHelpers';
+import { ImportFilterBar, StatusFilterType } from './ImportFilterBar';
+import { DubaiPreviewTable } from './DubaiPreviewTable';
+import { NormalPreviewTable } from './NormalPreviewTable';
+import { ImportResultPanel } from './ImportResultPanel';
+import { CustomSelect } from '../ui/CustomSelect';
 import './trades-import.css';
-
-// Helper to convert normalized datetime string (e.g. "2026-04-10 15:11:56") 
-// to input datetime-local format "2026-04-10T15:11:56"
-function formatDateTimeForInput(dateTimeStr: string | null | undefined): string {
-  if (!dateTimeStr) return '';
-  const cleaned = dateTimeStr.trim();
-  if (cleaned.includes('T')) {
-    return cleaned;
-  }
-  return cleaned.replace(' ', 'T');
-}
-
-// Helper to convert input datetime-local value (e.g. "2026-04-10T15:11:56")
-// back to normalized datetime string "2026-04-10 15:11:56"
-function parseDateTimeFromInput(value: string): string {
-  if (!value) return '';
-  let cleaned = value.trim().replace('T', ' ');
-  if (cleaned.length === 16) { // YYYY-MM-DD HH:MM
-    cleaned += ':00';
-  }
-  return cleaned;
-}
-
-// Helper to convert different expiry string formats to "YYYY-MM-DD"
-// so that the HTML date picker can display it.
-function formatExpiryForInput(expiryStr: string | null | undefined): string {
-  if (!expiryStr) return '';
-  const cleaned = expiryStr.trim();
-  if (!cleaned) return '';
-
-  // Check if already YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
-    return cleaned;
-  }
-
-  // Check YYYY/MM/DD
-  const ymdSlash = cleaned.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
-  if (ymdSlash) {
-    return `${ymdSlash[1]}-${ymdSlash[2]}-${ymdSlash[3]}`;
-  }
-
-  // Check DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-26, 28-APR-2026)
-  const regex = /^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})$/;
-  const match = cleaned.match(regex);
-  if (match) {
-    const day = match[1].padStart(2, '0');
-    const monthStr = match[2].toUpperCase();
-    let yearStr = match[3];
-    let year = parseInt(yearStr, 10);
-    if (yearStr.length === 2) {
-      year += 2000;
-    }
-    
-    const months: Record<string, string> = {
-      JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
-      JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12'
-    };
-    if (monthStr in months) {
-      return `${year}-${months[monthStr]}-${day}`;
-    }
-  }
-
-  // Fallback to native Date parsing if possible
-  const date = new Date(cleaned);
-  if (!isNaN(date.getTime())) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-
-  return '';
-}
 
 export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const {
@@ -106,21 +43,41 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setSelectedBrokerId,
     selectedImportType,
     setSelectedImportType,
+    dubaiPreviewRows,
+    setDubaiPreviewRows,
     resetImportState,
   } = useTradeImport();
+
+  const isDubaiImport = selectedImportType === 'dubai_trade_fno';
 
   const [clients, setClients] = useState<any[]>([]);
   const [exchanges, setExchanges] = useState<any[]>([]);
   const [brokers, setBrokers] = useState<any[]>([]);
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
+  const [isValidatingMasterData, setIsValidatingMasterData] = useState(false);
+
+  const [showBrokerModal, setShowBrokerModal] = useState(false);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [exchangeModalInitialData, setExchangeModalInitialData] = useState<any>(null);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [currencyModalInitialData, setCurrencyModalInitialData] = useState<any>(null);
+
+  const [dubaiCurrentPage, setDubaiCurrentPage] = useState(1);
+  const [dubaiPageSize, setDubaiPageSize] = useState(50);
+  const [dubaiDebugSample, setDubaiDebugSample] = useState<string>('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchColumn, setSearchColumn] = useState<string>('clientCode');
+  const [exactMatch, setExactMatch] = useState(false);
+  const [showValidOnly, setShowValidOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
 
   const previewRowsRef = useRef<any[]>([]);
-
   useEffect(() => {
     previewRowsRef.current = previewRows;
   }, [previewRows]);
 
-  // If the wizard was left in the RESULT state (import finished),
-  // reset it on mount so the user starts fresh when visiting again.
   useEffect(() => {
     if (step === 'RESULT') {
       resetImportState();
@@ -134,13 +91,12 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load exchanges and brokers on mount
+  // Load exchanges, brokers, clients, scripts, currencies on mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         
-        // 1. Fetch Exchanges
         const exRes = await fetch(`${apiUrl}/exchanges`);
         if (exRes.ok) {
           const exData = await exRes.json();
@@ -150,7 +106,6 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           }
         }
 
-        // 2. Fetch Brokers (Sundry Creditors)
         const brRes = await fetch(`${apiUrl}/account-masters?group=Sundry Creditors`);
         if (brRes.ok) {
           const brData = await brRes.json();
@@ -160,11 +115,22 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           }
         }
 
-        // 3. Fetch Clients (Sundry Debtors)
         const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
         if (clRes.ok) {
           const clData = await clRes.json();
           setClients(clData);
+        }
+
+        const scRes = await fetch(`${apiUrl}/scripts`);
+        if (scRes.ok) {
+          const scData = await scRes.json();
+          setScripts(scData);
+        }
+
+        const curRes = await fetch(`${apiUrl}/currencies`);
+        if (curRes.ok) {
+          const curData = await curRes.json();
+          setCurrencies(curData);
         }
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
@@ -173,43 +139,278 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     fetchInitialData();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processFile(file);
+  const fetchExchanges = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const exRes = await fetch(`${apiUrl}/exchanges`);
+      if (exRes.ok) {
+        const exData = await exRes.json();
+        setExchanges(exData);
+      }
+    } catch (err) {
+      console.error('Failed to fetch exchanges:', err);
     }
+  };
+
+  const fetchScripts = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const scRes = await fetch(`${apiUrl}/scripts`);
+      if (scRes.ok) {
+        const scData = await scRes.json();
+        setScripts(scData);
+      }
+    } catch (err) {
+      console.error('Failed to fetch scripts:', err);
+    }
+  };
+
+  const fetchBrokers = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const brRes = await fetch(`${apiUrl}/account-masters?group=Sundry Creditors`);
+      if (brRes.ok) {
+        const brData = await brRes.json();
+        setBrokers(brData);
+        if (brData.length > 0) {
+          const latest = brData[brData.length - 1];
+          setSelectedBrokerId(latest.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch brokers:', err);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
+      if (clRes.ok) {
+        const clData = await clRes.json();
+        setClients(clData);
+      }
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const curRes = await fetch(`${apiUrl}/currencies`);
+      if (curRes.ok) {
+        const curData = await curRes.json();
+        setCurrencies(curData);
+      }
+    } catch (err) {
+      console.error('Failed to fetch currencies:', err);
+    }
+  };
+
+  const handleRevalidateAll = async () => {
+    setIsValidatingMasterData(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const [exRes, brRes, clRes, scRes, curRes] = await Promise.all([
+        fetch(`${apiUrl}/exchanges`),
+        fetch(`${apiUrl}/account-masters?group=Sundry Creditors`),
+        fetch(`${apiUrl}/account-masters?group=Sundry Debtors`),
+        fetch(`${apiUrl}/scripts`),
+        fetch(`${apiUrl}/currencies`),
+      ]);
+
+      if (exRes.ok) setExchanges(await exRes.json());
+      if (brRes.ok) setBrokers(await brRes.json());
+      if (clRes.ok) setClients(await clRes.json());
+      if (scRes.ok) setScripts(await scRes.json());
+      if (curRes.ok) setCurrencies(await curRes.json());
+
+      if (!isDubaiImport) {
+        handleRevalidate();
+      }
+      toast.success('Database validation checks updated');
+    } catch (err) {
+      console.error('Failed to revalidate master data:', err);
+      toast.error('Failed to rerun checks');
+    } finally {
+      setIsValidatingMasterData(false);
+    }
+  };
+
+  const handleExchangeDoubleClick = (exchangeCode: string) => {
+    setExchangeModalInitialData({
+      code: exchangeCode.toUpperCase(),
+      name: exchangeCode,
+    });
+    setShowExchangeModal(true);
+  };
+
+  const handleCurrencyDoubleClick = (currencyCode: string) => {
+    setCurrencyModalInitialData({
+      code: (currencyCode || 'USD').toUpperCase(),
+      name: (currencyCode || 'USD').toUpperCase(),
+    });
+    setShowCurrencyModal(true);
+  };
+
+  const handleDubaiScriptDoubleClick = (
+    tickCode: string,
+    securityName: string,
+    marketCode: string,
+    marketLot?: any,
+    currencyCode?: string
+  ) => {
+    let foundExchange = exchanges.find(
+      (ex) => ex.code.toUpperCase() === marketCode.toUpperCase()
+    );
+    let foundCurrency = currencies.find(
+      (c) => c.code.toUpperCase() === (currencyCode || 'USD').toUpperCase()
+    );
+
+    const cleanedFullName = cleanScriptFullName(securityName || tickCode);
+    const parsedLot = marketLot ? parseFloat(String(marketLot)) : 1;
+
+    setScriptModalInitialData({
+      shortName: tickCode.toUpperCase(),
+      fullName: cleanedFullName,
+      lotSize: parsedLot > 0 ? parsedLot : 1,
+      exchangeId: foundExchange ? foundExchange.id : undefined,
+      currencyId: foundCurrency ? foundCurrency.id : undefined,
+    });
+    setShowScriptModal(true);
+  };
+
+  const getDubaiRowValidation = (row: DubaiParsedTrade) => {
+    const errors: string[] = [];
+    const client = clients.find((c) => c.code.toUpperCase() === row.clientCode.toUpperCase());
+    const script = scripts.find((s) => s.shortName.toUpperCase() === row.tickCode.toUpperCase());
+
+    const resolvedExchange =
+      (script?.exchangeId ? exchanges.find((e) => e.id === script.exchangeId) : null) ||
+      (script?.exchange ? script.exchange : null) ||
+      (script?.scriptExchangeMappings?.[0]?.exchange ? script.scriptExchangeMappings[0].exchange : null) ||
+      exchanges.find((e) => e.code.toUpperCase() === row.marketCode.toUpperCase());
+
+    const currencyCode = row.currencyCode || 'USD';
+    const currency = currencies.find((c) => c.code.toUpperCase() === currencyCode.toUpperCase());
+
+    if (!client) {
+      errors.push(`Client '${row.clientCode}' not found`);
+    }
+    if (!resolvedExchange) {
+      errors.push(`Exchange '${row.marketCode}' not found`);
+    }
+    if (!script) {
+      errors.push(`Script with short name '${row.tickCode}' not found`);
+    }
+    if (!currency) {
+      errors.push(`Currency '${currencyCode}' not found in master database`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      resolvedClientId: client?.id,
+      resolvedScriptId: script?.id,
+      resolvedExchangeId: resolvedExchange?.id,
+      resolvedCurrencyId: currency?.id,
+      dealerCode: client?.dealerCode || '-',
+    };
   };
 
   const processFile = (file: File) => {
     setFileName(file.name);
     setIsProcessing(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const content = e.target?.result as string;
-      if (content) {
-        await handleFileRead(content, file.name);
-      }
-    };
-    reader.onerror = () => {
-      toast.error('Failed to read the file.');
+
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    const isCsv = file.name.endsWith('.csv') || file.name.endsWith('.txt');
+
+    if (!isExcel && !isCsv) {
+      toast.error('Unsupported file format. Please upload an Excel (.xlsx, .xls) or CSV (.csv, .txt) file.');
       setIsProcessing(false);
-    };
-    reader.readAsText(file);
+      return;
+    }
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const csvContent = XLSX.utils.sheet_to_csv(sheet);
+          await handleFileRead(csvContent, file.name);
+        } catch (err: any) {
+          toast.error('Failed to parse Excel file: ' + (err.message || 'Invalid format'));
+          setIsProcessing(false);
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read Excel file.');
+        setIsProcessing(false);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const content = e.target?.result as string;
+        if (content) {
+          await handleFileRead(content, file.name);
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read the file.');
+        setIsProcessing(false);
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleFileRead = async (content: string, name: string) => {
     setIsProcessing(true);
     setFileName(name);
     try {
-      // ── Phase 1: Instant local parse (runs in ~10-50ms) ──────
+      if (isDubaiImport) {
+        const dubaiResult = parseDubaiTradeFile(content);
+        if (dubaiResult.trades.length === 0) {
+          throw new Error('No valid trade rows found in the Dubai file.');
+        }
+        setDubaiPreviewRows(dubaiResult.trades);
+        setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
+        setDubaiCurrentPage(1);
+        setStep('PREVIEW');
+        toast.success(`Parsed ${dubaiResult.trades.length} Dubai trade rows.`);
+
+        setIsValidatingMasterData(true);
+        setTimeout(async () => {
+          await handleRevalidateAll();
+        }, 100);
+
+        if (dubaiResult.debugSampleCsv) {
+          try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            fetch(`${apiUrl}/trade-import/save-debug-sample`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileName: name, csvContent: dubaiResult.debugSampleCsv }),
+            });
+          } catch (e) {
+            console.error('Failed to save debug sample to backend', e);
+          }
+        }
+
+        setIsProcessing(false);
+        return;
+      }
+
       const parseResult = parseTradeFile(content);
       if (parseResult.trades.length === 0) {
         throw new Error('No valid trade rows found in the file structure.');
       }
       setParsedTrades(parseResult.trades);
 
-      // Build an immediate preview from local data so the table renders instantly.
-      // Status is 'Validating' until the backend confirms.
       const instantPreview = parseResult.trades.map((t) => ({
         tradeNumber: t.tradeNo,
         clientCode: t.clientCode,
@@ -237,7 +438,6 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       setStep('PREVIEW');
       toast.success(`Parsed ${parseResult.trades.length} rows. Validating against database…`);
 
-      // ── Phase 2: Background validation (runs async) ──────────
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
         method: 'POST',
@@ -256,98 +456,12 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       toast.success('Validation complete.');
     } catch (err: any) {
       toast.error(err.message || 'Error uploading file');
-      // If we already moved to PREVIEW, stay there with the local data
-      // Otherwise reset
       if (step === 'UPLOAD') {
         setFileName('');
       }
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const fetchClients = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
-      if (clRes.ok) {
-        const clData = await clRes.json();
-        setClients(clData);
-      }
-    } catch (err) {
-      console.error('Failed to fetch clients:', err);
-    }
-  };
-
-  const triggerRevalidation = async (currentRows: any[]) => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const parsed = currentRows.map((r) => ({
-        tradeNo: r.tradeNumber,
-        clientCode: r.clientCode,
-        script: r.scriptShortName,
-        fullScript: r.scriptFullName || r.scriptShortName,
-        expiry: r.expiry || '',
-        terminal: r.terminal || '',
-        type: r.buySell,
-        qty: Number(r.quantity),
-        rate: Number(r.rate),
-        tradeTime: r.tradeDate,
-        orderId: r.orderId || '',
-        uniqueTradeId: r.uniqueTradeId || '',
-        exchangeTime: r.exchangeTime || '',
-        orderTime: r.orderTime || '',
-        instrumentType: r.instrumentType || '',
-      }));
-
-      const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: parsed }),
-      });
-
-      if (previewRes.ok) {
-        const previewData = await previewRes.json();
-        setPreviewRows(previewData);
-        setNormalizedRows(previewData);
-      }
-    } catch (err) {
-      console.error('Failed to auto-revalidate:', err);
-    }
-  };
-
-  const handleCellChange = (index: number, field: string, value: any) => {
-    setPreviewRows(prev => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
-      
-      if (field === 'clientCode') {
-        const found = clients.find(c => c.code === value);
-        copy[index].resolvedAccountId = found ? found.id : undefined;
-      }
-      if (field === 'scriptShortName') {
-        copy[index].scriptFullName = value;
-      }
-      return copy;
-    });
-
-    setNormalizedRows(prev => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
-      
-      if (field === 'clientCode') {
-        const found = clients.find(c => c.code === value);
-        copy[index].resolvedAccountId = found ? found.id : undefined;
-      }
-      if (field === 'scriptShortName') {
-        copy[index].scriptFullName = value;
-      }
-      return copy;
-    });
-  };
-
-  const handleBlur = () => {
-    triggerRevalidation(previewRowsRef.current);
   };
 
   const handleRevalidate = async () => {
@@ -398,12 +512,19 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const handleConfirmImport = async () => {
     setIsProcessing(true);
     try {
+      const validRowsToImport = normalizedRows.filter((r) => r.status === 'Valid');
+      if (validRowsToImport.length === 0) {
+        toast.error('No valid trades found to import.');
+        setIsProcessing(false);
+        return;
+      }
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${apiUrl}/trade-import/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          rows: normalizedRows,
+          rows: validRowsToImport,
           brokerId: selectedBrokerId,
           exchangeId: selectedExchangeId,
         }),
@@ -425,12 +546,138 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  const [importProgress, setImportProgress] = useState<{
+    current: number;
+    total: number;
+    percentage: number;
+    phase: string;
+  } | null>(null);
+
+  const handleConfirmDubaiImport = async () => {
+    setIsProcessing(true);
+    setImportProgress({
+      current: 0,
+      total: 0,
+      percentage: 0,
+      phase: 'Preparing trade records for bulk insertion...',
+    });
+
+    try {
+      const activeDubaiRows = dubaiPreviewRows.filter((r) => !r.typeCode.toUpperCase().includes('X'));
+      const validActiveRows = activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid);
+
+      if (validActiveRows.length === 0) {
+        toast.error('No valid trades found to import.');
+        setIsProcessing(false);
+        setImportProgress(null);
+        return;
+      }
+
+      const formattedRows = validActiveRows.map((r, idx) => {
+        const val = getDubaiRowValidation(r);
+        const scriptObj = scripts.find(
+          (s) => s.shortName.toUpperCase() === (r.tickCode || '').toUpperCase()
+        );
+        const generatedSecName = generateDubaiSecurityName(r, scriptObj);
+
+        return {
+          tradeNumber: `DUB-${Date.now()}-${idx + 1}`,
+          clientCode: r.clientCode,
+          scriptCode: r.tickCode,
+          scriptShortName: r.tickCode,
+          scriptFullName: scriptObj?.fullName || r.securityName || r.tickCode,
+          exchange: r.marketCode,
+          buySell: (r.buySellFlag || '').toUpperCase().includes('BUY') ? 'BUY' : 'SELL',
+          quantity: parseFloat(r.qty) || 0,
+          rate: parseFloat(r.price) || 0,
+          tradeDate: r.tradeDate,
+          status: 'Valid',
+          errors: [],
+          resolvedAccountId: val.resolvedClientId,
+          resolvedScriptId: val.resolvedScriptId,
+          resolvedExchangeId: val.resolvedExchangeId,
+          terminal: 'DUBAI',
+          expiry: r.expiryDate,
+          orderId: r.exchOrderId,
+
+          dealerCode: val.dealerCode,
+          currencyCode: r.currencyCode,
+          securityName: generatedSecName || r.securityName,
+          delMonth: r.delMonth,
+          marketLot: parseFloat(r.marketLot) || null,
+          callPut: r.callPut,
+          strikePrice: parseFloat(r.strikePrice) || null,
+          bloombergCode: r.bloombergCode,
+          mktValue: parseFloat(r.mktValue) || null,
+          clnCommission: parseFloat(r.clnCommission) || null,
+          clnExCharges: parseFloat(r.clnExCharges) || null,
+          clnCharges1: parseFloat(r.clnCharges1) || null,
+          clnCharges2: parseFloat(r.clnCharges2) || null,
+          vat: parseFloat(r.vat) || null,
+        };
+      });
+
+      const totalRows = formattedRows.length;
+      const CHUNK_SIZE = 500;
+      let totalImported = 0;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+      for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
+        const chunk = formattedRows.slice(i, i + CHUNK_SIZE);
+        const pct = Math.round((totalImported / totalRows) * 100);
+
+        setImportProgress({
+          current: totalImported,
+          total: totalRows,
+          percentage: pct,
+          phase: `Inserting trades into database (${totalImported.toLocaleString()} / ${totalRows.toLocaleString()})...`,
+        });
+
+        const res = await fetch(`${apiUrl}/trade-import/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rows: chunk,
+            brokerId: selectedBrokerId,
+            exchangeId: selectedExchangeId || undefined,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Failed to confirm trade import batch');
+        }
+
+        const result = await res.json();
+        totalImported += result.importedCount || chunk.length;
+      }
+
+      setImportProgress({
+        current: totalRows,
+        total: totalRows,
+        percentage: 100,
+        phase: 'Finalizing database transactions...',
+      });
+
+      setImportResult({ importedCount: totalImported, failedCount: 0 });
+      setStep('RESULT');
+      toast.success(`Import complete! Successfully saved ${totalImported.toLocaleString()} trades.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error confirming trade import');
+    } finally {
+      setIsProcessing(false);
+      setImportProgress(null);
+    }
+  };
+
   const handleReset = () => {
     setStep('UPLOAD');
     setFileName('');
     setParsedTrades([]);
     setNormalizedRows([]);
     setPreviewRows([]);
+    setDubaiPreviewRows([]);
+    setDubaiCurrentPage(1);
     setImportResult(null);
     if (inputRef.current) inputRef.current.value = '';
   };
@@ -443,49 +690,31 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setShowClientModal(true);
   };
 
-  const handleScriptDoubleClick = (shortName: string, fullName: string, exchangeCode: string) => {
-    let foundExchange = exchanges.find(
-      (ex) => ex.code.toUpperCase() === (exchangeCode || '').toUpperCase()
-    );
-    // Fallback to the user-selected exchange from the dropdown if the row doesn't have it resolved yet
-    if (!foundExchange && selectedExchangeId) {
-      foundExchange = exchanges.find((ex) => ex.id === selectedExchangeId);
-    }
-    setScriptModalInitialData({
-      shortName: shortName,
-      fullName: fullName,
-      scriptExchangeMappings: foundExchange
-        ? [
-            {
-              exchangeId: foundExchange.id,
-              exchangeScriptCode: fullName,
-            },
-          ]
-        : [],
-    });
-    setShowScriptModal(true);
-  };
-
-  // Compute stats and split rows
-  const isValidating = previewRows.some((r) => r.status === 'Validating');
   const futureRows = previewRows.filter((r) => r.instrumentType?.toUpperCase().startsWith('FUT'));
   const optionRows = previewRows.filter((r) => !r.instrumentType?.toUpperCase().startsWith('FUT'));
-
-  const totalRows = previewRows.length;
   const validRowsCount = previewRows.filter((r) => r.status === 'Valid').length;
   const validFuturesCount = futureRows.filter((r) => r.status === 'Valid').length;
   const invalidFuturesCount = futureRows.filter((r) => r.status === 'Invalid').length;
-  const validatingCount = futureRows.filter((r) => r.status === 'Validating').length;
-  const skippedOptionsCount = optionRows.length;
+  const isValidating = previewRows.some((r) => r.status === 'Validating');
+
+  const activeDubaiRows = useMemo(() => {
+    return dubaiPreviewRows.filter((r) => !r.typeCode?.toUpperCase().includes('X'));
+  }, [dubaiPreviewRows]);
+
+  const validDubaiRowsCount = useMemo(() => {
+    return activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid).length;
+  }, [activeDubaiRows, getDubaiRowValidation]);
+
+  const invalidDubaiRowsCount = activeDubaiRows.length - validDubaiRowsCount;
 
   return (
     <div className="p-4 md:p-6 max-w-full mx-auto space-y-6">
-      {/* Top Section */}
+      {/* Top Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
         <div>
           <h1 className="text-h2 font-display">Trade Import</h1>
           <p className="text-sm text-[var(--color-slate)] mt-1">
-            {step === 'UPLOAD' && 'Upload files exported from your broker (CSV or Text format).'}
+            {step === 'UPLOAD' && 'Upload files exported from your broker (CSV or Excel format).'}
             {step === 'PREVIEW' && `Preview and validate trades from ${fileName} before importing.`}
             {step === 'RESULT' && 'Import complete. Review execution results below.'}
           </p>
@@ -493,12 +722,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
         <div className="flex items-center gap-3">
           {onBack && (step === 'UPLOAD' || step === 'RESULT') && (
-            <button onClick={() => {
-              if (step === 'RESULT') {
-                resetImportState();
-              }
-              onBack();
-            }} className="btn btn--secondary flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (step === 'RESULT') resetImportState();
+                onBack();
+              }}
+              className="btn btn--secondary flex items-center gap-2"
+            >
               <ArrowLeft className="w-4 h-4" /> Back to Trades
             </button>
           )}
@@ -507,107 +737,120 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
                 <ArrowLeft className="w-4 h-4" /> Cancel
               </button>
-              <button
-                onClick={handleConfirmImport}
-                disabled={validRowsCount === 0 || isProcessing || isValidating}
-                className="btn btn--primary flex items-center gap-2"
-              >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
-                  </>
-                ) : isValidating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Validating…
-                  </>
-                ) : (
-                  <>
-                    Import {validRowsCount} Valid Trades
-                  </>
-                )}
-              </button>
+              {isDubaiImport ? (
+                <button
+                  onClick={handleConfirmDubaiImport}
+                  disabled={isProcessing || validDubaiRowsCount === 0}
+                  className="btn btn--primary flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
+                    </>
+                  ) : (
+                    <>Import {validDubaiRowsCount} Valid Dubai Trades</>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleConfirmImport}
+                  disabled={validRowsCount === 0 || isProcessing || isValidating}
+                  className="btn btn--primary flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
+                    </>
+                  ) : isValidating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Validating…
+                    </>
+                  ) : (
+                    <>Import {validRowsCount} Valid Trades</>
+                  )}
+                </button>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {/* Top Selection & Browse Panel (Always Visible) */}
-      <div className="card shadow-md border border-[var(--color-border-light)] p-8">
+      {/* Top Configuration Panel */}
+      <div className="card shadow-md border border-[var(--color-border-light)] p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
           <div className="form-field">
-            <label className="form-label form-label--required">Broker Selection</label>
-            <select
+            <label className="form-label form-label--required flex items-center justify-between">
+              <span>Broker Selection</span>
+              {!selectedBrokerId && (
+                <span className="text-[10px] text-rose-600 font-bold">Required</span>
+              )}
+            </label>
+            <CustomSelect
               value={selectedBrokerId}
-              onChange={(e) => setSelectedBrokerId(e.target.value)}
-              className="input"
+              options={brokers.map((b) => ({
+                value: b.id,
+                label: `${b.name} (${b.code})`,
+              }))}
+              onChange={(val) => setSelectedBrokerId(val)}
+              placeholder="Select Broker (Required)"
               disabled={isProcessing}
-            >
-              <option value="" disabled>Select a Broker</option>
-              {brokers.map((broker) => (
-                <option key={broker.id} value={broker.id}>
-                  {broker.code} - {broker.name}
-                </option>
-              ))}
-            </select>
+              onAddClick={() => setShowBrokerModal(true)}
+              addLabel="Add Broker"
+            />
           </div>
 
-          <div className="form-field">
-            <label className="form-label form-label--required">Exchange Selection</label>
-            <select
-              value={selectedExchangeId}
-              onChange={(e) => setSelectedExchangeId(e.target.value)}
-              className="input"
-              disabled={isProcessing}
-            >
-              <option value="" disabled>Select an Exchange</option>
-              {exchanges.map((ex) => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.code} {ex.name ? `(${ex.name})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isDubaiImport && (
+            <div className="form-field">
+              <label className="form-label form-label--required">Exchange Selection</label>
+              <CustomSelect
+                value={selectedExchangeId}
+                options={exchanges.map((ex) => ({
+                  value: ex.id,
+                  label: `${ex.code} ${ex.name ? `(${ex.name})` : ''}`,
+                }))}
+                onChange={(val) => setSelectedExchangeId(val)}
+                placeholder="Select Exchange"
+                disabled={isProcessing}
+                onAddClick={() => setShowExchangeModal(true)}
+                addLabel="Add Exchange"
+              />
+            </div>
+          )}
 
           <div className="form-field">
             <label className="form-label form-label--required">Import Type</label>
-            <select
+            <CustomSelect
               value={selectedImportType}
-              onChange={(e) => setSelectedImportType(e.target.value)}
-              className="input"
-              disabled={isProcessing}
-            >
-              <option value="trades_fno">Trades (F&O)</option>
-            </select>
+              options={[
+                { value: 'trades_fno', label: 'Trades (F&O) - Standard Broker Format' },
+                { value: 'dubai_trade_fno', label: 'Dubai Trade FnO (30 Columns)' },
+              ]}
+              onChange={(val) => setSelectedImportType(val as any)}
+              disabled={isProcessing || step !== 'UPLOAD'}
+            />
           </div>
 
-          <div className="form-field">
-            <label className="form-label form-label--required">Trade File</label>
-            <div className="flex flex-col justify-end">
+          <div>
+            <label className="form-label mb-2">Upload Trade File</label>
+            <div className="flex gap-2">
               <input
-                ref={inputRef}
                 type="file"
-                accept=".txt,.csv"
-                onChange={handleInputChange}
+                ref={inputRef}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) processFile(f);
+                }}
+                accept=".txt, .csv, .xlsx, .xls"
                 className="hidden"
+                id="file-upload-input"
               />
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                disabled={isProcessing}
-                className="btn btn--secondary flex items-center gap-2 w-full justify-center h-[38px] text-xs font-semibold border-[var(--color-border)] hover:bg-[var(--color-snow)] transition-colors"
+              <label
+                htmlFor="file-upload-input"
+                className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2.5"
               >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-[var(--color-primary)]" />
-                    Processing…
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 text-[var(--color-primary)]" />
-                    {fileName ? 'Change File' : 'Browse File'}
-                  </>
-                )}
-              </button>
+                <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+                <span>Browse CSV / Excel</span>
+              </label>
             </div>
           </div>
         </div>
@@ -620,435 +863,229 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         )}
       </div>
 
-      {/* Wizard Steps Content (Rendered Below Dropdowns) */}
+      {/* Step = UPLOAD */}
       {step === 'UPLOAD' && (
         <div className="max-w-3xl mx-auto py-6">
-          <FileUploadZone onFileRead={handleFileRead} isProcessing={isProcessing} />
+          <FileUploadZone onFileSelected={processFile} isProcessing={isProcessing} />
         </div>
       )}
 
+      {/* Step = PREVIEW Validation Status Bar */}
       {step === 'PREVIEW' && (
-        <div className="space-y-6">
-          {/* Stats Summary Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="card bg-[var(--color-snow)]">
-              <div className="card__body p-4 flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Total Rows</div>
-                  <div className="text-lg font-bold text-[var(--color-charcoal)]">{totalRows}</div>
-                </div>
+        <div className="card p-3.5 bg-slate-900 text-white rounded-lg shadow-sm flex items-center justify-between gap-4 border border-slate-800">
+          <div className="flex items-center gap-3">
+            {isValidatingMasterData ? (
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
+                <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                <span>Running database checks & master data validation...</span>
               </div>
-            </div>
-
-            <div className="card bg-[var(--color-snow)]">
-              <div className="card__body p-4 flex items-center gap-3">
-                <div className="p-2 bg-green-50 rounded-lg text-green-600">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Valid Futures</div>
-                  <div className="text-lg font-bold text-[var(--color-positive)]">{validFuturesCount}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card bg-[var(--color-snow)]">
-              <div className="card__body p-4 flex items-center gap-3">
-                <div className="p-2 bg-red-50 rounded-lg text-red-600">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Invalid Futures</div>
-                  <div className="text-lg font-bold text-[var(--color-negative)]">{invalidFuturesCount}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card bg-[var(--color-snow)]">
-              <div className="card__body p-4 flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
-                  <AlertTriangle className="w-5 h-5 text-slate-500" />
-                </div>
-                <div>
-                  <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Options (Skipped)</div>
-                  <div className="text-lg font-bold text-slate-700">{skippedOptionsCount}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-[var(--color-slate)] italic bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-            <span>💡 Tip: Click inside cells to edit. Click '+Map' or '+Create' on unmapped client/scripts to resolve database records.</span>
-            <button onClick={handleRevalidate} disabled={isProcessing} className="flex items-center gap-1 text-[var(--color-emerald)] font-semibold hover:underline">
-              <RefreshCw className={cn("w-3 h-3", isProcessing && "animate-spin")} /> Re-run validation
-            </button>
-          </div>
-
-          {/* Future Trades Table */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold text-[var(--color-charcoal)] flex items-center gap-2">
-              <span>📈 Future Trades Preview</span>
-              <span className="text-xs font-normal bg-emerald-50 text-[var(--color-emerald)] px-2.5 py-0.5 rounded-full font-mono">
-                {validFuturesCount} valid / {futureRows.length} total
-              </span>
-            </h3>
-            <div className="card">
-              <div className="card__body p-0 overflow-x-auto">
-                <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '960px' }}>
-                  <colgroup>
-                    <col style={{ width: '80px' }} />
-                    <col style={{ width: '185px' }} />
-                    <col style={{ width: '100px' }} />
-                    <col style={{ width: '60px' }} />
-                    <col style={{ width: '70px' }} />
-                    <col style={{ width: '80px' }} />
-                    <col style={{ width: '140px' }} />
-                    <col style={{ width: '70px' }} />
-                    <col style={{ width: '125px' }} />
-                    <col style={{ width: '45px' }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>Trade No</th>
-                      <th>Date</th>
-                      <th>Script</th>
-                      <th>BS</th>
-                      <th className="text-right">Qty</th>
-                      <th className="text-right">Rate</th>
-                      <th>Client</th>
-                      <th>Terminal</th>
-                      <th>Close Out</th>
-                      <th className="text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {futureRows.length === 0 ? (
-                      <tr className="trade-empty-row">
-                        <td colSpan={10}>No future trades found in the file.</td>
-                      </tr>
-                    ) : (
-                      futureRows.map((row) => {
-                        const idx = previewRows.findIndex(
-                          (r) => r.tradeNumber === row.tradeNumber && r.uniqueTradeId === row.uniqueTradeId
-                        );
-                        return (
-                          <tr
-                            key={row.uniqueTradeId || row.tradeNumber}
-                            className={cn(
-                              row.status === 'Invalid' ? 'bg-red-50/20' : 'hover:bg-[var(--color-snow)]'
-                            )}
-                          >
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-cell-input font-mono w-tradenum text-xs"
-                                value={row.tradeNumber}
-                                onChange={(e) => handleCellChange(idx, 'tradeNumber', e.target.value)}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="datetime-local"
-                                step="1"
-                                className="edit-cell-input w-date text-xs"
-                                value={formatDateTimeForInput(row.tradeDate)}
-                                onChange={(e) => {
-                                  const newVal = parseDateTimeFromInput(e.target.value);
-                                  handleCellChange(idx, 'tradeDate', newVal);
-                                  if (newVal) {
-                                    const updated = [...previewRows];
-                                    updated[idx] = { ...updated[idx], tradeDate: newVal };
-                                    triggerRevalidation(updated);
-                                  }
-                                }}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className={cn(
-                                  "edit-cell-input font-semibold w-script text-xs cursor-pointer",
-                                  !row.resolvedScriptId ? "text-red-600 font-bold decoration-red-500 underline" : "text-[var(--grid-text)]"
-                                )}
-                                value={row.scriptShortName}
-                                onChange={(e) => handleCellChange(idx, 'scriptShortName', e.target.value)}
-                                onBlur={handleBlur}
-                                onDoubleClick={() => handleScriptDoubleClick(row.scriptShortName, row.scriptFullName || row.scriptShortName, row.exchange)}
-                                title={!row.resolvedScriptId ? 'Script not mapped/added. Double-click to map.' : 'Script resolved'}
-                              />
-                            </td>
-                            <td>
-                              <select
-                                className="edit-cell-select font-semibold text-xs text-center"
-                                value={row.buySell}
-                                onChange={(e) => {
-                                  handleCellChange(idx, 'buySell', e.target.value);
-                                  triggerRevalidation(previewRowsRef.current);
-                                }}
-                              >
-                                <option value="BUY">BUY</option>
-                                <option value="SELL">SELL</option>
-                              </select>
-                            </td>
-                            <td className="text-right">
-                              <input
-                                type="number"
-                                className="edit-cell-input text-right font-mono font-semibold w-number text-xs"
-                                value={row.quantity}
-                                onChange={(e) => handleCellChange(idx, 'quantity', Number(e.target.value))}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td className="text-right">
-                              <input
-                                type="number"
-                                step="any"
-                                className="edit-cell-input text-right font-mono font-semibold w-number text-xs"
-                                value={row.rate}
-                                onChange={(e) => handleCellChange(idx, 'rate', Number(e.target.value))}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td>
-                              <select
-                                className={cn(
-                                  "edit-cell-select font-mono w-client text-xs cursor-pointer",
-                                  !row.resolvedAccountId ? "text-red-600 font-bold" : "text-[var(--grid-text)]"
-                                )}
-                                value={row.clientCode}
-                                onChange={(e) => {
-                                  const newCode = e.target.value;
-                                  handleCellChange(idx, 'clientCode', newCode);
-                                  const found = clients.find(c => c.code === newCode);
-                                  if (found) {
-                                    handleCellChange(idx, 'resolvedAccountId', found.id);
-                                  } else {
-                                    handleCellChange(idx, 'resolvedAccountId', undefined);
-                                  }
-                                  triggerRevalidation(previewRowsRef.current);
-                                }}
-                                onDoubleClick={() => handleClientDoubleClick(row.clientCode)}
-                                title={!row.resolvedAccountId ? 'Client not found. Double-click client to create.' : 'Client resolved'}
-                              >
-                                <option value="">-- Select Client --</option>
-                                {row.clientCode && !clients.some(c => c.code === row.clientCode) && (
-                                  <option value={row.clientCode}>{row.clientCode}</option>
-                                )}
-                                {clients.map(client => (
-                                  <option key={client.id} value={client.code}>
-                                    {client.code} ({client.name})
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-cell-input w-terminal text-xs"
-                                value={row.terminal || ''}
-                                onChange={(e) => handleCellChange(idx, 'terminal', e.target.value)}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="date"
-                                className="edit-cell-input w-date text-xs"
-                                value={formatExpiryForInput(row.expiry)}
-                                onChange={(e) => {
-                                  const newVal = e.target.value;
-                                  handleCellChange(idx, 'expiry', newVal);
-                                  if (newVal) {
-                                    const updated = [...previewRows];
-                                    updated[idx] = { ...updated[idx], expiry: newVal };
-                                    triggerRevalidation(updated);
-                                  }
-                                }}
-                                onBlur={handleBlur}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1 text-xs font-semibold cursor-help',
-                                  row.status === 'Valid'
-                                    ? 'text-[var(--color-positive)]'
-                                    : row.status === 'Validating'
-                                    ? 'text-blue-500'
-                                    : 'text-[var(--color-negative)]'
-                                )}
-                                title={
-                                  row.status === 'Validating'
-                                    ? 'Validating against database…'
-                                    : row.errors && row.errors.length > 0
-                                    ? row.errors.join(', ')
-                                    : 'No errors'
-                                }
-                              >
-                                {row.status === 'Valid' ? (
-                                  <CheckCircle2 className="w-4 h-4" />
-                                ) : row.status === 'Validating' ? (
-                                  <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <AlertTriangle className="w-4 h-4" />
-                                )}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Option Trades (Excluded) Table */}
-          {optionRows.length > 0 && (
-            <div className="space-y-3 pt-6">
-              <h3 className="text-sm font-bold text-[var(--color-charcoal)] flex items-center gap-2">
-                <span>🚫 Excluded Option Trades</span>
-                <span className="text-xs font-normal bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-mono">
-                  {optionRows.length} excluded
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>
+                  Validation checks complete: {isDubaiImport ? validDubaiRowsCount : validFuturesCount} valid,{' '}
+                  {isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount} unmapped
                 </span>
-              </h3>
-              <div className="card border-slate-200 bg-slate-50/20 opacity-80">
-                <div className="card__body p-0 overflow-x-auto">
-                  <table className="data-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '960px' }}>
-                    <colgroup>
-                      <col style={{ width: '80px' }} />
-                      <col style={{ width: '185px' }} />
-                      <col style={{ width: '100px' }} />
-                      <col style={{ width: '60px' }} />
-                      <col style={{ width: '70px' }} />
-                      <col style={{ width: '80px' }} />
-                      <col style={{ width: '140px' }} />
-                      <col style={{ width: '70px' }} />
-                      <col style={{ width: '125px' }} />
-                      <col style={{ width: '45px' }} />
-                    </colgroup>
-                    <thead>
-                      <tr className="bg-slate-100/50">
-                        <th>Trade No</th>
-                        <th>Date</th>
-                        <th>Script</th>
-                        <th>BS</th>
-                        <th className="text-right">Qty</th>
-                        <th className="text-right">Rate</th>
-                        <th>Client</th>
-                        <th>Terminal</th>
-                        <th>Close Out</th>
-                        <th className="text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {optionRows.map((row) => (
-                        <tr key={row.uniqueTradeId || row.tradeNumber} className="hover:bg-slate-50/50">
-                          <td className="font-mono text-xs text-slate-500 px-3 py-2">{row.tradeNumber}</td>
-                          <td className="text-xs text-slate-500 px-3 py-2">{row.tradeDate}</td>
-                          <td className="text-xs text-slate-500 font-semibold px-3 py-2">{row.scriptShortName}</td>
-                          <td className="px-3 py-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">
-                              {row.buySell}
-                            </span>
-                          </td>
-                          <td className="text-right font-mono text-xs text-slate-500 px-3 py-2">{row.quantity}</td>
-                          <td className="text-right font-mono text-xs text-slate-500 px-3 py-2">₹{row.rate.toFixed(2)}</td>
-                          <td className="font-mono text-xs text-slate-500 px-3 py-2">{row.clientCode}</td>
-                          <td className="text-xs text-slate-500 px-3 py-2">{row.terminal}</td>
-                          <td className="text-xs text-slate-500 px-3 py-2">{row.expiry}</td>
-                          <td className="text-center py-2">
-                            <span
-                              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 cursor-help"
-                              title={row.errors && row.errors.length > 0 ? row.errors.join(', ') : 'Not a valid future trade'}
-                            >
-                              <AlertTriangle className="w-4 h-4 text-slate-400" />
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleRevalidateAll}
+            disabled={isValidatingMasterData}
+            className="btn btn--secondary text-xs py-1.5 px-3 flex items-center gap-1.5 hover:bg-slate-800 border-slate-700 text-slate-200 font-medium"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isValidatingMasterData ? 'animate-spin' : ''}`} />
+            <span>Rerun Checks</span>
+          </button>
+        </div>
+      )}
+
+      {/* Step = PREVIEW Filters */}
+      {step === 'PREVIEW' && (
+        <ImportFilterBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchColumn={searchColumn}
+          setSearchColumn={setSearchColumn}
+          exactMatch={exactMatch}
+          setExactMatch={setExactMatch}
+          showValidOnly={showValidOnly}
+          setShowValidOnly={setShowValidOnly}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          resetPage={() => setDubaiCurrentPage(1)}
+        />
+      )}
+
+      {/* Step = PREVIEW Dubai */}
+      {step === 'PREVIEW' && isDubaiImport && dubaiPreviewRows.length > 0 && (
+        <DubaiPreviewTable
+          dubaiPreviewRows={dubaiPreviewRows}
+          setDubaiPreviewRows={setDubaiPreviewRows}
+          clients={clients}
+          exchanges={exchanges}
+          scripts={scripts}
+          getDubaiRowValidation={getDubaiRowValidation}
+          searchQuery={searchQuery}
+          searchColumn={searchColumn}
+          exactMatch={exactMatch}
+          showValidOnly={showValidOnly}
+          statusFilter={statusFilter}
+          dubaiCurrentPage={dubaiCurrentPage}
+          setDubaiCurrentPage={setDubaiCurrentPage}
+          dubaiPageSize={dubaiPageSize}
+          setDubaiPageSize={setDubaiPageSize}
+          dubaiDebugSample={dubaiDebugSample}
+          isValidatingMasterData={isValidatingMasterData}
+          onDoubleClickClient={handleClientDoubleClick}
+          onDoubleClickScript={handleDubaiScriptDoubleClick}
+          onDoubleClickExchange={handleExchangeDoubleClick}
+          onDoubleClickCurrency={handleCurrencyDoubleClick}
+        />
+      )}
+
+      {/* Step = PREVIEW Standard F&O */}
+      {step === 'PREVIEW' && !isDubaiImport && (
+        <NormalPreviewTable
+          totalRows={parsedTrades.length}
+          validFuturesCount={validFuturesCount}
+          invalidFuturesCount={invalidFuturesCount}
+          skippedOptionsCount={optionRows.length}
+          futureRows={futureRows}
+          optionRows={optionRows}
+          previewRows={previewRows}
+          setPreviewRows={setPreviewRows}
+          normalizedRows={normalizedRows}
+          setNormalizedRows={setNormalizedRows}
+          clients={clients}
+          exchanges={exchanges}
+          scripts={scripts}
+          isProcessing={isProcessing}
+          handleRevalidate={handleRevalidate}
+          searchQuery={searchQuery}
+          searchColumn={searchColumn}
+          exactMatch={exactMatch}
+          showValidOnly={showValidOnly}
+          statusFilter={statusFilter}
+          onDoubleClickClient={handleClientDoubleClick}
+          onDoubleClickScript={handleDubaiScriptDoubleClick}
+        />
+      )}
+
+      {/* Step = RESULT */}
+      {step === 'RESULT' && importResult && (
+        <ImportResultPanel
+          importResult={importResult}
+          fileName={fileName}
+          onReset={handleReset}
+          onBack={onBack}
+        />
+      )}
+
+      {/* Entity Creation Modals */}
+      {showBrokerModal &&
+        createPortal(
+          <FormModal
+            entityLabel="Broker"
+            groupName="Sundry Creditors"
+            onClose={() => setShowBrokerModal(false)}
+            onSuccess={async () => {
+              setShowBrokerModal(false);
+              await fetchBrokers();
+            }}
+          />,
+          document.body
+        )}
+
+      {showClientModal &&
+        createPortal(
+          <FormModal
+            entityLabel="Client"
+            groupName="Sundry Debtors"
+            initialData={clientModalInitialData}
+            onClose={() => setShowClientModal(false)}
+            onSuccess={async () => {
+              setShowClientModal(false);
+              await fetchClients();
+              if (!isDubaiImport) handleRevalidate();
+            }}
+          />,
+          document.body
+        )}
+
+      {showScriptModal &&
+        createPortal(
+          <ScriptFormModal
+            initialData={scriptModalInitialData}
+            exchanges={exchanges}
+            currencies={currencies}
+            onClose={() => setShowScriptModal(false)}
+            onSuccess={() => {
+              setShowScriptModal(false);
+              if (!isDubaiImport) handleRevalidate();
+              fetchScripts();
+            }}
+          />,
+          document.body
+        )}
+
+      {showExchangeModal &&
+        createPortal(
+          <ExchangeFormModal
+            initialData={exchangeModalInitialData}
+            onClose={() => setShowExchangeModal(false)}
+            onSuccess={async () => {
+              setShowExchangeModal(false);
+              await fetchExchanges();
+            }}
+          />,
+          document.body
+        )}
+
+      {showCurrencyModal &&
+        createPortal(
+          <CurrencyFormModal
+            initialData={currencyModalInitialData}
+            onClose={() => setShowCurrencyModal(false)}
+            onSuccess={async () => {
+              setShowCurrencyModal(false);
+              await fetchCurrencies();
+            }}
+          />,
+          document.body
+        )}
+
+      {importProgress &&
+        createPortal(
+          <div className="fixed inset-0 z-[200000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <div className="card w-[480px] max-w-[92vw] p-6 bg-white shadow-2xl border border-slate-200 rounded-xl space-y-6 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 animate-pulse">
+                <RefreshCw className="w-6 h-6 animate-spin" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-800">Importing Trades to Database</h3>
+                <p className="text-xs text-slate-500 font-medium">{importProgress.phase}</p>
+              </div>
+
+              {/* Progress Bar Container */}
+              <div className="space-y-2">
+                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${importProgress.percentage}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[11px] font-mono text-slate-600 font-semibold px-1">
+                  <span>{importProgress.current.toLocaleString()} / {importProgress.total.toLocaleString()} rows</span>
+                  <span className="text-emerald-700 font-bold">{importProgress.percentage}%</span>
                 </div>
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {step === 'RESULT' && importResult && (
-        <div className="max-w-md mx-auto py-10">
-          <div className="card text-center p-8 space-y-6">
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-[var(--color-positive)] mx-auto">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-[var(--color-charcoal)]">Import Completed Successfully</h2>
-              <p className="text-sm text-[var(--color-slate)] mt-2">
-                Processed trade file: <span className="font-semibold">{fileName}</span>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-y border-[var(--color-border-light)] py-4">
-              <div>
-                <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Imported</div>
-                <div className="text-2xl font-bold text-[var(--color-positive)]">{importResult.importedCount}</div>
-              </div>
-              <div>
-                <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Skipped (Errors)</div>
-                <div className="text-2xl font-bold text-[var(--color-negative)]">{importResult.failedCount}</div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-center pt-2">
-              <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
-                <Upload className="w-4 h-4" /> Upload Another
-              </button>
-              {onBack && (
-                <button onClick={() => {
-                  resetImportState();
-                  onBack();
-                }} className="btn btn--primary flex items-center gap-2">
-                  View Trades List
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Auto-Creation Modals */}
-      {showClientModal && (
-        <FormModal
-          entityLabel="Client"
-          groupName="Sundry Debtors"
-          initialData={clientModalInitialData}
-          onClose={() => setShowClientModal(false)}
-          onSuccess={async () => {
-            setShowClientModal(false);
-            await fetchClients();
-            handleRevalidate();
-          }}
-        />
-      )}
-
-      {showScriptModal && (
-        <ScriptFormModal
-          initialData={scriptModalInitialData}
-          exchanges={exchanges}
-          onClose={() => setShowScriptModal(false)}
-          onSuccess={() => {
-            setShowScriptModal(false);
-            handleRevalidate();
-          }}
-        />
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

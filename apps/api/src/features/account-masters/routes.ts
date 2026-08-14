@@ -12,11 +12,12 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { group, search, excludeGroups } = req.query;
+    const { group, search, excludeGroups, directOnly } = req.query;
     const result = await accountMastersService.findAll(
       group as string | undefined,
       search as string | undefined,
       excludeGroups as string | undefined,
+      directOnly === 'true'
     );
     res.json(result);
   } catch (err) { next(err); }

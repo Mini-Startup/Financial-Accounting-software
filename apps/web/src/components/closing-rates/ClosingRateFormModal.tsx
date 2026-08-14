@@ -18,6 +18,7 @@ export function ClosingRateFormModal({
   const [formData, setFormData] = useState({
     exchangeId: initialData?.exchangeId || (exchanges[0]?.id || ''),
     scriptId: initialData?.scriptId || (scripts[0]?.id || ''),
+    securityName: initialData?.securityName || '',
     rateDate: initialData?.rateDate ? new Date(initialData.rateDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     rate: initialData?.rate || '',
     ...initialData
@@ -25,8 +26,11 @@ export function ClosingRateFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.exchangeId || !formData.scriptId || !formData.rateDate || formData.rate === '') {
-      alert('Please fill out all fields.');
+    const selectedScript = scripts.find(s => s.id === formData.scriptId);
+    const secName = (formData.securityName || selectedScript?.fullName || selectedScript?.shortName || '').trim();
+
+    if (!formData.exchangeId || !secName || !formData.rateDate || formData.rate === '') {
+      alert('Please fill out all required fields.');
       return;
     }
     try {
@@ -36,9 +40,11 @@ export function ClosingRateFormModal({
       
       const payload = {
         exchangeId: formData.exchangeId,
-        scriptId: formData.scriptId,
+        scriptId: formData.scriptId || null,
+        securityName: secName,
         rateDate: new Date(formData.rateDate).toISOString(),
-        rate: Number(formData.rate)
+        rate: Number(formData.rate),
+        currencyCode: selectedScript?.currency?.code || selectedScript?.currencyCode || null,
       };
       
       const res = await fetch(url, {
@@ -55,7 +61,7 @@ export function ClosingRateFormModal({
       window.location.reload();
     } catch(err: any) {
       console.error(err);
-      alert(err.message || 'Save failed. A closing rate for this exchange, script, and date combination may already exist.');
+      alert(err.message || 'Save failed.');
     }
   }
 
@@ -65,7 +71,7 @@ export function ClosingRateFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div ref={modalRef} className="card w-[500px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div ref={modalRef} className="card w-[520px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}
         <div className="card__header bg-[var(--color-snow)]">
@@ -81,7 +87,7 @@ export function ClosingRateFormModal({
 
         <div className="card__body p-6">
           <form id="closingRateForm" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-[110px_1fr] gap-x-4 gap-y-4 items-center text-sm">
+            <div className="grid grid-cols-[130px_1fr] gap-x-4 gap-y-4 items-center text-sm">
               <label className="form-label font-medium text-slate-700">Date</label>
               <input required type="date" name="rateDate" value={formData.rateDate} onChange={handleChange} className="input" />
 
@@ -92,15 +98,19 @@ export function ClosingRateFormModal({
                 ))}
               </select>
 
-              <label className="form-label font-medium text-slate-700">Script</label>
+              <label className="form-label font-medium text-slate-700">Security Name</label>
+              <input type="text" name="securityName" value={formData.securityName} onChange={handleChange} placeholder="e.g. GOLD 27 AUG 2026" className="input" />
+
+              <label className="form-label font-medium text-slate-700">Script (Optional)</label>
               <select name="scriptId" value={formData.scriptId} onChange={handleChange} className="input text-slate-900" style={{ color: 'var(--color-charcoal)' }}>
+                <option value="">Select Script</option>
                 {scripts.map(s => (
-                  <option key={s.id} value={s.id} className="text-slate-900">{s.shortName}</option>
+                  <option key={s.id} value={s.id} className="text-slate-900">{s.shortName} - {s.fullName}</option>
                 ))}
               </select>
 
               <label className="form-label font-medium text-slate-700">Closing Rate</label>
-              <input required type="number" step="0.01" min="0" name="rate" value={formData.rate} onChange={handleChange} placeholder="0.00" className="input" />
+              <input required type="number" step="0.0001" min="0" name="rate" value={formData.rate} onChange={handleChange} placeholder="0.00" className="input" />
             </div>
             
             <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">

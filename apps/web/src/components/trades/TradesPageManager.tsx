@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TradeFormModal } from './TradeFormModal';
 import { TradeImportManager } from './TradeImportManager';
 import { TradeDetailModal } from './TradeDetailModal';
-import { Trash2, Search, Plus, UploadCloud, ArrowLeft, TrendingUp } from 'lucide-react';
+import { Trash2, Search, Plus, UploadCloud, ArrowLeft, TrendingUp, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 
@@ -26,6 +26,7 @@ export function TradesPageManager({
 
   const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [trades, setTrades] = useState<any[]>(initialTrades);
   const [selectedTrade, setSelectedTrade] = useState<any | null>(null);
 
@@ -180,14 +181,17 @@ export function TradesPageManager({
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Trade No</th>
                 <th>Exchange</th>
-                <th>Script</th>
+                <th>Security Name / Script</th>
                 <th>BS</th>
                 <th className="text-right">Qty</th>
                 <th className="text-right">Rate</th>
                 <th>Client</th>
                 <th>Broker</th>
+                <th>Dealer</th>
+                <th>Curr</th>
+                <th>Del Month</th>
+                <th className="text-right">Mkt Value</th>
                 <th className="text-right">Client Rate</th>
                 <th className="text-right">Broker Rate</th>
                 <th className="text-right">Profit</th>
@@ -198,13 +202,14 @@ export function TradesPageManager({
             <tbody>
               {filteredTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={17} className="py-12 text-center text-[var(--color-slate)] font-medium">
                     No trades match your filter criteria. Click "Add Trade" or "Import File" to record some.
                   </td>
                 </tr>
               ) : null}
               {filteredTrades.map(t => {
                 const profit = t.profitTotal ?? 0;
+                const secName = t.securityName || t.script?.fullName || t.script?.shortName || '—';
                 return (
                   <tr
                     key={t.id}
@@ -212,13 +217,15 @@ export function TradesPageManager({
                     className="hover:bg-slate-50 transition-colors cursor-pointer select-none"
                     title="Click to view full details"
                   >
-                    <td className="text-[var(--color-slate)] font-mono text-xs">
+                    <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
                       {new Date(t.tradeDate).toLocaleDateString()}
                     </td>
-                    <td className="font-mono text-xs">{t.tradeNumber}</td>
                     <td className="font-bold text-[var(--color-charcoal)]">{t.exchange?.code || '—'}</td>
-                    <td className="font-semibold text-[var(--color-charcoal)]">
-                      {t.script?.fullName || t.script?.shortName || '—'}
+                    <td>
+                      <div className="font-semibold text-[var(--color-charcoal)] text-xs">{secName}</div>
+                      {t.script?.shortName && t.script?.shortName !== secName && (
+                        <div className="text-[10px] text-[var(--color-slate)] font-mono">{t.script.shortName}</div>
+                      )}
                     </td>
                     <td>
                       <span
@@ -236,6 +243,12 @@ export function TradesPageManager({
                     <td className="font-mono text-right text-xs">₹{t.rate.toFixed(2)}</td>
                     <td className="font-mono text-xs" title={t.account?.name}>{t.account?.code || '—'}</td>
                     <td className="font-mono text-xs" title={t.broker?.name}>{t.broker?.code || '—'}</td>
+                    <td className="font-mono text-xs text-slate-600">{t.dealerCode || '—'}</td>
+                    <td className="font-mono text-xs text-slate-600">{t.currencyCode || '—'}</td>
+                    <td className="font-mono text-xs text-slate-600 whitespace-nowrap">{t.delMonth || '—'}</td>
+                    <td className="font-mono text-right text-xs">
+                      {t.mktValue != null ? `₹${t.mktValue.toFixed(2)}` : '—'}
+                    </td>
                     <td className="font-mono text-right text-xs">
                       {t.clientRate != null ? `₹${t.clientRate.toFixed(2)}` : '—'}
                     </td>
@@ -264,7 +277,14 @@ export function TradesPageManager({
                         {t.source}
                       </span>
                     </td>
-                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="text-right flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setEditingTrade(t)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50"
+                        title="Edit Trade"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => handleDelete(t.id)}
                         className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
@@ -293,11 +313,25 @@ export function TradesPageManager({
         />
       )}
 
+      {/* Edit Form Modal */}
+      {editingTrade && (
+        <TradeFormModal
+          exchanges={exchanges}
+          scripts={scripts}
+          clients={clients}
+          brokers={brokers}
+          initialTrade={editingTrade}
+          onClose={() => setEditingTrade(null)}
+          onSave={handleSave}
+        />
+      )}
+
       {/* Detail Modal Popup */}
       {selectedTrade && (
         <TradeDetailModal
           trade={selectedTrade}
           onClose={() => setSelectedTrade(null)}
+          onEdit={() => setEditingTrade(selectedTrade)}
         />
       )}
     </div>

@@ -21,6 +21,7 @@ export function TradeFormModal({
   scripts,
   clients,
   brokers,
+  initialTrade,
   onClose,
   onSave,
 }: {
@@ -28,19 +29,30 @@ export function TradeFormModal({
   scripts: any[];
   clients: any[];
   brokers: any[];
+  initialTrade?: any;
   onClose: () => void;
   onSave: (row: any) => void;
 }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
-  const [exchangeId, setExchangeId] = useState('');
+  const [exchangeId, setExchangeId] = useState(initialTrade?.exchangeId || initialTrade?.exchange?.id || '');
   const [tradeType, setTradeType] = useState('INTERNAL');
-  const [date, setDate] = useState(todayISO());
-  const [expiryDate, setExpiryDate] = useState('');
-  const [quantity, setQuantity] = useState<string>('');
-  const [scriptId, setScriptId] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [brokerId, setBrokerId] = useState('');
-  const [marketRate, setMarketRate] = useState<string>('');
+  const [date, setDate] = useState(
+    initialTrade?.tradeDate
+      ? new Date(initialTrade.tradeDate).toISOString().split('T')[0]
+      : todayISO()
+  );
+  const [expiryDate, setExpiryDate] = useState(initialTrade?.expiry || '');
+  const [quantity, setQuantity] = useState<string>(
+    initialTrade?.quantity != null
+      ? String(initialTrade.transactionType === 'SELL' ? -Math.abs(initialTrade.quantity) : initialTrade.quantity)
+      : ''
+  );
+  const [scriptId, setScriptId] = useState(initialTrade?.scriptId || initialTrade?.script?.id || '');
+  const [clientId, setClientId] = useState(initialTrade?.accountId || initialTrade?.account?.id || '');
+  const [brokerId, setBrokerId] = useState(initialTrade?.brokerId || initialTrade?.broker?.id || '');
+  const [marketRate, setMarketRate] = useState<string>(
+    initialTrade?.rate != null ? String(initialTrade.rate) : ''
+  );
 
   const [expiryDatesList, setExpiryDatesList] = useState<any[]>([]);
   const [isAddingExpiry, setIsAddingExpiry] = useState(false);
