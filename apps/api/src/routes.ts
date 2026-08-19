@@ -8,7 +8,6 @@ import scriptsRouter from './features/scripts/routes';
 import tradesRouter from './features/trades/routes';
 import tradeFnoRouter from './features/Trade_FnO/routes';
 import closingRatesRouter from './features/closing-rates/routes';
-import expiryDatesRouter from './features/expiry-dates/routes';
 import settlementRouter from './features/settlement/routes';
 import vouchersRouter from './features/vouchers/routes';
 import ledgerReportRouter from './features/ledger-report/routes';
@@ -27,7 +26,6 @@ export function registerRoutes(app: Express) {
   app.use('/groups', groupsRouter);
   app.use('/scripts', scriptsRouter);
   app.use('/closing-rates', closingRatesRouter);
-  app.use('/expiry-dates', expiryDatesRouter);
   app.use('/settlement', settlementRouter);
   app.use('/vouchers', vouchersRouter);
   app.use('/ledger-report', ledgerReportRouter);

@@ -11,6 +11,9 @@ function sanitizePayload(payload: any) {
   if (payload.isDirectClient !== undefined && payload.isDirectClient !== null) {
     payload.isDirectClient = payload.isDirectClient === true || payload.isDirectClient === 'true';
   }
+  if (payload.openingBalance !== undefined && payload.openingBalance !== null && payload.openingBalance !== '') {
+    payload.openingBalance = Number(payload.openingBalance);
+  }
   return payload;
 }
 

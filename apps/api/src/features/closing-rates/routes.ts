@@ -22,6 +22,18 @@ router.post('/bulk-import', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/check-duplicates', async (req, res, next) => {
+  try {
+    const { rates } = req.body || {};
+    if (!Array.isArray(rates) || rates.length === 0) {
+      res.status(400).json({ error: 'rates array is required' });
+      return;
+    }
+    const result = await closingRatesService.checkDuplicates(rates);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const result = await closingRatesService.findAll(req.query.search as string | undefined);

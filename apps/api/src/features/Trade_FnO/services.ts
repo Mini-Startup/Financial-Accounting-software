@@ -195,63 +195,33 @@ export class TradeImportService {
       }
     }
 
-    // ── 3. Batch fetch script-exchange mappings ─────────────────
-    const mappingMap = new Map<string, { scriptId: string; exchangeId: string; exchangeCode: string }>();
-    if (uniqueScriptCodes.size > 0) {
-      const mappings = await prisma.scriptExchangeMapping.findMany({
-        where: {
-          exchangeScriptCode: { in: Array.from(uniqueScriptCodes), mode: 'insensitive' },
-        },
-        include: { exchange: { select: { code: true } } },
-      });
-      for (const m of mappings) {
-        const key = m.exchangeScriptCode.toUpperCase();
-        if (!mappingMap.has(key)) {
-          mappingMap.set(key, {
-            scriptId: m.scriptId,
-            exchangeId: m.exchangeId,
-            exchangeCode: m.exchange?.code || '',
-          });
-        }
-      }
-    }
-
-    // ── 4. Batch fallback: scripts by name (only for codes not resolved above) ──
-    const unresolvedScriptNames: string[] = [];
-    for (const name of uniqueScriptNames) {
-      if (!mappingMap.has(name)) {
-        unresolvedScriptNames.push(name);
-      }
-    }
-
+    // ── 3. Batch fetch scripts by shortName or fullName ─────────────
     const scriptFallbackMap = new Map<string, { scriptId: string; exchangeId: string; exchangeCode: string }>();
-    if (unresolvedScriptNames.length > 0) {
+    const allSearchNames = Array.from(new Set([...uniqueScriptCodes, ...uniqueScriptNames]));
+
+    if (allSearchNames.length > 0) {
       const scripts = await prisma.script.findMany({
         where: {
           OR: [
-            { shortName: { in: unresolvedScriptNames, mode: 'insensitive' } },
-            { fullName: { in: unresolvedScriptNames, mode: 'insensitive' } },
+            { shortName: { in: allSearchNames, mode: 'insensitive' } },
+            { fullName: { in: allSearchNames, mode: 'insensitive' } },
           ],
         },
         include: {
           exchange: { select: { id: true, code: true } },
-          scriptExchangeMappings: {
-            include: { exchange: { select: { id: true, code: true } } },
-            take: 1,
-          },
         },
       });
 
       for (const script of scripts) {
-        const exId = script.exchangeId || script.exchange?.id || script.scriptExchangeMappings?.[0]?.exchangeId;
-        const exCode = script.exchange?.code || script.scriptExchangeMappings?.[0]?.exchange?.code;
+        const exId = script.exchangeId || script.exchange?.id;
+        const exCode = script.exchange?.code || '';
 
         if (!exId) continue;
 
         const entry = {
           scriptId: script.id,
           exchangeId: exId,
-          exchangeCode: exCode || '',
+          exchangeCode: exCode,
         };
         // Index by both shortName and fullName
         if (script.shortName) scriptFallbackMap.set(script.shortName.toUpperCase(), entry);
@@ -288,22 +258,14 @@ export class TradeImportService {
       if (!scriptCode) {
         errors.push('Script/Symbol Code is required');
       } else {
-        // Try exchange mapping first (most common)
-        const mapped = mappingMap.get(scriptCode.toUpperCase()) || mappingMap.get(shortCode.toUpperCase());
-        if (mapped) {
-          resolvedScriptId = mapped.scriptId;
-          resolvedExchangeId = mapped.exchangeId;
-          exchangeCode = mapped.exchangeCode;
+        // Lookup script from batch map
+        const resolved = scriptFallbackMap.get(scriptCode.toUpperCase()) || scriptFallbackMap.get(shortCode.toUpperCase());
+        if (resolved) {
+          resolvedScriptId = resolved.scriptId;
+          resolvedExchangeId = resolved.exchangeId;
+          exchangeCode = resolved.exchangeCode;
         } else {
-          // Fallback: script name lookup
-          const fallback = scriptFallbackMap.get(scriptCode.toUpperCase()) || scriptFallbackMap.get(shortCode.toUpperCase());
-          if (fallback) {
-            resolvedScriptId = fallback.scriptId;
-            resolvedExchangeId = fallback.exchangeId;
-            exchangeCode = fallback.exchangeCode;
-          } else {
-            errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
-          }
+          errors.push(`Script mapping for '${scriptCode}' not found on any exchange`);
         }
       }
 
@@ -522,29 +484,7 @@ export class TradeImportService {
     // Batch insertion in chunks of 2000 for high performance
     const BATCH_SIZE = 2000;
     
-    // 1. Pre-process and collect all unique expiry dates
-    const uniqueExpiryDates = new Set<string>();
-    for (const { row } of validRowsWithCalcs) {
-      if (row.expiry?.trim()) {
-        const parsed = parseAndNormalizeExpiry(row.expiry);
-        if (parsed) {
-          uniqueExpiryDates.add(parsed.toISOString());
-        }
-      }
-    }
-
-    if (uniqueExpiryDates.size > 0) {
-      const datesToInsert = Array.from(uniqueExpiryDates).map((isoStr) => ({
-        date: new Date(isoStr),
-        isActive: true,
-      }));
-      await prisma.expiryDate.createMany({
-        data: datesToInsert,
-        skipDuplicates: true,
-      });
-    }
-
-    // 2. Perform bulk insertion using createMany in batches
+    // Perform bulk insertion using createMany in batches
     for (let i = 0; i < validRowsWithCalcs.length; i += BATCH_SIZE) {
       const chunk = validRowsWithCalcs.slice(i, i + BATCH_SIZE);
       const tradesData = chunk.map(({ row, targetExchangeId, clientRate, brokerRate, clientBrokerage, brokerBrokerage, profitTotal }) => {

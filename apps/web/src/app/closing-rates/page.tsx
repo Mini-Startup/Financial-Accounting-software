@@ -13,11 +13,12 @@ async function safeFetch(url: string) {
 }
 
 export default async function ClosingRatesPage() {
-  const [closingRates, exchanges, scripts, currencies] = await Promise.all([
+  const [closingRates, exchanges, scripts, currencies, accounts] = await Promise.all([
     safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/closing-rates`),
     safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges?active=true`),
     safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts`),
     safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/currencies`),
+    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`),
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function ClosingRatesPage() {
       exchanges={exchanges} 
       scripts={scripts} 
       currencies={currencies}
+      accounts={accounts}
     />
   );
 }

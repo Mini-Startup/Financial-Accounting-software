@@ -6,11 +6,12 @@ import { toast } from 'sonner';
 import { OpenPositionVerificationPanel, type PositionVerificationItem } from '../trades/OpenPositionVerificationPanel';
 import { generateDubaiSecurityName, cleanScriptFullName } from '../trades/tradeImportHelpers';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
+import { FormModal as AccountFormModal } from '../accounts/FormModal';
 import { ClosingRateDataTable } from './ClosingRateDataTable';
 import { ClosingRateFormModal } from './ClosingRateFormModal';
 import { 
   Plus, UploadCloud, ArrowLeft, CheckCircle2, AlertTriangle, FileSpreadsheet, 
-  RefreshCw, ChevronDown, ChevronUp, PlusCircle 
+  RefreshCw, ChevronDown, ChevronUp, PlusCircle, AlertCircle, X, ShieldAlert
 } from 'lucide-react';
 import { 
   parseOpenPositionCSV, 
@@ -32,12 +33,14 @@ export function ClosingRatePageManager({
   initialClosingRates,
   exchanges,
   scripts,
-  currencies = []
+  currencies = [],
+  accounts = [],
 }: { 
   initialClosingRates: any[];
   exchanges: any[];
   scripts: any[];
   currencies?: any[];
+  accounts?: any[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,10 +52,15 @@ export function ClosingRatePageManager({
   // Dynamic reference master data
   const [localScripts, setLocalScripts] = useState<any[]>(scripts);
   const [localCurrencies, setLocalCurrencies] = useState<any[]>(currencies);
+  const [localAccounts, setLocalAccounts] = useState<any[]>(accounts);
 
   // Script Creation Modal States
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [scriptModalInitialData, setScriptModalInitialData] = useState<any>(null);
+
+  // Client Creation Modal States
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
 
   // Sync state with query parameters
   useEffect(() => {
@@ -78,7 +86,27 @@ export function ClosingRatePageManager({
   const [settlementItems, setSettlementItems] = useState<any[]>([]);
   const [isLoadingSettlement, setIsLoadingSettlement] = useState(false);
 
+  // Duplicate Check Modal state
+  const [duplicateCheckModal, setDuplicateCheckModal] = useState<{
+    isOpen: boolean;
+    newRates: any[];
+    exactDuplicates: any[];
+    conflicts: any[];
+  } | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch accounts if not loaded
+  useEffect(() => {
+    if (localAccounts.length === 0) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => {
+          if (data.length > 0) setLocalAccounts(data);
+        })
+        .catch((err) => console.error('Failed to load accounts:', err));
+    }
+  }, [localAccounts.length]);
 
   // Fetch settlement trades whenever import date changes
   const fetchSettlementForDate = async (dateStr: string) => {
@@ -160,6 +188,28 @@ export function ClosingRatePageManager({
     }
   };
 
+  const handleOpenClientModal = (clientCode: string) => {
+    setClientModalInitialData({
+      code: clientCode.toUpperCase(),
+      name: clientCode.toUpperCase(),
+    });
+    setShowClientModal(true);
+  };
+
+  const handleClientCreated = async () => {
+    setShowClientModal(false);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
+      if (res.ok) {
+        const updatedAccounts = await res.json();
+        setLocalAccounts(updatedAccounts);
+        toast.success('Client created! Open position verification re-evaluated.');
+      }
+    } catch (err) {
+      console.error('Failed to reload accounts:', err);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -202,18 +252,33 @@ export function ClosingRatePageManager({
     const csvClientMap = new Map<string, {
       netLots: number;
       isScriptMissing: boolean;
+      isClientMissing: boolean;
       commodityCode: string;
       exchangeCode: string;
       securityName: string;
+      clientCode: string;
     }>();
 
     for (const row of rawOpenPositionRows) {
       const clientCode = row.clientCode.trim().toUpperCase();
       if (!clientCode) continue;
 
+      const bought = parseFloat(row.rawRow['BOUGHT_LOTS'] || '0') || 0;
+      const sold = parseFloat(row.rawRow['SOLD_LOTS'] || '0') || 0;
+      const netLotsFromCols = bought - sold;
+      const netLotsFromCol = parseFloat(row.rawRow['NET_LOTS'] || '0');
+      const netLots = !isNaN(netLotsFromCol) && netLotsFromCol !== 0 ? netLotsFromCol : netLotsFromCols;
+
+      // Skip inactive rows where net lots is 0 and no bought/sold trades exist
+      if (netLots === 0 && bought === 0 && sold === 0) continue;
+
       const scriptObj = localScripts.find(
         (s) => (s.shortName && s.shortName.toUpperCase() === row.commodityCode.toUpperCase()) ||
                (s.fullName && s.fullName.toUpperCase() === row.commodityCode.toUpperCase())
+      );
+
+      const clientObj = localAccounts.find(
+        (a) => (a.code && a.code.trim().toUpperCase() === clientCode)
       );
 
       const baseName = scriptObj?.fullName || scriptObj?.shortName || row.commodityCode;
@@ -231,24 +296,21 @@ export function ClosingRatePageManager({
         ) || `${baseName} ${row.expiryDate || row.delMonth}`.trim()
       ).toUpperCase();
 
-      const bought = parseFloat(row.rawRow['BOUGHT_LOTS'] || '0') || 0;
-      const sold = parseFloat(row.rawRow['SOLD_LOTS'] || '0') || 0;
-      const netLotsFromCols = bought - sold;
-      const netLotsFromCol = parseFloat(row.rawRow['NET_LOTS'] || '0');
-      const netLots = !isNaN(netLotsFromCol) && netLotsFromCol !== 0 ? netLotsFromCol : netLotsFromCols;
-
       const key = `${clientCode}_${secName}`;
       const existing = csvClientMap.get(key);
       if (existing) {
         existing.netLots += netLots;
         if (!scriptObj) existing.isScriptMissing = true;
+        if (!clientObj) existing.isClientMissing = true;
       } else {
         csvClientMap.set(key, {
           netLots,
           isScriptMissing: !scriptObj,
+          isClientMissing: !clientObj,
           commodityCode: row.commodityCode,
           exchangeCode: row.exchange,
           securityName: secName,
+          clientCode,
         });
       }
     }
@@ -271,26 +333,43 @@ export function ClosingRatePageManager({
       const csvQty = csvData ? csvData.netLots : 0;
       const sysObj = systemClientMap.get(key);
       const sysQty = sysObj ? sysObj.netQty : 0;
+
+      // Skip entries where both system and CSV have 0 open positions
+      if (csvQty === 0 && sysQty === 0) continue;
+
       const diff = sysQty - csvQty;
       const isQtyMatched = Math.abs(diff) <= 0.001;
-      const isUnmapped = !!csvData?.isScriptMissing;
-      
-      // Even if quantity matches, if script is unmapped in DB, position is INVALID / UNMAPPED!
-      const isValid = isQtyMatched && !isUnmapped;
 
       const parts = key.split('_');
       const clientCode = parts[0];
       const securityName = parts.slice(1).join('_');
 
+      // Check client in DB
+      const clientInDb = localAccounts.some(
+        (a) => (a.code && a.code.trim().toUpperCase() === clientCode)
+      );
+      const isUnmappedClient = !clientInDb;
+
+      // Check script in DB
+      const isUnmappedScript = !!csvData?.isScriptMissing;
+
+      // A trade/position is ONLY valid/matched if:
+      // 1. Client exists in DB
+      // 2. Script exists in DB
+      // 3. System net Qty equals CSV net Qty
+      const isValid = isQtyMatched && !isUnmappedScript && !isUnmappedClient;
+
       let reason = 'Matched';
-      if (isUnmapped) {
+      if (isUnmappedClient) {
+        reason = `Client '${clientCode}' not found in database. Please create client account.`;
+      } else if (isUnmappedScript) {
         reason = `Script '${csvData?.commodityCode}' not found in database. Please create script.`;
       } else if (!isQtyMatched) {
         reason = sysQty === 0
-          ? 'Position present in CSV but missing in system trades'
+          ? `Position present in CSV (Qty: ${csvQty}) but missing in system trades (Qty: 0)`
           : csvQty === 0
-          ? 'Position present in system trades but missing in CSV'
-          : 'Open quantity mismatch between system and CSV';
+          ? `Position present in system trades (Qty: ${sysQty}) but missing in CSV (Qty: 0)`
+          : `Open quantity mismatch: System (${sysQty}) vs CSV (${csvQty})`;
       }
 
       items.push({
@@ -302,13 +381,14 @@ export function ClosingRatePageManager({
         csvNetQty: csvQty,
         diff,
         isValid,
-        isUnmappedScript: isUnmapped,
+        isUnmappedScript,
+        isUnmappedClient,
         reason,
       });
     }
 
     const discrepancies = items.filter((i) => !i.isValid);
-    const isValidated = discrepancies.length === 0;
+    const isValidated = discrepancies.length === 0 && items.length > 0;
 
     return {
       status: isValidated ? ('VALIDATED' as const) : ('FAILED' as const),
@@ -376,6 +456,37 @@ export function ClosingRatePageManager({
     }
   };
 
+  const executeImport = async (ratesToImport: any[]) => {
+    if (!ratesToImport || ratesToImport.length === 0) {
+      toast.error('No rates to import.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/closing-rates/bulk-import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rates: ratesToImport }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Bulk import failed');
+      }
+
+      const result = await res.json();
+      toast.success(`Successfully imported ${result.importedCount} closing rates for ${importDate}!`);
+      setDuplicateCheckModal(null);
+      handleImportBack();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Error saving closing rates to database.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleConfirmImport = async () => {
     const validItems = parsedItems.filter(
       (item) => item.status === 'Valid' && item.resolvedExchangeId && item.resolvedScriptId
@@ -392,43 +503,52 @@ export function ClosingRatePageManager({
 
     setIsProcessing(true);
     try {
-      const payload = {
-        rates: validItems.map((item) => {
-          const scriptObj = localScripts.find((s) => s.id === item.resolvedScriptId);
-          const scriptCurrency = scriptObj?.currency?.code || item.currencyCode || 'USD';
+      const payloadRates = validItems.map((item) => {
+        const scriptObj = localScripts.find((s) => s.id === item.resolvedScriptId);
+        const scriptCurrency = scriptObj?.currency?.code || item.currencyCode || 'USD';
 
-          return {
-            exchangeId: item.resolvedExchangeId,
-            scriptId: item.resolvedScriptId || null,
-            securityName: item.securityName || item.scriptFullName || item.commodityCode,
-            rateDate: importDate,
-            rate: item.closingPrice,
-            expiry: item.expiryDate || null,
-            delMonth: item.delMonth || null,
-            callPut: item.callPut || null,
-            strikePrice: item.strikePrice ? parseFloat(item.strikePrice) : null,
-            currencyCode: scriptCurrency,
-          };
-        }),
-      };
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/closing-rates/bulk-import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        return {
+          exchangeId: item.resolvedExchangeId,
+          scriptId: item.resolvedScriptId || null,
+          securityName: item.securityName || item.scriptFullName || item.commodityCode,
+          rateDate: importDate,
+          rate: item.closingPrice,
+          expiry: item.expiryDate || null,
+          delMonth: item.delMonth || null,
+          callPut: item.callPut || null,
+          strikePrice: item.strikePrice ? parseFloat(item.strikePrice) : null,
+          currencyCode: scriptCurrency,
+        };
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || errData.message || 'Bulk import failed');
+      // 1. Run duplicate & conflict check first
+      const checkRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/closing-rates/check-duplicates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rates: payloadRates }),
+      });
+
+      if (!checkRes.ok) {
+        throw new Error('Failed to verify duplicate closing rates.');
       }
 
-      const result = await res.json();
-      toast.success(`Successfully imported ${result.importedCount} closing rates for ${importDate}!`);
-      handleImportBack();
+      const checkData = await checkRes.json();
+      const { newRates = [], exactDuplicates = [], conflicts = [] } = checkData;
+
+      if (conflicts.length > 0 || exactDuplicates.length > 0) {
+        setDuplicateCheckModal({
+          isOpen: true,
+          newRates,
+          exactDuplicates,
+          conflicts,
+        });
+      } else {
+        // All are new rates, proceed directly
+        await executeImport(payloadRates);
+      }
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Error saving closing rates to database.');
+      toast.error(err.message || 'Error verifying closing rates.');
     } finally {
       setIsProcessing(false);
     }
@@ -594,6 +714,7 @@ export function ClosingRatePageManager({
               items={verification.items}
               isValidated={isValidated}
               onAddScript={handleOpenScriptModal}
+              onAddClient={handleOpenClientModal}
             />
           )}
 
@@ -809,6 +930,161 @@ export function ClosingRatePageManager({
             onClose={() => setShowScriptModal(false)}
             onSuccess={handleScriptCreated}
           />,
+          document.body
+        )}
+
+      {showClientModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <AccountFormModal
+            initialData={clientModalInitialData}
+            entityLabel="Client"
+            groupName="Sundry Debtors"
+            onClose={() => setShowClientModal(false)}
+            onSuccess={handleClientCreated}
+          />,
+          document.body
+        )}
+
+      {/* Duplicate & Conflict Verification Modal */}
+      {duplicateCheckModal?.isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-[var(--bg-card)] border border-[var(--color-border-medium)] rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-[var(--color-border-light)] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Closing Rates Import Verification</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Date: {importDate}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDuplicateCheckModal(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60">
+                    <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">New Rates</div>
+                    <div className="text-2xl font-bold text-emerald-700 mt-1">{duplicateCheckModal.newRates.length}</div>
+                    <div className="text-[11px] text-emerald-600 mt-0.5">Will be added</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/60">
+                    <div className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Exact Duplicates</div>
+                    <div className="text-2xl font-bold text-amber-700 mt-1">{duplicateCheckModal.exactDuplicates.length}</div>
+                    <div className="text-[11px] text-amber-600 mt-0.5">Already in DB (skip)</div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50/60">
+                    <div className="text-xs font-semibold text-rose-800 uppercase tracking-wider">Rate Conflicts</div>
+                    <div className="text-2xl font-bold text-rose-700 mt-1">{duplicateCheckModal.conflicts.length}</div>
+                    <div className="text-[11px] text-rose-600 mt-0.5">Existing rate differs</div>
+                  </div>
+                </div>
+
+                {/* Conflicts Section */}
+                {duplicateCheckModal.conflicts.length > 0 && (
+                  <div className="border border-rose-200 rounded-xl overflow-hidden">
+                    <div className="bg-rose-50 px-4 py-2.5 border-b border-rose-200 flex items-center gap-2 text-rose-800 font-semibold text-xs uppercase tracking-wider">
+                      <AlertCircle className="w-4 h-4 text-rose-600" />
+                      Conflicts — Already Exists with Different Rate
+                    </div>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-rose-100">
+                      {duplicateCheckModal.conflicts.map((c, i) => (
+                        <div key={i} className="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-rose-50/30">
+                          <div>
+                            <span className="font-semibold text-slate-800">{c.securityName}</span>
+                            <span className="ml-2 text-slate-500 text-[11px]">({c.currencyCode || 'USD'})</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-slate-500">DB Rate: <strong className="text-slate-800">{c.existingRate}</strong></span>
+                            <span className="text-rose-600 font-bold">Incoming: {c.rate}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Exact Duplicates Section */}
+                {duplicateCheckModal.exactDuplicates.length > 0 && (
+                  <div className="border border-amber-200 rounded-xl overflow-hidden">
+                    <div className="bg-amber-50 px-4 py-2.5 border-b border-amber-200 flex items-center gap-2 text-amber-800 font-semibold text-xs uppercase tracking-wider">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      Already Exists in Database (Will be Skipped)
+                    </div>
+                    <div className="max-h-36 overflow-y-auto divide-y divide-amber-100">
+                      {duplicateCheckModal.exactDuplicates.map((d, i) => (
+                        <div key={i} className="px-4 py-2 flex items-center justify-between text-xs hover:bg-amber-50/30">
+                          <span className="font-medium text-slate-700">{d.securityName}</span>
+                          <span className="text-slate-500">Rate: <strong className="text-slate-800">{d.rate}</strong></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New Rates Section */}
+                {duplicateCheckModal.newRates.length > 0 && (
+                  <div className="border border-emerald-200 rounded-xl overflow-hidden">
+                    <div className="bg-emerald-50 px-4 py-2.5 border-b border-emerald-200 flex items-center gap-2 text-emerald-800 font-semibold text-xs uppercase tracking-wider">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      New Closing Rates Ready to Add ({duplicateCheckModal.newRates.length})
+                    </div>
+                    <div className="max-h-36 overflow-y-auto divide-y divide-emerald-100">
+                      {duplicateCheckModal.newRates.map((n, i) => (
+                        <div key={i} className="px-4 py-2 flex items-center justify-between text-xs hover:bg-emerald-50/30">
+                          <span className="font-medium text-slate-700">{n.securityName}</span>
+                          <span className="text-emerald-700 font-semibold">{n.currencyCode || ''} {n.rate}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 bg-slate-50 border-t border-[var(--color-border-light)] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDuplicateCheckModal(null)}
+                  className="btn btn--secondary text-xs"
+                >
+                  Cancel
+                </button>
+                {duplicateCheckModal.newRates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => executeImport(duplicateCheckModal.newRates)}
+                    disabled={isProcessing}
+                    className="btn btn--primary text-xs flex items-center gap-2"
+                  >
+                    {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    Import {duplicateCheckModal.newRates.length} New Rates Only
+                  </button>
+                )}
+                {duplicateCheckModal.conflicts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => executeImport([...duplicateCheckModal.newRates, ...duplicateCheckModal.conflicts])}
+                    disabled={isProcessing}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    Overwrite Conflicts ({duplicateCheckModal.conflicts.length}) & Import All
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>,
           document.body
         )}
     </div>

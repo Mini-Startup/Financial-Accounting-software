@@ -227,6 +227,115 @@ export class ClosingRatesService {
     }
     return { importedCount: imported };
   }
+
+  async checkDuplicates(
+    rates: Array<{
+      exchangeId: string;
+      scriptId?: string | null;
+      securityName?: string | null;
+      rateDate: string | Date;
+      rate: number;
+      expiry?: string | null;
+      delMonth?: string | null;
+      callPut?: string | null;
+      strikePrice?: number | null;
+      bloombergCode?: string | null;
+      currencyCode?: string | null;
+    }>
+  ) {
+    const allScriptIds = Array.from(
+      new Set(rates.filter((r) => r.scriptId).map((r) => r.scriptId!))
+    );
+
+    const scriptMap = new Map<string, string>();
+    const scriptCurrencyMap = new Map<string, string>();
+
+    if (allScriptIds.length > 0) {
+      const fetchedScripts = await prisma.script.findMany({
+        where: { id: { in: allScriptIds } },
+        select: {
+          id: true,
+          fullName: true,
+          shortName: true,
+          currency: { select: { code: true } },
+        },
+      });
+      for (const s of fetchedScripts) {
+        scriptMap.set(s.id, s.fullName || s.shortName || '');
+        if (s.currency?.code) {
+          scriptCurrencyMap.set(s.id, s.currency.code);
+        }
+      }
+    }
+
+    const newRates: any[] = [];
+    const exactDuplicates: any[] = [];
+    const conflicts: any[] = [];
+
+    for (const r of rates) {
+      if (!r.exchangeId || r.rate == null) continue;
+
+      const rateDate = new Date(r.rateDate);
+      rateDate.setUTCHours(0, 0, 0, 0);
+
+      let secName = (r.securityName || '').trim();
+      if (!secName && r.scriptId) {
+        secName = (scriptMap.get(r.scriptId) || '').trim();
+      }
+
+      if (!secName) continue;
+
+      const resolvedCurrencyCode =
+        r.currencyCode || (r.scriptId ? scriptCurrencyMap.get(r.scriptId) : null) || null;
+
+      const existing = await prisma.closingRate.findUnique({
+        where: {
+          exchangeId_securityName_rateDate: {
+            exchangeId: r.exchangeId,
+            securityName: secName,
+            rateDate,
+          },
+        },
+        include: {
+          exchange: true,
+          script: true,
+        },
+      });
+
+      const rateObj = {
+        ...r,
+        securityName: secName,
+        currencyCode: resolvedCurrencyCode,
+        rateDate: rateDate.toISOString().split('T')[0],
+      };
+
+      if (!existing) {
+        newRates.push(rateObj);
+      } else {
+        const diff = Math.abs(Number(existing.rate) - Number(r.rate));
+        if (diff < 0.00001) {
+          exactDuplicates.push({
+            ...rateObj,
+            existingRate: existing.rate,
+            existingId: existing.id,
+          });
+        } else {
+          conflicts.push({
+            ...rateObj,
+            existingRate: existing.rate,
+            existingId: existing.id,
+          });
+        }
+      }
+    }
+
+    return {
+      newRates,
+      exactDuplicates,
+      conflicts,
+      totalCount: rates.length,
+    };
+  }
 }
 
 export const closingRatesService = new ClosingRatesService();

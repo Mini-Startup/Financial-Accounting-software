@@ -47,6 +47,7 @@ export function FormModal({
     referenceEmail: initialData?.referenceEmail || '',
     isDirectClient: initialData?.isDirectClient ?? true,
     dealerCode: initialData?.dealerCode || '',
+    openingBalance: initialData?.openingBalance ?? 0,
     ...initialData // Keep ID if passing through
   });
 
@@ -160,6 +161,19 @@ export function FormModal({
                 <div className="form-group">
                   <label className="form-label">Name *</label>
                   <input required name="name" value={formData.name} onChange={handleChange} className="input" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Opening Balance</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    name="openingBalance" 
+                    value={formData.openingBalance} 
+                    onChange={handleChange} 
+                    className="input font-mono" 
+                    placeholder="0.00"
+                  />
+                  <span className="text-[11px] text-[var(--color-slate)] mt-0.5 block">Positive for Credit, Negative for Debit</span>
                 </div>
                 
                 {groupName === 'Sundry Debtors' && (

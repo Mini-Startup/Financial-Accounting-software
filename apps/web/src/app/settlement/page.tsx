@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { 
   Search, Calculator, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, 
-  Eye, EyeOff, FileSpreadsheet, CheckCircle2, ChevronDown, ChevronUp, PlusCircle, Plus 
+  Eye, EyeOff, FileSpreadsheet, CheckCircle2, ChevronDown, ChevronUp, PlusCircle, Plus,
+  Layers, Zap, History, ShieldAlert, AlertCircle, X, Check, ArrowRight
 } from 'lucide-react';
 import { parseOpenPositionCSV, processOpenPositionClosingRates, type ParsedClosingRateItem, type OpenPositionParsedRow } from '../../lib/tradeParser/openPositionParser';
 import { OpenPositionVerificationPanel, type PositionVerificationItem } from '../../components/trades/OpenPositionVerificationPanel';
@@ -39,13 +40,13 @@ interface SettlementItem {
   closingRate: number | null;
 }
 
-interface PositionDiscrepancy {
-  clientCode: string;
-  securityName: string;
-  systemNetQty: number;
-  csvNetQty: number;
-  diff: number;
-  reason: string;
+interface SettlementRecord {
+  id: string;
+  name: string;
+  fromDate: string;
+  toDate: string;
+  createdAt: string;
+  _count?: { trades: number };
 }
 
 export default function SettlementPage() {
@@ -54,6 +55,22 @@ export default function SettlementPage() {
   const [summaryData, setSummaryData] = useState<SettlementItem[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showAutoCalculated, setShowAutoCalculated] = useState(false);
+
+  // Settlement Cycles state
+  const [settlementsList, setSettlementsList] = useState<SettlementRecord[]>([]);
+  const [selectedSettlementId, setSelectedSettlementId] = useState<string>('LIVE');
+  const [isLoadingSettlements, setIsLoadingSettlements] = useState(false);
+
+  // Settlement Execution Preview state
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    preview: any[];
+    errors: any[];
+    settlementFromDate: string;
+    settlementToDate: string;
+    unsettledTradesCount: number;
+  } | null>(null);
+  const [isExecutingSettlement, setIsExecutingSettlement] = useState(false);
 
   // System reference data for parsing
   const [exchanges, setExchanges] = useState<any[]>([]);
@@ -81,6 +98,21 @@ export default function SettlementPage() {
   const [positionFilter, setPositionFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchSettlementsList = async () => {
+    setIsLoadingSettlements(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements`);
+      if (res.ok) {
+        const data = await res.json();
+        setSettlementsList(data);
+      }
+    } catch (err) {
+      console.error('Failed to load settlements list:', err);
+    } finally {
+      setIsLoadingSettlements(false);
+    }
+  };
 
   const fetchScripts = async () => {
     try {
@@ -126,7 +158,7 @@ export default function SettlementPage() {
     const today = new Date();
     setReportDate(today.toISOString().split('T')[0]);
 
-    // Fetch exchanges & scripts & currencies for Open Position parsing
+    // Fetch exchanges & scripts & currencies & settlements
     const loadRefData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -138,6 +170,7 @@ export default function SettlementPage() {
         if (exRes.ok) setExchanges(await exRes.json());
         if (scRes.ok) setScripts(await scRes.json());
         if (curRes.ok) setCurrencies(await curRes.json());
+        await fetchSettlementsList();
       } catch (err) {
         console.error('Failed to load reference data:', err);
       }
@@ -145,8 +178,14 @@ export default function SettlementPage() {
     loadRefData();
   }, []);
 
-  const fetchSettlementSummary = async (date: string) => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?date=${date}`;
+  const fetchSettlementSummary = async (date: string, settlementId: string = 'LIVE') => {
+    let url = '';
+    if (settlementId === 'LIVE') {
+      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=LIVE&date=${date}`;
+    } else {
+      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=${settlementId}`;
+    }
+
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
@@ -159,9 +198,9 @@ export default function SettlementPage() {
     }
   };
 
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reportDate) {
+  const handleGenerate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (selectedSettlementId === 'LIVE' && !reportDate) {
       toast.error('Please select a Date');
       return;
     }
@@ -169,13 +208,98 @@ export default function SettlementPage() {
     setLoading(true);
     setShowAutoCalculated(false);
     try {
-      await fetchSettlementSummary(reportDate);
-      toast.success(`Generated settlement summary for ${reportDate}`);
+      await fetchSettlementSummary(reportDate, selectedSettlementId);
+      toast.success(
+        selectedSettlementId === 'LIVE'
+          ? `Generated live positions summary up to ${reportDate}`
+          : `Loaded summary for selected settlement`
+      );
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Failed to connect to the backend server');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSettlementSelectionChange = (newSettlementId: string) => {
+    setSelectedSettlementId(newSettlementId);
+    setHasGenerated(false);
+    setSummaryData([]);
+    if (newSettlementId !== 'LIVE') {
+      const s = settlementsList.find((item) => item.id === newSettlementId);
+      if (s) {
+        setReportDate(new Date(s.toDate).toISOString().split('T')[0]);
+      }
+    }
+  };
+
+  const handleOpenSettlementPreview = async () => {
+    if (!reportDate) {
+      toast.error('Please select a closing rate date for settlement.');
+      return;
+    }
+
+    setIsAdjusting(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closingRateDate: reportDate }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || 'Failed to compute settlement preview');
+      }
+
+      const data = await res.json();
+      setPreviewModal({
+        isOpen: true,
+        preview: data.preview || [],
+        errors: data.errors || [],
+        settlementFromDate: data.settlementFromDate,
+        settlementToDate: data.settlementToDate,
+        unsettledTradesCount: data.unsettledTradesCount || 0,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Error computing settlement preview');
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
+
+  const handleConfirmExecuteSettlement = async () => {
+    if (!reportDate) return;
+    setIsExecutingSettlement(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closingRateDate: reportDate }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.error || 'Failed to execute settlement');
+      }
+
+      const data = await res.json();
+      toast.success(
+        `Settlement created successfully! Added ${data.cfCount} CF trades, ${data.bfCount} BF trades, ${data.settlementCount} Settlement trades, and ${data.ledgerEntriesCount} Ledger entries.`
+      );
+      setPreviewModal(null);
+      await fetchSettlementsList();
+      if (data.settlement?.id) {
+        setSelectedSettlementId(data.settlement.id);
+        await fetchSettlementSummary(reportDate, data.settlement.id);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Error executing settlement');
+    } finally {
+      setIsExecutingSettlement(false);
     }
   };
 
@@ -486,62 +610,136 @@ export default function SettlementPage() {
         </div>
       </div>
 
-      {/* Date & Open Position Upload Form Card */}
-      <div className="card">
-        <div className="card__body p-6">
-          <form onSubmit={handleGenerate} className="flex flex-col md:flex-row items-end gap-6">
-            <div className="form-field flex-1 max-w-xs">
-              <label className="form-label form-label--required">Select Date (Daily Settlement)</label>
-              <input 
-                type="date" 
-                value={reportDate} 
-                onChange={e => setReportDate(e.target.value)} 
-                className="input w-full"
-                required 
-              />
+      {/* Settlement Cycle Selector Card */}
+      <div className="card p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl shadow-md border border-slate-700">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-emerald-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Settlement Period / Batch</span>
             </div>
+            <h2 className="text-lg font-bold text-white">Select Settlement Cycle</h2>
+            <p className="text-xs text-slate-300">
+              View live open positions or select any finalized historical settlement batch.
+            </p>
+          </div>
 
-            <div className="form-field flex-1 max-w-sm">
-              <label className="form-label">Upload Open Position CSV (Optional)</label>
-              <div className="flex gap-2">
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handleOpenPositionFileUpload}
-                  accept=".csv, .txt"
-                  className="hidden"
-                  id="open-pos-csv-settlement"
-                />
-                <label 
-                  htmlFor="open-pos-csv-settlement"
-                  className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 text-xs"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
-                  <span className="truncate">{openPositionFileName ? openPositionFileName : 'Upload Open Position CSV'}</span>
-                </label>
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="btn btn--primary h-[42px] px-6 flex items-center justify-center gap-2 w-full md:w-auto shrink-0"
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedSettlementId}
+              onChange={(e) => handleSettlementSelectionChange(e.target.value)}
+              className="bg-slate-800 border border-slate-600 text-white text-sm rounded-xl px-4 py-2.5 font-medium focus:ring-2 focus:ring-emerald-400 focus:outline-none cursor-pointer"
             >
-              {loading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Calculator className="w-4 h-4" />
-                  Generate Summary
-                </>
-              )}
+              <option value="LIVE">⚡ Live / Open Positions (Unsettled)</option>
+              {settlementsList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  📁 {s.name} ({formatDateStr(s.fromDate)} – {formatDateStr(s.toDate)}) • {s._count?.trades || 0} trades
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleGenerate()}
+              disabled={loading}
+              className="btn btn--primary text-xs flex items-center gap-1.5 py-2.5 px-4 rounded-xl"
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span>Refresh</span>
             </button>
-          </form>
+          </div>
         </div>
       </div>
+
+      {/* Date & Open Position Upload Form Card (For Live Settlements) */}
+      {selectedSettlementId === 'LIVE' ? (
+        <div className="card">
+          <div className="card__body p-6">
+            <form onSubmit={handleGenerate} className="flex flex-col md:flex-row items-end gap-6">
+              <div className="form-field flex-1 max-w-xs">
+                <label className="form-label form-label--required">Closing Rate Date (Cutoff)</label>
+                <input 
+                  type="date" 
+                  value={reportDate} 
+                  onChange={e => setReportDate(e.target.value)} 
+                  className="input w-full"
+                  required 
+                />
+              </div>
+
+              <div className="form-field flex-1 max-w-sm">
+                <label className="form-label">Upload Open Position CSV (Verification)</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleOpenPositionFileUpload}
+                    accept=".csv, .txt"
+                    className="hidden"
+                    id="open-pos-csv-settlement"
+                  />
+                  <label 
+                    htmlFor="open-pos-csv-settlement"
+                    className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 text-xs"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+                    <span className="truncate">{openPositionFileName ? openPositionFileName : 'Upload Open Position CSV'}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="btn btn--primary h-[42px] px-6 flex items-center justify-center gap-2 w-full md:w-auto shrink-0"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="w-4 h-4" />
+                      Generate Summary
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenSettlementPreview}
+                  disabled={isAdjusting || !hasGenerated}
+                  className="px-5 h-[42px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Compute and preview Carry Forward, Back Forward, and Settlement trades"
+                >
+                  {isAdjusting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-emerald-300" />}
+                  <span>Generate CF/BF/Settlement</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : (
+        /* Historical Settlement Banner */
+        <div className="card p-5 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">
+              FINALIZED
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-950">
+                {settlementsList.find(s => s.id === selectedSettlementId)?.name}
+              </h3>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                Period: {formatDateStr(settlementsList.find(s => s.id === selectedSettlementId)?.fromDate || '')} to {formatDateStr(settlementsList.find(s => s.id === selectedSettlementId)?.toDate || '')}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-emerald-800 bg-white px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs">
+            Read-only Historical Record
+          </span>
+        </div>
+      )}
 
       {/* Verification Status & Adjust Trades Bar */}
       {hasGenerated && (
@@ -1078,6 +1276,181 @@ export default function SettlementPage() {
             onClose={() => setShowScriptModal(false)}
             onSuccess={handleScriptCreated}
           />,
+          document.body
+        )}
+
+      {/* Settlement Execution Preview Modal */}
+      {previewModal?.isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-[var(--bg-card)] border border-[var(--color-border-medium)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-6 border-b border-[var(--color-border-light)] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
+                    <Zap className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Settlement Execution Preview</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Period: <strong>{formatDateStr(previewModal.settlementFromDate)}</strong> to <strong>{formatDateStr(previewModal.settlementToDate)}</strong> • {previewModal.unsettledTradesCount} unsettled trades
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPreviewModal(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60">
+                    <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Carry Forward (CF)</div>
+                    <div className="text-2xl font-bold text-blue-700 mt-1">
+                      {previewModal.preview.filter(p => p.tradeType === 'CARRY_FORWARD').length} trades
+                    </div>
+                    <div className="text-[11px] text-blue-600 mt-0.5">Closes open positions on {formatDateStr(previewModal.settlementToDate)}</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/60">
+                    <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Back Forward (BF)</div>
+                    <div className="text-2xl font-bold text-emerald-700 mt-1">
+                      {previewModal.preview.filter(p => p.tradeType === 'BACK_FORWARD').length} trades
+                    </div>
+                    <div className="text-[11px] text-emerald-600 mt-0.5">Re-opens position on next day ({getNextDayStr(previewModal.settlementToDate)})</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/60">
+                    <div className="text-xs font-semibold text-purple-800 uppercase tracking-wider">Settlement (Expired)</div>
+                    <div className="text-2xl font-bold text-purple-700 mt-1">
+                      {previewModal.preview.filter(p => p.tradeType === 'SETTLEMENT').length} trades
+                    </div>
+                    <div className="text-[11px] text-purple-600 mt-0.5">Final closing trade on expiry date (No BF)</div>
+                  </div>
+                </div>
+
+                {/* Errors Section */}
+                {previewModal.errors.length > 0 && (
+                  <div className="border border-rose-200 bg-rose-50/80 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-rose-800 font-bold text-xs uppercase tracking-wider">
+                      <AlertCircle className="w-4 h-4 text-rose-600" />
+                      Missing Closing Rates for Settlement ({previewModal.errors.length})
+                    </div>
+                    <p className="text-xs text-rose-700">
+                      The following securities are missing closing rates for this settlement date. Please import or add closing rates before executing settlement.
+                    </p>
+                    <ul className="list-disc list-inside text-xs text-rose-800 space-y-1 mt-2">
+                      {previewModal.errors.map((e, idx) => (
+                        <li key={idx}>
+                          <strong>{e.securityName}</strong>: {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Preview Trades Table */}
+                {previewModal.preview.length > 0 ? (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                      <span>Generated Adjustment Trades Preview ({previewModal.preview.length})</span>
+                      <span className="text-[11px] text-slate-500 font-normal">Auto-calculated using closing rates</span>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-slate-100/75 text-slate-600 font-semibold sticky top-0">
+                          <tr>
+                            <th className="py-2.5 px-3">Type</th>
+                            <th className="py-2.5 px-3">Date</th>
+                            <th className="py-2.5 px-3">Client</th>
+                            <th className="py-2.5 px-3">Broker</th>
+                            <th className="py-2.5 px-3">Security Name</th>
+                            <th className="py-2.5 px-3">Action</th>
+                            <th className="py-2.5 px-3 text-right">Qty</th>
+                            <th className="py-2.5 px-3 text-right">Closing Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {previewModal.preview.map((p, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="py-2.5 px-3 font-semibold">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  p.tradeType === 'CARRY_FORWARD' ? 'bg-blue-100 text-blue-800' :
+                                  p.tradeType === 'BACK_FORWARD' ? 'bg-emerald-100 text-emerald-800' :
+                                  'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {p.tradeType}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-600">{formatDateStr(p.tradeDate)}</td>
+                              <td className="py-2.5 px-3 font-medium text-slate-800">{p.accountCode}</td>
+                              <td className="py-2.5 px-3 text-slate-600">{p.brokerCode || '—'}</td>
+                              <td className="py-2.5 px-3 font-mono text-slate-700">{p.securityName}</td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  p.transactionType === 'BUY' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                                }`}>
+                                  {p.transactionType}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">{p.quantity.toLocaleString('en-IN')}</td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-700">
+                                {p.currencyCode || '$'}{p.rate.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-500 border border-dashed border-slate-300 rounded-xl">
+                    No open positions require Carry Forward, Back Forward, or Settlement adjustment for this date.
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-slate-50 border-t border-[var(--color-border-light)] flex items-center justify-between">
+                <span className="text-xs text-slate-500">
+                  Executing will create trades, tag participating records with Settlement ID, and post net amounts to the Ledger.
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewModal(null)}
+                    className="btn btn--secondary text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmExecuteSettlement}
+                    disabled={isExecutingSettlement || previewModal.errors.length > 0 || previewModal.preview.length === 0}
+                    className="btn btn--primary text-xs flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isExecutingSettlement ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        Executing Settlement...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        Confirm & Execute Settlement
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
           document.body
         )}
     </div>

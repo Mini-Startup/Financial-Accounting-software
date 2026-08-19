@@ -6,7 +6,6 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
-import { ExpiryDateFormModal } from '../expiry-dates/ExpiryDateFormModal';
 
 function todayISO() {
   const d = new Date();
@@ -54,27 +53,10 @@ export function TradeFormModal({
     initialTrade?.rate != null ? String(initialTrade.rate) : ''
   );
 
-  const [expiryDatesList, setExpiryDatesList] = useState<any[]>([]);
-  const [isAddingExpiry, setIsAddingExpiry] = useState(false);
 
-  const fetchExpiryDates = async (selectLatestDate?: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates`);
-      if (res.ok) {
-        const data = await res.json();
-        const activeOnly = data.filter((item: any) => item.isActive);
-        setExpiryDatesList(activeOnly);
-        if (selectLatestDate) {
-          setExpiryDate(selectLatestDate);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   useEffect(() => {
-    fetchExpiryDates();
+    // Initial setup if needed
   }, []);
 
   const [clientRule, setClientRule] = useState<BrokerageRule | null>(null);
@@ -275,32 +257,13 @@ export function TradeFormModal({
 
                  <div className="form-field">
                   <label className="form-label">Expiry date</label>
-                  <select
+                  <input
+                    type="date"
                     value={expiryDate}
-                    onChange={e => {
-                      if (e.target.value === "ADD_NEW_EXPIRY") {
-                        setIsAddingExpiry(true);
-                      } else {
-                        setExpiryDate(e.target.value);
-                      }
-                    }}
+                    onChange={e => setExpiryDate(e.target.value)}
                     className="input w-full text-slate-900"
                     style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    <option value="" className="text-slate-900">Select Expiry</option>
-                    {expiryDatesList.map(item => {
-                      const dateStr = new Date(item.date).toISOString().split('T')[0];
-                      const displayStr = new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                      return (
-                        <option key={item.id} value={dateStr} className="text-slate-900">
-                          {displayStr}
-                        </option>
-                      );
-                    })}
-                    <option value="ADD_NEW_EXPIRY" className="text-[var(--color-forest)] font-semibold bg-emerald-50">
-                      + Add New Expiry Date
-                    </option>
-                  </select>
+                  />
                 </div>
               </div>
 
@@ -457,19 +420,6 @@ export function TradeFormModal({
           </button>
         </div>
       </div>
-
-      {isAddingExpiry && (
-        <ExpiryDateFormModal
-          onClose={() => {
-            setIsAddingExpiry(false);
-            setExpiryDate('');
-          }}
-          onSaveSuccess={(newDate?: string) => {
-            setIsAddingExpiry(false);
-            fetchExpiryDates(newDate);
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -47,6 +47,7 @@ export function AccountMasterFormModal({
     micrCode: initialData?.micrCode || '',
     bankAccountNumber: initialData?.bankAccountNumber || '',
     upiId: initialData?.upiId || '',
+    openingBalance: initialData?.openingBalance ?? 0,
   });
 
   const selectedGroupName = useMemo(() => {
@@ -117,9 +118,22 @@ export function AccountMasterFormModal({
                 </select>
               </div>
 
-              <div className="form-field col-span-2">
+              <div className="form-field">
                 <label className="form-label form-label--required">Name</label>
                 <input required name="name" value={formData.name} onChange={handleChange} className="input" />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">Opening Balance</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  name="openingBalance" 
+                  value={formData.openingBalance} 
+                  onChange={handleChange} 
+                  className="input font-mono" 
+                  placeholder="0.00"
+                />
               </div>
             </div>
           </div>

@@ -88,7 +88,6 @@ const sections: NavSection[] = [
     children: [
       { name: "Trades",        path: "/trades",        icon: ArrowUpDown },
       { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp },
-      { name: "Expiry Dates",  path: "/expiry-dates",   icon: CalendarDays },
       {
         name: "Import Files",
         path: "#",

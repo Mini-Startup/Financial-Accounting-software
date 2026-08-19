@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, CheckCircle2, AlertTriangle, Plus } from 'lucide-react';
+import { Search, CheckCircle2, AlertTriangle, Plus, UserPlus } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export interface PositionVerificationItem {
@@ -14,6 +14,7 @@ export interface PositionVerificationItem {
   diff: number;
   isValid: boolean;
   isUnmappedScript?: boolean;
+  isUnmappedClient?: boolean;
   reason: string;
 }
 
@@ -21,10 +22,12 @@ export function OpenPositionVerificationPanel({
   items,
   isValidated,
   onAddScript,
+  onAddClient,
 }: {
   items: PositionVerificationItem[];
   isValidated: boolean;
   onAddScript?: (commodityCode: string, securityName?: string, exchangeCode?: string) => void;
+  onAddClient?: (clientCode: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'ALL' | 'VALID' | 'MISMATCH'>('ALL');
@@ -184,7 +187,16 @@ export function OpenPositionVerificationPanel({
                       </span>
                     )}
                   </td>
-                  <td className="p-2.5 font-mono font-bold text-slate-900">{item.clientCode}</td>
+                  <td className="p-2.5 font-mono font-bold text-slate-900">
+                    <div className="flex items-center gap-1.5">
+                      <span>{item.clientCode}</span>
+                      {item.isUnmappedClient && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                          Not in DB
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="p-2.5 font-mono text-slate-700 font-semibold">{item.securityName}</td>
                   <td className="p-2.5 text-right font-mono font-bold text-slate-900">
                     {item.systemNetQty}
@@ -208,17 +220,30 @@ export function OpenPositionVerificationPanel({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span>{item.reason}</span>
-                      {(item.isUnmappedScript || (!item.isValid && item.commodityCode)) && onAddScript && (
-                        <button
-                          type="button"
-                          onClick={() => onAddScript(item.commodityCode!, item.securityName, item.exchangeCode)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors shrink-0"
-                          title={`Add script '${item.commodityCode}' to database`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>+ Add Script</span>
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.isUnmappedClient && onAddClient && (
+                          <button
+                            type="button"
+                            onClick={() => onAddClient(item.clientCode)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors"
+                            title={`Create client '${item.clientCode}' in database`}
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>+ Add Client</span>
+                          </button>
+                        )}
+                        {(item.isUnmappedScript || (!item.isValid && item.commodityCode && !item.isUnmappedClient)) && onAddScript && (
+                          <button
+                            type="button"
+                            onClick={() => onAddScript(item.commodityCode!, item.securityName, item.exchangeCode)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors"
+                            title={`Add script '${item.commodityCode}' to database`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Add Script</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>

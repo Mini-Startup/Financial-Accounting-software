@@ -10,44 +10,22 @@ export class ScriptsService {
     exchangeId?: string | null;
     currencyId?: string | null;
     isActive?: boolean;
-    exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
   }) {
-    const { exchangeMappings, ...scriptData } = data;
-
-    return prisma.$transaction(async (tx) => {
-      const script = await tx.script.create({
-        data: {
-          shortName: scriptData.shortName.trim(),
-          fullName: scriptData.fullName.trim(),
-          isin: scriptData.isin?.trim() || null,
-          lotSize: Number(scriptData.lotSize),
-          exchangeId: scriptData.exchangeId || null,
-          currencyId: scriptData.currencyId || null,
-          isActive: scriptData.isActive ?? true,
-        },
-      });
-
-      if (exchangeMappings && exchangeMappings.length > 0) {
-        await tx.scriptExchangeMapping.createMany({
-          data: exchangeMappings.map((m) => ({
-            scriptId: script.id,
-            exchangeId: m.exchangeId,
-            exchangeScriptCode: m.exchangeScriptCode.trim(),
-          })),
-        });
-      }
-
-      return tx.script.findUnique({
-        where: { id: script.id },
-        include: {
-          exchange: true,
-          currency: true,
-          scriptExchangeMappings: {
-            include: { exchange: true },
-          },
-        },
-      });
-    }, { maxWait: 10000, timeout: 30000 });
+    return prisma.script.create({
+      data: {
+        shortName: data.shortName.trim(),
+        fullName: data.fullName.trim(),
+        isin: data.isin?.trim() || null,
+        lotSize: Number(data.lotSize),
+        exchangeId: data.exchangeId || null,
+        currencyId: data.currencyId || null,
+        isActive: data.isActive ?? true,
+      },
+      include: {
+        exchange: true,
+        currency: true,
+      },
+    });
   }
 
   async findAll(search?: string) {
@@ -66,9 +44,6 @@ export class ScriptsService {
       include: {
         exchange: true,
         currency: true,
-        scriptExchangeMappings: {
-          include: { exchange: true },
-        },
       },
     });
   }
@@ -79,9 +54,6 @@ export class ScriptsService {
       include: {
         exchange: true,
         currency: true,
-        scriptExchangeMappings: {
-          include: { exchange: true },
-        },
       },
     });
     if (!script) throw new NotFoundException(`Script ${id} not found`);
@@ -98,54 +70,25 @@ export class ScriptsService {
       exchangeId?: string | null;
       currencyId?: string | null;
       isActive?: boolean;
-      exchangeMappings?: Array<{ exchangeId: string; exchangeScriptCode: string }>;
     },
   ) {
     await this.findOne(id); // ensure exists
 
-    const { exchangeMappings, ...scriptData } = data;
-
-    return prisma.$transaction(async (tx) => {
-      await tx.script.update({
-        where: { id },
-        data: {
-          ...(scriptData.shortName !== undefined && { shortName: scriptData.shortName.trim() }),
-          ...(scriptData.fullName !== undefined && { fullName: scriptData.fullName.trim() }),
-          ...(scriptData.isin !== undefined && { isin: scriptData.isin?.trim() || null }),
-          ...(scriptData.lotSize !== undefined && { lotSize: Number(scriptData.lotSize) }),
-          ...(scriptData.exchangeId !== undefined && { exchangeId: scriptData.exchangeId || null }),
-          ...(scriptData.currencyId !== undefined && { currencyId: scriptData.currencyId || null }),
-          ...(scriptData.isActive !== undefined && { isActive: scriptData.isActive }),
-        },
-      });
-
-      if (exchangeMappings !== undefined) {
-        // Sync exchange mappings: clear existing and insert new
-        await tx.scriptExchangeMapping.deleteMany({
-          where: { scriptId: id },
-        });
-
-        if (exchangeMappings.length > 0) {
-          await tx.scriptExchangeMapping.createMany({
-            data: exchangeMappings.map((m) => ({
-              scriptId: id,
-              exchangeId: m.exchangeId,
-              exchangeScriptCode: m.exchangeScriptCode.trim(),
-            })),
-          });
-        }
-      }
-
-      return tx.script.findUnique({
-        where: { id },
-        include: {
-          exchange: true,
-          currency: true,
-          scriptExchangeMappings: {
-            include: { exchange: true },
-          },
-        },
-      });
+    return prisma.script.update({
+      where: { id },
+      data: {
+        ...(data.shortName !== undefined && { shortName: data.shortName.trim() }),
+        ...(data.fullName !== undefined && { fullName: data.fullName.trim() }),
+        ...(data.isin !== undefined && { isin: data.isin?.trim() || null }),
+        ...(data.lotSize !== undefined && { lotSize: Number(data.lotSize) }),
+        ...(data.exchangeId !== undefined && { exchangeId: data.exchangeId || null }),
+        ...(data.currencyId !== undefined && { currencyId: data.currencyId || null }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+      include: {
+        exchange: true,
+        currency: true,
+      },
     });
   }
 

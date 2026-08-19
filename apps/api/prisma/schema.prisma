@@ -76,14 +76,16 @@ model Account {
   isActive            Boolean  @default(true) @map("is_active")
   isDirectClient      Boolean  @default(true) @map("is_direct_client")
   dealerCode          String?  @map("dealer_code")
+  openingBalance      Float    @default(0) @map("opening_balance")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt      @map("updated_at")
 
-  group        Group       @relation(fields: [groupId], references: [id])
-  brokerages   Brokerage[]
-  trades       Trade[]     @relation("AccountTrades")
-  brokerTrades Trade[]     @relation("BrokerTrades")
-  voucherLines VoucherLine[]
+  group         Group         @relation(fields: [groupId], references: [id])
+  brokerages    Brokerage[]
+  trades        Trade[]       @relation("AccountTrades")
+  brokerTrades  Trade[]       @relation("BrokerTrades")
+  voucherLines  VoucherLine[]
+  ledgerEntries Ledger[]
 
   @@index([name])
   @@index([groupId])
@@ -106,12 +108,11 @@ model Script {
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt      @map("updated_at")
 
-  exchange               Exchange?               @relation(fields: [exchangeId], references: [id])
-  currency               Currency?               @relation(fields: [currencyId], references: [id])
-  brokerages             Brokerage[]
-  scriptExchangeMappings ScriptExchangeMapping[]
-  trades                 Trade[]
-  closingRates           ClosingRate[]
+  exchange     Exchange?    @relation(fields: [exchangeId], references: [id])
+  currency     Currency?    @relation(fields: [currencyId], references: [id])
+  brokerages   Brokerage[]
+  trades       Trade[]
+  closingRates ClosingRate[]
 
   @@index([fullName])
   @@map("scripts")
@@ -149,11 +150,10 @@ model Exchange {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  brokerages             Brokerage[]
-  scriptExchangeMappings ScriptExchangeMapping[]
-  trades                 Trade[]
-  closingRates           ClosingRate[]
-  scripts                Script[]
+  brokerages   Brokerage[]
+  trades       Trade[]
+  closingRates ClosingRate[]
+  scripts      Script[]
 
   @@map("exchanges")
 }
@@ -176,24 +176,6 @@ model Currency {
   @@map("currencies")
 }
 
-// ─────────────────────────────────────────────
-// SCRIPT EXCHANGE MAPPING
-// ─────────────────────────────────────────────
-
-model ScriptExchangeMapping {
-  id                 String   @id @default(uuid())
-  scriptId           String   @map("script_id")
-  exchangeId         String   @map("exchange_id")
-  exchangeScriptCode String   @map("exchange_script_code")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt      @map("updated_at")
-
-  script   Script   @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
-  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
-
-  @@unique([scriptId, exchangeId])
-  @@map("script_exchange_mappings")
-}
 
 // ─────────────────────────────────────────────
 // TRADES
@@ -235,6 +217,10 @@ model Trade {
   clnCharges2     Float?   @map("cln_charges2")
   vat             Float?   @map("vat")
 
+  // Trade classification
+  tradeType       String   @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
+  settlementId    String?  @map("settlement_id")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt      @map("updated_at")
 
@@ -246,15 +232,17 @@ model Trade {
   brokerBrokerage Float?   @map("broker_brokerage")
   profitTotal     Float?   @map("profit_total")
 
-  account  Account  @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
-  broker   Account? @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
-  script   Script   @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
-  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  account    Account     @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
+  broker     Account?    @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
+  script     Script      @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
+  exchange   Exchange    @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  settlement Settlement? @relation(fields: [settlementId], references: [id])
 
   @@index([accountId])
   @@index([brokerId])
   @@index([scriptId])
   @@index([exchangeId])
+  @@index([settlementId])
   @@map("trades")
 }
 
@@ -331,17 +319,42 @@ model ClosingRate {
 }
 
 // ─────────────────────────────────────────────
-// EXPIRY DATES
+// SETTLEMENTS
 // ─────────────────────────────────────────────
 
-model ExpiryDate {
+model Settlement {
   id        String   @id @default(uuid())
-  date      DateTime @unique
-  isActive  Boolean  @default(true) @map("is_active")
+  name      String                          // e.g. "Settlement 1"
+  fromDate  DateTime @map("from_date")
+  toDate    DateTime @map("to_date")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  @@map("expiry_dates")
+  trades Trade[]
+
+  @@map("settlements")
+}
+
+// ─────────────────────────────────────────────
+// LEDGER ENTRIES
+// ─────────────────────────────────────────────
+
+model Ledger {
+  id          String   @id @default(uuid())
+  accountId   String   @map("account_id")
+  date        DateTime @map("date")
+  amount      Float    @map("amount")
+  entryType   String   @map("entry_type")       // SETTLEMENT, VOUCHER
+  description String?  @map("description")
+  referenceId String?  @map("reference_id")     // settlementId or voucherId
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([date])
+  @@map("ledger_entries")
 }
 
 // ─────────────────────────────────────────────

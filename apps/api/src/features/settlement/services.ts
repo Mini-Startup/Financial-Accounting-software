@@ -1,28 +1,86 @@
 import { prisma } from '../../database';
+import { settlementEngine } from './engine';
 
 export class SettlementService {
-  async generateSummary(fromDate: string, toDate: string) {
-    const start = new Date(fromDate);
-    start.setUTCHours(0, 0, 0, 0);
-
-    const end = new Date(toDate);
-    end.setUTCHours(23, 59, 59, 999);
-
-    // Fetch all trades in the date range
-    const trades = await prisma.trade.findMany({
-      where: {
-        tradeDate: {
-          gte: start,
-          lte: end,
+  async listSettlements() {
+    return prisma.settlement.findMany({
+      orderBy: {
+        toDate: 'desc',
+      },
+      include: {
+        _count: {
+          select: { trades: true },
         },
       },
+    });
+  }
+
+  async getSettlement(id: string) {
+    return prisma.settlement.findUnique({
+      where: { id },
+      include: {
+        trades: {
+          include: {
+            account: true,
+            broker: true,
+            script: { include: { currency: true } },
+            exchange: true,
+          },
+        },
+      },
+    });
+  }
+
+  async previewSettlement(closingRateDate: string) {
+    return settlementEngine.computeSettlement(closingRateDate);
+  }
+
+  async executeSettlement(closingRateDate: string) {
+    return settlementEngine.executeSettlement(closingRateDate);
+  }
+
+  async generateSummary(fromDate?: string, toDate?: string, settlementId?: string | null) {
+    let whereClause: any = {};
+
+    if (settlementId === 'UNSETTLED' || settlementId === 'LIVE') {
+      whereClause.settlementId = null;
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setUTCHours(23, 59, 59, 999);
+        whereClause.tradeDate = { lte: end };
+      }
+    } else if (settlementId) {
+      whereClause.settlementId = settlementId;
+    } else if (fromDate && toDate) {
+      const start = new Date(fromDate);
+      start.setUTCHours(0, 0, 0, 0);
+
+      const end = new Date(toDate);
+      end.setUTCHours(23, 59, 59, 999);
+
+      whereClause.tradeDate = {
+        gte: start,
+        lte: end,
+      };
+    } else if (toDate) {
+      const end = new Date(toDate);
+      end.setUTCHours(23, 59, 59, 999);
+      whereClause.tradeDate = { lte: end };
+    }
+
+    // Fetch all matching trades
+    const trades = await prisma.trade.findMany({
+      where: whereClause,
       include: {
         account: true,
         broker: true,
         script: {
-          include: { currency: true }
+          include: { currency: true },
         },
         exchange: true,
+      },
+      orderBy: {
+        tradeDate: 'asc',
       },
     });
 
@@ -127,10 +185,11 @@ export class SettlementService {
       groups.get(key)!.push(leg);
     }
 
-    // Fetch closing rates on the toDate
-    const rateDateStart = new Date(toDate);
+    // Fetch closing rates on the toDate (or latest date)
+    const rateDateTarget = toDate ? new Date(toDate) : new Date();
+    const rateDateStart = new Date(rateDateTarget);
     rateDateStart.setUTCHours(0, 0, 0, 0);
-    const rateDateEnd = new Date(toDate);
+    const rateDateEnd = new Date(rateDateTarget);
     rateDateEnd.setUTCHours(23, 59, 59, 999);
 
     const closingRates = await prisma.closingRate.findMany({
@@ -268,78 +327,9 @@ export class SettlementService {
       expiry?: string | null;
     }>;
   }) {
-    const reportDateObj = new Date(data.reportDate);
-    const sameDayDate = new Date(reportDateObj);
-    sameDayDate.setUTCHours(12, 0, 0, 0);
-
-    const nextDayDate = new Date(reportDateObj);
-    nextDayDate.setUTCDate(nextDayDate.getUTCDate() + 1);
-    nextDayDate.setUTCHours(12, 0, 0, 0);
-
-    let createdCount = 0;
-
-    await prisma.$transaction(async (tx) => {
-      for (let i = 0; i < data.adjustments.length; i++) {
-        const adj = data.adjustments[i];
-        if (adj.netQty === 0) continue;
-
-        const qty = Math.abs(adj.netQty);
-        const rate = Number(adj.closingRate) || 0;
-
-        // 1. Same-day Carry Forward trade (inverts position)
-        const cfType = adj.netQty > 0 ? 'SELL' : 'BUY';
-        await tx.trade.create({
-          data: {
-            tradeNumber: `CF-${Date.now()}-${i + 1}`,
-            tradeDate: sameDayDate,
-            accountId: adj.accountId,
-            scriptId: adj.scriptId,
-            exchangeId: adj.exchangeId,
-            transactionType: cfType,
-            quantity: qty,
-            rate: rate,
-            clientRate: rate,
-            brokerRate: rate,
-            clientBrokerage: 0,
-            brokerBrokerage: 0,
-            profitTotal: 0,
-            source: 'SETTLEMENT_CARRY_FORWARD',
-            remarks: 'Carry forward settlement closing trade',
-            securityName: adj.securityName || null,
-            expiry: adj.expiry || null,
-          },
-        });
-        createdCount++;
-
-        // 2. Next-day Back Forward trade (re-opens position on next day)
-        const bfType = adj.netQty > 0 ? 'BUY' : 'SELL';
-        await tx.trade.create({
-          data: {
-            tradeNumber: `BF-${Date.now()}-${i + 1}`,
-            tradeDate: nextDayDate,
-            accountId: adj.accountId,
-            scriptId: adj.scriptId,
-            exchangeId: adj.exchangeId,
-            transactionType: bfType,
-            quantity: qty,
-            rate: rate,
-            clientRate: rate,
-            brokerRate: rate,
-            clientBrokerage: 0,
-            brokerBrokerage: 0,
-            profitTotal: 0,
-            source: 'SETTLEMENT_BACK_FORWARD',
-            remarks: 'Back forward settlement opening trade',
-            securityName: adj.securityName || null,
-            expiry: adj.expiry || null,
-          },
-        });
-        createdCount++;
-      }
-    });
-
-    return { createdCount };
+    return settlementEngine.executeSettlement(data.reportDate);
   }
 }
 
 export const settlementService = new SettlementService();
+

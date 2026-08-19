@@ -20,51 +20,61 @@ export class VouchersService {
       throw new BadRequestException('A valid voucher date is required.');
     }
 
-    if (!data.lines || data.lines.length !== 2) {
-      throw new BadRequestException('Voucher must contain exactly two rows (double-entry).');
+    if (!data.lines || data.lines.length < 2) {
+      throw new BadRequestException('Voucher must contain at least two rows for double-entry.');
     }
 
-    const [line1, line2] = data.lines;
-    
-    if (Number(line1.amount) + Number(line2.amount) !== 0) {
-      throw new BadRequestException(`Double entry must balance. Sum of amounts must be zero. (Sum: ${Number(line1.amount) + Number(line2.amount)})`);
+    const totalSum = data.lines.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+    if (Math.abs(totalSum) > 0.001) {
+      throw new BadRequestException(
+        `Double entry must balance. Sum of amounts must be zero. (Current sum: ${totalSum.toFixed(2)})`
+      );
     }
 
-    // Verify both accounts exist
-    const account1 = await prisma.account.findUnique({ where: { id: line1.accountId } });
-    if (!account1) {
-      throw new BadRequestException(`Account ID ${line1.accountId} does not exist.`);
+    // Verify all accounts exist
+    for (const line of data.lines) {
+      if (!line.accountId) {
+        throw new BadRequestException('All voucher lines must have an account selected.');
+      }
+      const account = await prisma.account.findUnique({ where: { id: line.accountId } });
+      if (!account) {
+        throw new BadRequestException(`Account ID ${line.accountId} does not exist.`);
+      }
     }
 
-    const account2 = await prisma.account.findUnique({ where: { id: line2.accountId } });
-    if (!account2) {
-      throw new BadRequestException(`Account ID ${line2.accountId} does not exist.`);
-    }
+    const voucherDate = new Date(data.date);
 
     // Execute in transaction
     return prisma.$transaction(async (tx) => {
       const voucher = await tx.voucher.create({
         data: {
           type: data.type,
-          date: new Date(data.date),
+          date: voucherDate,
           remarks: data.remarks?.trim() || null,
         },
       });
 
       await tx.voucherLine.createMany({
-        data: [
-          {
-            voucherId: voucher.id,
-            accountId: line1.accountId,
-            amount: Number(line1.amount),
-          },
-          {
-            voucherId: voucher.id,
-            accountId: line2.accountId,
-            amount: Number(line2.amount),
-          },
-        ],
+        data: data.lines.map((l) => ({
+          voucherId: voucher.id,
+          accountId: l.accountId,
+          amount: Number(l.amount),
+        })),
       });
+
+      // Post to Ledger table for each line
+      for (const line of data.lines) {
+        await tx.ledger.create({
+          data: {
+            accountId: line.accountId,
+            date: voucherDate,
+            amount: Number(Number(line.amount).toFixed(2)),
+            entryType: 'VOUCHER',
+            description: `Voucher: ${data.type}${data.remarks ? ` - ${data.remarks}` : ''}`,
+            referenceId: voucher.id,
+          },
+        });
+      }
 
       return tx.voucher.findUnique({
         where: { id: voucher.id },
@@ -97,8 +107,19 @@ export class VouchersService {
     if (!voucher) {
       throw new NotFoundException(`Voucher with ID ${id} not found.`);
     }
-    return prisma.voucher.delete({
-      where: { id },
+
+    return prisma.$transaction(async (tx) => {
+      // Remove ledger entries first
+      await tx.ledger.deleteMany({
+        where: {
+          referenceId: id,
+          entryType: 'VOUCHER',
+        },
+      });
+
+      return tx.voucher.delete({
+        where: { id },
+      });
     });
   }
 }

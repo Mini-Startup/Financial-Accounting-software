@@ -11,17 +11,11 @@ router.get('/', async (req, res, next) => {
     if (!accountId) {
       throw new BadRequestException('accountId is required.');
     }
-    if (!fromDate) {
-      throw new BadRequestException('fromDate is required.');
-    }
-    if (!toDate) {
-      throw new BadRequestException('toDate is required.');
-    }
 
     const result = await ledgerReportService.generateLedgerReport(
       accountId as string,
-      fromDate as string,
-      toDate as string
+      fromDate ? (fromDate as string) : undefined,
+      toDate ? (toDate as string) : undefined
     );
     res.json(result);
   } catch (err) {
