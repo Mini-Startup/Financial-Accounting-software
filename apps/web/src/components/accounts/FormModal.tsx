@@ -6,6 +6,8 @@ import { cn } from '@/utils/cn';
 
 import { useScrollLock } from '../../hooks/useScrollLock';
 
+import { toast } from 'sonner';
+
 export function FormModal({
   initialData,
   entityLabel,
@@ -47,11 +49,11 @@ export function FormModal({
     referenceEmail: initialData?.referenceEmail || '',
     isDirectClient: initialData?.isDirectClient ?? true,
     dealerCode: initialData?.dealerCode || '',
-    openingBalance: initialData?.openingBalance ?? 0,
-    ...initialData // Keep ID if passing through
+    openingBalance: initialData?.openingBalance != null ? initialData.openingBalance : 0,
   });
 
   const [directClients, setDirectClients] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (groupName === 'Sundry Debtors') {
@@ -74,40 +76,65 @@ export function FormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     try {
       const url = initialData?.id 
         ? `${process.env.NEXT_PUBLIC_API_URL}/account-masters/${initialData.id}` 
         : `${process.env.NEXT_PUBLIC_API_URL}/account-masters`;
       
-      const payloadForm = { ...formData };
-      if (payloadForm.isWhatsappSameAsMobile) {
-        payloadForm.whatsappNumber = payloadForm.mobileNumber;
-      }
-      delete (payloadForm as any).isWhatsappSameAsMobile;
-
-      const payload = {
-        ...payloadForm,
-        groupName: initialData?.fldGroupNo ? undefined : groupName, 
+      const payload: any = {
+        code: formData.code?.trim(),
+        name: formData.name?.trim(),
+        address: formData.address || null,
+        mobileNumber: formData.mobileNumber || null,
+        officeNumber: formData.officeNumber || null,
+        whatsappNumber: (formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber) || null,
+        email: formData.email || null,
+        contactPersonName: formData.contactPersonName || null,
+        contactPersonMobile: formData.contactPersonMobile || null,
+        contactPersonEmail: formData.contactPersonEmail || null,
+        bankName: formData.bankName || null,
+        bankBranch: formData.bankBranch || null,
+        ifscCode: formData.ifscCode || null,
+        micrCode: formData.micrCode || null,
+        bankAccountNumber: formData.bankAccountNumber || null,
+        upiId: formData.upiId || null,
+        referenceName: formData.referenceName || null,
+        referenceMobile: formData.referenceMobile || null,
+        referenceEmail: formData.referenceEmail || null,
+        isDirectClient: Boolean(formData.isDirectClient),
+        dealerCode: formData.isDirectClient ? formData.code?.trim() : (formData.dealerCode?.trim() || null),
+        openingBalance: formData.openingBalance !== '' && formData.openingBalance != null && !isNaN(Number(formData.openingBalance))
+          ? Number(formData.openingBalance)
+          : 0,
+        groupName: groupName,
       };
-      
+
       const res = await fetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
       if (res.ok) {
+        toast.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
         if (onSuccess) {
           onSuccess();
         } else {
           window.location.reload();
         }
+        onClose();
       } else {
-        const err = await res.json();
-        alert(err.message || 'Save failed.');
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.message || 'Save failed.');
       }
     } catch(err) {
       console.error(err);
-      alert('Save failed.');
+      toast.error('Network or server error while saving account.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 

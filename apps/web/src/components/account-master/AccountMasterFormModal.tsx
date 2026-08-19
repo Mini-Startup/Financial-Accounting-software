@@ -58,16 +58,39 @@ export function AccountMasterFormModal({
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     try {
       const url = initialData?.id 
         ? `${process.env.NEXT_PUBLIC_API_URL}/account-masters/${initialData.id}` 
         : `${process.env.NEXT_PUBLIC_API_URL}/account-masters`;
       
       const payload = {
-        ...formData,
+        code: formData.code?.trim(),
+        name: formData.name?.trim(),
         groupId: Number(formData.groupId),
+        address: formData.address || null,
+        mobileNumber: formData.mobileNumber || null,
+        officeNumber: formData.officeNumber || null,
+        whatsappNumber: formData.whatsappNumber || null,
+        email: formData.email || null,
+        contactPersonName: formData.contactPersonName || null,
+        contactPersonMobile: formData.contactPersonMobile || null,
+        contactPersonEmail: formData.contactPersonEmail || null,
+        bankName: formData.bankName || null,
+        bankBranch: formData.bankBranch || null,
+        ifscCode: formData.ifscCode || null,
+        micrCode: formData.micrCode || null,
+        bankAccountNumber: formData.bankAccountNumber || null,
+        upiId: formData.upiId || null,
+        openingBalance: formData.openingBalance !== '' && formData.openingBalance != null && !isNaN(Number(formData.openingBalance))
+          ? Number(formData.openingBalance)
+          : 0,
       };
 
       const res = await fetch(url, {
@@ -81,11 +104,13 @@ export function AccountMasterFormModal({
         onSave();
         onClose();
       } else {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         toast.error(errData.message || 'Failed to save account master');
       }
     } catch {
       toast.error('Failed to save account master');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

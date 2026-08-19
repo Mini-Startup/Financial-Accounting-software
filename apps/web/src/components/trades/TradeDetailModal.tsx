@@ -17,6 +17,15 @@ export function TradeDetailModal({
 
   const formattedDate = new Date(trade.tradeDate).toLocaleDateString();
   const profit = trade.profitTotal ?? 0;
+  
+  const currSym = trade.script?.currency?.symbol || (
+    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'INR' ? '₹' :
+    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'USD' ? '$' :
+    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'AED' ? 'AED ' :
+    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'EUR' ? '€' :
+    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'GBP' ? '£' :
+    (trade.currencyCode ? `${trade.currencyCode} ` : '$')
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
@@ -103,18 +112,18 @@ export function TradeDetailModal({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--color-slate)]">Market Rate</span>
-                  <span className="font-mono">₹{trade.rate?.toFixed(4) || '0.0000'}</span>
+                  <span className="font-mono">{currSym}{trade.rate?.toFixed(4) || '0.0000'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--color-slate)]">Effective Client Rate</span>
                   <span className="font-mono font-semibold text-[var(--color-charcoal)]">
-                    ₹{trade.clientRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
+                    {currSym}{trade.clientRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm border-t pt-2 mt-1">
                   <span className="text-[var(--color-slate)]">Computed Brokerage</span>
                   <span className="font-mono text-emerald-600">
-                    {trade.clientBrokerage != null ? `₹${trade.clientBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
+                    {trade.clientBrokerage != null ? `${currSym}${trade.clientBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
                   </span>
                 </div>
               </div>
@@ -129,18 +138,18 @@ export function TradeDetailModal({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--color-slate)]">Market Rate</span>
-                  <span className="font-mono">₹{trade.rate?.toFixed(4) || '0.0000'}</span>
+                  <span className="font-mono">{currSym}{trade.rate?.toFixed(4) || '0.0000'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--color-slate)]">Effective Broker Rate</span>
                   <span className="font-mono font-semibold text-[var(--color-charcoal)]">
-                    ₹{trade.brokerRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
+                    {currSym}{trade.brokerRate?.toFixed(4) || trade.rate?.toFixed(4) || '—'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm border-t pt-2 mt-1">
                   <span className="text-[var(--color-slate)]">Computed Brokerage</span>
                   <span className="font-mono text-emerald-600">
-                    {trade.brokerBrokerage != null ? `₹${trade.brokerBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
+                    {trade.brokerBrokerage != null ? `${currSym}${trade.brokerBrokerage.toFixed(4)}` : 'Fixed / Invoice'}
                   </span>
                 </div>
               </div>
@@ -164,7 +173,7 @@ export function TradeDetailModal({
                 Net Trade Spread Profit
               </span>
               <span className="font-mono text-xl font-bold">
-                {profit > 0 ? '+' : ''}₹{profit.toFixed(4)}
+                {profit > 0 ? '+' : ''}{currSym}{profit.toFixed(4)}
               </span>
             </div>
             <p className="text-[11px] text-[var(--color-slate)] mt-1">

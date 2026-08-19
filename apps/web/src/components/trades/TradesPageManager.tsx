@@ -264,9 +264,9 @@ export function TradesPageManager({
       {/* Table List Card */}
       <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table">
+          <table className="data-table w-full text-xs">
             <thead>
-              <tr>
+              <tr className="whitespace-nowrap">
                 <th style={{ width: '40px' }} className="text-center">
                   <CustomCheckbox
                     checked={isAllVisibleSelected}
@@ -276,15 +276,12 @@ export function TradesPageManager({
                 <th>Date</th>
                 <th>Exchange</th>
                 <th>Security Name / Script</th>
+                <th>Expiry Date</th>
                 <th>Type</th>
                 <th className="text-right">Qty</th>
                 <th className="text-right">Rate</th>
                 <th>Client</th>
                 <th>Broker</th>
-                <th>Dealer</th>
-                <th>Curr</th>
-                <th>Del Month</th>
-                <th className="text-right">Mkt Value</th>
                 <th className="text-right">Client Rate</th>
                 <th className="text-right">Broker Rate</th>
                 <th className="text-right">Profit</th>
@@ -292,10 +289,10 @@ export function TradesPageManager({
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 font-sans">
               {paginatedTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={18} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={15} className="py-12 text-center text-[var(--color-slate)] font-medium">
                     No trades match your search criteria.
                   </td>
                 </tr>
@@ -304,19 +301,29 @@ export function TradesPageManager({
                 const profit = t.profitTotal ?? 0;
                 const secName = t.securityName || t.script?.fullName || t.script?.shortName || '—';
                 const isSelected = selectedIds.has(t.id);
+                
+                // Dynamic currency symbol resolution
+                const currSym = t.script?.currency?.symbol || (
+                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'INR' ? '₹' :
+                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'USD' ? '$' :
+                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'AED' ? 'AED ' :
+                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'EUR' ? '€' :
+                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'GBP' ? '£' :
+                  (t.currencyCode ? `${t.currencyCode} ` : '$')
+                );
 
                 return (
                   <tr
                     key={t.id}
                     onClick={() => setSelectedTrade(t)}
                     className={cn(
-                      'hover:bg-slate-50 transition-colors cursor-pointer select-none',
+                      'hover:bg-slate-50 transition-colors cursor-pointer select-none whitespace-nowrap',
                       isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60'
                     )}
                     title="Click to view full details"
                   >
                     <td
-                      className="text-center"
+                      className="text-center whitespace-nowrap"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleToggleRow(t.id);
@@ -330,17 +337,17 @@ export function TradesPageManager({
                     <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
                       {new Date(t.tradeDate).toLocaleDateString('en-GB')}
                     </td>
-                    <td className="font-bold text-[var(--color-charcoal)]">{t.exchange?.code || '—'}</td>
-                    <td>
-                      <div className="font-semibold text-[var(--color-charcoal)] text-xs">{secName}</div>
-                      {t.script?.shortName && t.script?.shortName !== secName && (
-                        <div className="text-[10px] text-[var(--color-slate)] font-mono">{t.script.shortName}</div>
-                      )}
+                    <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">{t.exchange?.code || '—'}</td>
+                    <td className="max-w-[260px] truncate whitespace-nowrap" title={secName}>
+                      <span className="font-semibold text-[var(--color-charcoal)] text-xs truncate block">{secName}</span>
                     </td>
-                    <td>
+                    <td className="font-mono text-xs text-slate-700 whitespace-nowrap">
+                      {t.expiry || '—'}
+                    </td>
+                    <td className="whitespace-nowrap">
                       <span
                         className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',
+                          'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap',
                           t.transactionType === 'BUY'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
@@ -349,36 +356,30 @@ export function TradesPageManager({
                         {t.transactionType}
                       </span>
                     </td>
-                    <td className="font-mono font-semibold text-right">{t.quantity}</td>
-                    <td className="font-mono text-right text-xs">₹{t.rate.toFixed(2)}</td>
-                    <td className="font-mono text-xs" title={t.account?.name}>{t.account?.code || '—'}</td>
-                    <td className="font-mono text-xs" title={t.broker?.name}>{t.broker?.code || '—'}</td>
-                    <td className="font-mono text-xs text-slate-600">{t.dealerCode || '—'}</td>
-                    <td className="font-mono text-xs text-slate-600">{t.currencyCode || '—'}</td>
-                    <td className="font-mono text-xs text-slate-600 whitespace-nowrap">{t.delMonth || '—'}</td>
-                    <td className="font-mono text-right text-xs">
-                      {t.mktValue != null ? `₹${t.mktValue.toFixed(2)}` : '—'}
+                    <td className="font-mono font-semibold text-right whitespace-nowrap">{t.quantity}</td>
+                    <td className="font-mono text-right text-xs whitespace-nowrap">{currSym}{t.rate.toFixed(2)}</td>
+                    <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>{t.account?.code || '—'}</td>
+                    <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>{t.broker?.code || '—'}</td>
+                    <td className="font-mono text-right text-xs whitespace-nowrap">
+                      {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
                     </td>
-                    <td className="font-mono text-right text-xs">
-                      {t.clientRate != null ? `₹${t.clientRate.toFixed(2)}` : '—'}
-                    </td>
-                    <td className="font-mono text-right text-xs">
-                      {t.brokerRate != null ? `₹${t.brokerRate.toFixed(2)}` : '—'}
+                    <td className="font-mono text-right text-xs whitespace-nowrap">
+                      {t.brokerRate != null ? `${currSym}${t.brokerRate.toFixed(2)}` : '—'}
                     </td>
                     <td
                       className={cn(
-                        'font-mono font-bold text-right text-xs',
+                        'font-mono font-bold text-right text-xs whitespace-nowrap',
                         profit > 0 ? 'text-[var(--color-positive)]' :
                         profit < 0 ? 'text-[var(--color-negative)]' :
                         'text-[var(--color-charcoal)]'
                       )}
                     >
-                      {profit > 0 ? '+' : ''}₹{profit.toFixed(2)}
+                      {profit > 0 ? '+' : ''}{currSym}{profit.toFixed(2)}
                     </td>
-                    <td>
+                    <td className="whitespace-nowrap">
                       <span
                         className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                          'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap',
                           t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                           t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
                           t.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -392,23 +393,25 @@ export function TradesPageManager({
                       </span>
                     </td>
                     <td
-                      className="text-right flex items-center justify-end gap-1"
+                      className="text-right whitespace-nowrap"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <button
-                        onClick={() => setEditingTrade(t)}
-                        className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50"
-                        title="Edit Trade"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
-                        title="Delete Trade"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setEditingTrade(t)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 cursor-pointer"
+                          title="Edit Trade"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.id)}
+                          className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50 cursor-pointer"
+                          title="Delete Trade"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

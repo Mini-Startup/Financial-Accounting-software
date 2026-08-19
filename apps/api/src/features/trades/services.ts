@@ -56,8 +56,13 @@ export class TradesService {
       },
       include: {
         account: true,
-        script: true,
+        script: {
+          include: {
+            currency: true,
+          },
+        },
         exchange: true,
+        broker: true,
       },
     });
   }
@@ -67,7 +72,11 @@ export class TradesService {
       orderBy: { tradeDate: 'desc' },
       include: {
         account: true,
-        script: true,
+        script: {
+          include: {
+            currency: true,
+          },
+        },
         exchange: true,
         broker: true,
       },
@@ -79,7 +88,11 @@ export class TradesService {
       where: { id },
       include: {
         account: true,
-        script: true,
+        script: {
+          include: {
+            currency: true,
+          },
+        },
         exchange: true,
         broker: true,
       },
@@ -142,8 +155,13 @@ export class TradesService {
       },
       include: {
         account: true,
-        script: true,
+        script: {
+          include: {
+            currency: true,
+          },
+        },
         exchange: true,
+        broker: true,
       },
     });
   }
