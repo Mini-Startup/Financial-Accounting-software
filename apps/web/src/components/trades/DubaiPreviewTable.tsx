@@ -297,7 +297,23 @@ export function DubaiPreviewTable({
                       <td className="py-3 px-3 font-mono text-slate-600">{val.dealerCode || '-'}</td>
 
                       {/* Exchange */}
-                      <td className="py-3 px-3 font-mono font-semibold text-slate-700">{row.marketCode || '—'}</td>
+                      <td className="py-3 px-3">
+                        {val.resolvedExchangeId || isValidatingMasterData ? (
+                          <span className="font-mono font-bold text-slate-800">{row.marketCode || '—'}</span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDoubleClickExchange(row.marketCode);
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors border border-rose-200"
+                            title={`Unmapped Exchange '${row.marketCode}'. Click to add to database.`}
+                          >
+                            <span>{row.marketCode || 'Missing'}</span>
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )}
+                      </td>
 
                       {/* 6. Curr */}
                       <td className="py-3 px-3">

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { X, AlertTriangle, Building2, TrendingUp, Calendar, DollarSign, Edit3 } from 'lucide-react';
 import { SearchableSelect } from './SearchableSelect';
@@ -26,7 +28,7 @@ interface TradeRowDrawerProps {
     dealerCode?: string;
   };
   onDoubleClickClient?: (code: string) => void;
-  onDoubleClickScript?: (shortName: string, fullName: string, exchange: string, marketLot?: any) => void;
+  onDoubleClickScript?: (shortName: string, fullName: string, exchange: string, marketLot?: any, currencyCode?: string) => void;
   onDoubleClickExchange?: (code: string) => void;
 }
 
@@ -163,7 +165,8 @@ export function TradeRowDrawer({
                       isDubai ? row.tickCode : row.scriptShortName,
                       isDubai ? row.securityName : row.scriptFullName,
                       isDubai ? row.marketCode : row.exchange,
-                      isDubai ? row.marketLot : undefined
+                      isDubai ? row.marketLot : undefined,
+                      isDubai ? row.currencyCode : undefined
                     )
                   }
                   onAddClick={() =>
@@ -171,7 +174,8 @@ export function TradeRowDrawer({
                       isDubai ? row.tickCode : row.scriptShortName,
                       isDubai ? row.securityName : row.scriptFullName,
                       isDubai ? row.marketCode : row.exchange,
-                      isDubai ? row.marketLot : undefined
+                      isDubai ? row.marketLot : undefined,
+                      isDubai ? row.currencyCode : undefined
                     )
                   }
                   addLabel="Add Script"

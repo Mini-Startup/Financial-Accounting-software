@@ -11,6 +11,7 @@ import closingRatesRouter from './features/closing-rates/routes';
 import settlementRouter from './features/settlement/routes';
 import vouchersRouter from './features/vouchers/routes';
 import ledgerReportRouter from './features/ledger-report/routes';
+import trialBalanceRouter from './features/trial-balance/routes';
 
 export function registerRoutes(app: Express) {
   // Health check
@@ -29,6 +30,7 @@ export function registerRoutes(app: Express) {
   app.use('/settlement', settlementRouter);
   app.use('/vouchers', vouchersRouter);
   app.use('/ledger-report', ledgerReportRouter);
+  app.use('/trial-balance', trialBalanceRouter);
   app.use('/', tradesRouter);
   app.use('/', tradeFnoRouter);
 }

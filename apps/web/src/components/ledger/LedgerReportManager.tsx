@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { 
   BookOpen, Search, Calendar, Scale, ArrowUpRight, ArrowDownRight, 
@@ -52,8 +53,11 @@ interface LedgerReportData {
 }
 
 export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
-  // Account selection state - starts with NO account selected
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const searchParams = useSearchParams();
+  const accountIdParam = searchParams.get('accountId') || '';
+
+  // Account selection state - starts with URL param if present, else empty
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accountIdParam);
   
   // Date and filter states (applied after account is selected)
   const [fromDate, setFromDate] = useState<string>('');
@@ -87,6 +91,14 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
       setLoading(false);
     }
   }, []);
+
+  // Initial load if accountId is provided in URL params
+  useEffect(() => {
+    if (accountIdParam) {
+      setSelectedAccountId(accountIdParam);
+      fetchReport(accountIdParam);
+    }
+  }, [accountIdParam, fetchReport]);
 
   // When user selects an account, generate immediately
   const handleAccountChange = (accountId: string) => {

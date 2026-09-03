@@ -261,10 +261,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     marketLot?: any,
     currencyCode?: string
   ) => {
-    let foundExchange = exchanges.find(
-      (ex) => ex.code.toUpperCase() === marketCode.toUpperCase()
+    const foundExchange = exchanges.find(
+      (ex) => ex.code.toUpperCase() === (marketCode || '').toUpperCase()
     );
-    let foundCurrency = currencies.find(
+    const foundCurrency = currencies.find(
       (c) => c.code.toUpperCase() === (currencyCode || 'USD').toUpperCase()
     );
 
@@ -275,8 +275,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       shortName: tickCode.toUpperCase(),
       fullName: cleanedFullName,
       lotSize: parsedLot > 0 ? parsedLot : 1,
-      exchangeId: foundExchange ? foundExchange.id : undefined,
-      currencyId: foundCurrency ? foundCurrency.id : undefined,
+      exchangeId: foundExchange ? foundExchange.id : '',
+      currencyId: foundCurrency ? foundCurrency.id : '',
+      targetExchangeCode: marketCode || '',
+      targetCurrencyCode: currencyCode || 'USD',
     });
     setShowScriptModal(true);
   };
@@ -1021,10 +1023,11 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             exchanges={exchanges}
             currencies={currencies}
             onClose={() => setShowScriptModal(false)}
-            onSuccess={() => {
+            onSuccess={async () => {
               setShowScriptModal(false);
+              await fetchScripts();
+              await fetchExchanges();
               if (!isDubaiImport) handleRevalidate();
-              fetchScripts();
             }}
           />,
           document.body
@@ -1038,6 +1041,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             onSuccess={async () => {
               setShowExchangeModal(false);
               await fetchExchanges();
+              await fetchScripts();
             }}
           />,
           document.body

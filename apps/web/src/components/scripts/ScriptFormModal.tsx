@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, Building2, Coins, Plus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomSelect } from '../ui/CustomSelect';
 import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
 import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
-
 import { useScrollLock } from '../../hooks/useScrollLock';
 
 export function ScriptFormModal({
@@ -31,31 +30,72 @@ export function ScriptFormModal({
   const [currencies, setCurrencies] = useState<any[]>(initialCurrencies);
 
   const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [exchangeModalInitialData, setExchangeModalInitialData] = useState<any>(null);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [currencyModalInitialData, setCurrencyModalInitialData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Target codes from import row (e.g. 'SGX', 'USD')
+  const targetExchangeCode = (
+    initialData?.targetExchangeCode ||
+    (typeof initialData?.exchange === 'string' ? initialData.exchange : initialData?.exchange?.code) ||
+    ''
+  ).trim();
+
+  const targetCurrencyCode = (
+    initialData?.targetCurrencyCode ||
+    (typeof initialData?.currency === 'string' ? initialData.currency : initialData?.currency?.code) ||
+    'USD'
+  ).trim();
+
+  // Helper to find initial exchange ID
+  const resolveInitialExchangeId = (exList: any[], initData?: any, targetCode?: string) => {
+    if (initData?.exchangeId) return initData.exchangeId;
+    if (initData?.exchange?.id) return initData.exchange.id;
+    if (targetCode) {
+      const match = exList.find((e) => e.code.toUpperCase() === targetCode.toUpperCase());
+      if (match) return match.id;
+      // If targetCode was explicitly requested and not found, do NOT fallback to arbitrary first exchange!
+      return '';
+    }
+    return exList[0]?.id || '';
+  };
+
+  // Helper to find initial currency ID
+  const resolveInitialCurrencyId = (curList: any[], initData?: any, targetCode?: string) => {
+    if (initData?.currencyId) return initData.currencyId;
+    if (initData?.currency?.id) return initData.currency.id;
+    if (targetCode) {
+      const match = curList.find((c) => c.code.toUpperCase() === targetCode.toUpperCase());
+      if (match) return match.id;
+    }
+    const usd = curList.find((c) => c.code.toUpperCase() === 'USD');
+    return usd ? usd.id : (curList[0]?.id || '');
+  };
 
   const [formData, setFormData] = useState({
     shortName: initialData?.shortName || '',
     fullName: initialData?.fullName || '',
     isin: initialData?.isin || '',
     lotSize: initialData?.lotSize !== undefined && initialData?.lotSize !== null ? initialData.lotSize : 1,
-    exchangeId: initialData?.exchangeId || initialData?.exchange?.id || (initialExchanges[0]?.id || ''),
-    currencyId: initialData?.currencyId || initialData?.currency?.id || '',
+    exchangeId: resolveInitialExchangeId(initialExchanges, initialData, targetExchangeCode),
+    currencyId: resolveInitialCurrencyId(initialCurrencies, initialData, targetCurrencyCode),
     isActive: initialData?.isActive ?? true,
   });
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        shortName: initialData.shortName || '',
-        fullName: initialData.fullName || '',
-        isin: initialData.isin || '',
-        lotSize: initialData.lotSize !== undefined && initialData.lotSize !== null ? initialData.lotSize : 1,
-        exchangeId: initialData.exchangeId || initialData.exchange?.id || (exchanges[0]?.id || ''),
-        currencyId: initialData.currencyId || initialData.currency?.id || '',
-        isActive: initialData.isActive ?? true,
-      });
+      setFormData((prev) => ({
+        shortName: initialData.shortName || prev.shortName,
+        fullName: initialData.fullName || prev.fullName,
+        isin: initialData.isin || prev.isin,
+        lotSize: initialData.lotSize !== undefined && initialData.lotSize !== null ? initialData.lotSize : prev.lotSize,
+        exchangeId: resolveInitialExchangeId(exchanges, initialData, targetExchangeCode),
+        currencyId: resolveInitialCurrencyId(currencies, initialData, targetCurrencyCode),
+        isActive: initialData.isActive ?? prev.isActive,
+      }));
     }
-  }, [initialData, exchanges]);
+  }, [initialData, exchanges, currencies, targetExchangeCode, targetCurrencyCode]);
 
   const fetchExchanges = async () => {
     try {
@@ -89,19 +129,71 @@ export function ScriptFormModal({
     if (!initialCurrencies || initialCurrencies.length === 0) {
       fetchCurrencies().then((data) => {
         if (!formData.currencyId && data.length > 0) {
-          const usd = data.find((c: any) => c.code === 'USD');
-          setFormData((prev) => ({ ...prev, currencyId: usd ? usd.id : data[0].id }));
+          const curId = resolveInitialCurrencyId(data, initialData, targetCurrencyCode);
+          setFormData((prev) => ({ ...prev, currencyId: curId }));
         }
       });
     }
-  }, [initialCurrencies]);
+    if (!initialExchanges || initialExchanges.length === 0) {
+      fetchExchanges().then((data) => {
+        if (!formData.exchangeId && data.length > 0) {
+          const exId = resolveInitialExchangeId(data, initialData, targetExchangeCode);
+          setFormData((prev) => ({ ...prev, exchangeId: exId }));
+        }
+      });
+    }
+  }, [initialCurrencies, initialExchanges]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Check if target exchange is missing
+  const isTargetExchangeMissing =
+    Boolean(targetExchangeCode) &&
+    !exchanges.some((e) => e.code.toUpperCase() === targetExchangeCode.toUpperCase());
+
+  // Check if target currency is missing
+  const isTargetCurrencyMissing =
+    Boolean(targetCurrencyCode) &&
+    currencies.length > 0 &&
+    !currencies.some((c) => c.code.toUpperCase() === targetCurrencyCode.toUpperCase());
+
+  const handleOpenAddExchange = () => {
+    setExchangeModalInitialData({
+      code: targetExchangeCode ? targetExchangeCode.toUpperCase() : '',
+      name: targetExchangeCode || '',
+    });
+    setShowExchangeModal(true);
+  };
+
+  const handleOpenAddCurrency = () => {
+    setCurrencyModalInitialData({
+      code: targetCurrencyCode ? targetCurrencyCode.toUpperCase() : 'USD',
+      name: targetCurrencyCode || 'US Dollar',
+      symbol: targetCurrencyCode === 'USD' ? '$' : targetCurrencyCode === 'INR' ? '₹' : '',
+    });
+    setShowCurrencyModal(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.exchangeId) {
+      toast.error(
+        targetExchangeCode
+          ? `Please add or select Exchange '${targetExchangeCode}' before saving the script.`
+          : 'Please select an Exchange for this script.'
+      );
+      return;
+    }
+
+    if (!formData.currencyId) {
+      toast.error('Please select a Trade Currency for this script.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const url = initialData?.id
         ? `${process.env.NEXT_PUBLIC_API_URL}/scripts/${initialData.id}`
@@ -109,7 +201,7 @@ export function ScriptFormModal({
 
       const payload = {
         ...formData,
-        lotSize: Number(formData.lotSize),
+        lotSize: Number(formData.lotSize) || 1,
       };
 
       const res = await fetch(url, {
@@ -119,7 +211,7 @@ export function ScriptFormModal({
       });
 
       if (res.ok) {
-        toast.success(initialData?.id ? 'Script updated' : 'Script created');
+        toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
         if (onSuccess) {
           onSuccess();
         } else {
@@ -130,7 +222,9 @@ export function ScriptFormModal({
         toast.error(err.message || 'Failed to save script');
       }
     } catch {
-      toast.error('Save failed');
+      toast.error('Save failed due to network error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -148,57 +242,183 @@ export function ScriptFormModal({
     <>
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150"
       >
-        <div ref={modalRef} className="card w-[600px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+        <div
+          ref={modalRef}
+          className="card w-[620px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none animate-in zoom-in-95 duration-150"
+        >
           {/* Header */}
-          <div className="card__header bg-[var(--color-snow)]">
-            <h2 className="card__title">{initialData && initialData.id ? 'Edit Script' : 'Create New Script'}</h2>
-            <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+          <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div>
+              <h2 className="card__title text-base font-bold text-slate-800">
+                {initialData && initialData.id ? 'Edit Script Master' : 'Create New Script Master'}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Define security symbol, exchange linkage, and contract specifications
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <form id="scriptForm" onSubmit={handleSubmit} className="card__body p-6 space-y-6 overflow-y-auto">
+          <form id="scriptForm" onSubmit={handleSubmit} className="card__body p-6 space-y-5 overflow-y-auto">
+            {/* Warning Banner: Exchange Missing from Database */}
+            {isTargetExchangeMissing && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-800 animate-in fade-in">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-rose-900">Exchange '{targetExchangeCode}' Not Found in Database</div>
+                    <div className="text-[11px] text-rose-700 mt-0.5">
+                      This trade record belongs to exchange <strong>{targetExchangeCode}</strong>, which must be added before saving.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddExchange}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Exchange '{targetExchangeCode}'</span>
+                </button>
+              </div>
+            )}
+
+            {/* Warning Banner: Currency Missing from Database */}
+            {isTargetCurrencyMissing && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-800 animate-in fade-in">
+                <div className="flex items-start gap-2.5">
+                  <Coins className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-amber-900">Currency '{targetCurrencyCode}' Not Found</div>
+                    <div className="text-[11px] text-amber-700 mt-0.5">
+                      Add currency <strong>{targetCurrencyCode}</strong> to properly calibrate trade profit and rates.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddCurrency}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Currency '{targetCurrencyCode}'</span>
+                </button>
+              </div>
+            )}
+
+            {/* Basic Info */}
             <div className="space-y-4">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Script Information</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">
+                Script Information
+              </h3>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
-                  <label className="form-label form-label--required">Short Name</label>
-                  <input required name="shortName" value={formData.shortName} onChange={handleChange} className="input" placeholder="e.g. GOLD" />
+                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Short Name / Tick Code</label>
+                  <input
+                    required
+                    name="shortName"
+                    value={formData.shortName}
+                    onChange={handleChange}
+                    className="input text-xs font-mono font-bold uppercase"
+                    placeholder="e.g. GIN, GOLD"
+                  />
                 </div>
 
                 <div className="form-field">
-                  <label className="form-label form-label--required">Full Name</label>
-                  <input required name="fullName" value={formData.fullName} onChange={handleChange} className="input" placeholder="e.g. GOLD 100 OZ" />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label form-label--required">Market Lot / Lot Size</label>
-                  <input required type="number" name="lotSize" value={formData.lotSize} onChange={handleChange} className="input font-mono text-right" min="1" />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label form-label--required">Exchange</label>
-                  <CustomSelect
-                    value={formData.exchangeId}
-                    options={exchangeOptions}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
-                    placeholder="Select Exchange"
-                    onAddClick={() => setShowExchangeModal(true)}
-                    addLabel="Add Exchange"
+                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Market Lot / Lot Size</label>
+                  <input
+                    required
+                    type="number"
+                    name="lotSize"
+                    value={formData.lotSize}
+                    onChange={handleChange}
+                    className="input text-xs font-mono text-right font-bold"
+                    min="1"
                   />
                 </div>
 
                 <div className="form-field col-span-2">
-                  <label className="form-label form-label--required">Trade Currency</label>
+                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Full Security Name</label>
+                  <input
+                    required
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="input text-xs"
+                    placeholder="e.g. GIFT CONN NIFTY 50 IND"
+                  />
+                </div>
+
+                {/* Exchange Select */}
+                <div className="form-field">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700">
+                      Primary Exchange
+                    </label>
+                    {targetExchangeCode && (
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                          formData.exchangeId ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'
+                        }`}
+                      >
+                        Target: {targetExchangeCode}
+                      </span>
+                    )}
+                  </div>
+                  <div className={isTargetExchangeMissing || !formData.exchangeId ? 'rounded-lg border-2 border-rose-300' : ''}>
+                    <CustomSelect
+                      value={formData.exchangeId}
+                      options={exchangeOptions}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
+                      placeholder={
+                        isTargetExchangeMissing
+                          ? `⚠️ Add '${targetExchangeCode}' first`
+                          : 'Select Exchange'
+                      }
+                      onAddClick={handleOpenAddExchange}
+                      addLabel={targetExchangeCode ? `Add '${targetExchangeCode}'` : 'Add Exchange'}
+                    />
+                  </div>
+                </div>
+
+                {/* Currency Select */}
+                <div className="form-field">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700">
+                      Trade Currency
+                    </label>
+                    {targetCurrencyCode && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
+                        Target: {targetCurrencyCode}
+                      </span>
+                    )}
+                  </div>
                   <CustomSelect
                     value={formData.currencyId}
                     options={currencyOptions}
                     onChange={(val) => setFormData((prev) => ({ ...prev, currencyId: val }))}
                     placeholder="Select Currency (e.g. USD, INR)"
-                    onAddClick={() => setShowCurrencyModal(true)}
-                    addLabel="Add Currency"
+                    onAddClick={handleOpenAddCurrency}
+                    addLabel={targetCurrencyCode ? `Add '${targetCurrencyCode}'` : 'Add Currency'}
+                  />
+                </div>
+
+                <div className="form-field col-span-2">
+                  <label className="form-label text-xs font-semibold text-slate-700">ISIN Code (Optional)</label>
+                  <input
+                    name="isin"
+                    value={formData.isin}
+                    onChange={handleChange}
+                    className="input text-xs font-mono"
+                    placeholder="e.g. INE123A01012"
                   />
                 </div>
               </div>
@@ -206,51 +426,76 @@ export function ScriptFormModal({
 
             {/* Footer */}
             <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
-              <button type="button" onClick={onClose} className="btn btn--secondary">
+              <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary text-xs py-2 px-3">
                 Cancel
               </button>
-              <button type="submit" form="scriptForm" className="btn btn--primary">
-                Save
+              <button
+                type="submit"
+                form="scriptForm"
+                disabled={isSubmitting || !formData.exchangeId}
+                className="btn btn--primary text-xs py-2 px-4 shadow-xs"
+              >
+                {isSubmitting ? 'Saving...' : 'Save Script'}
               </button>
             </div>
           </form>
         </div>
       </div>
 
+      {/* Exchange Sub-modal */}
       {showExchangeModal &&
         createPortal(
           <div onMouseDown={(e) => e.stopPropagation()}>
             <ExchangeFormModal
+              initialData={exchangeModalInitialData}
               onClose={() => setShowExchangeModal(false)}
               onSuccess={async (created?: any) => {
                 setShowExchangeModal(false);
                 const fresh = await fetchExchanges();
                 if (created && created.id) {
                   setFormData((prev) => ({ ...prev, exchangeId: created.id }));
-                } else if (fresh.length > 0) {
-                  setFormData((prev) => ({ ...prev, exchangeId: fresh[fresh.length - 1].id }));
+                  toast.success(`Exchange '${created.code}' linked and selected`);
+                } else if (targetExchangeCode) {
+                  const match = fresh.find(
+                    (ex: any) => ex.code.toUpperCase() === targetExchangeCode.toUpperCase()
+                  );
+                  if (match) {
+                    setFormData((prev) => ({ ...prev, exchangeId: match.id }));
+                    toast.success(`Exchange '${match.code}' linked and selected`);
+                  } else if (fresh.length > 0) {
+                    setFormData((prev) => ({ ...prev, exchangeId: fresh[fresh.length - 1].id }));
+                  }
                 }
-                toast.success('New Exchange added');
               }}
             />
           </div>,
           document.body
         )}
 
+      {/* Currency Sub-modal */}
       {showCurrencyModal &&
         createPortal(
           <div onMouseDown={(e) => e.stopPropagation()}>
             <CurrencyFormModal
+              initialData={currencyModalInitialData}
               onClose={() => setShowCurrencyModal(false)}
               onSuccess={async (created?: any) => {
                 setShowCurrencyModal(false);
                 const fresh = await fetchCurrencies();
                 if (created && created.id) {
                   setFormData((prev) => ({ ...prev, currencyId: created.id }));
-                } else if (fresh.length > 0) {
-                  setFormData((prev) => ({ ...prev, currencyId: fresh[fresh.length - 1].id }));
+                  toast.success(`Currency '${created.code}' linked and selected`);
+                } else if (targetCurrencyCode) {
+                  const match = fresh.find(
+                    (c: any) => c.code.toUpperCase() === targetCurrencyCode.toUpperCase()
+                  );
+                  if (match) {
+                    setFormData((prev) => ({ ...prev, currencyId: match.id }));
+                    toast.success(`Currency '${match.code}' linked and selected`);
+                  } else if (fresh.length > 0) {
+                    setFormData((prev) => ({ ...prev, currencyId: fresh[fresh.length - 1].id }));
+                  }
                 }
-                toast.success('New Currency added');
               }}
             />
           </div>,

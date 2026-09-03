@@ -121,6 +121,7 @@ const sections: NavSection[] = [
     children: [
       { name: "Ledger Report",             path: "/ledger",                               icon: BookText },
       { name: "Voucher Entry",             path: "/vouchers",                             icon: Receipt },
+      { name: "Trial Balance",             path: "/trial-balance",                        icon: Scale },
       { name: "Collection Book",           path: comingSoon("collection-book"),           icon: BookText, upcoming: true },
       { name: "Cash Book",                 path: comingSoon("cash-book"),                 icon: CircleDollarSign, upcoming: true },
       { name: "Bank Book",                 path: comingSoon("bank-book"),                 icon: Building2, upcoming: true },
@@ -128,7 +129,6 @@ const sections: NavSection[] = [
       { name: "Payment / Receipt Register",path: comingSoon("payment-receipt-register"),  icon: Scale, upcoming: true },
       { name: "Margine Report",            path: comingSoon("margine-report"),            icon: AlertTriangle, upcoming: true },
       { name: "Expance Register",          path: comingSoon("expance-register"),          icon: Receipt, upcoming: true },
-      { name: "Trial Balance",             path: comingSoon("trial-balance"),             icon: Scale, upcoming: true },
       { name: "Profit & Loss",             path: comingSoon("profit-loss"),               icon: Percent, upcoming: true },
       { name: "Balancesheet",              path: comingSoon("balancesheet"),              icon: PieChart, upcoming: true },
     ],
