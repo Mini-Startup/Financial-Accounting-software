@@ -72,7 +72,7 @@ export function TradeDetailModal({
               <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
               Core Execution Details
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
                 <span className="text-[11px] text-[var(--color-slate)] block">Exchange</span>
                 <span className="font-bold text-[var(--color-charcoal)]">{trade.exchange?.code || '—'}</span>
@@ -92,6 +92,29 @@ export function TradeDetailModal({
                   )}
                 >
                   {trade.transactionType}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[var(--color-slate)] block">Trade Type</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold mt-1 border',
+                    trade.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
+                    trade.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
+                    trade.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                    trade.tradeType === 'INTERNAL' && 'bg-blue-50 text-blue-700 border-blue-200',
+                    (!trade.tradeType || trade.tradeType === 'REGULAR') && 'bg-slate-50 text-slate-700 border-slate-200'
+                  )}
+                >
+                  {trade.tradeType === 'CARRY_FORWARD'
+                    ? 'Carry Forward'
+                    : trade.tradeType === 'BACK_FORWARD'
+                    ? 'Backforward'
+                    : trade.tradeType === 'SETTLEMENT'
+                    ? 'Settlement'
+                    : trade.tradeType === 'INTERNAL'
+                    ? 'Internal Trade'
+                    : trade.tradeType || 'Regular'}
                 </span>
               </div>
               <div>

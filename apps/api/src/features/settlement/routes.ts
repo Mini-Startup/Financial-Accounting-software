@@ -77,4 +77,17 @@ router.post('/adjust-trades', async (req, res, next) => {
   }
 });
 
+router.delete('/settlements/:id', async (req, res, next) => {
+  try {
+    const result = await settlementService.deleteSettlement(req.params.id);
+    res.json(result);
+  } catch (err: any) {
+    if (err.message && (err.message.includes('Only the most recent') || err.message.includes('not found'))) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next(err);
+  }
+});
+
 export default router;

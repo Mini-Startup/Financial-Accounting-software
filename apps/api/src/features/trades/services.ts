@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 import { brokeragesService } from '../brokerages/services';
-import { calculateTrade } from '../../utils/brokerage';
+import { calculateBrokerage, round } from '../../utils/brokerage';
 import type { BrokerageRule } from '../../utils/brokerage';
 
 import { parseFlexibleDate } from '../Trade_FnO/services';
@@ -14,20 +14,30 @@ export class TradesService {
     accountId: string;
     brokerId?: string | null;
     scriptId: string;
-    exchangeId: string;
+    exchangeId?: string | null;
     transactionType: string;
     quantity: number;
     rate: number;
     remarks?: string | null;
-    source: string;
+    source?: string;
     expiry?: string | null;
+    tradeType?: string | null;
   }) {
-    await this.validateTradeData(data);
+    const script = await prisma.script.findUnique({ where: { id: data.scriptId } });
+    if (!script) {
+      throw new BadRequestException(`Script with ID ${data.scriptId} does not exist`);
+    }
+    const exchangeId = data.exchangeId || script.exchangeId;
+    if (!exchangeId) {
+      throw new BadRequestException(`Script with ID ${data.scriptId} is not assigned to an exchange`);
+    }
+
+    await this.validateTradeData({ ...data, exchangeId });
 
     const calcs = await this.calculateBrokerageForTrade({
       accountId: data.accountId,
       brokerId: data.brokerId,
-      exchangeId: data.exchangeId,
+      exchangeId: exchangeId,
       scriptId: data.scriptId,
       quantity: Number(data.quantity),
       marketRate: Number(data.rate),
@@ -41,13 +51,14 @@ export class TradesService {
         accountId: data.accountId,
         brokerId: data.brokerId || null,
         scriptId: data.scriptId,
-        exchangeId: data.exchangeId,
+        exchangeId: exchangeId,
         transactionType: data.transactionType.toUpperCase(),
         quantity: Number(data.quantity),
         rate: Number(data.rate),
         remarks: data.remarks?.trim() || null,
         source: data.source || 'MANUAL',
         expiry: data.expiry || null,
+        tradeType: data.tradeType || 'INTERNAL',
         clientRate: calcs.clientRate,
         brokerRate: calcs.brokerRate,
         clientBrokerage: calcs.clientBrokerage,
@@ -110,16 +121,24 @@ export class TradesService {
     accountId: string;
     brokerId?: string | null;
     scriptId: string;
-    exchangeId: string;
+    exchangeId?: string | null;
     transactionType: string;
     quantity: number;
     rate: number;
     remarks?: string | null;
     source: string;
     expiry?: string | null;
+    tradeType?: string | null;
   }>) {
     const existing = await this.findOne(id);
-    const updatedData = { ...existing, ...data };
+    let resolvedExchangeId = data.exchangeId || existing.exchangeId;
+    if (data.scriptId && !data.exchangeId) {
+      const script = await prisma.script.findUnique({ where: { id: data.scriptId } });
+      if (script?.exchangeId) {
+        resolvedExchangeId = script.exchangeId;
+      }
+    }
+    const updatedData = { ...existing, ...data, exchangeId: resolvedExchangeId };
     await this.validateTradeData(updatedData);
 
     const calcs = await this.calculateBrokerageForTrade({
@@ -131,28 +150,31 @@ export class TradesService {
       marketRate: Number(updatedData.rate),
     });
 
+    const updatePayload: Prisma.TradeUncheckedUpdateInput = {
+      ...(data.tradeNumber && { tradeNumber: data.tradeNumber.trim() }),
+      ...(data.tradeDate && { tradeDate: parseFlexibleDate(data.tradeDate) }),
+      ...(data.tradeTime !== undefined && { tradeTime: data.tradeTime?.trim() || null }),
+      ...(data.accountId && { accountId: data.accountId }),
+      ...(data.brokerId !== undefined && { brokerId: data.brokerId || null }),
+      ...(data.scriptId && { scriptId: data.scriptId }),
+      ...(resolvedExchangeId && { exchangeId: resolvedExchangeId }),
+      ...(data.transactionType && { transactionType: data.transactionType.toUpperCase() }),
+      ...(data.quantity != null && { quantity: Number(data.quantity) }),
+      ...(data.rate != null && { rate: Number(data.rate) }),
+      ...(data.remarks !== undefined && { remarks: data.remarks?.trim() || null }),
+      ...(data.source && { source: data.source }),
+      ...(data.expiry !== undefined && { expiry: data.expiry || null }),
+      ...(data.tradeType && { tradeType: data.tradeType }),
+      clientRate: calcs.clientRate,
+      brokerRate: calcs.brokerRate,
+      clientBrokerage: calcs.clientBrokerage,
+      brokerBrokerage: calcs.brokerBrokerage,
+      profitTotal: calcs.profitTotal,
+    };
+
     return prisma.trade.update({
       where: { id },
-      data: {
-        ...(data.tradeNumber !== undefined && { tradeNumber: data.tradeNumber.trim() }),
-        ...(data.tradeDate !== undefined && { tradeDate: parseFlexibleDate(data.tradeDate) }),
-        ...(data.tradeTime !== undefined && { tradeTime: data.tradeTime?.trim() || null }),
-        ...(data.accountId !== undefined && { accountId: data.accountId }),
-        ...(data.brokerId !== undefined && { brokerId: data.brokerId || null }),
-        ...(data.scriptId !== undefined && { scriptId: data.scriptId }),
-        ...(data.exchangeId !== undefined && { exchangeId: data.exchangeId }),
-        ...(data.transactionType !== undefined && { transactionType: data.transactionType.toUpperCase() }),
-        ...(data.quantity !== undefined && { quantity: Number(data.quantity) }),
-        ...(data.rate !== undefined && { rate: Number(data.rate) }),
-        ...(data.remarks !== undefined && { remarks: data.remarks?.trim() || null }),
-        ...(data.source !== undefined && { source: data.source }),
-        ...(data.expiry !== undefined && { expiry: data.expiry || null }),
-        clientRate: calcs.clientRate,
-        brokerRate: calcs.brokerRate,
-        clientBrokerage: calcs.clientBrokerage,
-        brokerBrokerage: calcs.brokerBrokerage,
-        profitTotal: calcs.profitTotal,
-      },
+      data: updatePayload,
       include: {
         account: true,
         script: {
@@ -210,10 +232,15 @@ export class TradesService {
       throw new BadRequestException(`Script with ID ${data.scriptId} does not exist`);
     }
 
+    const exchangeId = data.exchangeId || script.exchangeId;
+    if (!exchangeId) {
+      throw new BadRequestException(`Script with ID ${data.scriptId} is not assigned to an exchange`);
+    }
+
     // Verify exchange exists
-    const exchange = await prisma.exchange.findUnique({ where: { id: data.exchangeId } });
+    const exchange = await prisma.exchange.findUnique({ where: { id: exchangeId } });
     if (!exchange) {
-      throw new BadRequestException(`Exchange with ID ${data.exchangeId} does not exist`);
+      throw new BadRequestException(`Exchange with ID ${exchangeId} does not exist`);
     }
   }
 
@@ -234,12 +261,6 @@ export class TradesService {
       scriptId
     );
 
-    if (!clientRuleRow) {
-      throw new BadRequestException(
-        'No brokerage rule configured for the selected client on this exchange.'
-      );
-    }
-
     const toRule = (row: any): BrokerageRule => ({
       type: row.type as 'AMOUNT' | 'PERCENT',
       baseAmount: row.baseAmount,
@@ -252,7 +273,7 @@ export class TradesService {
       deliveryMinFee: row.deliveryMinFee,
     });
 
-    const clientRule = toRule(clientRuleRow);
+    const clientRule = clientRuleRow ? toRule(clientRuleRow) : null;
 
     let brokerRuleRow: any = null;
     if (brokerId) {
@@ -263,36 +284,43 @@ export class TradesService {
         scriptId
       );
     }
+    const brokerRule = brokerRuleRow ? toRule(brokerRuleRow) : null;
 
-    const brokerFallbackMode = Boolean(clientRule && !brokerRuleRow);
+    const side: 'BUY' | 'SELL' = quantity >= 0 ? 'BUY' : 'SELL';
+    const absQuantity = Math.abs(quantity);
+    const tradeValue = round(absQuantity * marketRate);
 
-    if (brokerFallbackMode || !brokerId) {
-      const marketRounded = Number(marketRate.toFixed(4));
-      return {
-        clientRate: marketRounded,
-        brokerRate: marketRounded,
-        clientBrokerage: 0,
-        brokerBrokerage: 0,
-        profitTotal: 0,
-      };
+    let clientBrokerage = 0;
+    let clientRate = marketRate;
+    if (clientRule) {
+      if (clientRule.type !== 'AMOUNT') {
+        clientBrokerage = calculateBrokerage(clientRule, tradeValue, side, 'TRADING');
+        const clientPerUnit = absQuantity > 0 ? round(clientBrokerage / absQuantity) : 0;
+        clientRate = side === 'BUY' ? round(marketRate + clientPerUnit) : round(marketRate - clientPerUnit);
+      }
     }
 
-    const brokerRule = toRule(brokerRuleRow);
+    let brokerBrokerage = 0;
+    let brokerRate = marketRate;
+    if (brokerRule) {
+      if (brokerRule.type !== 'AMOUNT') {
+        brokerBrokerage = calculateBrokerage(brokerRule, tradeValue, side, 'TRADING');
+        const brokerPerUnit = absQuantity > 0 ? round(brokerBrokerage / absQuantity) : 0;
+        brokerRate = side === 'BUY' ? round(marketRate + brokerPerUnit) : round(marketRate - brokerPerUnit);
+      }
+    }
 
-    const calc = calculateTrade({
-      quantity,
-      marketRate,
-      segment: 'TRADING',
-      clientRule,
-      brokerRule,
-    });
+    const profit = side === 'BUY'
+      ? round(clientRate - brokerRate)
+      : round(brokerRate - clientRate);
+    const profitTotal = round(profit * absQuantity);
 
     return {
-      clientRate: calc.clientRate,
-      brokerRate: calc.brokerRate,
-      clientBrokerage: calc.clientBrokerage,
-      brokerBrokerage: calc.brokerBrokerage,
-      profitTotal: calc.totalProfit,
+      clientRate,
+      brokerRate,
+      clientBrokerage,
+      brokerBrokerage,
+      profitTotal,
     };
   }
 }

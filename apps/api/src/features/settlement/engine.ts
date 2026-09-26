@@ -1,5 +1,6 @@
 import { prisma } from '../../database';
 import { BadRequestException } from '../../errors';
+import { deriveSecurityName } from './utils';
 
 export interface SettlementTradePreview {
   tradeType: 'CARRY_FORWARD' | 'BACK_FORWARD' | 'SETTLEMENT';
@@ -70,6 +71,7 @@ export class SettlementEngine {
     settlementFromDate: string;
     settlementToDate: string;
     unsettledTradesCount: number;
+    unsettledTradeIds: string[];
   }> {
     const closingDate = new Date(closingRateDateStr);
     closingDate.setUTCHours(23, 59, 59, 999);
@@ -106,6 +108,7 @@ export class SettlementEngine {
         settlementFromDate: closingRateDateStr,
         settlementToDate: closingRateDateStr,
         unsettledTradesCount: 0,
+        unsettledTradeIds: [],
       };
     }
 
@@ -118,7 +121,7 @@ export class SettlementEngine {
     const rateDateEnd = new Date(closingRateDateStr);
     rateDateEnd.setUTCHours(23, 59, 59, 999);
 
-    const closingRates = await prisma.closingRate.findMany({
+    let closingRates = await prisma.closingRate.findMany({
       where: {
         rateDate: {
           gte: rateDateStart,
@@ -127,13 +130,27 @@ export class SettlementEngine {
       },
     });
 
+    if (closingRates.length === 0) {
+      closingRates = await prisma.closingRate.findMany({
+        where: {
+          rateDate: {
+            lte: rateDateEnd,
+          },
+        },
+        orderBy: {
+          rateDate: 'desc',
+        },
+      });
+    }
+
     const closingRateMap = new Map<string, number>();
     for (const cr of closingRates) {
       if (cr.securityName) {
-        closingRateMap.set(`${cr.exchangeId}_${cr.securityName.trim().toUpperCase()}`, cr.rate);
-      }
-      if (cr.scriptId) {
-        closingRateMap.set(`${cr.exchangeId}_${cr.scriptId}`, cr.rate);
+        const secUpper = cr.securityName.trim().toUpperCase();
+        closingRateMap.set(`${cr.exchangeId}_${secUpper}`, cr.rate);
+        if (!closingRateMap.has(secUpper)) {
+          closingRateMap.set(secUpper, cr.rate);
+        }
       }
     }
 
@@ -141,11 +158,14 @@ export class SettlementEngine {
     const groups = new Map<string, typeof unsettledTrades>();
     for (const t of unsettledTrades) {
       const brokerKey = t.brokerId || 'NO_BROKER';
-      const baseScriptName = t.script.fullName || t.script.shortName;
-      let secName = t.securityName?.trim() || '';
-      if (!secName || secName.toUpperCase() === t.script.shortName.toUpperCase()) {
-        secName = t.expiry ? `${baseScriptName} ${t.expiry}` : baseScriptName;
-      }
+      const secName = deriveSecurityName(
+        t.securityName,
+        t.script.shortName,
+        t.script.fullName,
+        t.expiry,
+        t.callPut,
+        t.strikePrice
+      );
 
       const groupKey = `${t.accountId}_${brokerKey}_${t.scriptId}_${t.exchangeId}_${secName.toUpperCase()}`;
       if (!groups.has(groupKey)) {
@@ -160,11 +180,14 @@ export class SettlementEngine {
     // 4. Process each group
     for (const groupTrades of Array.from(groups.values())) {
       const first = groupTrades[0];
-      const baseScriptName = first.script.fullName || first.script.shortName;
-      let secName = first.securityName?.trim() || '';
-      if (!secName || secName.toUpperCase() === first.script.shortName.toUpperCase()) {
-        secName = first.expiry ? `${baseScriptName} ${first.expiry}` : baseScriptName;
-      }
+      const secName = deriveSecurityName(
+        first.securityName,
+        first.script.shortName,
+        first.script.fullName,
+        first.expiry,
+        first.callPut,
+        first.strikePrice
+      );
 
       let buyQty = 0;
       let buyVal = 0;
@@ -192,7 +215,7 @@ export class SettlementEngine {
       // Check closing rate
       const closingRate =
         closingRateMap.get(`${first.exchangeId}_${secName.toUpperCase()}`) ??
-        closingRateMap.get(`${first.exchangeId}_${first.scriptId}`) ??
+        closingRateMap.get(secName.toUpperCase()) ??
         null;
 
       if (closingRate == null) {
@@ -297,6 +320,7 @@ export class SettlementEngine {
       settlementFromDate,
       settlementToDate: closingRateDateStr,
       unsettledTradesCount: unsettledTrades.length,
+      unsettledTradeIds: unsettledTrades.map((t) => t.id),
     };
   }
 
@@ -419,20 +443,16 @@ export class SettlementEngine {
         }
 
         // 4. Tag all previously unsettled trades with this settlementId
-        await tx.trade.updateMany({
-          where: {
-            settlementId: null,
-            tradeDate: {
-              lte: closingDate,
+        if (computed.unsettledTradeIds && computed.unsettledTradeIds.length > 0) {
+          await tx.trade.updateMany({
+            where: {
+              id: { in: computed.unsettledTradeIds },
             },
-            tradeType: {
-              not: 'BACK_FORWARD', // do not tag newly created BF trades
+            data: {
+              settlementId: settlement.id,
             },
-          },
-          data: {
-            settlementId: settlement.id,
-          },
-        });
+          });
+        }
 
         // 5. Create Ledger entries per Client and per Broker
         const settledTrades = await tx.trade.findMany({

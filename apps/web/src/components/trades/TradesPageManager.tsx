@@ -37,6 +37,7 @@ export function TradesPageManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [exchangeFilter, setExchangeFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [tradeTypeFilter, setTradeTypeFilter] = useState('');
 
   // Selection & Pagination
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -76,10 +77,15 @@ export function TradesPageManager({
 
       const matchesExchange = !exchangeFilter || t.exchange?.code === exchangeFilter;
       const matchesType = !typeFilter || t.transactionType === typeFilter;
+      const matchesTradeType =
+        !tradeTypeFilter ||
+        (tradeTypeFilter === 'REGULAR'
+          ? !t.tradeType || t.tradeType === 'REGULAR'
+          : t.tradeType === tradeTypeFilter);
 
-      return matchesSearch && matchesExchange && matchesType;
+      return matchesSearch && matchesExchange && matchesType && matchesTradeType;
     });
-  }, [trades, searchQuery, exchangeFilter, typeFilter]);
+  }, [trades, searchQuery, exchangeFilter, typeFilter, tradeTypeFilter]);
 
   // Paginated trades
   const totalItems = filteredTrades.length;
@@ -257,6 +263,21 @@ export function TradesPageManager({
               <option value="BUY">BUY</option>
               <option value="SELL">SELL</option>
             </select>
+            <select
+              value={tradeTypeFilter}
+              onChange={(e) => {
+                setTradeTypeFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="input text-xs py-1.5 w-36 bg-white"
+            >
+              <option value="">All Trade Types</option>
+              <option value="INTERNAL">Internal Trade</option>
+              <option value="CARRY_FORWARD">Carry Forward</option>
+              <option value="BACK_FORWARD">Backforward</option>
+              <option value="SETTLEMENT">Settlement</option>
+              <option value="REGULAR">Regular / Import</option>
+            </select>
           </div>
         }
       />
@@ -383,13 +404,24 @@ export function TradesPageManager({
                           t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                           t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
                           t.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                          t.tradeType === 'INTERNAL' && 'bg-blue-50 text-blue-700 border-blue-200',
                           (!t.tradeType || t.tradeType === 'REGULAR') &&
                             (t.source === 'MANUAL'
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-purple-50 text-purple-700 border-purple-200')
                         )}
                       >
-                        {t.tradeType && t.tradeType !== 'REGULAR' ? t.tradeType : t.source}
+                        {t.tradeType === 'CARRY_FORWARD'
+                          ? 'Carry Forward'
+                          : t.tradeType === 'BACK_FORWARD'
+                          ? 'Backforward'
+                          : t.tradeType === 'SETTLEMENT'
+                          ? 'Settlement'
+                          : t.tradeType === 'INTERNAL'
+                          ? 'Internal Trade'
+                          : t.tradeType && t.tradeType !== 'REGULAR'
+                          ? t.tradeType
+                          : t.source}
                       </span>
                     </td>
                     <td

@@ -432,25 +432,73 @@ const brokers = [
 ];
 
 async function main() {
-  console.log('🏦 Seeding Accounts (Clients & Brokers)...\n');
+  console.log('🌱 Starting database seeding...\n');
 
-  // 1. Ensure required groups exist
-  const clientGroup = await prisma.group.upsert({
-    where: { name: 'Sundry Debtors' },
+  // 1. Seed standard accounting groups
+  console.log('📁 1. Seeding Groups...');
+  const groupsList = [
+    "Capital Account",
+    "Reserves & Surplus",
+    "FD-OD & CC Account",
+    "Secured Loans",
+    "Unsecured Loans",
+    "Current Liabilities",
+    "Provisions",
+    "Duties & Taxes",
+    "Sundry Creditors", // For Brokers & Vendors
+    "Profit & Loss A/c.",
+    "Fixed Assets",
+    "Bank Accounts",
+    "Cash Accounts",
+    "Current Assets",
+    "Sundry Debtors", // For Clients
+    "Income Accounts",
+    "Expense Accounts",
+    "Investments",
+    "Deposits (Assets)",
+    "Deposits (Liabilities)",
+    "Preliminary Expenses",
+    "Pre-Operative Expenses",
+    "Margin Collected",
+    "Direct Expenses",
+    "Indirect Expenses",
+    "Direct Incomes",
+    "Indirect Incomes",
+    "Loans & Advances (Asset)",
+    "Suspense A/c",
+    "Unknown",
+  ];
+
+  const groupMap = {};
+  for (let i = 0; i < groupsList.length; i++) {
+    const name = groupsList[i];
+    const group = await prisma.group.upsert({
+      where: { name },
+      update: { displayOrder: i + 1 },
+      create: { name, displayOrder: i + 1 },
+    });
+    groupMap[name] = group.id;
+  }
+  console.log(`   ✅ ${Object.keys(groupMap).length} groups seeded successfully.\n`);
+
+  // 2. Seed Roles (keep roles, no users)
+  console.log('👤 2. Seeding Roles...');
+  await prisma.role.upsert({
+    where: { name: 'admin' },
     update: {},
-    create: { name: 'Sundry Debtors' },
+    create: { name: 'admin' },
   });
 
-  const brokerGroup = await prisma.group.upsert({
-    where: { name: 'Sundry Creditors' },
+  await prisma.role.upsert({
+    where: { name: 'user' },
     update: {},
-    create: { name: 'Sundry Creditors' },
+    create: { name: 'user' },
   });
+  console.log(`   ✅ Roles ("admin", "user") seeded.\n`);
 
-  console.log(`  Client group ID: ${clientGroup.id} (Sundry Debtors)`);
-  console.log(`  Broker group ID: ${brokerGroup.id} (Sundry Creditors)\n`);
-
-  // 2. Seed Clients
+  // 3. Seed Clients (Sundry Debtors with openingBalance = 0)
+  console.log('👥 3. Seeding Clients (Sundry Debtors)...');
+  const clientGroupId = groupMap['Sundry Debtors'];
   let clientCount = 0;
   let clientSkipped = 0;
 
@@ -460,15 +508,17 @@ async function main() {
         where: { code: c.code },
         update: {
           name: c.name,
+          groupId: clientGroupId,
           address: c.address,
-          openingBalance: c.opening,
+          openingBalance: 0,
+          isDirectClient: true,
         },
         create: {
           code: c.code,
           name: c.name,
-          groupId: clientGroup.id,
+          groupId: clientGroupId,
           address: c.address,
-          openingBalance: c.opening,
+          openingBalance: 0,
           isDirectClient: true,
         },
       });
@@ -478,10 +528,11 @@ async function main() {
       clientSkipped++;
     }
   }
+  console.log(`   ✅ Clients: ${clientCount} upserted with opening balance 0, ${clientSkipped} failed.\n`);
 
-  console.log(`  ✅ Clients: ${clientCount} upserted, ${clientSkipped} failed\n`);
-
-  // 3. Seed Brokers
+  // 4. Seed Brokers (Sundry Creditors with openingBalance = 0)
+  console.log('🏢 4. Seeding Brokers (Sundry Creditors)...');
+  const brokerGroupId = groupMap['Sundry Creditors'];
   let brokerCount = 0;
   let brokerSkipped = 0;
 
@@ -491,15 +542,17 @@ async function main() {
         where: { code: b.code },
         update: {
           name: b.name,
+          groupId: brokerGroupId,
           address: b.address,
-          openingBalance: b.opening,
+          openingBalance: 0,
+          isDirectClient: false,
         },
         create: {
           code: b.code,
           name: b.name,
-          groupId: brokerGroup.id,
+          groupId: brokerGroupId,
           address: b.address,
-          openingBalance: b.opening,
+          openingBalance: 0,
           isDirectClient: false,
         },
       });
@@ -509,14 +562,9 @@ async function main() {
       brokerSkipped++;
     }
   }
+  console.log(`   ✅ Brokers: ${brokerCount} upserted with opening balance 0, ${brokerSkipped} failed.\n`);
 
-  if (brokers.length > 0) {
-    console.log(`  ✅ Brokers: ${brokerCount} upserted, ${brokerSkipped} failed\n`);
-  } else {
-    console.log('  ⏳ Brokers: No broker data yet (will be added later)\n');
-  }
-
-  console.log('🎉 Account seeding complete!');
+  console.log('✨ All seeding completed successfully!');
 }
 
 main()
@@ -525,3 +573,5 @@ main()
     await prisma.$disconnect();
     await pool.end();
   });
+
+

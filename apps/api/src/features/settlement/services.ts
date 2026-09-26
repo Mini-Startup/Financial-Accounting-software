@@ -1,5 +1,6 @@
 import { prisma } from '../../database';
 import { settlementEngine } from './engine';
+import { deriveSecurityName } from './utils';
 
 export class SettlementService {
   async listSettlements() {
@@ -119,18 +120,14 @@ export class SettlementService {
       const currencyCode = (trade.currencyCode || trade.script.currency?.code || 'USD').toUpperCase();
       const currencySymbol = currencySymbolMap.get(currencyCode) || trade.script.currency?.symbol || '$';
 
-      const baseScriptName = trade.script.fullName || trade.script.shortName;
-      let derivedSecurityName = trade.securityName?.trim() || '';
-
-      if (
-        !derivedSecurityName ||
-        derivedSecurityName.toUpperCase() === trade.script.shortName.toUpperCase() ||
-        derivedSecurityName.toUpperCase() === (trade.script.fullName || '').toUpperCase()
-      ) {
-        derivedSecurityName = trade.expiry
-          ? `${baseScriptName} ${trade.expiry}`
-          : baseScriptName;
-      }
+      const derivedSecurityName = deriveSecurityName(
+        trade.securityName,
+        trade.script.shortName,
+        trade.script.fullName,
+        trade.expiry,
+        trade.callPut,
+        trade.strikePrice
+      );
 
       // 1. Client leg
       legs.push({
@@ -185,14 +182,23 @@ export class SettlementService {
       groups.get(key)!.push(leg);
     }
 
+    // If viewing a past settlement and no toDate is supplied, get the settlement's toDate
+    let effectiveToDate = toDate;
+    if (settlementId && settlementId !== 'LIVE' && settlementId !== 'UNSETTLED' && !effectiveToDate) {
+      const sett = await prisma.settlement.findUnique({ where: { id: settlementId } });
+      if (sett?.toDate) {
+        effectiveToDate = sett.toDate.toISOString().split('T')[0];
+      }
+    }
+
     // Fetch closing rates on the toDate (or latest date)
-    const rateDateTarget = toDate ? new Date(toDate) : new Date();
+    const rateDateTarget = effectiveToDate ? new Date(effectiveToDate) : new Date();
     const rateDateStart = new Date(rateDateTarget);
     rateDateStart.setUTCHours(0, 0, 0, 0);
     const rateDateEnd = new Date(rateDateTarget);
     rateDateEnd.setUTCHours(23, 59, 59, 999);
 
-    const closingRates = await prisma.closingRate.findMany({
+    let closingRates = await prisma.closingRate.findMany({
       where: {
         rateDate: {
           gte: rateDateStart,
@@ -201,13 +207,27 @@ export class SettlementService {
       },
     });
 
+    if (closingRates.length === 0) {
+      closingRates = await prisma.closingRate.findMany({
+        where: {
+          rateDate: {
+            lte: rateDateEnd,
+          },
+        },
+        orderBy: {
+          rateDate: 'desc',
+        },
+      });
+    }
+
     const closingRateMap = new Map<string, number>();
     for (const cr of closingRates) {
       if (cr.securityName) {
-        closingRateMap.set(`${cr.exchangeId}_${cr.securityName.trim().toUpperCase()}`, cr.rate);
-      }
-      if (cr.scriptId) {
-        closingRateMap.set(`${cr.exchangeId}_${cr.scriptId}`, cr.rate);
+        const secUpper = cr.securityName.trim().toUpperCase();
+        closingRateMap.set(`${cr.exchangeId}_${secUpper}`, cr.rate);
+        if (!closingRateMap.has(secUpper)) {
+          closingRateMap.set(secUpper, cr.rate);
+        }
       }
     }
 
@@ -275,9 +295,10 @@ export class SettlementService {
         netAvgRate = Math.abs(netVal / netQty);
       }
 
+      const secUpper = firstLeg.securityName.trim().toUpperCase();
       const closingRate =
-        closingRateMap.get(`${firstLeg.exchangeId}_${firstLeg.securityName.trim().toUpperCase()}`) ??
-        closingRateMap.get(`${firstLeg.exchangeId}_${firstLeg.scriptId}`) ??
+        closingRateMap.get(`${firstLeg.exchangeId}_${secUpper}`) ??
+        closingRateMap.get(secUpper) ??
         null;
 
       const unrealizedPnL = closingRate && netQty !== 0 ? netQty * (closingRate - netAvgRate) : 0;
@@ -328,6 +349,91 @@ export class SettlementService {
     }>;
   }) {
     return settlementEngine.executeSettlement(data.reportDate);
+  }
+
+  async deleteSettlement(settlementId: string) {
+    // 1. Verify it is the newest settlement (LIFO: only the latest can be deleted)
+    const allSettlements = await prisma.settlement.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
+
+    if (allSettlements.length === 0) {
+      throw new Error('No settlements found.');
+    }
+
+    const newest = allSettlements[0];
+    if (newest.id !== settlementId) {
+      throw new Error(
+        `Only the most recent settlement can be deleted. The newest settlement is "${newest.name}". Please delete it first.`
+      );
+    }
+
+    const settlement = await prisma.settlement.findUnique({
+      where: { id: settlementId },
+    });
+
+    if (!settlement) {
+      throw new Error('Settlement not found.');
+    }
+
+    return await prisma.$transaction(
+      async (tx) => {
+        // 2. Delete unsettled BF trades that were created by this settlement
+        //    These have settlementId = null, tradeType = BACK_FORWARD, and remarks containing the settlement name
+        const deletedBfUnsettled = await tx.trade.deleteMany({
+          where: {
+            settlementId: null,
+            tradeType: 'BACK_FORWARD',
+            remarks: {
+              contains: settlement.name,
+            },
+          },
+        });
+
+        // 3. Delete all generated trades (CF, BF, SETTLEMENT) that belong to this settlement
+        const deletedGenerated = await tx.trade.deleteMany({
+          where: {
+            settlementId: settlementId,
+            tradeType: {
+              in: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'],
+            },
+          },
+        });
+
+        // 4. Un-tag original trades: set settlementId = null for remaining trades tagged with this settlement
+        const untagged = await tx.trade.updateMany({
+          where: {
+            settlementId: settlementId,
+          },
+          data: {
+            settlementId: null,
+          },
+        });
+
+        // 5. Delete ledger entries that reference this settlement
+        const deletedLedger = await tx.ledger.deleteMany({
+          where: {
+            referenceId: settlementId,
+            entryType: 'SETTLEMENT',
+          },
+        });
+
+        // 6. Delete the settlement record itself
+        await tx.settlement.delete({
+          where: { id: settlementId },
+        });
+
+        return {
+          deletedBfUnsettledCount: deletedBfUnsettled.count,
+          deletedGeneratedCount: deletedGenerated.count,
+          untaggedTradesCount: untagged.count,
+          deletedLedgerCount: deletedLedger.count,
+          settlementName: settlement.name,
+        };
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
   }
 }
 
