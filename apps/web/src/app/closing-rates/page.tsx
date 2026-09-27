@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { ClosingRatePageManager } from '../../components/closing-rates/ClosingRatePageManager';
+
+export const metadata: Metadata = {
+  title: 'Closing Rates | BizzMate Accounting',
+  description: 'Manage daily script closing rates for mark-to-market valuation.',
+};
 
 export const dynamic = 'force-dynamic';
 

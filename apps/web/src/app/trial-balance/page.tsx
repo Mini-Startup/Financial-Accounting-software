@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { TrialBalanceManager } from '../../components/trial-balance/TrialBalanceManager';
+
+export const metadata: Metadata = {
+  title: 'Trial Balance | BizzMate Accounting',
+  description: 'Consolidated balance sheet and trial balance statement across all account heads.',
+};
 
 export const dynamic = 'force-dynamic';
 

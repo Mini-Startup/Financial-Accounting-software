@@ -22,7 +22,7 @@ export function ScriptFormModal({
   exchanges: any[];
   currencies?: any[];
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (createdScript?: any) => void;
 }) {
   const router = useRouter();
   const shortNameInputRef = useRef<HTMLInputElement>(null);
@@ -214,9 +214,10 @@ export function ScriptFormModal({
       });
 
       if (res.ok) {
+        const savedData = await res.json().catch(() => null);
         toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
         if (onSuccess) {
-          onSuccess();
+          onSuccess(savedData);
         }
         router.refresh();
         if (!initialData?.id) {

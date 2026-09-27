@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@/database";
 import {
   ArrowUpRight,
@@ -19,6 +20,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/utils/cn";
+
+export const metadata: Metadata = {
+  title: "Dashboard | BizzMate Accounting",
+  description: "Executive accounting overview, volume statistics, and recent activity blotter.",
+};
 
 export const dynamic = "force-dynamic";
 

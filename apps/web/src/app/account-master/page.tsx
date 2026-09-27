@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { AccountMasterPageManager } from '../../components/account-master/AccountMasterPageManager';
+
+export const metadata: Metadata = {
+  title: 'Account Master | BizzMate Accounting',
+  description: 'Manage general ledger account masters and banking details.',
+};
 
 export const dynamic = 'force-dynamic';
 

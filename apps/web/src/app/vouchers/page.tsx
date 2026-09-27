@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { VoucherForm } from '../../components/vouchers/VoucherForm';
+
+export const metadata: Metadata = {
+  title: 'Vouchers & Journals | BizzMate Accounting',
+  description: 'Post and manage manual journals, receipts, payments, and contra entries.',
+};
 
 export const dynamic = 'force-dynamic';
 

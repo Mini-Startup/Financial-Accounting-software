@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { EntityPageManager } from '../../components/accounts/EntityPageManager';
+
+export const metadata: Metadata = {
+  title: 'Brokers | BizzMate Accounting',
+  description: 'Manage broker accounts, contact details, and account balances.',
+};
 
 export default async function BrokersPage(props: { searchParams: Promise<{ search?: string }> }) {
   const searchParams = await props.searchParams;

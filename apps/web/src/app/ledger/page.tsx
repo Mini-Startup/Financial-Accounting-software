@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { LedgerReportManager } from '../../components/ledger/LedgerReportManager';
+
+export const metadata: Metadata = {
+  title: 'Ledger Statement | BizzMate Accounting',
+  description: 'Detailed financial statement and transaction journal for any party account.',
+};
 
 export const dynamic = 'force-dynamic';
 

@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { BrokeragePageManager } from '../../components/brokerage/BrokeragePageManager';
+
+export const metadata: Metadata = {
+  title: 'Brokerage Rules | BizzMate Accounting',
+  description: 'Configure and resolve client and broker tariff commission rules.',
+};
 
 export const dynamic = 'force-dynamic';
 

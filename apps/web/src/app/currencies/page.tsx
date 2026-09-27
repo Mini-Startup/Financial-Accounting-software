@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { CurrencyPageManager } from '../../components/currencies/CurrencyPageManager';
+
+export const metadata: Metadata = {
+  title: 'Currencies | BizzMate Accounting',
+  description: 'Manage system currencies, ISO codes, and currency symbols.',
+};
 
 export const dynamic = 'force-dynamic';
 

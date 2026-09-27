@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { ExchangePageManager } from '../../components/exchanges/ExchangePageManager';
+
+export const metadata: Metadata = {
+  title: 'Exchanges | BizzMate Accounting',
+  description: 'Manage financial exchanges, codes, and currency associations.',
+};
 
 export const dynamic = 'force-dynamic';
 

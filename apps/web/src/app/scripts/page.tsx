@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { ScriptPageManager } from '../../components/scripts/ScriptPageManager';
+
+export const metadata: Metadata = {
+  title: 'Scripts & Securities | BizzMate Accounting',
+  description: 'Manage scripts, tick codes, lot sizes, and contract specifications.',
+};
 
 export const dynamic = 'force-dynamic';
 

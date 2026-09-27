@@ -1,5 +1,11 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import { TradesPageManager } from '../../components/trades/TradesPageManager';
+
+export const metadata: Metadata = {
+  title: 'Trades | BizzMate Accounting',
+  description: 'Track, filter, and manage trade blotters, manual trades, and imports.',
+};
 
 export const dynamic = 'force-dynamic';
 
