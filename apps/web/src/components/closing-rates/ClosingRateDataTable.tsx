@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ClosingRateFormModal } from './ClosingRateFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -16,6 +17,7 @@ export function ClosingRateDataTable({
   exchanges: any[];
   scripts: any[];
 }) {
+  const router = useRouter();
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -109,7 +111,7 @@ export function ClosingRateDataTable({
       });
       if (res.ok) {
         toast.success('Closing rate deleted');
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error('Failed to delete closing rate');
       }
@@ -134,7 +136,8 @@ export function ClosingRateDataTable({
         )
       );
       toast.success(`${count} closing rates deleted successfully`);
-      window.location.reload();
+      setSelectedIds(new Set());
+      router.refresh();
     } catch {
       toast.error('Failed to delete some records');
     } finally {

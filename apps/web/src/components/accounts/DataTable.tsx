@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { FormModal } from './FormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -16,6 +17,7 @@ export function DataTable({
   groupName: string;
   entityLabel: string;
 }) {
+  const router = useRouter();
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -80,7 +82,7 @@ export function DataTable({
       });
       if (res.ok) {
         toast.success(`${entityLabel} deleted successfully`);
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error('Failed to delete account');
       }
@@ -105,7 +107,8 @@ export function DataTable({
         )
       );
       toast.success(`${count} records deleted successfully`);
-      window.location.reload();
+      setSelectedIds(new Set());
+      router.refresh();
     } catch {
       toast.error('Failed to delete some records');
     } finally {

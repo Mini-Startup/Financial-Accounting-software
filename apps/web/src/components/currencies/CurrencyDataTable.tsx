@@ -1,18 +1,27 @@
 'use client';
+
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { CurrencyFormModal } from './CurrencyFormModal';
 
 export function CurrencyDataTable({ currencies }: { currencies: any[] }) {
+  const router = useRouter();
   const [editingCurrency, setEditingCurrency] = useState<any | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to deactivate this currency?')) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/currencies/${id}`, { method: 'DELETE' });
-      window.location.reload();
-    } catch(e) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/currencies/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Currency deactivated successfully');
+        router.refresh();
+      } else {
+        throw new Error('Failed to deactivate currency');
+      }
+    } catch(e: any) {
       console.error(e);
-      alert('Failed to delete right now.');
+      toast.error(e.message || 'Failed to delete right now.');
     }
   };
 

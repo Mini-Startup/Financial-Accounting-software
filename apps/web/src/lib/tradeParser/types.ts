@@ -22,6 +22,7 @@ export interface ParsedTrade {
   exchangeTime: string;
   orderTime: string;
   instrumentType?: string;
+  selected?: boolean;
 }
 
 /** Error captured during parsing — one per problematic row */
@@ -99,6 +100,7 @@ export interface DubaiParsedTrade {
   settlementId: string;
   settlementDate: string;
   tradeType: string;        // TradeType / CarryType
+  selected?: boolean;
 }
 
 /** Result of parsing a Dubai Trade FnO file */

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ScriptFormModal } from './ScriptFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -14,6 +15,7 @@ export function ScriptDataTable({
   scripts: any[];
   exchanges: any[];
 }) {
+  const router = useRouter();
   const [editingScript, setEditingScript] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -78,7 +80,7 @@ export function ScriptDataTable({
       });
       if (res.ok) {
         toast.success('Script deleted successfully');
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error('Failed to delete script');
       }
@@ -103,7 +105,8 @@ export function ScriptDataTable({
         )
       );
       toast.success(`${count} scripts deleted successfully`);
-      window.location.reload();
+      setSelectedIds(new Set());
+      router.refresh();
     } catch {
       toast.error('Failed to delete some scripts');
     } finally {

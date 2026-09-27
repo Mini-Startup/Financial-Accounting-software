@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -21,6 +22,8 @@ export function FormModal({
   onClose: () => void;
   onSuccess?: () => void;
 }) {
+  const router = useRouter();
+  const codeInputRef = useRef<HTMLInputElement>(null);
   useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
@@ -122,10 +125,36 @@ export function FormModal({
         toast.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
         if (onSuccess) {
           onSuccess();
-        } else {
-          window.location.reload();
         }
-        onClose();
+        router.refresh();
+
+        if (!initialData?.id) {
+          // Rapid entry persistence: reset identifiers and details, keep modal open
+          setFormData((prev) => ({
+            ...prev,
+            code: '',
+            name: '',
+            address: '',
+            mobileNumber: '',
+            officeNumber: '',
+            whatsappNumber: '',
+            isWhatsappSameAsMobile: false,
+            email: '',
+            openingBalance: 0,
+            contactPersonName: '',
+            contactPersonMobile: '',
+            contactPersonEmail: '',
+            bankName: '',
+            bankBranch: '',
+            ifscCode: '',
+            micrCode: '',
+            bankAccountNumber: '',
+            upiId: '',
+          }));
+          setTimeout(() => codeInputRef.current?.focus(), 50);
+        } else {
+          onClose();
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.message || 'Save failed.');
@@ -183,7 +212,7 @@ export function FormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="form-label">Code *</label>
-                  <input required name="code" value={formData.code} onChange={handleChange} className="input" />
+                  <input ref={codeInputRef} required name="code" value={formData.code} onChange={handleChange} className="input" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Name *</label>

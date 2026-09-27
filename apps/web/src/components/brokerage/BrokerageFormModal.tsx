@@ -1,19 +1,25 @@
 'use client';
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 
 export function BrokerageFormModal({ 
   exchanges, 
   accounts, 
   scripts, 
-  onClose 
+  onClose,
+  persistFields = ['exchangeId', 'accountId', 'appliesTo'],
 }: { 
   exchanges: any[], 
   accounts: any[], 
   scripts: any[], 
-  onClose: () => void 
+  onClose: () => void,
+  persistFields?: string[],
 }) {
+  const router = useRouter();
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     exchangeId: '',
     appliesTo: 'CLIENT',
@@ -66,6 +72,7 @@ export function BrokerageFormModal({
         payload.deliveryMinFee = parseFloat(formData.deliveryMinFee || '0');
       }
 
+      setIsSubmitting(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,14 +81,35 @@ export function BrokerageFormModal({
       
       if (!res.ok) {
         const err = await res.json();
-        alert('Error: ' + err.message);
+        toast.error('Error: ' + (err.message || 'Failed to save brokerage rule'));
         return;
       }
       
-      window.location.reload();
+      toast.success('Brokerage rule saved successfully');
+      router.refresh();
+
+      // Selective reset keeping configured persistFields (e.g. accountId, exchangeId)
+      setFormData(prev => ({
+        exchangeId: persistFields.includes('exchangeId') ? prev.exchangeId : '',
+        appliesTo: persistFields.includes('appliesTo') ? prev.appliesTo : 'CLIENT',
+        accountId: persistFields.includes('accountId') ? prev.accountId : '',
+        type: prev.type,
+        scope: 'DEFAULT',
+        scriptId: '',
+        baseAmount: '',
+        flatFee: '',
+        tradingBuyPct: '',
+        tradingSellPct: '',
+        tradingMinFee: '',
+        deliveryBuyPct: '',
+        deliverySellPct: '',
+        deliveryMinFee: '',
+      }));
     } catch(err: any) {
       console.error(err);
-      alert('Save failed.');
+      toast.error(err.message || 'Save failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 

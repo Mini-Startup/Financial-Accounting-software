@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, FileSpreadsheet, Edit3, Plus, ExternalLink, RefreshCw } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { CheckCircle2, AlertTriangle, FileSpreadsheet, Edit3, Plus, ExternalLink, RefreshCw, Replace, CheckSquare, Square } from 'lucide-react';
 import { generateDubaiSecurityName } from './tradeImportHelpers';
 import { TradeRowDrawer } from './TradeRowDrawer';
+import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { FindAndReplace, type FindAndReplaceColumn } from '../ui/FindAndReplace';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
 
 interface DubaiPreviewTableProps {
@@ -129,6 +131,80 @@ export function DubaiPreviewTable({
   const selectedRowObj = selectedRowIndex !== null ? dubaiPreviewRows[selectedRowIndex] : null;
   const selectedRowValidation = selectedRowObj ? getDubaiRowValidation(selectedRowObj) : undefined;
 
+  const [showFindAndReplace, setShowFindAndReplace] = useState(false);
+
+  // Selection calculations
+  const selectedCount = activeDubaiRows.filter((r) => r.selected !== false).length;
+  const isAllFilteredSelected =
+    filteredDubaiRows.length > 0 && filteredDubaiRows.every((r) => r.selected !== false);
+
+  const handleToggleSelectAll = () => {
+    const target = !isAllFilteredSelected;
+    const filteredSet = new Set(filteredDubaiRows);
+    setDubaiPreviewRows((prev) =>
+      prev.map((r) => {
+        if (filteredSet.has(r)) {
+          return { ...r, selected: target };
+        }
+        return r;
+      })
+    );
+  };
+
+  const handleToggleRow = (mainIdx: number) => {
+    setDubaiPreviewRows((prev) => {
+      const copy = [...prev];
+      const current = copy[mainIdx].selected !== false;
+      copy[mainIdx] = { ...copy[mainIdx], selected: !current };
+      return copy;
+    });
+  };
+
+  const handleSelectAllValid = () => {
+    setDubaiPreviewRows((prev) =>
+      prev.map((r) => {
+        const val = getDubaiRowValidation(r);
+        return { ...r, selected: val.isValid };
+      })
+    );
+  };
+
+  const handleDeselectAll = () => {
+    setDubaiPreviewRows((prev) => prev.map((r) => ({ ...r, selected: false })));
+  };
+
+  const findAndReplaceColumns: FindAndReplaceColumn[] = [
+    { key: 'clientCode', label: 'Client Code' },
+    { key: 'tickCode', label: 'Tick / Script Code' },
+    { key: 'marketCode', label: 'Exchange / Market Code' },
+    { key: 'securityName', label: 'Security Name' },
+    { key: 'tradeDate', label: 'Trade Date' },
+    { key: 'expiryDate', label: 'Expiry Date' },
+    { key: 'qty', label: 'Quantity' },
+    { key: 'price', label: 'Price' },
+    { key: 'exchOrderId', label: 'Exchange Order ID' },
+  ];
+
+  const handleReplaceOne = (rowIndex: number, columnKey: string, newValue: string) => {
+    handleCellChange(rowIndex, columnKey as keyof DubaiParsedTrade, newValue);
+  };
+
+  const handleReplaceAll = (columnKey: string, findValue: string, replaceValue: string) => {
+    if (!findValue) return;
+    setDubaiPreviewRows((prev) =>
+      prev.map((row) => {
+        const current = String((row as any)[columnKey] || '');
+        if (current.toLowerCase().includes(findValue.toLowerCase())) {
+          const escaped = findValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(escaped, 'gi');
+          const updated = current.replace(regex, replaceValue);
+          return { ...row, [columnKey]: updated };
+        }
+        return row;
+      })
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Bar */}
@@ -196,12 +272,70 @@ export function DubaiPreviewTable({
         )}
       </div>
 
+      {/* Batch Selection & Action Controls Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+            <CheckSquare className="w-4 h-4 text-emerald-600" />
+            <span>
+              <strong>{selectedCount}</strong> of {activeDubaiRows.length} trades selected for import
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSelectAllValid}
+            className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+          >
+            Select All Valid
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeselectAll}
+            className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
+          >
+            Deselect All
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowFindAndReplace(!showFindAndReplace)}
+          className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
+            showFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
+          }`}
+        >
+          <Replace className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Find & Replace</span>
+        </button>
+      </div>
+
+      {/* Find & Replace Drawer / Panel */}
+      {showFindAndReplace && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+          <FindAndReplace<DubaiParsedTrade>
+            data={dubaiPreviewRows}
+            columns={findAndReplaceColumns}
+            onReplaceOne={handleReplaceOne}
+            onReplaceAll={handleReplaceAll}
+            onClose={() => setShowFindAndReplace(false)}
+          />
+        </div>
+      )}
+
       {/* Main Table Card */}
       <div className="card shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table whitespace-nowrap" style={{ tableLayout: 'auto', minWidth: '2200px' }}>
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider select-none text-[11px]">
+                <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
+                  <CustomCheckbox
+                    checked={isAllFilteredSelected}
+                    onChange={handleToggleSelectAll}
+                  />
+                </th>
                 <th className="py-3 px-3 text-center">Sr. No.</th>
                 <th className="py-3 px-3">Trade Date</th>
                 <th className="py-3 px-3">Trade Time</th>
@@ -232,7 +366,7 @@ export function DubaiPreviewTable({
             <tbody className="divide-y divide-slate-100 text-xs">
               {paginatedDubaiRows.length === 0 ? (
                 <tr>
-                  <td colSpan={24} className="py-8 text-center text-slate-400 italic">
+                  <td colSpan={26} className="py-8 text-center text-slate-400 italic">
                     No matching Dubai trade rows found.
                   </td>
                 </tr>
@@ -263,6 +397,20 @@ export function DubaiPreviewTable({
                         !val.isValid && !isValidatingMasterData ? 'bg-rose-50/20' : ''
                       }`}
                     >
+                      {/* Checkbox column */}
+                      <td
+                        className="py-3 px-3 text-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleRow(mainIdx);
+                        }}
+                      >
+                        <CustomCheckbox
+                          checked={row.selected !== false}
+                          onChange={() => handleToggleRow(mainIdx)}
+                        />
+                      </td>
+
                       {/* 1. # */}
                       <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px]">
                         {(dubaiCurrentPage - 1) * dubaiPageSize + relativeIdx + 1}

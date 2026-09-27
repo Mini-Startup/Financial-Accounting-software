@@ -8,7 +8,7 @@ import { TradeDetailModal } from './TradeDetailModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
-import { Trash2, Plus, UploadCloud, Pencil } from 'lucide-react';
+import { Trash2, Plus, UploadCloud, Pencil, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 
@@ -124,6 +124,18 @@ export function TradesPageManager({
   };
 
   const handleDelete = async (id: string) => {
+    const tradeToDelete = trades.find((t) => t.id === id);
+    const isLocked = Boolean(
+      tradeToDelete?.tradeType === 'CARRY_FORWARD' ||
+      tradeToDelete?.tradeType === 'BACK_FORWARD' ||
+      tradeToDelete?.tradeType === 'SETTLEMENT' ||
+      tradeToDelete?.settlementId != null
+    );
+    if (isLocked) {
+      toast.error('Settlement-generated trades are locked and cannot be deleted.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this trade?')) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
@@ -143,6 +155,19 @@ export function TradesPageManager({
   const handleBulkDelete = async () => {
     const count = selectedIds.size;
     if (count === 0) return;
+
+    // Check if any selected trade is locked
+    const lockedCount = trades.filter(
+      (t) =>
+        selectedIds.has(t.id) &&
+        (['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType) || t.settlementId != null)
+    ).length;
+
+    if (lockedCount > 0) {
+      toast.error(`Cannot delete selection: ${lockedCount} settlement trade(s) are locked.`);
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete all ${count} selected trades?`)) return;
 
     setIsDeleting(true);
@@ -165,9 +190,19 @@ export function TradesPageManager({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = (savedTrade?: any) => {
+    if (savedTrade && savedTrade.id) {
+      setTrades((prev) => {
+        const index = prev.findIndex((t) => t.id === savedTrade.id);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = savedTrade;
+          return updated;
+        }
+        return [savedTrade, ...prev];
+      });
+    }
     router.refresh();
-    toast.success('Trades list refreshed');
   };
 
   const handleImportBack = () => {
@@ -428,22 +463,32 @@ export function TradesPageManager({
                       className="text-right whitespace-nowrap"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="inline-flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setEditingTrade(t)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 cursor-pointer"
-                          title="Edit Trade"
+                      {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType) || t.settlementId != null ? (
+                        <div
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs select-none border border-slate-200"
+                          title="Settlement-generated trade is locked against edits and deletion"
                         >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(t.id)}
-                          className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50 cursor-pointer"
-                          title="Delete Trade"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[11px] font-medium">Locked</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setEditingTrade(t)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 cursor-pointer"
+                            title="Edit Trade"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(t.id)}
+                            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50 cursor-pointer"
+                            title="Delete Trade"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

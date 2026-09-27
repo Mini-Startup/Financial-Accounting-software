@@ -566,10 +566,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
     try {
       const activeDubaiRows = dubaiPreviewRows.filter((r) => !r.typeCode.toUpperCase().includes('X'));
-      const validActiveRows = activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid);
+      // Only import rows that are selected and pass validation
+      const validActiveRows = activeDubaiRows.filter(
+        (r) => r.selected !== false && getDubaiRowValidation(r).isValid
+      );
 
       if (validActiveRows.length === 0) {
-        toast.error('No valid trades found to import.');
+        toast.error('No selected valid trades found to import.');
         setIsProcessing(false);
         setImportProgress(null);
         return;
@@ -824,11 +827,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             <CustomSelect
               value={selectedImportType}
               options={[
-                { value: 'trades_fno', label: 'Trades (F&O) - Standard Broker Format' },
-                { value: 'dubai_trade_fno', label: 'Dubai Trade FnO (30 Columns)' },
+                { value: 'dubai_trade_fno', label: 'Trade FNO (Dubai)' },
               ]}
               onChange={(val) => setSelectedImportType(val as any)}
-              disabled={isProcessing || step !== 'UPLOAD'}
+              disabled={true}
             />
           </div>
 

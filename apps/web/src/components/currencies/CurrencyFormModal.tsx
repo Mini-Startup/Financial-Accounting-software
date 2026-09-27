@@ -1,7 +1,8 @@
-'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { useScrollLock } from '../../hooks/useScrollLock';
 
@@ -15,7 +16,9 @@ export function CurrencyFormModal({
   onSuccess?: (created?: any) => void;
 }) {
   useScrollLock(true);
+  const router = useRouter();
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
+  const codeInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
     name: initialData?.name || '',
@@ -23,18 +26,24 @@ export function CurrencyFormModal({
     isActive: initialData?.isActive ?? true,
     ...initialData,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    codeInputRef.current?.focus();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const url = initialData?.id
         ? `${process.env.NEXT_PUBLIC_API_URL}/currencies/${initialData.id}`
         : `${process.env.NEXT_PUBLIC_API_URL}/currencies`;
 
       const payload = {
-        code: formData.code,
-        name: formData.name,
-        symbol: formData.symbol,
+        code: formData.code.trim().toUpperCase(),
+        name: formData.name.trim(),
+        symbol: formData.symbol.trim(),
         isActive: formData.isActive,
       };
 
@@ -44,15 +53,37 @@ export function CurrencyFormModal({
         body: JSON.stringify(payload),
       });
 
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || 'Save failed');
+      }
+
       const savedData = await res.json();
+      toast.success(initialData?.id ? 'Currency updated' : `Currency '${payload.code}' created successfully`);
+
       if (onSuccess) {
         onSuccess(savedData);
       } else {
-        window.location.reload();
+        router.refresh();
       }
-    } catch (err) {
+
+      if (initialData?.id) {
+        onClose();
+      } else {
+        // Keep modal open for next entry
+        setFormData({
+          code: '',
+          name: '',
+          symbol: '',
+          isActive: true,
+        });
+        setTimeout(() => codeInputRef.current?.focus(), 50);
+      }
+    } catch (err: any) {
       console.error(err);
-      alert('Save failed.');
+      toast.error(err.message || 'Save failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,7 +115,7 @@ export function CurrencyFormModal({
           <form id="currencyForm" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-[80px_1fr] gap-x-4 gap-y-4 items-center text-sm">
               <label className="form-label">Code</label>
-              <input required name="code" value={formData.code} onChange={handleChange} placeholder="e.g. USD" className="input uppercase" />
+              <input ref={codeInputRef} required name="code" value={formData.code} onChange={handleChange} placeholder="e.g. USD" className="input uppercase" />
 
               <label className="form-label">Name</label>
               <input name="name" value={formData.name} onChange={handleChange} placeholder="US Dollar" className="input" />

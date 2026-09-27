@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ export function ExchangeFormModal({
   onSuccess?: (saved?: any) => void;
 }) {
   useScrollLock(true);
+  const router = useRouter();
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
@@ -60,7 +62,17 @@ export function ExchangeFormModal({
         if (onSuccess) {
           onSuccess(saved);
         } else {
-          window.location.reload();
+          router.refresh();
+        }
+
+        if (initialData?.id) {
+          onClose();
+        } else {
+          setFormData({
+            code: '',
+            name: '',
+            isActive: true,
+          });
         }
       } else {
         const err = await res.json();

@@ -36,7 +36,15 @@ router.post('/check-duplicates', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const result = await closingRatesService.findAll(req.query.search as string | undefined);
+    const { search, date, fromDate, toDate, scriptId, exchangeId } = req.query as {
+      search?: string;
+      date?: string;
+      fromDate?: string;
+      toDate?: string;
+      scriptId?: string;
+      exchangeId?: string;
+    };
+    const result = await closingRatesService.findAll({ search, date, fromDate, toDate, scriptId, exchangeId });
     res.json(result);
   } catch (err) { next(err); }
 });

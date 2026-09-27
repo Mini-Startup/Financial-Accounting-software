@@ -344,25 +344,14 @@ export function ClosingRatePageManager({
       const clientCode = parts[0];
       const securityName = parts.slice(1).join('_');
 
-      // Check client in DB
-      const clientInDb = localAccounts.some(
-        (a) => (a.code && a.code.trim().toUpperCase() === clientCode)
-      );
-      const isUnmappedClient = !clientInDb;
-
       // Check script in DB
       const isUnmappedScript = !!csvData?.isScriptMissing;
 
-      // A trade/position is ONLY valid/matched if:
-      // 1. Client exists in DB
-      // 2. Script exists in DB
-      // 3. System net Qty equals CSV net Qty
-      const isValid = isQtyMatched && !isUnmappedScript && !isUnmappedClient;
+      // Position is valid if quantity matches and script exists in DB (client validation not required)
+      const isValid = isQtyMatched && !isUnmappedScript;
 
       let reason = 'Matched';
-      if (isUnmappedClient) {
-        reason = `Client '${clientCode}' not found in database. Please create client account.`;
-      } else if (isUnmappedScript) {
+      if (isUnmappedScript) {
         reason = `Script '${csvData?.commodityCode}' not found in database. Please create script.`;
       } else if (!isQtyMatched) {
         reason = sysQty === 0
@@ -382,7 +371,7 @@ export function ClosingRatePageManager({
         diff,
         isValid,
         isUnmappedScript,
-        isUnmappedClient,
+        isUnmappedClient: false,
         reason,
       });
     }

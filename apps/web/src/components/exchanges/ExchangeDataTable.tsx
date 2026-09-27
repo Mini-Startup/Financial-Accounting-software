@@ -1,18 +1,26 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ExchangeFormModal } from './ExchangeFormModal';
 
 export function ExchangeDataTable({ exchanges }: { exchanges: any[] }) {
+  const router = useRouter();
   const [editingExchange, setEditingExchange] = useState<any | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to deactivate this exchange?')) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges/${id}`, { method: 'DELETE' });
-      window.location.reload();
-    } catch(e) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Exchange deactivated successfully');
+        router.refresh();
+      } else {
+        throw new Error('Failed to deactivate exchange');
+      }
+    } catch(e: any) {
       console.error(e);
-      alert('Failed to delete right now.');
+      toast.error(e.message || 'Failed to delete right now.');
     }
   };
 

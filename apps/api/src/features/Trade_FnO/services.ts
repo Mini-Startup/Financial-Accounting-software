@@ -277,6 +277,21 @@ export class TradeImportService {
       // 4. Quantity check
       if (row.qty <= 0) {
         errors.push('Quantity must be greater than zero');
+      } else if (!Number.isInteger(row.qty)) {
+        errors.push('Quantity must be a whole number (no decimals allowed)');
+      }
+
+      // 4b. Expiry vs Trade date check
+      if (row.expiry && row.tradeTime) {
+        const tDate = parseFlexibleDate(row.tradeTime);
+        const eDate = parseAndNormalizeExpiry(row.expiry);
+        if (eDate && tDate) {
+          const tUtc = Date.UTC(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+          const eUtc = Date.UTC(eDate.getFullYear(), eDate.getMonth(), eDate.getDate());
+          if (eUtc < tUtc) {
+            errors.push('Expiry date cannot be before trade date');
+          }
+        }
       }
 
       // 5. Rate check

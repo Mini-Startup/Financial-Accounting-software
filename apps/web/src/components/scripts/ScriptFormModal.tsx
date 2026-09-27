@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, AlertTriangle, Building2, Coins, Plus, Check } from 'lucide-react';
@@ -23,6 +24,8 @@ export function ScriptFormModal({
   onClose: () => void;
   onSuccess?: () => void;
 }) {
+  const router = useRouter();
+  const shortNameInputRef = useRef<HTMLInputElement>(null);
   useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
 
@@ -214,8 +217,19 @@ export function ScriptFormModal({
         toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
         if (onSuccess) {
           onSuccess();
+        }
+        router.refresh();
+        if (!initialData?.id) {
+          // Rapid entry persistence: preserve exchangeId, currencyId, lotSize; reset name fields
+          setFormData((prev) => ({
+            ...prev,
+            shortName: '',
+            fullName: '',
+            code: '',
+          }));
+          setTimeout(() => shortNameInputRef.current?.focus(), 50);
         } else {
-          window.location.reload();
+          onClose();
         }
       } else {
         const err = await res.json();
@@ -323,6 +337,7 @@ export function ScriptFormModal({
                 <div className="form-field">
                   <label className="form-label form-label--required text-xs font-semibold text-slate-700">Short Name / Tick Code</label>
                   <input
+                    ref={shortNameInputRef}
                     required
                     name="shortName"
                     value={formData.shortName}

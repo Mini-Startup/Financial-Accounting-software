@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FileUploadZoneProps {
   onFileSelected: (file: File) => void;
@@ -25,7 +26,7 @@ export function FileUploadZone({ onFileSelected, isProcessing }: FileUploadZoneP
       const validExtensions = ['.txt', '.csv', '.xlsx', '.xls'];
 
       if (!validExtensions.includes(ext)) {
-        alert('Please upload a .txt, .csv, or Excel (.xlsx, .xls) file.');
+        toast.error('Please upload a .txt, .csv, or Excel (.xlsx, .xls) file.');
         return;
       }
 

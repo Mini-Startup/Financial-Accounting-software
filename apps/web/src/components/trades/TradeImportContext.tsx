@@ -45,7 +45,7 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
   const [importResult, setImportResult] = useState<{ importedCount: number; failedCount: number } | null>(null);
   const [selectedExchangeId, setSelectedExchangeId] = useState<string>('');
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('');
-  const [selectedImportType, setSelectedImportType] = useState<string>('trades_fno');
+  const [selectedImportType, setSelectedImportType] = useState<string>('dubai_trade_fno');
   const [dubaiPreviewRows, setDubaiPreviewRows] = useState<DubaiParsedTrade[]>([]);
 
   const resetImportState = () => {

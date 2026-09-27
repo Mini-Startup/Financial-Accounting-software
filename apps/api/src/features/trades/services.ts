@@ -131,6 +131,14 @@ export class TradesService {
     tradeType?: string | null;
   }>) {
     const existing = await this.findOne(id);
+
+    if (
+      ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType) ||
+      existing.settlementId
+    ) {
+      throw new BadRequestException('Settlement-generated trades cannot be edited');
+    }
+
     let resolvedExchangeId = data.exchangeId || existing.exchangeId;
     if (data.scriptId && !data.exchangeId) {
       const script = await prisma.script.findUnique({ where: { id: data.scriptId } });
@@ -189,7 +197,14 @@ export class TradesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+    if (
+      ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType) ||
+      existing.settlementId
+    ) {
+      throw new BadRequestException('Settlement-generated trades cannot be deleted');
+    }
+
     return prisma.trade.delete({
       where: { id },
     });
@@ -202,8 +217,30 @@ export class TradesService {
     if (!data.tradeDate || isNaN(Date.parse(data.tradeDate))) {
       throw new BadRequestException('A valid Trade Date is required');
     }
+    const tradeDateObj = parseFlexibleDate(data.tradeDate);
+    const tradeYear = tradeDateObj.getFullYear();
+    if (tradeYear < 2000 || tradeYear > 2099) {
+      throw new BadRequestException('Trade Date year must be a valid 4-digit year (between 2000 and 2099)');
+    }
+
+    if (data.expiry) {
+      const expiryDateObj = parseFlexibleDate(data.expiry);
+      const expYear = expiryDateObj.getFullYear();
+      if (expYear < 2000 || expYear > 2099) {
+        throw new BadRequestException('Expiry Date year must be a valid 4-digit year (between 2000 and 2099)');
+      }
+      const tDateUtc = Date.UTC(tradeDateObj.getFullYear(), tradeDateObj.getMonth(), tradeDateObj.getDate());
+      const eDateUtc = Date.UTC(expiryDateObj.getFullYear(), expiryDateObj.getMonth(), expiryDateObj.getDate());
+      if (eDateUtc < tDateUtc) {
+        throw new BadRequestException('Expiry date cannot be before the trade date');
+      }
+    }
+
     if (data.quantity == null || Number(data.quantity) <= 0) {
       throw new BadRequestException('Quantity must be greater than zero');
+    }
+    if (!Number.isInteger(Number(data.quantity))) {
+      throw new BadRequestException('Quantity must be a whole number (no decimals allowed)');
     }
     if (data.rate == null || Number(data.rate) <= 0) {
       throw new BadRequestException('Rate must be greater than zero');

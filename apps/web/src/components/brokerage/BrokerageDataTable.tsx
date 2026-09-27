@@ -1,16 +1,24 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export function BrokerageDataTable({ brokerages }: { brokerages: any[] }) {
+  const router = useRouter();
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this brokerage rule?')) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/${id}`, { method: 'DELETE' });
-      window.location.reload();
-    } catch(e) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Brokerage rule deleted successfully');
+        router.refresh();
+      } else {
+        throw new Error('Failed to delete brokerage rule');
+      }
+    } catch(e: any) {
       console.error(e);
-      alert('Failed to delete right now.');
+      toast.error(e.message || 'Failed to delete right now.');
     }
   };
 

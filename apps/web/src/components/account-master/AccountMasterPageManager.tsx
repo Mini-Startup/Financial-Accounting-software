@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -14,6 +15,7 @@ export function AccountMasterPageManager({
   initialAccounts: any[];
   groups: any[];
 }) {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<any[]>(initialAccounts);
   const [isAdding, setIsAdding] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
@@ -119,7 +121,7 @@ export function AccountMasterPageManager({
   };
 
   const handleSave = () => {
-    window.location.reload();
+    router.refresh();
   };
 
   return (
