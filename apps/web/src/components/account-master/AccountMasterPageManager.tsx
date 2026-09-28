@@ -1,12 +1,31 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { FindAndReplace } from '../ui/FindAndReplace';
+import {
+  sortRecords,
+  filterRecordsWithAdvanced,
+  replaceValueInRecords,
+  type SortDirection,
+  type AdvancedCondition,
+} from '@/utils/tableFilter';
+
+const ACCOUNT_COLUMNS = [
+  { key: 'code', label: 'Code' },
+  { key: 'name', label: 'Account Name' },
+  { key: 'group.name', label: 'Group' },
+  { key: 'openingBalance', label: 'Opening Balance' },
+  { key: 'mobileNumber', label: 'Mobile' },
+  { key: 'email', label: 'Email' },
+  { key: 'bankName', label: 'Bank Name' },
+];
 
 export function AccountMasterPageManager({
   initialAccounts,
@@ -22,32 +41,89 @@ export function AccountMasterPageManager({
 
   // Search & Pagination & Selection
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchColumn, setSearchColumn] = useState('ALL');
+  const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
+  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortKey, setSortKey] = useState<string | null>('code');
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
-  // Search filter
+  // Sync state when initialAccounts updates
+  useEffect(() => {
+    setAccounts(initialAccounts);
+  }, [initialAccounts]);
+
+  // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        setIsFindReplaceOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? null : 'asc');
+      if (sortDir === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  // Search filter with column targeting + advanced conditions
   const filteredAccounts = useMemo(() => {
-    if (!searchQuery) return accounts;
-    const q = searchQuery.toLowerCase();
-    return accounts.filter(
-      (a) =>
-        (a.code || '').toLowerCase().includes(q) ||
-        (a.name || '').toLowerCase().includes(q) ||
-        (a.group?.name || '').toLowerCase().includes(q) ||
-        (a.mobileNumber || '').toLowerCase().includes(q) ||
-        (a.email || '').toLowerCase().includes(q) ||
-        (a.bankName || '').toLowerCase().includes(q)
-    );
-  }, [accounts, searchQuery]);
+    return filterRecordsWithAdvanced(accounts, searchQuery, searchColumn, advancedConditions);
+  }, [accounts, searchQuery, searchColumn, advancedConditions]);
 
-  // Paginated items
-  const totalItems = filteredAccounts.length;
+  // Sorted and Paginated items
+  const sortedAccounts = useMemo(() => {
+    return sortRecords(filteredAccounts, sortKey, sortDir);
+  }, [filteredAccounts, sortKey, sortDir]);
+
+  const totalItems = sortedAccounts.length;
   const paginatedAccounts = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredAccounts.slice(start, start + pageSize);
-  }, [filteredAccounts, currentPage, pageSize]);
+    return sortedAccounts.slice(start, start + pageSize);
+  }, [sortedAccounts, currentPage, pageSize]);
+
+  const totalOpeningBalance = useMemo(() => {
+    return paginatedAccounts.reduce((sum, a) => sum + (Number(a.openingBalance) || 0), 0);
+  }, [paginatedAccounts]);
+
+  const handleReplaceOne = (rowIndex: number, columnKey: string, newValue: string) => {
+    const target = paginatedAccounts[rowIndex];
+    if (!target) return;
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === target.id ? { ...a, [columnKey]: newValue } : a))
+    );
+    toast.success(`Updated ${columnKey}`);
+  };
+
+  const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
+    const { updatedRecords, count } = replaceValueInRecords(accounts, columnKey, findVal, replaceVal, true);
+    setAccounts(updatedRecords);
+    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+  };
 
   // Selection handlers
   const isAllVisibleSelected =
@@ -78,46 +154,59 @@ export function AccountMasterPageManager({
     });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this account master?')) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setAccounts((prev) => prev.filter((acc) => acc.id !== id));
-        toast.success('Account master deleted successfully');
-      } else {
-        toast.error('Failed to delete account master');
-      }
-    } catch {
-      toast.error('Failed to delete account master');
-    }
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Account Master',
+      message: 'Are you sure you want to delete this account master?',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+            method: 'DELETE',
+          });
+          if (res.ok) {
+            setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+            toast.success('Account master deleted successfully');
+          } else {
+            toast.error('Failed to delete account master');
+          }
+        } catch {
+          toast.error('Failed to delete account master');
+        }
+      },
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     const count = selectedIds.size;
     if (count === 0) return;
-    if (!confirm(`Are you sure you want to delete all ${count} selected account masters?`)) return;
-
-    setIsDeleting(true);
-    try {
-      const ids = Array.from(selectedIds);
-      await Promise.all(
-        ids.map((id) =>
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-            method: 'DELETE',
-          })
-        )
-      );
-      setAccounts((prev) => prev.filter((acc) => !selectedIds.has(acc.id)));
-      setSelectedIds(new Set());
-      toast.success(`${count} account masters deleted successfully`);
-    } catch {
-      toast.error('Failed to delete some accounts');
-    } finally {
-      setIsDeleting(false);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Selected Account Masters',
+      message: `Are you sure you want to delete all ${count} selected account masters?`,
+      confirmLabel: `Delete ${count} Accounts`,
+      onConfirm: async () => {
+        setIsDeleting(true);
+        try {
+          const ids = Array.from(selectedIds);
+          await Promise.all(
+            ids.map((id) =>
+              fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+                method: 'DELETE',
+              })
+            )
+          );
+          setAccounts((prev) => prev.filter((acc) => !selectedIds.has(acc.id)));
+          setSelectedIds(new Set());
+          toast.success(`${count} account masters deleted successfully`);
+        } catch {
+          toast.error('Failed to delete some accounts');
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+    });
   };
 
   const handleSave = () => {
@@ -145,6 +234,20 @@ export function AccountMasterPageManager({
           setCurrentPage(1);
         }}
         searchPlaceholder="Search account masters by code, name, group, bank..."
+        columns={ACCOUNT_COLUMNS}
+        searchColumn={searchColumn}
+        onSearchColumnChange={(col) => {
+          setSearchColumn(col);
+          setCurrentPage(1);
+        }}
+        advancedConditions={advancedConditions}
+        onAdvancedConditionsChange={(conds) => {
+          setAdvancedConditions(conds);
+          setCurrentPage(1);
+        }}
+        showFindReplaceButton={true}
+        isFindReplaceOpen={isFindReplaceOpen}
+        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
         selectedCount={selectedIds.size}
         onBulkDelete={handleBulkDelete}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -155,6 +258,17 @@ export function AccountMasterPageManager({
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+
+      {/* Find & Replace Drawer */}
+      {isFindReplaceOpen && (
+        <FindAndReplace
+          data={paginatedAccounts}
+          columns={ACCOUNT_COLUMNS}
+          onReplaceOne={handleReplaceOne}
+          onReplaceAll={handleReplaceAll}
+          onClose={() => setIsFindReplaceOpen(false)}
+        />
+      )}
 
       {/* Table Card */}
       <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
@@ -168,10 +282,61 @@ export function AccountMasterPageManager({
                     onChange={handleToggleSelectAll}
                   />
                 </th>
-                <th style={{ width: '120px' }}>Code</th>
-                <th>Name</th>
-                <th style={{ width: '140px' }}>Group</th>
-                <th style={{ width: '130px' }} className="text-right">Opening Bal</th>
+                <th
+                  style={{ width: '120px' }}
+                  onClick={() => handleSort('code')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Code</span>
+                    {sortKey === 'code' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('name')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Name</span>
+                    {sortKey === 'name' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  style={{ width: '140px' }}
+                  onClick={() => handleSort('group.name')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Group</span>
+                    {sortKey === 'group.name' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  style={{ width: '130px' }}
+                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                  onClick={() => handleSort('openingBalance')}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Opening Bal</span>
+                    {sortKey === 'openingBalance' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
                 <th>Contact</th>
                 <th>UPI / Bank Info</th>
                 <th style={{ width: '90px' }} className="text-right">Actions</th>
@@ -260,6 +425,28 @@ export function AccountMasterPageManager({
                 );
               })}
             </tbody>
+            {/* Sticky Total / Summary Row */}
+            <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
+              <tr>
+                <td className="py-2.5 px-4 text-center" colSpan={4}>
+                  Total Records: {totalItems} (Page {currentPage} of {Math.max(1, Math.ceil(totalItems / pageSize))})
+                </td>
+                <td className="py-2.5 px-4 text-right font-mono font-bold">
+                  {totalOpeningBalance === 0 ? (
+                    <span className="text-slate-500">₹0.00</span>
+                  ) : totalOpeningBalance < 0 ? (
+                    <span className="text-[var(--color-negative)]">
+                      -₹{Math.abs(totalOpeningBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
+                    </span>
+                  ) : (
+                    <span className="text-[var(--color-forest)]">
+                      +₹{totalOpeningBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
+                    </span>
+                  )}
+                </td>
+                <td className="py-2.5 px-4" colSpan={3}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -280,6 +467,20 @@ export function AccountMasterPageManager({
           onSave={handleSave}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={async () => {
+          await confirmDialog.onConfirm();
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        }}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

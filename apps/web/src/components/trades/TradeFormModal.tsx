@@ -7,6 +7,8 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, AlertCircle, Lock } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 
 function todayISO() {
   const d = new Date();
@@ -17,7 +19,7 @@ function todayISO() {
 }
 
 export function TradeFormModal({
-  exchanges,
+  exchanges: _exchanges,
   scripts,
   clients,
   brokers,
@@ -77,10 +79,6 @@ export function TradeFormModal({
   const exchangeId = useMemo(
     () => script?.exchangeId || script?.exchange?.id || initialTrade?.exchangeId || initialTrade?.exchange?.id || '',
     [script, initialTrade]
-  );
-  const exchange = useMemo(
-    () => script?.exchange || exchanges.find((e) => e.id === exchangeId),
-    [script, exchanges, exchangeId]
   );
   const client = useMemo(() => clients.find((c) => c.id === clientId), [clients, clientId]);
   const broker = useMemo(() => brokers.find((b) => b.id === brokerId), [brokers, brokerId]);
@@ -333,40 +331,31 @@ export function TradeFormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Script</label>
-                  <select
+                  <UniversalDropdown
                     value={scriptId}
-                    onChange={(e) => setScriptId(e.target.value)}
-                    className="input text-slate-900"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    <option value="" className="text-slate-900">
-                      Select Script
-                    </option>
-                    {scripts.map((s) => {
-                      const exCode = s.exchange?.code || s.exchange?.name;
-                      return (
-                        <option key={s.id} value={s.id} className="text-slate-900">
-                          {s.shortName}
-                          {exCode ? ` (${exCode})` : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+                    options={scripts.map((s) => ({
+                      value: s.id,
+                      label: `${s.shortName}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
+                      sublabel: s.fullName,
+                    }))}
+                    onChange={(val) => setScriptId(val)}
+                    placeholder="Select Script"
+                  />
                 </div>
 
                 <div className="form-field">
                   <label className="form-label form-label--required">Type</label>
-                  <select
+                  <UniversalDropdown
                     value={tradeType}
-                    onChange={(e) => setTradeType(e.target.value)}
-                    className="input text-slate-900"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    <option value="INTERNAL">Internal Trade</option>
-                    <option value="CARRY_FORWARD">Carry Forward</option>
-                    <option value="BACK_FORWARD">Backforward</option>
-                    <option value="SETTLEMENT">Settlement</option>
-                  </select>
+                    options={[
+                      { value: 'INTERNAL', label: 'Internal Trade' },
+                      { value: 'CARRY_FORWARD', label: 'Carry Forward' },
+                      { value: 'BACK_FORWARD', label: 'Backforward' },
+                      { value: 'SETTLEMENT', label: 'Settlement' },
+                    ]}
+                    onChange={(val) => setTradeType(val)}
+                    placeholder="Select Type"
+                  />
                 </div>
               </div>
 
@@ -374,22 +363,19 @@ export function TradeFormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Date</label>
-                  <input
-                    type="date"
+                  <UniversalDatePicker
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input"
+                    onChange={(newDate) => setDate(newDate)}
+                    placeholder="YYYY-MM-DD"
                   />
                 </div>
 
                 <div className="form-field">
                   <label className="form-label">Expiry date</label>
-                  <input
-                    type="date"
+                  <UniversalDatePicker
                     value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    className="input w-full text-slate-900"
-                    style={{ color: 'var(--color-charcoal)' }}
+                    onChange={(newDate) => setExpiryDate(newDate)}
+                    placeholder="YYYY-MM-DD"
                   />
                 </div>
               </div>
@@ -398,40 +384,28 @@ export function TradeFormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Client</label>
-                  <select
+                  <UniversalDropdown
                     value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="input text-slate-900"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    <option value="" className="text-slate-900">
-                      Select Client
-                    </option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id} className="text-slate-900">
-                        {c.code} - {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={clients.map((c) => ({
+                      value: c.id,
+                      label: `${c.code} - ${c.name}`,
+                    }))}
+                    onChange={(val) => setClientId(val)}
+                    placeholder="Select Client"
+                  />
                 </div>
 
                 <div className="form-field">
                   <label className="form-label form-label--required">Broker</label>
-                  <select
+                  <UniversalDropdown
                     value={brokerId}
-                    onChange={(e) => setBrokerId(e.target.value)}
-                    className="input text-slate-900"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    <option value="" className="text-slate-900">
-                      Select Broker
-                    </option>
-                    {brokers.map((b) => (
-                      <option key={b.id} value={b.id} className="text-slate-900">
-                        {b.code} - {b.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={brokers.map((b) => ({
+                      value: b.id,
+                      label: `${b.code} - ${b.name}`,
+                    }))}
+                    onChange={(val) => setBrokerId(val)}
+                    placeholder="Select Broker"
+                  />
                 </div>
               </div>
 

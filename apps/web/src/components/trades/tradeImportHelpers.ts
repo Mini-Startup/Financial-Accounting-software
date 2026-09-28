@@ -44,7 +44,7 @@ export function formatExpiryForInput(expiryStr: string | null | undefined): stri
   if (match) {
     const day = match[1].padStart(2, '0');
     const monthStr = match[2].toUpperCase();
-    let yearStr = match[3];
+    const yearStr = match[3];
     let year = parseInt(yearStr, 10);
     if (yearStr.length === 2) {
       year += 2000;
@@ -96,7 +96,7 @@ export function generateDubaiSecurityName(
     if (mmmMatch) {
       dayStr = mmmMatch[1].padStart(2, '0');
       monthStr = mmmMatch[2].toUpperCase();
-      let y = parseInt(mmmMatch[3], 10);
+      const y = parseInt(mmmMatch[3], 10);
       yearStr = y < 100 ? (2000 + y).toString() : y.toString();
     } else {
       const parts = cleaned.split(/[-/]/);
@@ -123,7 +123,7 @@ export function generateDubaiSecurityName(
     const dmParts = row.delMonth.trim().split(/[-/\s]+/);
     if (dmParts.length >= 2) {
       monthStr = dmParts[0].toUpperCase();
-      let y = parseInt(dmParts[1], 10);
+      const y = parseInt(dmParts[1], 10);
       if (!isNaN(y)) {
         yearStr = y < 100 ? (2000 + y).toString() : y.toString();
       }

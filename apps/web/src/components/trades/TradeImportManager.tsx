@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { FileUploadZone } from './FileUploadZone';
+import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { toast } from 'sonner';
 import { ArrowLeft, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { parseTradeFile, parseDubaiTradeFile } from '../../lib/tradeParser';
@@ -18,7 +18,7 @@ import { ImportFilterBar, StatusFilterType } from './ImportFilterBar';
 import { DubaiPreviewTable } from './DubaiPreviewTable';
 import { NormalPreviewTable } from './NormalPreviewTable';
 import { ImportResultPanel } from './ImportResultPanel';
-import { CustomSelect } from '../ui/CustomSelect';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 import './trades-import.css';
 
 export function TradeImportManager({ onBack }: { onBack?: () => void }) {
@@ -710,6 +710,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     return activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid).length;
   }, [activeDubaiRows, getDubaiRowValidation]);
 
+  const selectedValidDubaiCount = useMemo(() => {
+    return activeDubaiRows.filter((r) => r.selected !== false && getDubaiRowValidation(r).isValid).length;
+  }, [activeDubaiRows, getDubaiRowValidation]);
+
   const invalidDubaiRowsCount = activeDubaiRows.length - validDubaiRowsCount;
 
   return (
@@ -745,7 +749,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               {isDubaiImport ? (
                 <button
                   onClick={handleConfirmDubaiImport}
-                  disabled={isProcessing || validDubaiRowsCount === 0}
+                  disabled={isProcessing || selectedValidDubaiCount === 0}
                   className="btn btn--primary flex items-center gap-2"
                 >
                   {isProcessing ? (
@@ -753,7 +757,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                       <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
                     </>
                   ) : (
-                    <>Import {validDubaiRowsCount} Valid Dubai Trades</>
+                    <>Import {selectedValidDubaiCount} Selected Trades</>
                   )}
                 </button>
               ) : (
@@ -790,7 +794,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                 <span className="text-[10px] text-rose-600 font-bold">Required</span>
               )}
             </label>
-            <CustomSelect
+            <UniversalDropdown
               value={selectedBrokerId}
               options={brokers.map((b) => ({
                 value: b.id,
@@ -807,7 +811,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           {!isDubaiImport && (
             <div className="form-field">
               <label className="form-label form-label--required">Exchange Selection</label>
-              <CustomSelect
+              <UniversalDropdown
                 value={selectedExchangeId}
                 options={exchanges.map((ex) => ({
                   value: ex.id,
@@ -824,7 +828,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
           <div className="form-field">
             <label className="form-label form-label--required">Import Type</label>
-            <CustomSelect
+            <UniversalDropdown
               value={selectedImportType}
               options={[
                 { value: 'dubai_trade_fno', label: 'Trade FNO (Dubai)' },
@@ -870,7 +874,14 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       {/* Step = UPLOAD */}
       {step === 'UPLOAD' && (
         <div className="max-w-3xl mx-auto py-6">
-          <FileUploadZone onFileSelected={processFile} isProcessing={isProcessing} />
+          <UniversalFileUploader
+            onFileSelect={processFile}
+            isProcessing={isProcessing}
+            fileName={fileName}
+            accept=".txt, .csv, .xlsx, .xls"
+            title="Drag & Drop your Dubai FNO Trade file here"
+            description="Supports CSV, TXT, Excel files. You can also paste clipboard data (Ctrl+V)."
+          />
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 export function AccountMasterFormModal({
   initialData,
@@ -136,11 +137,15 @@ export function AccountMasterFormModal({
 
               <div className="form-field">
                 <label className="form-label form-label--required">Group</label>
-                <select name="groupId" value={formData.groupId} onChange={handleChange} className="input">
-                  {allowedGroups.map(group => (
-                    <option key={group.id} value={group.id}>{group.name}</option>
-                  ))}
-                </select>
+                <UniversalDropdown
+                  value={String(formData.groupId)}
+                  options={allowedGroups.map((g) => ({
+                    value: String(g.id),
+                    label: g.name,
+                  }))}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, groupId: Number(val) }))}
+                  placeholder="Select Group"
+                />
               </div>
 
               <div className="form-field">

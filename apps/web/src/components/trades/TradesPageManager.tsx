@@ -8,9 +8,34 @@ import { TradeDetailModal } from './TradeDetailModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
-import { Trash2, Plus, UploadCloud, Pencil, Lock } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
+import {
+  sortRecords,
+  filterRecordsWithAdvanced,
+  replaceValueInRecords,
+  type SortDirection,
+  type AdvancedCondition,
+} from '@/utils/tableFilter';
+import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
+
+const TRADE_COLUMNS = [
+  { key: 'securityName', label: 'Security / Script' },
+  { key: 'tradeDate', label: 'Trade Date' },
+  { key: 'exchange.code', label: 'Exchange' },
+  { key: 'expiry', label: 'Expiry Date' },
+  { key: 'transactionType', label: 'Type (BUY/SELL)' },
+  { key: 'quantity', label: 'Quantity' },
+  { key: 'price', label: 'Rate' },
+  { key: 'account.name', label: 'Client' },
+  { key: 'broker.name', label: 'Broker' },
+  { key: 'terminal', label: 'Terminal' },
+  { key: 'profitTotal', label: 'Profit' },
+  { key: 'tradeType', label: 'Trade Type' },
+];
 
 export function TradesPageManager({
   exchanges,
@@ -32,14 +57,32 @@ export function TradesPageManager({
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [trades, setTrades] = useState<any[]>(initialTrades);
   const [selectedTrade, setSelectedTrade] = useState<any | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchColumn, setSearchColumn] = useState('ALL');
+  const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
+  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [exchangeFilter, setExchangeFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [tradeTypeFilter, setTradeTypeFilter] = useState('');
+  const [findReplaceMatch, setFindReplaceMatch] = useState<FindReplaceMatchState | null>(null);
 
-  // Selection & Pagination
+  // Sorting & Pagination
+  const [sortKey, setSortKey] = useState<string | null>('tradeDate');
+  const [sortDir, setSortDir] = useState<SortDirection>('desc');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -55,44 +98,117 @@ export function TradesPageManager({
     setTrades(initialTrades);
   }, [initialTrades]);
 
+  // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        setIsFindReplaceOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const clients = useMemo(() => accounts.filter((a) => a.group?.name === 'Sundry Debtors'), [accounts]);
   const brokers = useMemo(() => accounts.filter((a) => a.group?.name === 'Sundry Creditors'), [accounts]);
 
-  // Filter trades list
+  const exchangeOptions = useMemo(() => [
+    { value: '', label: 'All Exchanges' },
+    ...exchanges.map((ex) => ({ value: ex.code, label: ex.code })),
+  ], [exchanges]);
+
+  const typeOptions = useMemo(() => [
+    { value: '', label: 'Buy / Sell' },
+    { value: 'BUY', label: 'BUY' },
+    { value: 'SELL', label: 'SELL' },
+  ], []);
+
+  const tradeTypeOptions = useMemo(() => [
+    { value: '', label: 'All Trade Types' },
+    { value: 'INTERNAL', label: 'Internal Trade' },
+    { value: 'CARRY_FORWARD', label: 'Carry Forward' },
+    { value: 'BACK_FORWARD', label: 'Backforward' },
+    { value: 'SETTLEMENT', label: 'Settlement' },
+    { value: 'REGULAR', label: 'Regular / Import' },
+  ], []);
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? null : 'asc');
+      if (sortDir === 'desc') setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  // Filter trades list with column targeting + advanced conditions
   const filteredTrades = useMemo(() => {
-    return trades.filter((t) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        !searchQuery ||
-        (t.tradeNumber || '').toLowerCase().includes(q) ||
-        (t.securityName || '').toLowerCase().includes(q) ||
-        (t.script?.fullName || '').toLowerCase().includes(q) ||
-        (t.script?.shortName || '').toLowerCase().includes(q) ||
-        (t.account?.code || '').toLowerCase().includes(q) ||
-        (t.account?.name || '').toLowerCase().includes(q) ||
-        (t.broker?.code || '').toLowerCase().includes(q) ||
-        (t.broker?.name || '').toLowerCase().includes(q) ||
-        (t.terminal || '').toLowerCase().includes(q) ||
-        (t.remarks || '').toLowerCase().includes(q);
-
-      const matchesExchange = !exchangeFilter || t.exchange?.code === exchangeFilter;
-      const matchesType = !typeFilter || t.transactionType === typeFilter;
-      const matchesTradeType =
-        !tradeTypeFilter ||
-        (tradeTypeFilter === 'REGULAR'
+    let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions);
+    if (exchangeFilter) list = list.filter((t) => t.exchange?.code === exchangeFilter);
+    if (typeFilter) list = list.filter((t) => t.transactionType === typeFilter);
+    if (tradeTypeFilter) {
+      list = list.filter((t) =>
+        tradeTypeFilter === 'REGULAR'
           ? !t.tradeType || t.tradeType === 'REGULAR'
-          : t.tradeType === tradeTypeFilter);
+          : t.tradeType === tradeTypeFilter
+      );
+    }
+    return list;
+  }, [trades, searchQuery, searchColumn, advancedConditions, exchangeFilter, typeFilter, tradeTypeFilter]);
 
-      return matchesSearch && matchesExchange && matchesType && matchesTradeType;
-    });
-  }, [trades, searchQuery, exchangeFilter, typeFilter, tradeTypeFilter]);
+  // Sorted and Paginated trades
+  const sortedTrades = useMemo(() => {
+    return sortRecords(filteredTrades, sortKey, sortDir);
+  }, [filteredTrades, sortKey, sortDir]);
 
-  // Paginated trades
-  const totalItems = filteredTrades.length;
+  const totalItems = sortedTrades.length;
   const paginatedTrades = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredTrades.slice(start, start + pageSize);
-  }, [filteredTrades, currentPage, pageSize]);
+    return sortedTrades.slice(start, start + pageSize);
+  }, [sortedTrades, currentPage, pageSize]);
+
+  // Statistics calculated strictly on currently visible / paginated rows
+  const visibleStats = useMemo(() => {
+    let buyQty = 0;
+    let sellQty = 0;
+    let totalProfit = 0;
+
+    for (const t of paginatedTrades) {
+      const qty = Math.abs(Number(t.quantity) || 0);
+      if (t.transactionType === 'BUY') {
+        buyQty += qty;
+      } else {
+        sellQty += qty;
+      }
+      totalProfit += Number(t.profitTotal) || 0;
+    }
+
+    return {
+      buyQty,
+      sellQty,
+      netQty: buyQty - sellQty,
+      totalProfit,
+      count: paginatedTrades.length,
+    };
+  }, [paginatedTrades]);
+
+  // Find & Replace handlers
+  const handleReplaceOne = (rowIndex: number, columnKey: string, newValue: string) => {
+    const target = paginatedTrades[rowIndex];
+    if (!target) return;
+    setTrades((prev) =>
+      prev.map((t) => (t.id === target.id ? { ...t, [columnKey]: newValue } : t))
+    );
+    toast.success(`Updated ${columnKey}`);
+  };
+
+  const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
+    const { updatedRecords, count } = replaceValueInRecords(trades, columnKey, findVal, replaceVal, true);
+    setTrades(updatedRecords);
+    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+  };
 
   // Selection handlers
   const isAllVisibleSelected =
@@ -123,7 +239,7 @@ export function TradesPageManager({
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     const tradeToDelete = trades.find((t) => t.id === id);
     const isLocked = Boolean(
       tradeToDelete?.tradeType === 'CARRY_FORWARD' ||
@@ -136,23 +252,30 @@ export function TradesPageManager({
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this trade?')) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setTrades((prev) => prev.filter((t) => t.id !== id));
-        toast.success('Trade deleted successfully');
-      } else {
-        toast.error('Failed to delete trade');
-      }
-    } catch {
-      toast.error('Failed to delete trade');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Trade',
+      message: 'Are you sure you want to delete this trade?',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
+            method: 'DELETE',
+          });
+          if (res.ok) {
+            setTrades((prev) => prev.filter((t) => t.id !== id));
+            toast.success('Trade deleted successfully');
+          } else {
+            toast.error('Failed to delete trade');
+          }
+        } catch {
+          toast.error('Failed to delete trade');
+        }
+      },
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     const count = selectedIds.size;
     if (count === 0) return;
 
@@ -168,26 +291,32 @@ export function TradesPageManager({
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete all ${count} selected trades?`)) return;
-
-    setIsDeleting(true);
-    try {
-      const ids = Array.from(selectedIds);
-      await Promise.all(
-        ids.map((id) =>
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
-            method: 'DELETE',
-          })
-        )
-      );
-      setTrades((prev) => prev.filter((t) => !selectedIds.has(t.id)));
-      setSelectedIds(new Set());
-      toast.success(`${count} trades deleted successfully`);
-    } catch {
-      toast.error('Failed to delete some trades');
-    } finally {
-      setIsDeleting(false);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Selected Trades',
+      message: `Are you sure you want to delete all ${count} selected trades?`,
+      confirmLabel: `Delete ${count} Trades`,
+      onConfirm: async () => {
+        setIsDeleting(true);
+        try {
+          const ids = Array.from(selectedIds);
+          await Promise.all(
+            ids.map((id) =>
+              fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
+                method: 'DELETE',
+              })
+            )
+          );
+          setTrades((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+          setSelectedIds(new Set());
+          toast.success(`${count} trades deleted successfully`);
+        } catch {
+          toast.error('Failed to delete some trades');
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+    });
   };
 
   const handleSave = (savedTrade?: any) => {
@@ -216,6 +345,34 @@ export function TradesPageManager({
   if (viewMode === 'import') {
     return <TradeImportManager onBack={handleImportBack} />;
   }
+
+  const renderWithDiff = (colKey: string, currentVal: any, isActiveMatch: boolean) => {
+    const rawText = String(currentVal ?? '');
+    if (!isActiveMatch || findReplaceMatch?.targetColumn !== colKey || !findReplaceMatch?.findText.trim()) {
+      return currentVal;
+    }
+    const isReplaceActive = Boolean(findReplaceMatch.replaceText && findReplaceMatch.replaceText.trim().length > 0);
+    if (!isReplaceActive) {
+      return (
+        <span className="bg-amber-200 text-amber-950 font-bold px-1.5 py-0.5 rounded shadow-2xs">
+          {rawText || '—'}
+        </span>
+      );
+    }
+    let preview = rawText;
+    try {
+      const regex = new RegExp(findReplaceMatch.findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      preview = rawText.replace(regex, findReplaceMatch.replaceText);
+    } catch {
+      preview = findReplaceMatch.replaceText;
+    }
+    return (
+      <span className="inline-flex items-center gap-1 font-mono text-xs">
+        <span className="line-through text-red-600 bg-red-50 px-1 py-0.5 rounded opacity-75">{rawText || '—'}</span>
+        <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold shadow-2xs">→ {preview}</span>
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-4 relative">
@@ -251,74 +408,79 @@ export function TradesPageManager({
         </div>
       </div>
 
-      {/* Top Table Toolbar with Pagination */}
-      <TableToolbar
-        searchQuery={searchQuery}
-        onSearchChange={(q) => {
-          setSearchQuery(q);
-          setCurrentPage(1);
-        }}
-        searchPlaceholder="Search trades by security, client, broker, terminal..."
-        selectedCount={selectedIds.size}
-        onBulkDelete={handleBulkDelete}
-        onClearSelection={() => setSelectedIds(new Set())}
-        isDeleting={isDeleting}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[25, 50, 100, 200]}
-        filterSlot={
-          <div className="flex gap-2">
-            <select
-              value={exchangeFilter}
-              onChange={(e) => {
-                setExchangeFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input text-xs py-1.5 w-32 bg-white"
-            >
-              <option value="">All Exchanges</option>
-              {exchanges.map((ex) => (
-                <option key={ex.id} value={ex.code}>
-                  {ex.code}
-                </option>
-              ))}
-            </select>
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input text-xs py-1.5 w-28 bg-white"
-            >
-              <option value="">Buy / Sell</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-            <select
-              value={tradeTypeFilter}
-              onChange={(e) => {
-                setTradeTypeFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input text-xs py-1.5 w-36 bg-white"
-            >
-              <option value="">All Trade Types</option>
-              <option value="INTERNAL">Internal Trade</option>
-              <option value="CARRY_FORWARD">Carry Forward</option>
-              <option value="BACK_FORWARD">Backforward</option>
-              <option value="SETTLEMENT">Settlement</option>
-              <option value="REGULAR">Regular / Import</option>
-            </select>
-          </div>
-        }
-      />
+      {/* Table Container Card (Seamless zero gap between Toolbar and Table) */}
+      <div className="border border-[var(--color-border-light)] rounded-xl shadow-xs overflow-hidden bg-white">
+        <TableToolbar
+          searchQuery={searchQuery}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            setCurrentPage(1);
+          }}
+          searchPlaceholder="Search trades by security, client, broker, terminal..."
+          columns={TRADE_COLUMNS}
+          searchColumn={searchColumn}
+          onSearchColumnChange={(col) => {
+            setSearchColumn(col);
+            setCurrentPage(1);
+          }}
+          advancedConditions={advancedConditions}
+          onAdvancedConditionsChange={(conds) => {
+            setAdvancedConditions(conds);
+            setCurrentPage(1);
+          }}
+          showFindReplaceButton={true}
+          isFindReplaceOpen={isFindReplaceOpen}
+          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+          selectedCount={selectedIds.size}
+          onBulkDelete={handleBulkDelete}
+          onClearSelection={() => setSelectedIds(new Set())}
+          isDeleting={isDeleting}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[25, 50, 100, 200]}
+          className="border-0 rounded-none border-b border-[var(--color-border-light)]"
+          filterSlot={
+            <div className="flex gap-2">
+              <div className="w-36">
+                <UniversalDropdown
+                  options={exchangeOptions}
+                  value={exchangeFilter}
+                  onChange={(val) => {
+                    setExchangeFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="All Exchanges"
+                />
+              </div>
+              <div className="w-32">
+                <UniversalDropdown
+                  options={typeOptions}
+                  value={typeFilter}
+                  onChange={(val) => {
+                    setTypeFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Buy / Sell"
+                />
+              </div>
+              <div className="w-40">
+                <UniversalDropdown
+                  options={tradeTypeOptions}
+                  value={tradeTypeFilter}
+                  onChange={(val) => {
+                    setTradeTypeFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="All Trade Types"
+                />
+              </div>
+            </div>
+          }
+        />
 
-      {/* Table List Card */}
-      <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table w-full text-xs">
             <thead>
@@ -329,20 +491,140 @@ export function TradesPageManager({
                     onChange={handleToggleSelectAll}
                   />
                 </th>
-                <th>Date</th>
-                <th>Exchange</th>
-                <th>Security Name / Script</th>
-                <th>Expiry Date</th>
-                <th>Type</th>
-                <th className="text-right">Qty</th>
-                <th className="text-right">Rate</th>
-                <th>Client</th>
-                <th>Broker</th>
+                <th
+                  onClick={() => handleSort('tradeDate')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Date</span>
+                    {sortKey === 'tradeDate' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('exchange.code')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Exchange</span>
+                    {sortKey === 'exchange.code' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('securityName')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Security Name / Script</span>
+                    {sortKey === 'securityName' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('expiry')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Expiry Date</span>
+                    {sortKey === 'expiry' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('transactionType')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Type</span>
+                    {sortKey === 'transactionType' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Qty</span>
+                    {sortKey === 'quantity' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                  onClick={() => handleSort('price')}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Rate</span>
+                    {sortKey === 'price' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('account.name')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Client</span>
+                    {sortKey === 'account.name' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('broker.name')}
+                  className="cursor-pointer hover:bg-slate-100 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Broker</span>
+                    {sortKey === 'broker.name' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
                 <th className="text-right">Client Rate</th>
                 <th className="text-right">Broker Rate</th>
-                <th className="text-right">Profit</th>
+                <th
+                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                  onClick={() => handleSort('profitTotal')}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Profit</span>
+                    {sortKey === 'profitTotal' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th>
                 <th>Trade Type</th>
-                <th className="text-right">Actions</th>
+                <th style={{ width: '90px' }} className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
@@ -353,10 +635,12 @@ export function TradesPageManager({
                   </td>
                 </tr>
               ) : null}
-              {paginatedTrades.map((t) => {
+              {paginatedTrades.map((t, index) => {
                 const profit = t.profitTotal ?? 0;
                 const secName = t.securityName || t.script?.fullName || t.script?.shortName || '—';
                 const isSelected = selectedIds.has(t.id);
+                const isMatched = findReplaceMatch?.matchedRowIndices.includes(index);
+                const isActiveMatch = findReplaceMatch?.activeRowIndex === index;
                 
                 // Dynamic currency symbol resolution
                 const currSym = t.script?.currency?.symbol || (
@@ -371,10 +655,18 @@ export function TradesPageManager({
                 return (
                   <tr
                     key={t.id}
+                    ref={(el) => {
+                      if (isActiveMatch && el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }
+                    }}
                     onClick={() => setSelectedTrade(t)}
                     className={cn(
-                      'hover:bg-slate-50 transition-colors cursor-pointer select-none whitespace-nowrap',
-                      isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60'
+                      'transition-colors cursor-pointer select-none whitespace-nowrap',
+                      isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60',
+                      !isSelected && isMatched && !isActiveMatch && 'bg-amber-50/60 hover:bg-amber-100/60',
+                      isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
+                      !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50'
                     )}
                     title="Click to view full details"
                   >
@@ -391,31 +683,43 @@ export function TradesPageManager({
                       />
                     </td>
                     <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
-                      {new Date(t.tradeDate).toLocaleDateString('en-GB')}
+                      {renderWithDiff('tradeDate', new Date(t.tradeDate).toLocaleDateString('en-GB'), isActiveMatch)}
                     </td>
-                    <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">{t.exchange?.code || '—'}</td>
+                    <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">
+                      {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}
+                    </td>
                     <td className="max-w-[260px] truncate whitespace-nowrap" title={secName}>
-                      <span className="font-semibold text-[var(--color-charcoal)] text-xs truncate block">{secName}</span>
+                      <span className="font-semibold text-[var(--color-charcoal)] text-xs truncate block">
+                        {renderWithDiff('securityName', secName, isActiveMatch)}
+                      </span>
                     </td>
                     <td className="font-mono text-xs text-slate-700 whitespace-nowrap">
-                      {t.expiry || '—'}
+                      {renderWithDiff('expiry', t.expiry || '—', isActiveMatch)}
                     </td>
                     <td className="whitespace-nowrap">
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap',
-                          t.transactionType === 'BUY'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        )}
-                      >
-                        {t.transactionType}
-                      </span>
+                      {isActiveMatch && findReplaceMatch?.targetColumn === 'transactionType' ? (
+                        renderWithDiff('transactionType', t.transactionType, true)
+                      ) : (
+                        <span
+                          className={cn(
+                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap',
+                            t.transactionType === 'BUY'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          )}
+                        >
+                          {t.transactionType}
+                        </span>
+                      )}
                     </td>
                     <td className="font-mono font-semibold text-right whitespace-nowrap">{t.quantity}</td>
                     <td className="font-mono text-right text-xs whitespace-nowrap">{currSym}{t.rate.toFixed(2)}</td>
-                    <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>{t.account?.code || '—'}</td>
-                    <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>{t.broker?.code || '—'}</td>
+                    <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>
+                      {renderWithDiff('account.code', t.account?.code || '—', isActiveMatch)}
+                    </td>
+                    <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>
+                      {renderWithDiff('broker.code', t.broker?.code || '—', isActiveMatch)}
+                    </td>
                     <td className="font-mono text-right text-xs whitespace-nowrap">
                       {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
                     </td>
@@ -494,9 +798,51 @@ export function TradesPageManager({
                 );
               })}
             </tbody>
+            {/* Sticky Total / Summary Row */}
+            <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
+              <tr>
+                <td className="py-2.5 px-4 text-center" colSpan={6}>
+                  Visible Trades: {visibleStats.count} of {totalItems} (Page {currentPage} of {Math.max(1, Math.ceil(totalItems / pageSize))})
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                  <div className="text-[10px] text-slate-500 font-normal">Buy: {visibleStats.buyQty.toLocaleString()} | Sell: {visibleStats.sellQty.toLocaleString()}</div>
+                  <div>Net: {visibleStats.netQty > 0 ? `+${visibleStats.netQty.toLocaleString()}` : visibleStats.netQty.toLocaleString()}</div>
+                </td>
+                <td colSpan={5} className="py-2.5 px-3 text-right text-slate-500 font-normal">
+                  Visible Net P&amp;L:
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono font-bold">
+                  <span
+                    className={cn(
+                      visibleStats.totalProfit > 0 ? 'text-[var(--color-positive)]' :
+                      visibleStats.totalProfit < 0 ? 'text-[var(--color-negative)]' :
+                      'text-slate-800'
+                    )}
+                  >
+                    {visibleStats.totalProfit > 0 ? '+' : ''}₹{visibleStats.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </td>
+                <td colSpan={2} className="py-2.5 px-3"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
+
+      {/* Floating Find & Replace Overlay Widget */}
+      {isFindReplaceOpen && (
+        <FindAndReplace
+          data={paginatedTrades}
+          columns={TRADE_COLUMNS}
+          onReplaceOne={handleReplaceOne}
+          onReplaceAll={handleReplaceAll}
+          onClose={() => {
+            setIsFindReplaceOpen(false);
+            setFindReplaceMatch(null);
+          }}
+          onMatchChange={setFindReplaceMatch}
+        />
+      )}
 
       {/* Manual Entry Form Modal */}
       {isAdding && (
@@ -531,6 +877,20 @@ export function TradesPageManager({
           onEdit={() => setEditingTrade(selectedTrade)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={async () => {
+          await confirmDialog.onConfirm();
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        }}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

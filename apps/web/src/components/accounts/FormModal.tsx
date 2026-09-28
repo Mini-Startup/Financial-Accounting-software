@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
-
 import { useScrollLock } from '../../hooks/useScrollLock';
-
 import { toast } from 'sonner';
+import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 export function FormModal({
   initialData,
@@ -236,14 +236,11 @@ export function FormModal({
                   <>
                     <div className="form-group flex items-center h-full pt-6">
                       <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
-                        <input
-                          type="checkbox"
-                          name="isDirectClient"
-                          checked={formData.isDirectClient}
-                          onChange={handleChange}
-                          className="rounded text-[var(--color-emerald)] focus:ring-[var(--color-emerald)]"
+                        <CustomCheckbox
+                          checked={Boolean(formData.isDirectClient)}
+                          onChange={(checked) => setFormData((prev) => ({ ...prev, isDirectClient: checked }))}
                         />
-                        Is Direct Client
+                        <span>Is Direct Client</span>
                       </label>
                     </div>
 
@@ -257,20 +254,15 @@ export function FormModal({
                           className="input opacity-60 bg-[var(--color-snow)]"
                         />
                       ) : (
-                        <select
-                          required
-                          name="dealerCode"
+                        <UniversalDropdown
                           value={formData.dealerCode}
-                          onChange={handleChange}
-                          className="input"
-                        >
-                          <option value="">-- Select Direct Client --</option>
-                          {directClients.map(c => (
-                            <option key={c.id} value={c.code}>
-                              {c.code} - {c.name}
-                            </option>
-                          ))}
-                        </select>
+                          options={directClients.map((c) => ({
+                            value: c.code,
+                            label: `${c.code} - ${c.name}`,
+                          }))}
+                          onChange={(val) => setFormData((prev) => ({ ...prev, dealerCode: val }))}
+                          placeholder="-- Select Direct Client --"
+                        />
                       )}
                     </div>
                   </>
@@ -306,8 +298,11 @@ export function FormModal({
                     className={cn("input", formData.isWhatsappSameAsMobile && 'opacity-60 bg-[var(--color-snow)]')}
                   />
                   <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] mt-2 cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
-                    <input type="checkbox" name="isWhatsappSameAsMobile" checked={formData.isWhatsappSameAsMobile} onChange={handleChange} className="rounded text-[var(--color-emerald)] focus:ring-[var(--color-emerald)]" />
-                    WhatsApp number is same as mobile
+                    <CustomCheckbox
+                      checked={Boolean(formData.isWhatsappSameAsMobile)}
+                      onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
+                    />
+                    <span>WhatsApp number is same as mobile</span>
                   </label>
                 </div>
 

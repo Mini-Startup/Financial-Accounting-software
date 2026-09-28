@@ -40,12 +40,14 @@ export function CustomDatePicker({
   const currentDate = parseValueToDate(value);
   const [viewYear, setViewYear] = useState(currentDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth()); // 0-indexed
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     const d = parseValueToDate(value);
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
-  }, [value]);
+  }
 
   const updateCoords = () => {
     if (containerRef.current) {

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 interface SettledTradesTableProps {
   trades: any[];
@@ -12,6 +13,21 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [actionFilter, setActionFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
+
+  const tradeTypeOptions = [
+    { value: 'ALL', label: 'All Trade Types' },
+    { value: 'CARRY_FORWARD', label: 'Carry Forward (CF)' },
+    { value: 'BACK_FORWARD', label: 'Backforward (BF)' },
+    { value: 'SETTLEMENT', label: 'Settlement' },
+    { value: 'INTERNAL', label: 'Internal Trade' },
+    { value: 'REGULAR', label: 'Regular / Import' },
+  ];
+
+  const actionOptions = [
+    { value: 'ALL', label: 'Buy & Sell' },
+    { value: 'BUY', label: 'BUY' },
+    { value: 'SELL', label: 'SELL' },
+  ];
 
   const filteredTrades = useMemo(() => {
     return (trades || []).filter((t: any) => {
@@ -62,29 +78,24 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Trade Type Filter */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="input text-xs py-1.5 px-2.5 w-40 cursor-pointer"
-          >
-            <option value="ALL">All Trade Types</option>
-            <option value="CARRY_FORWARD">Carry Forward (CF)</option>
-            <option value="BACK_FORWARD">Backforward (BF)</option>
-            <option value="SETTLEMENT">Settlement</option>
-            <option value="INTERNAL">Internal Trade</option>
-            <option value="REGULAR">Regular / Import</option>
-          </select>
+          <div className="w-44">
+            <UniversalDropdown
+              value={typeFilter}
+              options={tradeTypeOptions}
+              onChange={(val) => setTypeFilter(val)}
+              placeholder="All Trade Types"
+            />
+          </div>
 
           {/* Action Filter */}
-          <select
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value as any)}
-            className="input text-xs py-1.5 px-2.5 w-28 cursor-pointer"
-          >
-            <option value="ALL">Buy &amp; Sell</option>
-            <option value="BUY">BUY</option>
-            <option value="SELL">SELL</option>
-          </select>
+          <div className="w-32">
+            <UniversalDropdown
+              value={actionFilter}
+              options={actionOptions}
+              onChange={(val) => setActionFilter(val as any)}
+              placeholder="Buy & Sell"
+            />
+          </div>
 
           <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200">
             {filteredTrades.length} trades

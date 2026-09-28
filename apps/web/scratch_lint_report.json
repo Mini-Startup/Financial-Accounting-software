@@ -1,0 +1,1894 @@
+{
+  "@typescript-eslint/no-unused-vars": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\brokers\\page.tsx",
+      "loc": "21:12",
+      "type": "warning",
+      "msg": "'e' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\clients\\page.tsx",
+      "loc": "17:12",
+      "type": "warning",
+      "msg": "'e' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "4:3",
+      "type": "warning",
+      "msg": "'ArrowUpRight' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "5:3",
+      "type": "warning",
+      "msg": "'ArrowDownRight' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "11:3",
+      "type": "warning",
+      "msg": "'CalendarDays' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "13:3",
+      "type": "warning",
+      "msg": "'ShieldCheck' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "15:3",
+      "type": "warning",
+      "msg": "'Search' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "16:3",
+      "type": "warning",
+      "msg": "'Maximize2' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "17:3",
+      "type": "warning",
+      "msg": "'ExternalLink' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "23:10",
+      "type": "warning",
+      "msg": "'isSubmitting' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "28:11",
+      "type": "warning",
+      "msg": "'PositionDiscrepancy' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "108:10",
+      "type": "warning",
+      "msg": "'isLoadingSettlement' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "270:9",
+      "type": "warning",
+      "msg": "'handleFileChange' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "29:10",
+      "type": "warning",
+      "msg": "'isSubmitting' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ledger\\LedgerReportManager.tsx",
+      "loc": "7:21",
+      "type": "warning",
+      "msg": "'Calendar' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ledger\\LedgerReportManager.tsx",
+      "loc": "7:31",
+      "type": "warning",
+      "msg": "'Scale' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ledger\\LedgerReportManager.tsx",
+      "loc": "8:54",
+      "type": "warning",
+      "msg": "'CheckCircle2' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ledger\\LedgerReportManager.tsx",
+      "loc": "8:68",
+      "type": "warning",
+      "msg": "'UserCheck' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "16:3",
+      "type": "warning",
+      "msg": "'CalendarDays' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "35:3",
+      "type": "warning",
+      "msg": "'Lock' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "36:3",
+      "type": "warning",
+      "msg": "'Unlock' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "7:28",
+      "type": "warning",
+      "msg": "'Building2' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "7:52",
+      "type": "warning",
+      "msg": "'Check' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "3:20",
+      "type": "warning",
+      "msg": "'useMemo' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "4:116",
+      "type": "warning",
+      "msg": "'Square' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "38:3",
+      "type": "warning",
+      "msg": "'optionRows' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeDetailModal.tsx",
+      "loc": "4:13",
+      "type": "warning",
+      "msg": "'Calendar' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeDetailModal.tsx",
+      "loc": "4:23",
+      "type": "warning",
+      "msg": "'User' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "83:9",
+      "type": "warning",
+      "msg": "'exchange' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "7:10",
+      "type": "warning",
+      "msg": "'formatDateTimeForInput' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "7:34",
+      "type": "warning",
+      "msg": "'parseDateTimeFromInput' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "3:20",
+      "type": "warning",
+      "msg": "'useEffect' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "9:3",
+      "type": "warning",
+      "msg": "'Calendar' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "17:3",
+      "type": "warning",
+      "msg": "'Filter' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "23:3",
+      "type": "warning",
+      "msg": "'SlidersHorizontal' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "24:3",
+      "type": "warning",
+      "msg": "'Eye' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "25:3",
+      "type": "warning",
+      "msg": "'FileSpreadsheet' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "247:17",
+      "type": "warning",
+      "msg": "'_' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "131:9",
+      "type": "warning",
+      "msg": "'isSomeVisibleSelected' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFileUploader.tsx",
+      "loc": "4:43",
+      "type": "warning",
+      "msg": "'CheckCircle2' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFilterPanel.tsx",
+      "loc": "4:32",
+      "type": "warning",
+      "msg": "'Calendar' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFilterPanel.tsx",
+      "loc": "38:57",
+      "type": "warning",
+      "msg": "'_' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\vouchers\\VoucherForm.tsx",
+      "loc": "5:51",
+      "type": "warning",
+      "msg": "'Calendar' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\vouchers\\VoucherForm.tsx",
+      "loc": "5:77",
+      "type": "warning",
+      "msg": "'ArrowRightLeft' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\vouchers\\VoucherForm.tsx",
+      "loc": "347:25",
+      "type": "warning",
+      "msg": "'val' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\dubaiTradeParser.ts",
+      "loc": "468:5",
+      "type": "warning",
+      "msg": "'lineCount' is assigned a value but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\openPositionParser.ts",
+      "loc": "1:37",
+      "type": "warning",
+      "msg": "'cleanScriptFullName' is defined but never used"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\parser.ts",
+      "loc": "55:9",
+      "type": "warning",
+      "msg": "'ch' is assigned a value but never used"
+    }
+  ],
+  "@typescript-eslint/no-explicit-any": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "42:21",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "43:23",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\settlement\\page.tsx",
+      "loc": "102:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\settlement\\page.tsx",
+      "loc": "146:21",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\settlement\\page.tsx",
+      "loc": "186:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\settlement\\page.tsx",
+      "loc": "222:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\settlement\\page.tsx",
+      "loc": "259:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\trial-balance\\page.tsx",
+      "loc": "11:49",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterFormModal.tsx",
+      "loc": "15:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterFormModal.tsx",
+      "loc": "16:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterPageManager.tsx",
+      "loc": "34:20",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterPageManager.tsx",
+      "loc": "35:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterPageManager.tsx",
+      "loc": "38:44",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterPageManager.tsx",
+      "loc": "40:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\DataTable.tsx",
+      "loc": "34:13",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\DataTable.tsx",
+      "loc": "39:52",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\DataTable.tsx",
+      "loc": "40:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\DataTable.tsx",
+      "loc": "203:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\EntityPageManager.tsx",
+      "loc": "16:13",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "19:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "58:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "69:46",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "90:22",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "170:28",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\accounts\\FormModal.tsx",
+      "loc": "172:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageDataTable.tsx",
+      "loc": "25:85",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageDataTable.tsx",
+      "loc": "27:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageDataTable.tsx",
+      "loc": "95:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageDataTable.tsx",
+      "loc": "241:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageDataTable.tsx",
+      "loc": "241:135",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "15:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "16:13",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "17:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "52:22",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "109:18",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokerageFormModal.tsx",
+      "loc": "117:28",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokeragePageManager.tsx",
+      "loc": "13:22",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokeragePageManager.tsx",
+      "loc": "14:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokeragePageManager.tsx",
+      "loc": "15:13",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokeragePageManager.tsx",
+      "loc": "16:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\brokerage\\BrokeragePageManager.tsx",
+      "loc": "61:60",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "33:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "34:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "35:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "38:46",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "39:50",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateDataTable.tsx",
+      "loc": "82:36",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "15:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "16:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "17:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "19:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "90:43",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRateFormModal.tsx",
+      "loc": "171:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "44:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "45:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "46:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "47:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "48:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "58:52",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "59:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "60:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "64:72",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "68:72",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "107:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "113:15",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "114:22",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "115:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "253:21",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "324:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "349:53",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "472:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "480:47",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "503:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "570:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "633:43",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyDataTable.tsx",
+      "loc": "25:84",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyDataTable.tsx",
+      "loc": "27:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyDataTable.tsx",
+      "loc": "28:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyDataTable.tsx",
+      "loc": "100:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "14:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "16:26",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "82:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "90:28",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "92:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyFormModal.tsx",
+      "loc": "130:61",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\currencies\\CurrencyPageManager.tsx",
+      "loc": "7:81",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeDataTable.tsx",
+      "loc": "23:81",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeDataTable.tsx",
+      "loc": "25:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeDataTable.tsx",
+      "loc": "26:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeDataTable.tsx",
+      "loc": "98:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeFormModal.tsx",
+      "loc": "16:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeFormModal.tsx",
+      "loc": "18:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeFormModal.tsx",
+      "loc": "82:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeFormModal.tsx",
+      "loc": "90:28",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangeFormModal.tsx",
+      "loc": "92:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\exchanges\\ExchangePageManager.tsx",
+      "loc": "7:79",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ledger\\LedgerReportManager.tsx",
+      "loc": "462:64",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "48:29",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "51:96",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "loc": "57:29",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptDataTable.tsx",
+      "loc": "32:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptDataTable.tsx",
+      "loc": "33:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptDataTable.tsx",
+      "loc": "36:50",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptDataTable.tsx",
+      "loc": "37:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "21:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "22:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "23:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "25:32",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "32:46",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "33:48",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "36:76",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "38:76",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "55:45",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "55:63",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "68:46",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "68:64",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "468:43",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "476:26",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "498:43",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "506:25",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptPageManager.tsx",
+      "loc": "11:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptPageManager.tsx",
+      "loc": "12:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "71:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "72:24",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "173:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "183:59",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\SettledTradesTable.tsx",
+      "loc": "9:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\SettledTradesTable.tsx",
+      "loc": "33:38",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\SettledTradesTable.tsx",
+      "loc": "95:57",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\SettledTradesTable.tsx",
+      "loc": "132:40",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\types.ts",
+      "loc": "43:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\types.ts",
+      "loc": "48:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\types.ts",
+      "loc": "49:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "14:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "15:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "16:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "38:96",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\DubaiPreviewTable.tsx",
+      "loc": "196:40",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\ImportFilterBar.tsx",
+      "loc": "139:27",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "12:15",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "13:15",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "14:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "15:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "16:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "17:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "18:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "19:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "20:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "106:66",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeDetailModal.tsx",
+      "loc": "12:10",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "30:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "31:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "32:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "33:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "34:18",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "36:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeFormModal.tsx",
+      "loc": "290:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "15:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "16:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "17:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "18:58",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "19:16",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "20:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "42:52",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "43:56",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportContext.tsx",
+      "loc": "44:50",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "53:42",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "54:46",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "55:42",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "56:42",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "57:48",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "62:76",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "64:76",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "76:33",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "88:72",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "90:72",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "261:17",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "347:23",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "459:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "507:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "544:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "670:19",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "836:63",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "15:8",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "18:60",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "19:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "20:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "21:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "31:93",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeRowDrawer.tsx",
+      "loc": "59:47",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "46:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "47:13",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "48:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "49:18",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "57:52",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "58:40",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "59:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "310:36",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradesPageManager.tsx",
+      "loc": "337:55",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trial-balance\\TrialBalanceManager.tsx",
+      "loc": "100:11",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\FindAndReplace.tsx",
+      "loc": "81:36",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\FindAndReplace.tsx",
+      "loc": "141:45",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\FindAndReplace.tsx",
+      "loc": "160:59",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\TableToolbar.tsx",
+      "loc": "412:57",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "18:26",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "76:59",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "77:59",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "111:66",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDataTable.tsx",
+      "loc": "266:78",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFilterPanel.tsx",
+      "loc": "23:26",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFilterPanel.tsx",
+      "loc": "24:37",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFilterPanel.tsx",
+      "loc": "46:43",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\vouchers\\VoucherForm.tsx",
+      "loc": "106:91",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\vouchers\\VoucherForm.tsx",
+      "loc": "304:53",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\openPositionParser.ts",
+      "loc": "84:14",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\openPositionParser.ts",
+      "loc": "85:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\lib\\tradeParser\\openPositionParser.ts",
+      "loc": "117:12",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "5:64",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "37:45",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "37:66",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "43:54",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "83:68",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "165:64",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\utils\\tableFilter.ts",
+      "loc": "207:64",
+      "type": "error",
+      "msg": "Unexpected any. Specify a different type"
+    }
+  ],
+  "render": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx",
+      "loc": "144:29",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx:144:29",
+      "loc": "155:29",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx:155:29",
+      "loc": "166:29",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx:166:29",
+      "loc": "177:29",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx:177:29",
+      "loc": "204:24",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\app\\page.tsx:204:24",
+      "loc": "215:24",
+      "type": "error",
+      "msg": "Error: Cannot call impure function during"
+    }
+  ],
+  "react-hooks/exhaustive-deps": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\account-master\\AccountMasterFormModal.tsx",
+      "loc": "56:6",
+      "type": "warning",
+      "msg": "React Hook useMemo has a missing dependency: 'getGroupNameById'. Either include it or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "148:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has missing dependencies: 'formData.currencyId', 'formData.exchangeId', 'initialData', 'targetCurrencyCode', and 'targetExchangeCode'. Either include them or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "85:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has missing dependencies: 'resetImportState' and 'step'. Either include them or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "140:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has missing dependencies: 'selectedBrokerId', 'selectedExchangeId', 'setSelectedBrokerId', and 'setSelectedExchangeId'. Either include them or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "286:9",
+      "type": "warning",
+      "msg": "The 'getDubaiRowValidation' function makes the dependencies of useMemo Hook (at line 711) change on every render. To fix this, wrap the definition of 'getDubaiRowValidation' in its own useCallback() Hook"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\TradeImportManager.tsx",
+      "loc": "286:9",
+      "type": "warning",
+      "msg": "The 'getDubaiRowValidation' function makes the dependencies of useMemo Hook (at line 715) change on every render. To fix this, wrap the definition of 'getDubaiRowValidation' in its own useCallback() Hook"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDatePicker.tsx:118:7",
+      "loc": "126:6",
+      "type": "warning",
+      "msg": "React Hook useLayoutEffect has a missing dependency: 'updateCoords'. Either include it or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDatePicker.tsx:162:5",
+      "loc": "164:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has a missing dependency: 'textValue'. Either include it or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDropdown.tsx:156:7",
+      "loc": "164:6",
+      "type": "warning",
+      "msg": "React Hook useLayoutEffect has a missing dependency: 'updateCoords'. Either include it or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDropdown.tsx:156:7",
+      "loc": "185:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has a missing dependency: 'closeDropdown'. Either include it or remove the dependency array"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalFileUploader.tsx",
+      "loc": "97:6",
+      "type": "warning",
+      "msg": "React Hook useEffect has a missing dependency: 'validateAndSelect'. Either include it or remove the dependency array"
+    }
+  ],
+  "prefer-const": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\closing-rates\\ClosingRatePageManager.tsx",
+      "loc": "179:9",
+      "type": "error",
+      "msg": "'foundExchange' is never reassigned. Use 'const' instead"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "71:11",
+      "type": "error",
+      "msg": "'aVal' is never reassigned. Use 'const' instead"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\settlement\\PositionSummaryTable.tsx",
+      "loc": "72:11",
+      "type": "error",
+      "msg": "'bVal' is never reassigned. Use 'const' instead"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\tradeImportHelpers.ts",
+      "loc": "47:9",
+      "type": "error",
+      "msg": "'yearStr' is never reassigned. Use 'const' instead"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\tradeImportHelpers.ts",
+      "loc": "99:11",
+      "type": "error",
+      "msg": "'y' is never reassigned. Use 'const' instead"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\tradeImportHelpers.ts",
+      "loc": "126:11",
+      "type": "error",
+      "msg": "'y' is never reassigned. Use 'const' instead"
+    }
+  ],
+  "react/no-unescaped-entities": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "291:71",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "291:92",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "303:38",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "303:59",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "314:72",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "314:93",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "326:38",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\scripts\\ScriptFormModal.tsx",
+      "loc": "326:59",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "191:98",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\NormalPreviewTable.tsx",
+      "loc": "191:103",
+      "type": "error",
+      "msg": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    }
+  ],
+  "renders": [
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\trades\\SearchableSelect.tsx",
+      "loc": "40:7",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\CustomDatePicker.tsx",
+      "loc": "46:5",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\CustomSelect.tsx",
+      "loc": "54:7",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDatePicker.tsx",
+      "loc": "49:5",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDatePicker.tsx:49:5",
+      "loc": "118:7",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDatePicker.tsx:118:7",
+      "loc": "162:5",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDropdown.tsx",
+      "loc": "64:7",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    },
+    {
+      "file": "E:\\BizzMate\\clients\\devshreee papa\\financial_accounting_software\\apps\\web\\src\\components\\ui\\UniversalDropdown.tsx:64:7",
+      "loc": "156:7",
+      "type": "error",
+      "msg": "Error: Calling setState synchronously within an effect can trigger cascading"
+    }
+  ]
+}

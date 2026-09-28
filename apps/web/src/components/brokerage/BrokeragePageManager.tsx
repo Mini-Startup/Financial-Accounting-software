@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { BrokerageDataTable } from './BrokerageDataTable';
 import { BrokerageFormModal } from './BrokerageFormModal';
+import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 
 export function BrokeragePageManager({ 
   initialBrokerages, 
@@ -18,6 +19,17 @@ export function BrokeragePageManager({
   const [filterAppliesTo, setFilterAppliesTo] = useState<'ALL' | 'CLIENT' | 'BROKER'>('ALL');
   const [filterExchangeId, setFilterExchangeId] = useState<string>('ALL');
 
+  const exchangeOptions = useMemo(() => [
+    { value: 'ALL', label: 'All Exchanges' },
+    ...exchanges.map(ex => ({ value: ex.id, label: ex.code }))
+  ], [exchanges]);
+
+  const appliesToOptions = useMemo(() => [
+    { value: 'ALL', label: 'All Types' },
+    { value: 'CLIENT', label: 'Clients Only' },
+    { value: 'BROKER', label: 'Brokers Only' }
+  ], []);
+
   const filteredBrokerages = initialBrokerages.filter(b => {
     if (filterAppliesTo !== 'ALL' && b.appliesTo !== filterAppliesTo) return false;
     if (filterExchangeId !== 'ALL' && b.exchangeId !== filterExchangeId) return false;
@@ -33,24 +45,23 @@ export function BrokeragePageManager({
         </div>
         
         <div className="flex items-center gap-3">
-          <select 
-            className="input w-auto text-sm"
-            value={filterExchangeId}
-            onChange={e => setFilterExchangeId(e.target.value)}
-          >
-            <option value="ALL">All Exchanges</option>
-            {exchanges.map(ex => <option key={ex.id} value={ex.id}>{ex.code}</option>)}
-          </select>
+          <div className="w-44">
+            <UniversalDropdown
+              options={exchangeOptions}
+              value={filterExchangeId}
+              onChange={(val) => setFilterExchangeId(val)}
+              placeholder="All Exchanges"
+            />
+          </div>
 
-          <select 
-            className="input w-auto text-sm"
-            value={filterAppliesTo}
-            onChange={e => setFilterAppliesTo(e.target.value as any)}
-          >
-            <option value="ALL">All Types</option>
-            <option value="CLIENT">Clients Only</option>
-            <option value="BROKER">Brokers Only</option>
-          </select>
+          <div className="w-40">
+            <UniversalDropdown
+              options={appliesToOptions}
+              value={filterAppliesTo}
+              onChange={(val) => setFilterAppliesTo(val as any)}
+              placeholder="All Types"
+            />
+          </div>
 
           <button 
             onClick={() => setIsAdding(true)}

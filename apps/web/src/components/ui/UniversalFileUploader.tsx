@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { UploadCloud, FileSpreadsheet, X, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export interface UniversalFileUploaderProps {

@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
 import { prisma } from "@/database";
 import {
-  ArrowUpRight,
-  ArrowDownRight,
   TrendingUp,
   Users,
   Briefcase,
   Activity,
   ArrowUpDown,
-  CalendarDays,
   Coins,
-  ShieldCheck,
   Receipt,
-  Search,
-  Maximize2,
-  ExternalLink,
   ChevronRight,
   Plus
 } from "lucide-react";
@@ -130,7 +123,7 @@ export default async function Dashboard() {
       {
         id: "1",
         tradeNumber: "TR-9042",
-        tradeDate: new Date(),
+        tradeDate: new Date("2025-03-01T10:00:00Z"),
         transactionType: "BUY",
         quantity: 500,
         rate: 342.5,
@@ -141,7 +134,7 @@ export default async function Dashboard() {
       {
         id: "2",
         tradeNumber: "TR-9041",
-        tradeDate: new Date(Date.now() - 1000 * 60 * 30),
+        tradeDate: new Date("2025-03-01T09:30:00Z"),
         transactionType: "SELL",
         quantity: 200,
         rate: 1820.0,
@@ -152,7 +145,7 @@ export default async function Dashboard() {
       {
         id: "3",
         tradeNumber: "TR-9040",
-        tradeDate: new Date(Date.now() - 1000 * 60 * 120),
+        tradeDate: new Date("2025-03-01T08:00:00Z"),
         transactionType: "BUY",
         quantity: 1200,
         rate: 142.15,
@@ -163,7 +156,7 @@ export default async function Dashboard() {
       {
         id: "4",
         tradeNumber: "TR-9039",
-        tradeDate: new Date(Date.now() - 1000 * 60 * 360),
+        tradeDate: new Date("2025-02-28T16:00:00Z"),
         transactionType: "SELL",
         quantity: 1000,
         rate: 615.4,
@@ -174,7 +167,7 @@ export default async function Dashboard() {
       {
         id: "5",
         tradeNumber: "TR-9038",
-        tradeDate: new Date(Date.now() - 1000 * 60 * 1440),
+        tradeDate: new Date("2025-02-28T14:00:00Z"),
         transactionType: "BUY",
         quantity: 150,
         rate: 2450.0,
@@ -190,7 +183,7 @@ export default async function Dashboard() {
       {
         id: "v1",
         voucherNumber: "VCH-2025-001",
-        date: new Date(),
+        date: new Date("2025-03-01T11:00:00Z"),
         type: "RECEIPT",
         remarks: "Received client margin deposit",
         lines: [
@@ -201,7 +194,7 @@ export default async function Dashboard() {
       {
         id: "v2",
         voucherNumber: "VCH-2025-002",
-        date: new Date(Date.now() - 1000 * 60 * 240),
+        date: new Date("2025-03-01T07:00:00Z"),
         type: "PAYMENT",
         remarks: "Payout of excess ledger funds",
         lines: [
@@ -212,7 +205,7 @@ export default async function Dashboard() {
       {
         id: "v3",
         voucherNumber: "VCH-2025-003",
-        date: new Date(Date.now() - 1000 * 60 * 1440),
+        date: new Date("2025-02-28T11:00:00Z"),
         type: "JOURNAL",
         remarks: "Adjustment for script brokerage charges",
         lines: [

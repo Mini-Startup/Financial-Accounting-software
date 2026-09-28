@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Scale,
   Search,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
   CheckCircle2,
@@ -14,17 +13,17 @@ import {
   Printer,
   Download,
   RefreshCw,
-  Filter,
   Layers,
   Users,
   Building2,
   ExternalLink,
   ChevronRight,
-  SlidersHorizontal,
-  Eye,
-  FileSpreadsheet
+  X,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 export interface TrialBalanceAccountRow {
   id: string;
@@ -102,11 +101,20 @@ export function TrialBalanceManager({
   // Filter States
   const [toDate, setToDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchColumn, setSearchColumn] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | 'CLIENT' | 'BROKER' | 'ACCOUNT_MASTER'>('ALL');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [hideZeroBalance, setHideZeroBalance] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'standard' | 'detailed'>('detailed');
   const [groupByCategory, setGroupByCategory] = useState<boolean>(true);
+
+  const groupOptions = useMemo(() => [
+    { value: '', label: `-- All Groups (${groups?.length || 0}) --` },
+    ...(groups?.map((g) => ({
+      value: String(g.id),
+      label: g.name,
+    })) || []),
+  ], [groups]);
 
   // Fetch report
   const fetchReport = useCallback(async (asOfDate?: string) => {
@@ -155,20 +163,28 @@ export function TrialBalanceManager({
         return false;
       }
 
-      // Search query
+      // Search query with column targeting
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchesCode = (r.code || '').toLowerCase().includes(q);
-        const matchesName = (r.name || '').toLowerCase().includes(q);
-        const matchesGroup = (r.groupName || '').toLowerCase().includes(q);
-        if (!matchesCode && !matchesName && !matchesGroup) {
-          return false;
+        if (searchColumn === 'code') {
+          if (!(r.code || '').toLowerCase().includes(q)) return false;
+        } else if (searchColumn === 'name') {
+          if (!(r.name || '').toLowerCase().includes(q)) return false;
+        } else if (searchColumn === 'groupName') {
+          if (!(r.groupName || '').toLowerCase().includes(q)) return false;
+        } else {
+          const matchesCode = (r.code || '').toLowerCase().includes(q);
+          const matchesName = (r.name || '').toLowerCase().includes(q);
+          const matchesGroup = (r.groupName || '').toLowerCase().includes(q);
+          if (!matchesCode && !matchesName && !matchesGroup) {
+            return false;
+          }
         }
       }
 
       return true;
     });
-  }, [report, selectedCategory, selectedGroupId, hideZeroBalance, searchQuery]);
+  }, [report, selectedCategory, selectedGroupId, hideZeroBalance, searchQuery, searchColumn]);
 
   // Dynamic Subtotals for currently filtered view
   const visibleSummary = useMemo(() => {
@@ -224,7 +240,7 @@ export function TrialBalanceManager({
     }
 
     return Array.from(map.entries())
-      .filter(([_, data]) => data.rows.length > 0)
+      .filter(([, data]) => data.rows.length > 0)
       .map(([cat, data]) => ({
         category: cat,
         label: data.label,
@@ -378,98 +394,97 @@ export function TrialBalanceManager({
       {/* ── Top KPI Cards ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
         {/* Total Debit Balance */}
-        <div className="card bg-white p-4.5 border-l-4 border-l-blue-500 shadow-xs relative overflow-hidden">
+        <div className="group relative overflow-hidden bg-white p-5 rounded-2xl border border-[var(--color-border-light)] shadow-xs hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Debit (Dr)</span>
-            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md">
-              <ArrowDownRight className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-slate-900">
-              ₹{summary.grandTotalClosingDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <span className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Debit (Dr)</span>
+            <span className="p-2.5 rounded-xl bg-gradient-to-br from-[#ecfdf5] to-[#d1fae5] text-[var(--color-forest)] transition-all group-hover:scale-105">
+              <ArrowDownRight className="w-5 h-5 stroke-[1.75]" />
             </span>
           </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Debit Balances Across Accounts</span>
-            <span className="font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded">Dr Side</span>
+          <div className="mt-3">
+            <h3 className="font-mono text-2xl font-bold text-[var(--color-charcoal)] leading-tight tracking-tight">
+              ₹{summary.grandTotalClosingDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </h3>
+            <div className="flex items-center justify-between mt-2 text-xs font-medium text-[var(--color-slate)]">
+              <span>Debit Balances Across Accounts</span>
+              <span className="font-bold text-[var(--color-forest)] bg-[var(--color-mist)] px-2 py-0.5 rounded-md text-[10px]">Dr Side</span>
+            </div>
           </div>
         </div>
 
         {/* Total Credit Balance */}
-        <div className="card bg-white p-4.5 border-l-4 border-l-emerald-500 shadow-xs relative overflow-hidden">
+        <div className="group relative overflow-hidden bg-white p-5 rounded-2xl border border-[var(--color-border-light)] shadow-xs hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Credit (Cr)</span>
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-md">
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-emerald-800">
-              ₹{summary.grandTotalClosingCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <span className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Credit (Cr)</span>
+            <span className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 transition-all group-hover:scale-105">
+              <ArrowUpRight className="w-5 h-5 stroke-[1.75]" />
             </span>
           </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Credit Balances Across Accounts</span>
-            <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">Cr Side</span>
+          <div className="mt-3">
+            <h3 className="font-mono text-2xl font-bold text-emerald-800 leading-tight tracking-tight">
+              ₹{summary.grandTotalClosingCredit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </h3>
+            <div className="flex items-center justify-between mt-2 text-xs font-medium text-[var(--color-slate)]">
+              <span>Credit Balances Across Accounts</span>
+              <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md text-[10px]">Cr Side</span>
+            </div>
           </div>
         </div>
 
         {/* Trial Balance Status (Balanced or Diff) */}
-        <div
-          className={cn(
-            'card p-4.5 border-l-4 shadow-xs relative overflow-hidden',
-            summary.isBalanced
-              ? 'bg-emerald-50/40 border-l-emerald-600'
-              : 'bg-rose-50/50 border-l-rose-500'
-          )}
-        >
+        <div className={cn(
+          'group relative overflow-hidden bg-white p-5 rounded-2xl border shadow-xs hover:shadow-md transition-all duration-300',
+          summary.isBalanced ? 'border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
+        )}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Balance Validation</span>
-            {summary.isBalanced ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-            )}
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span
-              className={cn(
-                'text-xl font-bold font-mono',
-                summary.isBalanced ? 'text-emerald-700' : 'text-rose-700'
+            <span className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Balance Validation</span>
+            <span className={cn(
+              'p-2.5 rounded-xl bg-gradient-to-br transition-all group-hover:scale-105',
+              summary.isBalanced ? 'from-emerald-50 to-emerald-100 text-emerald-600' : 'from-rose-50 to-rose-100 text-rose-600'
+            )}>
+              {summary.isBalanced ? (
+                <CheckCircle2 className="w-5 h-5 stroke-[1.75]" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 stroke-[1.75]" />
               )}
-            >
+            </span>
+          </div>
+          <div className="mt-3">
+            <h3 className={cn(
+              'font-mono text-2xl font-bold leading-tight tracking-tight',
+              summary.isBalanced ? 'text-emerald-700' : 'text-rose-700'
+            )}>
               {summary.isBalanced ? 'TALLY BALANCED' : `DIFF: ₹${summary.difference.toFixed(2)}`}
-            </span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-600 flex items-center justify-between">
-            <span>Dr Total - Cr Total Match</span>
-            <span
-              className={cn(
-                'px-1.5 py-0.5 rounded font-bold text-[10px]',
-                summary.isBalanced ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-              )}
-            >
-              {summary.isBalanced ? '₹0.00 Diff' : `Discrepancy ₹${summary.difference.toFixed(2)}`}
-            </span>
+            </h3>
+            <div className="flex items-center justify-between mt-2 text-xs font-medium text-[var(--color-slate)]">
+              <span>Dr Total - Cr Total Match</span>
+              <span className={cn(
+                'px-2 py-0.5 rounded-md font-bold text-[10px]',
+                summary.isBalanced ? 'bg-emerald-100/80 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              )}>
+                {summary.isBalanced ? '✓ 0.00 Diff' : `Discrepancy ₹${summary.difference.toFixed(2)}`}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Total Accounts & Active Count */}
-        <div className="card bg-white p-4.5 border-l-4 border-l-indigo-500 shadow-xs relative overflow-hidden">
+        <div className="group relative overflow-hidden bg-white p-5 rounded-2xl border border-[var(--color-border-light)] shadow-xs hover:shadow-md transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Accounts</span>
-            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
-              <Users className="w-4 h-4" />
+            <span className="text-xs font-semibold text-[var(--color-slate)] uppercase tracking-wider">Total Accounts</span>
+            <span className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 text-indigo-700 transition-all group-hover:scale-105">
+              <Users className="w-5 h-5 stroke-[1.75]" />
+            </span>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-mono text-2xl font-bold text-slate-900 leading-tight tracking-tight">{summary.totalAccounts}</h3>
+              <span className="text-xs text-slate-500 font-medium">accounts</span>
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-slate-900">{summary.totalAccounts}</span>
-            <span className="text-xs text-slate-500">accounts mapped</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Active Non-Zero Accounts:</span>
-            <span className="font-bold text-indigo-700">{summary.activeAccounts} active</span>
+            <div className="flex items-center justify-between mt-2 text-xs font-medium text-[var(--color-slate)]">
+              <span>Active Accounts</span>
+              <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md text-[10px]">{summary.activeAccounts} active</span>
+            </div>
           </div>
         </div>
       </div>
@@ -602,58 +617,68 @@ export function TrialBalanceManager({
       {/* ── Interactive Filter & Search Bar ──────────────────────── */}
       <div className="card bg-white p-4 border border-slate-200 shadow-xs space-y-3 no-print">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by account code, name, or group..."
-              className="input pl-9 pr-8 text-xs py-2 w-full bg-slate-50 border-slate-200 focus:bg-white"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
-              >
-                ✕
-              </button>
-            )}
+          {/* Search Box with Column Selector */}
+          <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all flex-1 min-w-[280px]">
+            <div className="w-[130px] shrink-0 border-r border-[var(--color-border-light)]">
+              <UniversalDropdown
+                value={searchColumn}
+                onChange={(val) => setSearchColumn(val)}
+                searchable={false}
+                options={[
+                  { value: 'ALL', label: 'All Columns' },
+                  { value: 'code', label: 'Account Code' },
+                  { value: 'name', label: 'Account Name' },
+                  { value: 'groupName', label: 'Group' },
+                ]}
+                triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-[var(--color-charcoal)]"
+              />
+            </div>
+            <div className="relative flex-1 flex items-center">
+              <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Type to search accounts..."
+                className="w-full h-8.5 px-2.5 text-xs bg-transparent text-[var(--color-charcoal)] placeholder:text-slate-400 outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Group Filter */}
           <div className="w-full sm:w-56">
-            <select
+            <UniversalDropdown
+              options={groupOptions}
               value={selectedGroupId}
-              onChange={(e) => setSelectedGroupId(e.target.value)}
-              className="input text-xs py-2 w-full bg-slate-50 border-slate-200"
-            >
-              <option value="">-- All Groups ({groups?.length || 0}) --</option>
-              {groups?.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedGroupId(val)}
+              placeholder="-- All Groups --"
+            />
           </div>
 
           {/* As Of Date */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <div className="flex items-center gap-1.5 min-w-[200px]">
               <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">As of:</span>
-              <input
-                type="date"
+              <UniversalDatePicker
                 value={toDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="text-xs bg-transparent border-none p-0 focus:ring-0 text-slate-800 font-mono"
+                onChange={(d) => handleDateChange(d)}
+                placeholder="YYYY-MM-DD"
               />
             </div>
             {toDate && (
               <button
                 onClick={() => handleDateChange('')}
-                className="text-[11px] text-blue-600 hover:underline px-1 whitespace-nowrap"
+                className="text-[11px] text-[var(--color-forest)] hover:underline px-1 whitespace-nowrap"
               >
                 Reset to All-Time
               </button>
@@ -662,28 +687,24 @@ export function TrialBalanceManager({
         </div>
 
         {/* Secondary Toggles & Quick Presets */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--color-border-light)] text-xs">
           <div className="flex items-center gap-4">
             {/* Hide Zero Balance Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-slate-700 hover:text-slate-900">
-              <input
-                type="checkbox"
+            <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-[var(--color-charcoal)]">
+              <CustomCheckbox
                 checked={hideZeroBalance}
-                onChange={(e) => setHideZeroBalance(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                onChange={(checked) => setHideZeroBalance(checked)}
               />
-              Hide Nil / Zero Balance Accounts
+              <span>Hide Nil / Zero Balance Accounts</span>
             </label>
 
             {/* Group By Category Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-slate-700 hover:text-slate-900">
-              <input
-                type="checkbox"
+            <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-[var(--color-charcoal)]">
+              <CustomCheckbox
                 checked={groupByCategory}
-                onChange={(e) => setGroupByCategory(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                onChange={(checked) => setGroupByCategory(checked)}
               />
-              Category Sub-headings
+              <span>Category Sub-headings</span>
             </label>
           </div>
 
@@ -743,7 +764,7 @@ export function TrialBalanceManager({
                 )}
                 <th
                   style={{ width: '140px' }}
-                  className="text-right py-3 px-3.5 bg-blue-50/50 text-blue-900 font-bold border-l border-slate-200"
+                  className="text-right py-3 px-3.5 bg-slate-50/90 text-slate-800 font-bold border-l border-slate-200"
                 >
                   Closing Debit (Dr)
                 </th>
@@ -824,7 +845,7 @@ export function TrialBalanceManager({
                 )}
 
                 {/* Closing Debit Grand Total */}
-                <td className="text-right py-3.5 px-3.5 font-mono text-sm text-blue-700 bg-blue-50/80 border-l border-r border-blue-200/60 font-bold">
+                <td className="text-right py-3.5 px-3.5 font-mono text-sm text-slate-900 bg-slate-100/90 border-l border-r border-slate-200 font-bold">
                   ₹{visibleSummary.totalClosingDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
 
@@ -875,7 +896,7 @@ function RenderCategoryGroup({
               <span className="font-normal text-slate-500 text-[10px]">({group.rows.length} accounts)</span>
             </span>
             <div className="flex items-center gap-4 text-[11px] font-mono font-semibold">
-              <span className="text-blue-900">Dr Subtotal: ₹{group.totalDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <span className="text-slate-800">Dr Subtotal: ₹{group.totalDr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               <span className="text-emerald-900">Cr Subtotal: ₹{group.totalCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -906,7 +927,7 @@ function RenderAccountRow({
       <td className="py-2.5 px-3.5 font-mono font-bold text-slate-800">
         <Link
           href={`/ledger?accountId=${row.id}`}
-          className="hover:text-blue-600 transition-colors hover:underline"
+          className="hover:text-[var(--color-forest)] transition-colors hover:underline"
           title="Open ledger statement for this account"
         >
           {row.code}
@@ -917,7 +938,7 @@ function RenderAccountRow({
       <td className="py-2.5 px-3.5 font-medium text-slate-900 max-w-[280px] truncate" title={row.name}>
         <Link
           href={`/ledger?accountId=${row.id}`}
-          className="hover:text-blue-600 transition-colors"
+          className="hover:text-[var(--color-forest)] transition-colors"
         >
           {row.name}
         </Link>
@@ -971,7 +992,7 @@ function RenderAccountRow({
       <td
         className={cn(
           'py-2.5 px-3.5 text-right font-mono text-xs font-bold border-l border-slate-100',
-          row.closingDebit > 0 ? 'text-blue-700 bg-blue-50/20' : 'text-slate-300'
+          row.closingDebit > 0 ? 'text-slate-900 bg-slate-100/40' : 'text-slate-300'
         )}
       >
         {row.closingDebit > 0 ? `₹${row.closingDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
@@ -991,7 +1012,7 @@ function RenderAccountRow({
       <td className="py-2.5 px-3 text-center no-print" onClick={(e) => e.stopPropagation()}>
         <Link
           href={`/ledger?accountId=${row.id}`}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold text-slate-600 hover:text-[var(--color-forest)] hover:bg-[var(--color-mist)] transition-colors"
           title="Open Ledger Passbook for this account"
         >
           <span>Ledger</span>

@@ -6,6 +6,7 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { CustomCheckbox } from '../ui/CustomCheckbox';
 
 export function ExchangeFormModal({
   initialData,
@@ -151,15 +152,12 @@ export function ExchangeFormModal({
               </div>
 
               <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
+                <CustomCheckbox
                   id="exchangeActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                  checked={Boolean(formData.isActive)}
+                  onChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
                 />
-                <label htmlFor="exchangeActive" className="text-slate-700 select-none cursor-pointer font-medium">
+                <label htmlFor="exchangeActive" className="text-slate-700 select-none cursor-pointer font-medium text-xs">
                   Active in trading and imports
                 </label>
               </div>

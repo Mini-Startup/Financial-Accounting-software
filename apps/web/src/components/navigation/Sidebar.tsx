@@ -13,7 +13,6 @@ import {
   Layers,
   ArrowUpDown,
   TrendingUp,
-  CalendarDays,
   FileSpreadsheet,
   FolderOpen,
   Scale,
@@ -32,8 +31,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Lock,
-  Unlock,
   Sliders,
   DollarSign
 } from "lucide-react";

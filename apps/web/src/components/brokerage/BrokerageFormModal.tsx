@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 export function BrokerageFormModal({ 
   exchanges, 
@@ -136,58 +137,81 @@ export function BrokerageFormModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Exchange *</label>
-                <select required name="exchangeId" value={formData.exchangeId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
-                  <option value="">Select Exchange</option>
-                  {exchanges.map(ex => <option key={ex.id} value={ex.id}>{ex.code}</option>)}
-                </select>
+                <UniversalDropdown
+                  value={formData.exchangeId}
+                  options={exchanges.map((ex) => ({ value: ex.id, label: ex.code }))}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
+                  placeholder="Select Exchange"
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Applies To *</label>
-                <select required name="appliesTo" value={formData.appliesTo} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
-                  <option value="CLIENT">Client</option>
-                  <option value="BROKER">Broker</option>
-                </select>
+                <UniversalDropdown
+                  value={formData.appliesTo}
+                  options={[
+                    { value: 'CLIENT', label: 'Client' },
+                    { value: 'BROKER', label: 'Broker' },
+                  ]}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, appliesTo: val }))}
+                  placeholder="Select Applies To"
+                />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Account *</label>
-              <select required name="accountId" value={formData.accountId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
-                <option value="">Select Account</option>
-                {filteredAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>
-                    {(acc.name || acc.fldName) ?? 'Unnamed'} ({acc.code || acc.fldClient || acc.id.substring(0, 8)})
-                  </option>
-                ))}
-              </select>
+              <UniversalDropdown
+                value={formData.accountId}
+                options={filteredAccounts.map((acc) => ({
+                  value: acc.id,
+                  label: `${(acc.name || acc.fldName) ?? 'Unnamed'} (${acc.code || acc.fldClient || acc.id.substring(0, 8)})`,
+                }))}
+                onChange={(val) => setFormData((prev) => ({ ...prev, accountId: val }))}
+                placeholder="Select Account"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Type *</label>
-                <select required name="type" value={formData.type} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
-                  <option value="PERCENT">Percentage</option>
-                  <option value="AMOUNT">Flat Amount</option>
-                </select>
+                <UniversalDropdown
+                  value={formData.type}
+                  options={[
+                    { value: 'PERCENT', label: 'Percentage' },
+                    { value: 'AMOUNT', label: 'Flat Amount' },
+                  ]}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, type: val }))}
+                  placeholder="Select Type"
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Scope *</label>
-                <select required name="scope" value={formData.scope} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]">
-                  <option value="DEFAULT">Default</option>
-                  <option value="SCRIPT">Script Specific</option>
-                </select>
+                <UniversalDropdown
+                  value={formData.scope}
+                  options={[
+                    { value: 'DEFAULT', label: 'Default' },
+                    { value: 'SCRIPT', label: 'Script Specific' },
+                  ]}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, scope: val }))}
+                  placeholder="Select Scope"
+                />
               </div>
             </div>
 
             {formData.scope === 'SCRIPT' && (
-              <div className="space-y-1 border-l-4 border-blue-500 pl-4 py-1">
+              <div className="space-y-1 border-l-4 border-[var(--color-primary)] pl-4 py-1">
                 <label className="text-sm font-medium text-gray-700">Select Script *</label>
-                <select required name="scriptId" value={formData.scriptId} onChange={handleChange} className="w-full border border-gray-200 rounded-lg p-2 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] bg-blue-50/30">
-                  <option value="">Select Script...</option>
-                  {scripts.map(s => <option key={s.id} value={s.id}>{s.fullName || s.fldScriptName}</option>)}
-                </select>
+                <UniversalDropdown
+                  value={formData.scriptId}
+                  options={scripts.map((s) => ({
+                    value: s.id,
+                    label: s.fullName || s.fldScriptName || s.shortName,
+                  }))}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, scriptId: val }))}
+                  placeholder="Select Script..."
+                />
               </div>
             )}
 
@@ -250,7 +274,9 @@ export function BrokerageFormModal({
 
         <div className="px-6 py-4 flex justify-end gap-3 border-t border-[var(--color-border)] bg-gray-50/50">
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-          <button type="submit" form="brokerageForm" className="btn-primary">Save</button>
+          <button type="submit" form="brokerageForm" disabled={isSubmitting} className="btn-primary">
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </button>
         </div>
         
       </div>

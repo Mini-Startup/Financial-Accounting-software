@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter, X, RotateCcw, Calendar, ChevronDown } from 'lucide-react';
+import { Filter, X, RotateCcw, ChevronDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { UniversalDatePicker } from './UniversalDatePicker';
 
 export interface FilterOption {
   label: string;
@@ -34,7 +35,7 @@ export function UniversalFilterPanel({
 }: UniversalFilterPanelProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  const activeEntries = Object.entries(values).filter(([_, val]) => {
+  const activeEntries = Object.entries(values).filter(([, val]) => {
     if (val === undefined || val === null || val === '' || val === 'ALL') return false;
     if (typeof val === 'object' && !val.from && !val.to) return false;
     return true;
@@ -167,11 +168,10 @@ export function UniversalFilterPanel({
                     {filter.label}
                   </label>
                   <div className="relative flex items-center">
-                    <input
-                      type="date"
+                    <UniversalDatePicker
                       value={currentVal || ''}
-                      onChange={(e) => handleUpdate(filter.key, e.target.value)}
-                      className="w-full h-8 px-2.5 bg-[var(--color-snow)] border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
+                      onChange={(d) => handleUpdate(filter.key, d)}
+                      placeholder="YYYY-MM-DD"
                     />
                   </div>
                 </div>
@@ -186,24 +186,20 @@ export function UniversalFilterPanel({
                     {filter.label}
                   </label>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="date"
+                    <UniversalDatePicker
                       value={rangeVal.from || ''}
-                      onChange={(e) =>
-                        handleUpdate(filter.key, { ...rangeVal, from: e.target.value })
+                      onChange={(d) =>
+                        handleUpdate(filter.key, { ...rangeVal, from: d })
                       }
-                      className="flex-1 h-8 px-2.5 bg-[var(--color-snow)] border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
-                      placeholder="From"
+                      placeholder="From Date"
                     />
                     <span className="text-[var(--color-slate)] text-xs">to</span>
-                    <input
-                      type="date"
+                    <UniversalDatePicker
                       value={rangeVal.to || ''}
-                      onChange={(e) =>
-                        handleUpdate(filter.key, { ...rangeVal, to: e.target.value })
+                      onChange={(d) =>
+                        handleUpdate(filter.key, { ...rangeVal, to: d })
                       }
-                      className="flex-1 h-8 px-2.5 bg-[var(--color-snow)] border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
-                      placeholder="To"
+                      placeholder="To Date"
                     />
                   </div>
                 </div>

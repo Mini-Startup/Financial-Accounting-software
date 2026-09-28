@@ -48,12 +48,13 @@ export function CustomSelect({
   );
   const selectedLabel = selectedOption ? selectedOption.label : value || '';
 
-  // Sync searchQuery with selected label when not actively typing
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (!isTyping) {
       setSearchQuery(selectedLabel);
     }
-  }, [value, selectedLabel, isTyping]);
+  }
 
   const updateCoords = () => {
     if (containerRef.current) {

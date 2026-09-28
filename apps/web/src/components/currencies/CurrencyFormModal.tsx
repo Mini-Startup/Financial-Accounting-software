@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
-
+import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
 export function CurrencyFormModal({
@@ -125,13 +125,18 @@ export function CurrencyFormModal({
 
               <label className="form-label">Active</label>
               <div className="flex items-center">
-                <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 text-[var(--color-forest)] bg-white border-[var(--color-border)] rounded focus:ring-[var(--color-forest)]" />
+                <CustomCheckbox
+                  checked={Boolean(formData.isActive)}
+                  onChange={(checked) => setFormData((prev: any) => ({ ...prev, isActive: checked }))}
+                />
               </div>
             </div>
             
             <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
                <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-               <button type="submit" form="currencyForm" className="btn btn--primary">Save Currency</button>
+               <button type="submit" form="currencyForm" disabled={isSubmitting} className="btn btn--primary">
+                 {isSubmitting ? 'Saving...' : 'Save Currency'}
+               </button>
             </div>
           </form>
         </div>

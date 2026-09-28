@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { CheckCircle2, AlertTriangle, FileSpreadsheet, Edit3, Plus, ExternalLink, RefreshCw, Replace, CheckSquare, Square } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, AlertTriangle, FileSpreadsheet, Edit3, Plus, ExternalLink, RefreshCw, Replace, CheckSquare } from 'lucide-react';
 import { generateDubaiSecurityName } from './tradeImportHelpers';
 import { TradeRowDrawer } from './TradeRowDrawer';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -400,10 +400,7 @@ export function DubaiPreviewTable({
                       {/* Checkbox column */}
                       <td
                         className="py-3 px-3 text-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleRow(mainIdx);
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <CustomCheckbox
                           checked={row.selected !== false}

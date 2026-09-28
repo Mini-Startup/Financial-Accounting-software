@@ -128,8 +128,6 @@ export function UniversalDataTable<T>({
 
   const isAllVisibleSelected =
     visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k));
-  const isSomeVisibleSelected =
-    visibleKeys.some((k) => selectedKeys.has(k)) && !isAllVisibleSelected;
 
   const handleToggleAll = (checked: boolean) => {
     if (!onSelectionChange) return;

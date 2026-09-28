@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, AlertTriangle, Building2, Coins, Plus, Check } from 'lucide-react';
+import { X, AlertTriangle, Coins, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { CustomSelect } from '../ui/CustomSelect';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
 import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useScrollLock } from '../../hooks/useScrollLock';
@@ -288,7 +288,7 @@ export function ScriptFormModal({
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-bold text-rose-900">Exchange '{targetExchangeCode}' Not Found in Database</div>
+                    <div className="font-bold text-rose-900">Exchange &apos;{targetExchangeCode}&apos; Not Found in Database</div>
                     <div className="text-[11px] text-rose-700 mt-0.5">
                       This trade record belongs to exchange <strong>{targetExchangeCode}</strong>, which must be added before saving.
                     </div>
@@ -300,7 +300,7 @@ export function ScriptFormModal({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Exchange '{targetExchangeCode}'</span>
+                  <span>Add Exchange &apos;{targetExchangeCode}&apos;</span>
                 </button>
               </div>
             )}
@@ -311,7 +311,7 @@ export function ScriptFormModal({
                 <div className="flex items-start gap-2.5">
                   <Coins className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-bold text-amber-900">Currency '{targetCurrencyCode}' Not Found</div>
+                    <div className="font-bold text-amber-900">Currency &apos;{targetCurrencyCode}&apos; Not Found</div>
                     <div className="text-[11px] text-amber-700 mt-0.5">
                       Add currency <strong>{targetCurrencyCode}</strong> to properly calibrate trade profit and rates.
                     </div>
@@ -323,7 +323,7 @@ export function ScriptFormModal({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Currency '{targetCurrencyCode}'</span>
+                  <span>Add Currency &apos;{targetCurrencyCode}&apos;</span>
                 </button>
               </div>
             )}
@@ -390,7 +390,7 @@ export function ScriptFormModal({
                     )}
                   </div>
                   <div className={isTargetExchangeMissing || !formData.exchangeId ? 'rounded-lg border-2 border-rose-300' : ''}>
-                    <CustomSelect
+                    <UniversalDropdown
                       value={formData.exchangeId}
                       options={exchangeOptions}
                       onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
@@ -417,7 +417,7 @@ export function ScriptFormModal({
                       </span>
                     )}
                   </div>
-                  <CustomSelect
+                  <UniversalDropdown
                     value={formData.currencyId}
                     options={currencyOptions}
                     onChange={(val) => setFormData((prev) => ({ ...prev, currencyId: val }))}

@@ -2,8 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Trash2, AlertCircle, CheckCircle, Scale, Calendar, FileText, Plus, ArrowRightLeft, Sparkles } from 'lucide-react';
+import { Trash2, AlertCircle, CheckCircle, Scale, FileText, Plus, Sparkles } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
+import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 
 interface Account {
   id: string;
@@ -55,6 +58,21 @@ export function VoucherForm({
     { id: '1', accountId: accounts[0]?.id || '', amount: '', isDebit: true },
     { id: '2', accountId: accounts[1]?.id || accounts[0]?.id || '', amount: '', isDebit: false },
   ]);
+
+  const voucherTypeOptions = useMemo(() => [
+    { value: 'PAYMENT', label: 'Payment' },
+    { value: 'RECEIPT', label: 'Receipt' },
+    { value: 'JOURNAL', label: 'Journal' },
+    { value: 'CONTRA', label: 'Contra' },
+  ], []);
+
+  const accountOptions = useMemo(() => {
+    return accounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.code} - ${acc.name}`,
+      sublabel: acc.group?.name || 'No Group',
+    }));
+  }, [accounts]);
 
   // Live calculations
   const { totalDebit, totalCredit, difference, isBalanced } = useMemo(() => {
@@ -206,20 +224,27 @@ export function VoucherForm({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this voucher entry? It will also be removed from the ledger.')) return;
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vouchers/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vouchers/${deleteTargetId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
-        setVouchers((prev) => prev.filter((v) => v.id !== id));
+        setVouchers((prev) => prev.filter((v) => v.id !== deleteTargetId));
         toast.success('Voucher entry and ledger postings deleted');
+        setDeleteTargetId(null);
       } else {
         toast.error('Failed to delete voucher');
       }
     } catch {
       toast.error('Failed to delete voucher');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -273,33 +298,24 @@ export function VoucherForm({
               {/* Voucher Type */}
               <div className="form-field">
                 <label className="form-label form-label--required">Voucher Type</label>
-                <select
+                <UniversalDropdown
+                  options={voucherTypeOptions}
                   value={type}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="input w-full"
+                  onChange={(val) => setType(val as any)}
                   disabled={saving}
-                >
-                  <option value="PAYMENT">Payment</option>
-                  <option value="RECEIPT">Receipt</option>
-                  <option value="JOURNAL">Journal</option>
-                  <option value="CONTRA">Contra</option>
-                </select>
+                  placeholder="Select Type"
+                />
               </div>
 
               {/* Date */}
               <div className="form-field">
                 <label className="form-label form-label--required">Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input pl-10 w-full"
-                    required
-                    disabled={saving}
-                  />
-                </div>
+                <UniversalDatePicker
+                  value={date}
+                  onChange={(d) => setDate(d)}
+                  placeholder="YYYY-MM-DD"
+                  disabled={saving}
+                />
               </div>
 
               {/* Remarks */}
@@ -328,7 +344,6 @@ export function VoucherForm({
 
               <div className="p-4 space-y-3 bg-white">
                 {lines.map((line, index) => {
-                  const val = parseFloat(line.amount) || 0;
                   return (
                     <div
                       key={line.id}
@@ -346,18 +361,13 @@ export function VoucherForm({
                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                           Account Master
                         </label>
-                        <select
+                        <UniversalDropdown
+                          options={accountOptions}
                           value={line.accountId}
-                          onChange={(e) => handleLineChange(line.id, 'accountId', e.target.value)}
-                          className="input text-xs py-1.5 w-full bg-white"
+                          onChange={(val) => handleLineChange(line.id, 'accountId', val)}
                           disabled={saving}
-                        >
-                          {accounts.map((acc) => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.code} - {acc.name} ({acc.group?.name || 'No Group'})
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Select Account"
+                        />
                       </div>
 
                       {/* Dr / Cr Toggle */}
@@ -571,7 +581,7 @@ export function VoucherForm({
                       </td>
                       <td className="text-right">
                         <button
-                          onClick={() => handleDelete(v.id)}
+                          onClick={() => setDeleteTargetId(v.id)}
                           className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
                           title="Delete Voucher"
                         >
@@ -586,6 +596,17 @@ export function VoucherForm({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteTargetId}
+        title="Delete Voucher Entry"
+        message="Are you sure you want to delete this voucher entry? It will also be removed from the ledger."
+        variant="danger"
+        confirmLabel="Delete"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 }

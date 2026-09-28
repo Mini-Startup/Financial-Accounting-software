@@ -52,7 +52,6 @@ function splitRows(raw: string): string[] {
  * 1 → BUY, 2 → SELL
  */
 function transformBuySell(flag: string): 'BUY' | 'SELL' | null {
-  const ch = flag.charCodeAt(0);
   if (flag.length === 1 || (flag.length > 1 && flag.trim().length === 1)) {
     const trimmed = flag.trim();
     if (trimmed === '1') return 'BUY';

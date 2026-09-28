@@ -432,7 +432,6 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
     colMap.set('price', heuristics.priceIdx);
   }
 
-  let lineCount = 0;
   const debugSampleLinesList: Array<{ row: number; content: string }> = [];
 
   const startIndex = colMapMatched ? 1 : 0;
@@ -465,7 +464,6 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
       continue;
     }
 
-    lineCount++;
     const trade = extractDubaiFields(fields, colMap);
     const validationError = validateDubaiRow(trade);
 

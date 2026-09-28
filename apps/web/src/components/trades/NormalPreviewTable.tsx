@@ -35,7 +35,7 @@ export function NormalPreviewTable({
   invalidFuturesCount,
   skippedOptionsCount,
   futureRows,
-  optionRows,
+  optionRows: _optionRows,
   previewRows,
   setPreviewRows,
   setNormalizedRows,
@@ -188,7 +188,7 @@ export function NormalPreviewTable({
 
       {/* Tip Banner */}
       <div className="flex items-center justify-between text-xs text-[var(--color-slate)] bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-        <span>💡 Tip: Click any row to view & edit trade fields in a side inspector panel. Click '+Map' on unmapped clients/scripts to resolve them.</span>
+        <span>💡 Tip: Click any row to view &amp; edit trade fields in a side inspector panel. Click &apos;+Map&apos; on unmapped clients/scripts to resolve them.</span>
         <button
           onClick={handleRevalidate}
           disabled={isProcessing}

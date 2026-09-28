@@ -14,7 +14,7 @@ export default async function ClientsPage(props: { searchParams: Promise<{ searc
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?group=Sundry%20Debtors${query}`, { cache: 'no-store' });
     if (res.ok) accounts = await res.json();
-  } catch (e) {
+  } catch {
     console.error("Failed to fetch clients from API");
   }
 

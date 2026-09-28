@@ -1,4 +1,4 @@
-import { generateDubaiSecurityName, cleanScriptFullName } from '../../components/trades/tradeImportHelpers';
+import { generateDubaiSecurityName } from '../../components/trades/tradeImportHelpers';
 
 export interface OpenPositionParsedRow {
   clientCode: string;

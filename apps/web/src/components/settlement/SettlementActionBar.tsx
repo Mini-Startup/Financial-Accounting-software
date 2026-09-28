@@ -1,6 +1,7 @@
 'use client';
 
 import { Calculator, Zap, Trash2, Layers, RefreshCw } from 'lucide-react';
+import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import type { SettlementRecord } from './types';
 
 interface SettlementActionBarProps {
@@ -58,12 +59,10 @@ export function SettlementActionBar({
               <label className="form-label form-label--required text-xs font-semibold text-slate-700">
                 Closing Rate Date (Cutoff)
               </label>
-              <input
-                type="date"
+              <UniversalDatePicker
                 value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                className="input w-full text-xs font-mono py-2"
-                required
+                onChange={(d) => setReportDate(d)}
+                placeholder="YYYY-MM-DD"
               />
             </div>
 

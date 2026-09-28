@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, SlidersHorizontal, X, Plus, RotateCcw } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { UniversalDropdown } from './UniversalDropdown';
 
 export type SearchOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'gt' | 'lt';
 
@@ -85,18 +86,18 @@ export function UniversalSearchBar({
       {/* Simple Search Bar */}
       <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] shadow-xs transition-all focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20">
         {/* Column Selector */}
-        <select
-          value={selectedColumn}
-          onChange={(e) => handleSimpleSearch(simpleQuery, e.target.value)}
-          className="h-[36px] bg-[var(--color-snow)] border-r border-[var(--color-border-light)] px-3 text-xs font-medium text-[var(--color-charcoal)] rounded-l-[var(--radius-md)] outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-        >
-          <option value="ALL">All Columns</option>
-          {columns.map((col) => (
-            <option key={col.key} value={col.key}>
-              {col.label}
-            </option>
-          ))}
-        </select>
+        <div className="w-[130px] shrink-0 border-r border-[var(--color-border-light)]">
+          <UniversalDropdown
+            value={selectedColumn}
+            onChange={(val) => handleSimpleSearch(simpleQuery, val)}
+            searchable={false}
+            options={[
+              { value: 'ALL', label: 'All Columns' },
+              ...columns.map((col) => ({ value: col.key, label: col.label })),
+            ]}
+            triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-[var(--radius-md)] border-0 bg-[var(--color-snow)] hover:bg-slate-100 shadow-none px-2.5 text-xs font-medium text-[var(--color-charcoal)]"
+          />
+        </div>
 
         {/* Input */}
         <div className="relative flex-1 flex items-center">

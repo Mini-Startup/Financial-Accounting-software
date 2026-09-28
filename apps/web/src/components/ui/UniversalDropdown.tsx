@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
 import { Plus, ChevronDown, Check, X } from 'lucide-react';
@@ -17,6 +17,8 @@ export interface UniversalDropdownProps {
   onChange: (newValue: string) => void;
   placeholder?: string;
   className?: string;
+  triggerClassName?: string;
+  searchable?: boolean;
   disabled?: boolean;
   clearable?: boolean;
   onAddClick?: () => void;
@@ -25,12 +27,22 @@ export interface UniversalDropdownProps {
   title?: string;
 }
 
+interface Coords {
+  top?: number;
+  bottom?: number;
+  left: number;
+  width: number;
+  openUpward: boolean;
+}
+
 export function UniversalDropdown({
   value,
   options,
   onChange,
   placeholder = 'Select...',
   className,
+  triggerClassName,
+  searchable = true,
   disabled = false,
   clearable = false,
   onAddClick,
@@ -40,8 +52,9 @@ export function UniversalDropdown({
 }: UniversalDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const [coords, setCoords] = useState<Coords | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +62,14 @@ export function UniversalDropdown({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Filter options based on search query
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setInputValue(selectedOption ? selectedOption.label : '');
+    setSearchQuery('');
+  }
+
+  // Filter options based on typable search query
   const filteredOptions = options.filter((opt) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -60,30 +80,93 @@ export function UniversalDropdown({
     );
   });
 
+  // Calculate coordinates with space collision detection (flip upward if close to bottom)
+  const calculateCoords = (): Coords | null => {
+    if (!containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const menuEstimatedHeight = 240;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < menuEstimatedHeight && spaceAbove > spaceBelow;
+
+    const minWidth = Math.max(rect.width, 180);
+    let left = rect.left;
+    if (left + minWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - minWidth - 12);
+    }
+    if (left < 12) {
+      left = 12;
+    }
+
+    if (openUpward) {
+      return {
+        bottom: window.innerHeight - rect.top + 4,
+        left,
+        width: minWidth,
+        openUpward: true,
+      };
+    }
+
+    return {
+      top: rect.bottom + 4,
+      left,
+      width: minWidth,
+      openUpward: false,
+    };
+  };
+
   const updateCoords = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
+    const newCoords = calculateCoords();
+    if (newCoords) {
+      setCoords(newCoords);
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      updateCoords();
-      setHighlightedIndex(-1);
-      window.addEventListener('resize', updateCoords);
-      window.addEventListener('scroll', updateCoords, true);
+  const openDropdown = () => {
+    if (disabled) return;
+    const initialCoords = calculateCoords();
+    if (initialCoords) {
+      setCoords(initialCoords);
     }
-    return () => {
-      window.removeEventListener('resize', updateCoords);
-      window.removeEventListener('scroll', updateCoords, true);
-    };
+    setIsOpen(true);
+    setSearchQuery('');
+    setHighlightedIndex(-1);
+    // Focus the input so the user can immediately type
+    setTimeout(() => {
+      inputRef.current?.select();
+    }, 10);
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setSearchQuery('');
+    setInputValue(selectedOption ? selectedOption.label : '');
+  };
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (isOpen) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  };
+
+  // Re-calculate coords on scroll or window resize
+  useLayoutEffect(() => {
+    if (isOpen) {
+      const handleScrollResize = () => updateCoords();
+      window.addEventListener('resize', handleScrollResize);
+      window.addEventListener('scroll', handleScrollResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollResize);
+        window.removeEventListener('scroll', handleScrollResize, true);
+      };
+    }
   }, [isOpen]);
 
+  // Handle outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -93,8 +176,7 @@ export function UniversalDropdown({
         dropdownRef.current &&
         !dropdownRef.current.contains(target)
       ) {
-        setIsOpen(false);
-        setSearchQuery('');
+        closeDropdown();
       }
     };
     if (isOpen) {
@@ -103,28 +185,21 @@ export function UniversalDropdown({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    setIsOpen(true);
-    setSearchQuery('');
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
-  };
+  }, [isOpen, selectedOption]);
 
   const handleSelect = (val: string) => {
     onChange(val);
+    const chosen = options.find((o) => o.value === val);
+    setInputValue(chosen ? chosen.label : '');
     setIsOpen(false);
     setSearchQuery('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) {
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === ' ') {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
         e.preventDefault();
-        handleOpen();
+        openDropdown();
       }
       return;
     }
@@ -144,8 +219,9 @@ export function UniversalDropdown({
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      setIsOpen(false);
-      setSearchQuery('');
+      closeDropdown();
+    } else if (e.key === 'Tab') {
+      closeDropdown();
     }
   };
 
@@ -156,74 +232,120 @@ export function UniversalDropdown({
       title={title}
     >
       <div
-        id={id}
-        tabIndex={disabled ? -1 : 0}
-        onClick={handleOpen}
-        onKeyDown={handleKeyDown}
         className={cn(
-          'w-full min-h-[38px] px-3 py-1.5 bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)]',
-          'flex items-center justify-between gap-2 cursor-pointer transition-all duration-150 select-none shadow-xs',
+          'w-full min-h-[38px] px-2.5 py-1 bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)]',
+          'flex items-center justify-between gap-1.5 transition-all duration-150 select-none shadow-xs',
+          searchable ? 'cursor-text' : 'cursor-pointer',
           isOpen && 'border-[var(--color-border-focus)] ring-2 ring-[var(--color-leaf)]/20',
-          !disabled && 'hover:border-[var(--color-slate)]'
+          !disabled && 'hover:border-[var(--color-slate)]',
+          triggerClassName
         )}
+        onClick={() => {
+          if (disabled) return;
+          if (!searchable) {
+            handleToggle();
+          } else {
+            if (!isOpen) {
+              openDropdown();
+            } else {
+              inputRef.current?.focus();
+            }
+          }
+        }}
       >
-        <span className={cn('truncate', !selectedOption && 'text-[var(--color-fog)]')}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        {/* Main Typable Search / Display Input or static label */}
+        {searchable ? (
+          <input
+            ref={inputRef}
+            id={id}
+            type="text"
+            disabled={disabled}
+            value={isOpen ? inputValue : selectedOption ? selectedOption.label : ''}
+            placeholder={selectedOption ? selectedOption.label : placeholder}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setSearchQuery(e.target.value);
+              setHighlightedIndex(0);
+              if (!isOpen) {
+                openDropdown();
+              }
+            }}
+            onFocus={() => {
+              if (!isOpen) {
+                openDropdown();
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            className="w-full h-full bg-transparent text-xs text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)] outline-none cursor-text truncate"
+          />
+        ) : (
+          <span className="w-full text-xs text-[var(--color-charcoal)] truncate select-none">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+        )}
 
-        <div className="flex items-center gap-1.5 shrink-0 text-[var(--color-slate)]">
+        {/* Right side controls: Clear (X) & Chevron Toggle */}
+        <div className="flex items-center gap-1 shrink-0 text-[var(--color-slate)]">
           {clearable && selectedOption && !disabled && (
             <button
               type="button"
+              tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
                 onChange('');
+                setInputValue('');
+                setSearchQuery('');
+                closeDropdown();
               }}
-              className="p-0.5 hover:text-[var(--color-negative)] transition-colors rounded"
+              className="p-1 hover:text-[var(--color-negative)] transition-colors rounded cursor-pointer"
+              title="Clear selection"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
-          <ChevronDown
-            className={cn('w-4 h-4 transition-transform duration-200', isOpen && 'rotate-180')}
-          />
+
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle();
+            }}
+            className="p-1 hover:text-[var(--color-charcoal)] transition-colors rounded cursor-pointer"
+            title={isOpen ? 'Close' : 'Open'}
+          >
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 transition-transform duration-200',
+                isOpen && 'rotate-180 text-[var(--color-forest)]'
+              )}
+            />
+          </button>
         </div>
       </div>
 
+      {/* Floating Dropdown Menu Portal */}
       {isOpen &&
+        coords &&
         typeof document !== 'undefined' &&
         createPortal(
           <div
             ref={dropdownRef}
             style={{
-              position: 'absolute',
-              top: `${coords.top}px`,
+              position: 'fixed',
+              ...(coords.openUpward
+                ? { bottom: `${coords.bottom}px` }
+                : { top: `${coords.top}px` }),
               left: `${coords.left}px`,
-              width: `${Math.max(coords.width, 180)}px`,
-              zIndex: 99999,
+              width: `${coords.width}px`,
+              zIndex: 999999,
             }}
-            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] overflow-hidden flex flex-col max-h-64 animate-in fade-in zoom-in-95 duration-100"
+            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] overflow-hidden flex flex-col max-h-60 duration-100"
           >
-            {/* Search Input Header */}
-            <div className="p-2 border-b border-[var(--color-border-light)] bg-[var(--color-snow)]">
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setHighlightedIndex(0);
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Search..."
-                className="w-full px-2.5 py-1.5 text-xs bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-border-focus)] text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)]"
-              />
-            </div>
-
             {/* Options List */}
             <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
               {filteredOptions.length === 0 ? (
-                <div className="p-3 text-center text-xs text-[var(--color-slate)]">
+                <div className="p-3 text-center text-xs text-[var(--color-slate)] italic">
                   No matching options found
                 </div>
               ) : (
@@ -262,12 +384,11 @@ export function UniversalDropdown({
 
             {/* Add New Button Footer */}
             {onAddClick && (
-              <div className="border-t border-[var(--color-border-light)] p-1.5 bg-[var(--color-snow)]">
+              <div className="border-t border-[var(--color-border-light)] p-1.5 bg-[var(--color-snow)] shrink-0">
                 <button
                   type="button"
                   onClick={() => {
-                    setIsOpen(false);
-                    setSearchQuery('');
+                    closeDropdown();
                     onAddClick();
                   }}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold text-[var(--color-forest)] hover:bg-[var(--color-mist)] rounded-[var(--radius-sm)] transition-colors cursor-pointer"

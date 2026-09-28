@@ -2,6 +2,7 @@
 
 import { Search } from 'lucide-react';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 
 export type StatusFilterType = 'ALL' | 'VALID' | 'INVALID' | 'UNMAPPED_CLIENT' | 'UNMAPPED_SCRIPT' | 'UNMAPPED_EXCHANGE';
 
@@ -36,26 +37,30 @@ export function ImportFilterBar({
     <div className="card p-4 bg-white border border-[var(--color-border-light)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
       {/* Search Bar with Column Selector */}
       <div className="flex items-center gap-2 flex-1 max-w-xl">
-        <div className="flex items-center border border-slate-200 rounded-md bg-white shadow-sm overflow-hidden w-full focus-within:ring-2 focus-within:ring-[var(--color-primary-light)] focus-within:border-[var(--color-primary)]">
+        <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all w-full">
           {/* Column Select Dropdown */}
-          <select
-            value={searchColumn}
-            onChange={(e) => {
-              setSearchColumn(e.target.value);
-              resetPage();
-            }}
-            className="bg-slate-50 text-xs font-semibold text-slate-700 px-3 py-2 border-r border-slate-200 outline-none cursor-pointer hover:bg-slate-100 transition-colors shrink-0"
-          >
-            <option value="clientCode">Client</option>
-            <option value="dealerCode">Dealer Code</option>
-            <option value="tickCode">Script / Tick Code</option>
-            <option value="securityName">Security Name</option>
-            <option value="marketCode">Market / Exchange</option>
-            <option value="tradeDate">Trade Date</option>
-            <option value="quantity">Quantity</option>
-            <option value="price">Price / Rate</option>
-            <option value="ALL">All Columns</option>
-          </select>
+          <div className="w-[145px] shrink-0 border-r border-[var(--color-border-light)]">
+            <UniversalDropdown
+              value={searchColumn}
+              onChange={(val) => {
+                setSearchColumn(val);
+                resetPage();
+              }}
+              searchable={false}
+              options={[
+                { value: 'clientCode', label: 'Client' },
+                { value: 'dealerCode', label: 'Dealer Code' },
+                { value: 'tickCode', label: 'Script / Tick Code' },
+                { value: 'securityName', label: 'Security Name' },
+                { value: 'marketCode', label: 'Market / Exchange' },
+                { value: 'tradeDate', label: 'Trade Date' },
+                { value: 'quantity', label: 'Quantity' },
+                { value: 'price', label: 'Price / Rate' },
+                { value: 'ALL', label: 'All Columns' },
+              ]}
+              triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2.5 text-[11px] font-semibold text-[var(--color-charcoal)]"
+            />
+          </div>
 
           {/* Input */}
           <div className="relative flex-1">
@@ -134,21 +139,25 @@ export function ImportFilterBar({
         {/* Status Dropdown */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-slate)] font-semibold shrink-0">Filter:</span>
-          <select
-            value={statusFilter}
-            onChange={(e: any) => {
-              setStatusFilter(e.target.value);
-              resetPage();
-            }}
-            className="input text-xs py-1.5 px-3 font-semibold bg-white border border-slate-200 rounded-md"
-          >
-            <option value="ALL">All Parsed Rows</option>
-            <option value="VALID">✓ Valid Trades Only</option>
-            <option value="INVALID">⚠ Invalid / Unmapped Trades</option>
-            <option value="UNMAPPED_CLIENT">🔴 Unmapped Clients</option>
-            <option value="UNMAPPED_SCRIPT">🔴 Unmapped Scripts</option>
-            <option value="UNMAPPED_EXCHANGE">🔴 Unmapped Exchanges</option>
-          </select>
+          <div className="w-[210px]">
+            <UniversalDropdown
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val as StatusFilterType);
+                resetPage();
+              }}
+              searchable={false}
+              options={[
+                { value: 'ALL', label: 'All Parsed Rows' },
+                { value: 'VALID', label: '✓ Valid Trades Only' },
+                { value: 'INVALID', label: '⚠ Invalid / Unmapped Trades' },
+                { value: 'UNMAPPED_CLIENT', label: '🔴 Unmapped Clients' },
+                { value: 'UNMAPPED_SCRIPT', label: '🔴 Unmapped Scripts' },
+                { value: 'UNMAPPED_EXCHANGE', label: '🔴 Unmapped Exchanges' },
+              ]}
+              triggerClassName="min-h-[34px] h-[34px] text-xs font-semibold px-2.5 py-1.5"
+            />
+          </div>
         </div>
 
         {(searchQuery || statusFilter !== 'ALL' || exactMatch || showValidOnly) && (

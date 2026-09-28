@@ -35,11 +35,13 @@ export function SearchableSelect({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (!isOpen) {
       setSearchQuery(value);
     }
-  }, [value, isOpen]);
+  }
 
   const updateCoords = () => {
     if (inputRef.current) {

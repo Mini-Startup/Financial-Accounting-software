@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatDateForInput, normalizeYear } from '@/utils/dateUtils';
 
@@ -16,6 +16,13 @@ export interface UniversalDatePickerProps {
   className?: string;
   id?: string;
   error?: string;
+}
+
+interface Coords {
+  top?: number;
+  bottom?: number;
+  left: number;
+  openUpward: boolean;
 }
 
 export function UniversalDatePicker({
@@ -32,59 +39,59 @@ export function UniversalDatePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [textValue, setTextValue] = useState(value || '');
   const [localError, setLocalError] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [coords, setCoords] = useState<Coords | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setTextValue(value || '');
     setLocalError(null);
-  }, [value]);
+  }
 
-  const updateCoords = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
+  const calculateCoords = (): Coords | null => {
+    if (!containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const calendarHeight = 310;
+    const calendarWidth = 280;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < calendarHeight && spaceAbove > spaceBelow;
+
+    let left = rect.left;
+    if (left + calendarWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - calendarWidth - 12);
     }
+    if (left < 12) {
+      left = 12;
+    }
+
+    if (openUpward) {
+      return {
+        bottom: window.innerHeight - rect.top + 4,
+        left,
+        openUpward: true,
+      };
+    }
+
+    return {
+      top: rect.bottom + 4,
+      left,
+      openUpward: false,
+    };
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      updateCoords();
-      window.addEventListener('resize', updateCoords);
-      window.addEventListener('scroll', updateCoords, true);
+  const updateCoords = () => {
+    const newCoords = calculateCoords();
+    if (newCoords) {
+      setCoords(newCoords);
     }
-    return () => {
-      window.removeEventListener('resize', updateCoords);
-      window.removeEventListener('scroll', updateCoords, true);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(target) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(target)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  };
 
   // Calendar View month/year state
   const parseToDate = (str: string): Date => {
@@ -98,11 +105,62 @@ export function UniversalDatePicker({
   const [viewYear, setViewYear] = useState(activeDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(activeDate.getMonth());
 
-  useEffect(() => {
+  const openPicker = () => {
+    if (disabled) return;
+    const initialCoords = calculateCoords();
+    if (initialCoords) {
+      setCoords(initialCoords);
+    }
     const d = parseToDate(value || textValue);
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
-  }, [value, isOpen]);
+    setIsOpen(true);
+  };
+
+  const closePicker = () => {
+    setIsOpen(false);
+  };
+
+  const togglePicker = () => {
+    if (disabled) return;
+    if (isOpen) {
+      closePicker();
+    } else {
+      openPicker();
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      const handleScrollResize = () => updateCoords();
+      window.addEventListener('resize', handleScrollResize);
+      window.addEventListener('scroll', handleScrollResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollResize);
+        window.removeEventListener('scroll', handleScrollResize, true);
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
+        closePicker();
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Handle typing blur & smart year expansion
   const handleBlur = () => {
@@ -211,16 +269,27 @@ export function UniversalDatePicker({
           className="w-full h-[36px] px-3 text-xs font-mono tabular-nums text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)] outline-none bg-transparent"
         />
 
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange('');
+              setTextValue('');
+              setLocalError(null);
+            }}
+            className="p-1 text-[var(--color-slate)] hover:text-[var(--color-negative)] rounded cursor-pointer"
+            title="Clear date"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         <button
           type="button"
           disabled={disabled}
-          onClick={() => {
-            if (!disabled) {
-              updateCoords();
-              setIsOpen(!isOpen);
-            }
-          }}
+          onClick={togglePicker}
           className="p-2 text-[var(--color-slate)] hover:text-[var(--color-forest)] transition-colors cursor-pointer select-none"
+          title={isOpen ? 'Close Calendar' : 'Open Calendar'}
         >
           <CalendarIcon className="w-4 h-4" />
         </button>
@@ -241,13 +310,15 @@ export function UniversalDatePicker({
           <div
             ref={dropdownRef}
             style={{
-              position: 'absolute',
-              top: `${coords.top}px`,
+              position: 'fixed',
+              ...(coords.openUpward
+                ? { bottom: `${coords.bottom}px` }
+                : { top: `${coords.top}px` }),
               left: `${coords.left}px`,
-              width: 270,
+              width: 280,
               zIndex: 999999,
             }}
-            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-3 animate-in fade-in duration-100"
+            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-3 duration-100"
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-2">
@@ -261,7 +332,7 @@ export function UniversalDatePicker({
                     setViewMonth(viewMonth - 1);
                   }
                 }}
-                className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-snow)] rounded-[var(--radius-sm)]"
+                className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-snow)] rounded-[var(--radius-sm)] cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -280,7 +351,7 @@ export function UniversalDatePicker({
                     setViewMonth(viewMonth + 1);
                   }
                 }}
-                className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-snow)] rounded-[var(--radius-sm)]"
+                className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-snow)] rounded-[var(--radius-sm)] cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

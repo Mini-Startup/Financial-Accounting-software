@@ -9,9 +9,15 @@ import { ScriptFormModal } from '../scripts/ScriptFormModal';
 import { FormModal as AccountFormModal } from '../accounts/FormModal';
 import { ClosingRateDataTable } from './ClosingRateDataTable';
 import { ClosingRateFormModal } from './ClosingRateFormModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
+import { UniversalFileUploader } from '@/components/ui/UniversalFileUploader';
+import { CustomCheckbox } from '@/components/ui/CustomCheckbox';
+import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
+import { FindAndReplace, type FindAndReplaceColumn } from '@/components/ui/FindAndReplace';
 import { 
   Plus, UploadCloud, ArrowLeft, CheckCircle2, AlertTriangle, FileSpreadsheet, 
-  RefreshCw, ChevronDown, ChevronUp, PlusCircle, AlertCircle, X, ShieldAlert
+  RefreshCw, ChevronDown, ChevronUp, PlusCircle, AlertCircle, X, ShieldAlert, Replace, Search
 } from 'lucide-react';
 import { 
   parseOpenPositionCSV, 
@@ -20,14 +26,6 @@ import {
   type OpenPositionParsedRow 
 } from '../../lib/tradeParser/openPositionParser';
 
-interface PositionDiscrepancy {
-  clientCode: string;
-  securityName: string;
-  systemNetQty: number;
-  csvNetQty: number;
-  diff: number;
-  reason: string;
-}
 
 export function ClosingRatePageManager({ 
   initialClosingRates,
@@ -72,9 +70,25 @@ export function ClosingRatePageManager({
   const [fileName, setFileName] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAdjusting, setIsAdjusting] = useState<boolean>(false);
+  const [showAdjustConfirm, setShowAdjustConfirm] = useState<boolean>(false);
   const [rawOpenPositionRows, setRawOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
   const [parsedItems, setParsedItems] = useState<ParsedClosingRateItem[]>([]);
   
+  // Preview Selection & Search States
+  const [selectedRateIndices, setSelectedRateIndices] = useState<Set<number>>(new Set());
+  const [previewSearchQuery, setPreviewSearchQuery] = useState('');
+  const [previewSearchColumn, setPreviewSearchColumn] = useState('ALL');
+  const [showPreviewFindAndReplace, setShowPreviewFindAndReplace] = useState(false);
+
+  // Sync selectedRateIndices whenever parsedItems changes (default all Valid selected)
+  useEffect(() => {
+    const init = new Set<number>();
+    parsedItems.forEach((item, idx) => {
+      if (item.status === 'Valid') init.add(idx);
+    });
+    setSelectedRateIndices(init);
+  }, [parsedItems]);
+
   // Accordion state (Closed by default)
   const [isAccordionOpen, setIsAccordionOpen] = useState<boolean>(false);
 
@@ -84,7 +98,6 @@ export function ClosingRatePageManager({
 
   // System settlement trades for date verification
   const [settlementItems, setSettlementItems] = useState<any[]>([]);
-  const [isLoadingSettlement, setIsLoadingSettlement] = useState(false);
 
   // Duplicate Check Modal state
   const [duplicateCheckModal, setDuplicateCheckModal] = useState<{
@@ -95,6 +108,7 @@ export function ClosingRatePageManager({
   } | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const [_isLoadingSettlement, setIsLoadingSettlement] = useState(false);
 
   // Fetch accounts if not loaded
   useEffect(() => {
@@ -155,7 +169,7 @@ export function ClosingRatePageManager({
   }, [localCurrencies.length]);
 
   const handleOpenScriptModal = (commodityCode: string, securityName?: string, exchangeCode?: string) => {
-    let foundExchange = exchanges.find(
+    const foundExchange = exchanges.find(
       (ex) => ex.code.toUpperCase() === (exchangeCode || '').toUpperCase()
     );
     const cleanedFullName = securityName ? cleanScriptFullName(securityName) : commodityCode;
@@ -210,10 +224,7 @@ export function ClosingRatePageManager({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleFileSelect = (file: File) => {
     setFileName(file.name);
     setIsProcessing(true);
 
@@ -242,10 +253,21 @@ export function ClosingRatePageManager({
     reader.readAsText(file);
   };
 
+  const handleClearFile = () => {
+    setFileName('');
+    setRawOpenPositionRows([]);
+    setParsedItems([]);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
   // Perform Open Position Verification against system settlement trades
-  const performVerification = () => {
+  const performVerification = (): {
+    status: 'NO_FILE' | 'VALIDATED' | 'FAILED';
+    items: PositionVerificationItem[];
+    discrepancies: PositionVerificationItem[];
+  } => {
     if (rawOpenPositionRows.length === 0) {
-      return { status: 'NO_FILE' as const, discrepancies: [] };
+      return { status: 'NO_FILE', items: [], discrepancies: [] };
     }
 
     // 1. Group CSV open net lots by ClientCode + SecurityName (constructed using full script name)
@@ -390,7 +412,7 @@ export function ClosingRatePageManager({
   const isValidated = verification.status === 'VALIDATED';
 
   // Handle Add or Adjust Trades button
-  const handleAddAdjustTrades = async () => {
+  const handleAddAdjustTrades = () => {
     if (!isValidated) {
       toast.error('Open Position validation must pass before adding or adjusting trades.');
       return;
@@ -402,10 +424,11 @@ export function ClosingRatePageManager({
       return;
     }
 
-    if (!confirm(`Are you sure you want to add Carry Forward and Back Forward trades for ${openPositions.length} open positions on ${importDate}?`)) {
-      return;
-    }
+    setShowAdjustConfirm(true);
+  };
 
+  const executeAdjustTrades = async () => {
+    const openPositions = settlementItems.filter((i) => i.netQty !== 0);
     setIsAdjusting(true);
     try {
       const adjustments = openPositions.map((item) => ({
@@ -434,6 +457,7 @@ export function ClosingRatePageManager({
 
       const result = await res.json();
       toast.success(`Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`);
+      setShowAdjustConfirm(false);
       
       // Refresh settlement data
       await fetchSettlementForDate(importDate);
@@ -478,10 +502,10 @@ export function ClosingRatePageManager({
 
   const handleConfirmImport = async () => {
     const validItems = parsedItems.filter(
-      (item) => item.status === 'Valid' && item.resolvedExchangeId && item.resolvedScriptId
+      (item, idx) => selectedRateIndices.has(idx) && item.status === 'Valid' && item.resolvedExchangeId && item.resolvedScriptId
     );
     if (validItems.length === 0) {
-      toast.error('No valid mapped scripts available to import. Please add or map scripts in the database first.');
+      toast.error('No selected valid mapped scripts available to import. Please select at least one valid script.');
       return;
     }
 
@@ -545,15 +569,112 @@ export function ClosingRatePageManager({
 
   if (viewMode === 'import') {
     const validCount = parsedItems.filter((i) => i.status === 'Valid').length;
+    const selectedValidCount = parsedItems.filter((i, idx) => selectedRateIndices.has(idx) && i.status === 'Valid').length;
     const unmappedCount = parsedItems.filter((i) => i.status === 'Unmapped').length;
 
+    // Filter parsed items based on preview search
+    const filteredParsedItems = parsedItems.filter((item) => {
+      if (!previewSearchQuery.trim()) return true;
+      const q = previewSearchQuery.toLowerCase().trim();
+      if (previewSearchColumn === 'exchangeCode') return (item.exchangeCode || '').toLowerCase().includes(q);
+      if (previewSearchColumn === 'commodityCode') return (item.commodityCode || '').toLowerCase().includes(q);
+      if (previewSearchColumn === 'scriptFullName') return (item.scriptFullName || '').toLowerCase().includes(q);
+      if (previewSearchColumn === 'securityName') return (item.securityName || '').toLowerCase().includes(q);
+      if (previewSearchColumn === 'delMonth') return (item.delMonth || item.expiryDate || '').toLowerCase().includes(q);
+      return (
+        (item.exchangeCode || '').toLowerCase().includes(q) ||
+        (item.commodityCode || '').toLowerCase().includes(q) ||
+        (item.scriptFullName || '').toLowerCase().includes(q) ||
+        (item.securityName || '').toLowerCase().includes(q) ||
+        (item.delMonth || item.expiryDate || '').toLowerCase().includes(q) ||
+        String(item.closingPrice).includes(q)
+      );
+    });
+
     // Accordion pagination math
-    const totalTablePages = Math.max(1, Math.ceil(parsedItems.length / tablePageSize));
+    const totalTablePages = Math.max(1, Math.ceil(filteredParsedItems.length / tablePageSize));
     const safeTablePage = Math.min(tablePage, totalTablePages);
-    const paginatedItems = parsedItems.slice(
+    const paginatedItems = filteredParsedItems.slice(
       (safeTablePage - 1) * tablePageSize,
       safeTablePage * tablePageSize
     );
+
+    const findAndReplaceColumns: FindAndReplaceColumn[] = [
+      { key: 'exchangeCode', label: 'Exchange' },
+      { key: 'commodityCode', label: 'Commodity Code' },
+      { key: 'scriptFullName', label: 'Script Full Name' },
+      { key: 'securityName', label: 'Security Name' },
+      { key: 'delMonth', label: 'Expiry / DelMonth' },
+      { key: 'closingPrice', label: 'Closing Price' },
+    ];
+
+    const handleReplaceOne = (rowIndex: number, columnKey: string, newValue: string) => {
+      setParsedItems((prev) => {
+        const copy = [...prev];
+        if (copy[rowIndex]) {
+          copy[rowIndex] = { ...copy[rowIndex], [columnKey]: columnKey === 'closingPrice' ? parseFloat(newValue) || 0 : newValue };
+        }
+        return copy;
+      });
+    };
+
+    const handleReplaceAll = (columnKey: string, findValue: string, replaceValue: string) => {
+      if (!findValue) return;
+      setParsedItems((prev) =>
+        prev.map((item) => {
+          const current = String((item as any)[columnKey] || '');
+          if (current.toLowerCase().includes(findValue.toLowerCase())) {
+            const escaped = findValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escaped, 'gi');
+            const updated = current.replace(regex, replaceValue);
+            return { ...item, [columnKey]: columnKey === 'closingPrice' ? parseFloat(updated) || 0 : updated };
+          }
+          return item;
+        })
+      );
+      toast.success(`Replaced all occurrences in ${columnKey}`);
+    };
+
+    const validIndicesInFiltered = filteredParsedItems
+      .map((item) => parsedItems.indexOf(item))
+      .filter((idx) => idx !== -1 && parsedItems[idx]?.status === 'Valid');
+
+    const isAllFilteredValidSelected =
+      validIndicesInFiltered.length > 0 &&
+      validIndicesInFiltered.every((idx) => selectedRateIndices.has(idx));
+
+    const handleToggleSelectAllValid = () => {
+      setSelectedRateIndices((prev) => {
+        const next = new Set(prev);
+        if (isAllFilteredValidSelected) {
+          validIndicesInFiltered.forEach((idx) => next.delete(idx));
+        } else {
+          validIndicesInFiltered.forEach((idx) => next.add(idx));
+        }
+        return next;
+      });
+    };
+
+    const handleSelectAllValidOverall = () => {
+      const allValid = new Set<number>();
+      parsedItems.forEach((item, idx) => {
+        if (item.status === 'Valid') allValid.add(idx);
+      });
+      setSelectedRateIndices(allValid);
+    };
+
+    const handleDeselectAll = () => {
+      setSelectedRateIndices(new Set());
+    };
+
+    const handleToggleRow = (globalIdx: number) => {
+      setSelectedRateIndices((prev) => {
+        const next = new Set(prev);
+        if (next.has(globalIdx)) next.delete(globalIdx);
+        else next.add(globalIdx);
+        return next;
+      });
+    };
 
     return (
       <div className="space-y-6">
@@ -614,7 +735,7 @@ export function ClosingRatePageManager({
               {/* Import Closing Rates Button */}
               <button
                 onClick={handleConfirmImport}
-                disabled={isProcessing || validCount === 0}
+                disabled={isProcessing || selectedValidCount === 0}
                 className="btn btn--primary flex items-center gap-2 py-2 text-xs font-bold"
               >
                 {isProcessing ? (
@@ -622,7 +743,7 @@ export function ClosingRatePageManager({
                     <RefreshCw className="w-4 h-4 animate-spin" /> Saving…
                   </>
                 ) : (
-                  <>Import {validCount} Closing Rates</>
+                  <>Import {selectedValidCount} Selected Rates</>
                 )}
               </button>
             </div>
@@ -631,45 +752,33 @@ export function ClosingRatePageManager({
 
         {/* Configuration Card */}
         <div className="card p-6 bg-white border border-[var(--color-border-light)] shadow-sm space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            {/* Date Selection */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Import Rate Date <span className="text-rose-500">*</span>
-              </label>
-              <input 
-                type="date"
-                value={importDate}
-                onChange={(e) => setImportDate(e.target.value)}
-                className="input w-full text-slate-900"
-                required
-              />
-              <p className="text-xs text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
-            </div>
+          {/* Top Section: Date Selection */}
+          <div className="max-w-md space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              Import Rate Date <span className="text-rose-500">*</span>
+            </label>
+            <UniversalDatePicker
+              value={importDate}
+              onChange={(d) => setImportDate(d)}
+              placeholder="YYYY-MM-DD"
+            />
+            <p className="text-xs text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
+          </div>
 
-            {/* File Upload Button */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Open Position CSV File <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex gap-3">
-                <input 
-                  type="file"
-                  ref={inputRef}
-                  onChange={handleFileChange}
-                  accept=".csv, .txt"
-                  className="hidden"
-                  id="open-position-file-input"
-                />
-                <label 
-                  htmlFor="open-position-file-input"
-                  className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2.5"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
-                  <span className="truncate">{fileName ? `File: ${fileName}` : 'Browse Open Position CSV'}</span>
-                </label>
-              </div>
-            </div>
+          {/* Bottom Section: File Upload Component */}
+          <div className="pt-5 border-t border-[var(--color-border-light)] space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              Open Position CSV File <span className="text-rose-500">*</span>
+            </label>
+            <UniversalFileUploader
+              onFileSelect={handleFileSelect}
+              onClear={handleClearFile}
+              fileName={fileName}
+              isProcessing={isProcessing}
+              accept=".csv, .txt"
+              title="Select or drop Open Position CSV"
+              description="Supports CSV, TXT files (drag & drop or click to browse)"
+            />
           </div>
 
           {/* Validation Status Bar */}
@@ -749,11 +858,113 @@ export function ClosingRatePageManager({
 
             {/* Accordion Body */}
             {isAccordionOpen && (
-              <div>
-                <div className="overflow-x-auto">
+              <div className="space-y-3 p-4">
+                {/* Preview Toolbar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-3 flex-wrap flex-1">
+                    {/* Column-targeted Search */}
+                    <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all max-w-md w-full">
+                      <div className="w-[140px] shrink-0 border-r border-[var(--color-border-light)]">
+                        <UniversalDropdown
+                          value={previewSearchColumn}
+                          onChange={(val) => setPreviewSearchColumn(val)}
+                          searchable={false}
+                          options={[
+                            { value: 'ALL', label: 'All Columns' },
+                            { value: 'exchangeCode', label: 'Exchange' },
+                            { value: 'commodityCode', label: 'Commodity Code' },
+                            { value: 'scriptFullName', label: 'Script Name' },
+                            { value: 'securityName', label: 'Security Name' },
+                            { value: 'delMonth', label: 'Del Month' },
+                          ]}
+                          triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-[var(--color-charcoal)]"
+                        />
+                      </div>
+                      <div className="relative flex-1 flex items-center">
+                        <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
+                        <input
+                          type="text"
+                          value={previewSearchQuery}
+                          onChange={(e) => {
+                            setPreviewSearchQuery(e.target.value);
+                            setTablePage(1);
+                          }}
+                          placeholder="Search in preview..."
+                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
+                        />
+                        {previewSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewSearchQuery('');
+                              setTablePage(1);
+                            }}
+                            className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Batch Selection Counters */}
+                    <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                      <strong>{selectedValidCount}</strong> of {validCount} valid rates selected
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleSelectAllValidOverall}
+                      className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+                    >
+                      Select All Valid
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDeselectAll}
+                      className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewFindAndReplace(!showPreviewFindAndReplace)}
+                    className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
+                      showPreviewFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
+                    }`}
+                  >
+                    <Replace className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Find & Replace</span>
+                  </button>
+                </div>
+
+                {/* Find & Replace Drawer */}
+                {showPreviewFindAndReplace && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                    <FindAndReplace<ParsedClosingRateItem>
+                      data={parsedItems}
+                      columns={findAndReplaceColumns}
+                      onReplaceOne={handleReplaceOne}
+                      onReplaceAll={handleReplaceAll}
+                      onClose={() => setShowPreviewFindAndReplace(false)}
+                    />
+                  </div>
+                )}
+
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                        <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
+                          <CustomCheckbox
+                            checked={isAllFilteredValidSelected}
+                            onChange={handleToggleSelectAllValid}
+                          />
+                        </th>
                         <th className="py-3 px-4">#</th>
                         <th className="py-3 px-4">Exchange</th>
                         <th className="py-3 px-4">Commodity Code</th>
@@ -765,45 +976,57 @@ export function ClosingRatePageManager({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {paginatedItems.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-3 px-4 font-mono text-slate-500">
-                            {(safeTablePage - 1) * tablePageSize + idx + 1}
-                          </td>
-                          <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
-                          <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
-                          <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
-                          <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
-                          <td className="py-3 px-4 font-mono text-slate-600">{item.delMonth || item.expiryDate || '—'}</td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                            {item.currencySymbol || '$'}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            {item.status === 'Valid' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Valid</span>
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
-                                title={item.errors.join(', ') + ' - Click to add this script'}
-                              >
-                                <Plus className="w-3 h-3 text-rose-600" />
-                                <span>Unmapped (Add)</span>
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {paginatedItems.map((item, idx) => {
+                        const globalIdx = parsedItems.indexOf(item);
+                        const isSelected = selectedRateIndices.has(globalIdx);
+
+                        return (
+                          <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
+                            <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <CustomCheckbox
+                                checked={isSelected}
+                                disabled={item.status !== 'Valid'}
+                                onChange={() => handleToggleRow(globalIdx)}
+                              />
+                            </td>
+                            <td className="py-3 px-4 font-mono text-slate-500">
+                              {(safeTablePage - 1) * tablePageSize + idx + 1}
+                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
+                            <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
+                            <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
+                            <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
+                            <td className="py-3 px-4 font-mono text-slate-600">{item.delMonth || item.expiryDate || '—'}</td>
+                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                              {item.currencySymbol || '$'}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {item.status === 'Valid' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Valid</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
+                                  title={item.errors.join(', ') + ' - Click to add this script'}
+                                >
+                                  <Plus className="w-3 h-3 text-rose-600" />
+                                  <span>Unmapped (Add)</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Table Pagination Bar */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 border-t border-slate-200 text-xs">
+                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-slate-600 font-semibold">Rows per page:</span>
                     <select
@@ -812,7 +1035,7 @@ export function ClosingRatePageManager({
                         setTablePageSize(Number(e.target.value));
                         setTablePage(1);
                       }}
-                      className="input py-1 px-2 text-xs w-[70px]"
+                      className="input py-1 px-2 text-xs w-[70px] bg-white"
                     >
                       <option value={20}>20</option>
                       <option value={50}>50</option>
@@ -822,7 +1045,7 @@ export function ClosingRatePageManager({
 
                   <div className="flex items-center gap-3">
                     <span className="text-slate-600">
-                      Page {safeTablePage} of {totalTablePages} ({parsedItems.length} items)
+                      Page {safeTablePage} of {totalTablePages} ({filteredParsedItems.length} items)
                     </span>
                     <div className="flex gap-1">
                       <button
@@ -1076,6 +1299,17 @@ export function ClosingRatePageManager({
           </div>,
           document.body
         )}
+
+      <ConfirmDialog
+        isOpen={showAdjustConfirm}
+        title="Generate Carry Forward / Back Forward Trades"
+        message={`Are you sure you want to add Carry Forward and Back Forward trades for ${settlementItems.filter((i) => i.netQty !== 0).length} open positions on ${importDate}?`}
+        variant="warning"
+        confirmLabel="Generate Trades"
+        isLoading={isAdjusting}
+        onConfirm={executeAdjustTrades}
+        onCancel={() => setShowAdjustConfirm(false)}
+      />
     </div>
   );
 }

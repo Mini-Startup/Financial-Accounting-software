@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, CheckCircle2, AlertTriangle, Plus, UserPlus } from 'lucide-react';
+import { Search, CheckCircle2, AlertTriangle, Plus, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export interface PositionVerificationItem {
@@ -30,7 +30,8 @@ export function OpenPositionVerificationPanel({
   onAddClient?: (clientCode: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTab, setFilterTab] = useState<'ALL' | 'VALID' | 'MISMATCH'>('ALL');
+  const [filterTab, setFilterTab] = useState<'ALL' | 'VALID' | 'MISMATCH'>('MISMATCH');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const validCount = useMemo(() => items.filter((i) => i.isValid).length, [items]);
   const mismatchCount = useMemo(() => items.filter((i) => !i.isValid).length, [items]);
@@ -88,16 +89,27 @@ export function OpenPositionVerificationPanel({
               {mismatchCount} Mismatches
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="btn btn--secondary py-1 px-3 text-xs font-semibold flex items-center gap-1.5 cursor-pointer ml-1"
+          >
+            <span>{isExpanded ? 'Hide Details' : 'Show Details'}</span>
+            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
+      {/* Expandable Details Container */}
+      {isExpanded && (
+        <div className="space-y-4 pt-1">
+          {/* Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search party code or security..."
             className="input pl-9 text-xs py-1.5 w-full bg-white"
@@ -252,6 +264,8 @@ export function OpenPositionVerificationPanel({
           </tbody>
         </table>
       </div>
+        </div>
+      )}
     </div>
   );
 }

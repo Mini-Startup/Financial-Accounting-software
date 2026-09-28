@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { UniversalDropdown } from '../ui/UniversalDropdown';
 import type { SettlementItem } from './types';
 
 interface PositionSummaryTableProps {
@@ -67,8 +68,8 @@ export function PositionSummaryTable({
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
     list.sort((a, b) => {
-      let aVal = (a as any)[sortField];
-      let bVal = (b as any)[sortField];
+      const aVal = (a as any)[sortField];
+      const bVal = (b as any)[sortField];
 
       if (typeof aVal === 'string') {
         const cmp = aVal.localeCompare(String(bVal || ''));
@@ -136,6 +137,18 @@ export function PositionSummaryTable({
     );
   };
 
+  const roleOptions = [
+    { value: 'ALL', label: 'All Roles' },
+    { value: 'CLIENT', label: 'Clients Only' },
+    { value: 'BROKER', label: 'Brokers Only' },
+  ];
+
+  const positionOptions = [
+    { value: 'ALL', label: 'All Positions' },
+    { value: 'OPEN', label: 'Open (Net ≠ 0)' },
+    { value: 'CLOSED', label: 'Closed (Net = 0)' },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Search & Filter Toolbar */}
@@ -153,26 +166,24 @@ export function PositionSummaryTable({
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as any)}
-            className="input text-xs py-1.5 px-2.5 w-32 cursor-pointer"
-          >
-            <option value="ALL">All Roles</option>
-            <option value="CLIENT">Clients Only</option>
-            <option value="BROKER">Brokers Only</option>
-          </select>
+          <div className="w-36">
+            <UniversalDropdown
+              value={roleFilter}
+              options={roleOptions}
+              onChange={(val) => setRoleFilter(val as any)}
+              placeholder="All Roles"
+            />
+          </div>
 
           {/* Position Filter */}
-          <select
-            value={positionFilter}
-            onChange={(e) => setPositionFilter(e.target.value as any)}
-            className="input text-xs py-1.5 px-2.5 w-36 cursor-pointer"
-          >
-            <option value="ALL">All Positions</option>
-            <option value="OPEN">Open (Net ≠ 0)</option>
-            <option value="CLOSED">Closed (Net = 0)</option>
-          </select>
+          <div className="w-40">
+            <UniversalDropdown
+              value={positionFilter}
+              options={positionOptions}
+              onChange={(val) => setPositionFilter(val as any)}
+              placeholder="All Positions"
+            />
+          </div>
 
           <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200">
             {filteredRows.length} rows

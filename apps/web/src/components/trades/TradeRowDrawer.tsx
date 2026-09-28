@@ -4,7 +4,7 @@ import React from 'react';
 import { X, AlertTriangle, Building2, TrendingUp, Calendar, DollarSign, Edit3 } from 'lucide-react';
 import { SearchableSelect } from './SearchableSelect';
 import { CustomDatePicker } from '../ui/CustomDatePicker';
-import { formatDateTimeForInput, parseDateTimeFromInput, formatExpiryForInput, generateDubaiSecurityName } from './tradeImportHelpers';
+import { formatExpiryForInput, generateDubaiSecurityName } from './tradeImportHelpers';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
 

@@ -4,10 +4,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { 
-  BookOpen, Search, Calendar, Scale, ArrowUpRight, ArrowDownRight, 
-  Printer, Download, RefreshCw, X, Filter, FileText, CheckCircle2, UserCheck
+  BookOpen, Search, ArrowUpRight, ArrowDownRight, 
+  Printer, Download, RefreshCw, X, Filter, FileText
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
+import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 
 interface Account {
   id: string;
@@ -67,6 +69,14 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
   
   const [loading, setLoading] = useState<boolean>(false);
   const [reportData, setReportData] = useState<LedgerReportData | null>(null);
+
+  const accountOptions = useMemo(() => {
+    return accounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.code} — ${acc.name}`,
+      sublabel: acc.group?.name || 'General',
+    }));
+  }, [accounts]);
 
   // Fetch report function
   const fetchReport = useCallback(async (accountId: string, fDate?: string, tDate?: string) => {
@@ -282,29 +292,14 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
 
         {/* Primary Account Selector Dropdown */}
         <div className="pt-2 border-t border-slate-100 print:hidden">
-          <div className="relative max-w-2xl">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Search className="w-4 h-4" />
-            </div>
-            <select
+          <div className="max-w-2xl">
+            <UniversalDropdown
+              options={accountOptions}
               value={selectedAccountId}
-              onChange={(e) => handleAccountChange(e.target.value)}
-              className="input pl-10 pr-10 w-full text-sm font-semibold bg-slate-50 hover:bg-white focus:bg-white text-slate-900 border-slate-300 py-2.5 rounded-xl cursor-pointer shadow-xs transition-colors"
-            >
-              <option value="" disabled>
-                -- Choose Account (Client / Broker / Account Master) --
-              </option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.code} — {acc.name} ({acc.group?.name || 'General'})
-                </option>
-              ))}
-            </select>
-            {loading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
-              </div>
-            )}
+              onChange={(val) => handleAccountChange(val)}
+              placeholder="-- Choose Account (Client / Broker / Account Master) --"
+              disabled={loading}
+            />
           </div>
         </div>
       </div>
@@ -413,29 +408,21 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
               {/* From Date */}
               <div className="md:col-span-3 space-y-1">
                 <label className="text-[11px] font-semibold text-slate-600">From Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => handleDateChange(e.target.value, toDate)}
-                    className="input pl-8 py-1.5 text-xs w-full"
-                  />
-                </div>
+                <UniversalDatePicker
+                  value={fromDate}
+                  onChange={(d) => handleDateChange(d, toDate)}
+                  placeholder="YYYY-MM-DD"
+                />
               </div>
 
               {/* To Date */}
               <div className="md:col-span-3 space-y-1">
                 <label className="text-[11px] font-semibold text-slate-600">To Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => handleDateChange(fromDate, e.target.value)}
-                    className="input pl-8 py-1.5 text-xs w-full"
-                  />
-                </div>
+                <UniversalDatePicker
+                  value={toDate}
+                  onChange={(d) => handleDateChange(fromDate, d)}
+                  placeholder="YYYY-MM-DD"
+                />
               </div>
 
               {/* Search Particulars */}
@@ -465,15 +452,16 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
               {/* Entry Type Filter */}
               <div className="md:col-span-3 space-y-1">
                 <label className="text-[11px] font-semibold text-slate-600">Entry Type</label>
-                <select
+                <UniversalDropdown
+                  options={[
+                    { value: 'ALL', label: 'All Entries' },
+                    { value: 'SETTLEMENT', label: 'Settlement Cycles Only' },
+                    { value: 'VOUCHER', label: 'Vouchers Only' },
+                  ]}
                   value={entryTypeFilter}
-                  onChange={(e) => setEntryTypeFilter(e.target.value as any)}
-                  className="input py-1.5 text-xs w-full cursor-pointer"
-                >
-                  <option value="ALL">All Entries (Settlement & Vouchers)</option>
-                  <option value="SETTLEMENT">Settlement Cycles Only</option>
-                  <option value="VOUCHER">Vouchers Only</option>
-                </select>
+                  onChange={(val) => setEntryTypeFilter(val as any)}
+                  placeholder="All Entries"
+                />
               </div>
             </div>
 
