@@ -17,6 +17,7 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 
+
 const SCRIPT_COLUMNS = [
   { key: 'shortName', label: 'Symbol / Code' },
   { key: 'fullName', label: 'Full Description' },
