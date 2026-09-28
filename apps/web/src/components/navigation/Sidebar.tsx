@@ -17,22 +17,13 @@ import {
   FolderOpen,
   Scale,
   Coins,
-  GitFork,
-  Shuffle,
-  Filter,
   Wallet,
   Receipt,
   BookText,
-  CircleDollarSign,
-  Building2,
-  GitCompare,
-  AlertTriangle,
-  PieChart,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   Sliders,
-  DollarSign
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -57,7 +48,7 @@ interface NavSection {
 
 // ─── Upcoming helper ──────────────────────────────────────────────────────────
 
-function comingSoon(feature: string) {
+function _comingSoon(feature: string) {
   return `/coming-soon?feature=${feature}`;
 }
 
@@ -93,7 +84,7 @@ const sections: NavSection[] = [
         children: [
           { name: "Trade Import",          path: "/trades?import=true",                 icon: FileSpreadsheet },
           { name: "Open Position Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
-          { name: "Margine File Imports",  path: comingSoon("margine-file-imports"),  icon: DollarSign, upcoming: true },
+          // { name: "Margine File Imports",  path: _comingSoon("margine-file-imports"), upcoming: true },
         ],
       },
     ],
@@ -104,11 +95,11 @@ const sections: NavSection[] = [
     icon: Coins,
     children: [
       { name: "Sattelment Reports",     path: "/settlement",                         icon: Scale },
-      { name: "Brokerage Report",       path: comingSoon("brokerage-report"),        icon: Coins, upcoming: true },
-      { name: "Cleint wise / Script Wise", path: comingSoon("client-wise-script-wise"), icon: GitFork, upcoming: true },
-      { name: "Broker wise / Script Wise", path: comingSoon("broker-wise-script-wise"), icon: Shuffle, upcoming: true },
-      { name: "Script Wise / Cleint",   path: comingSoon("script-wise-client"),      icon: Filter, upcoming: true },
-      { name: "Script Wise / Broker",   path: comingSoon("script-wise-broker"),      icon: FolderOpen, upcoming: true },
+      // { name: "Brokerage Report",       path: _comingSoon("brokerage-report"), upcoming: true },
+      // { name: "Cleint wise / Script Wise", path: _comingSoon("client-wise-script-wise"), upcoming: true },
+      // { name: "Broker wise / Script Wise", path: _comingSoon("broker-wise-script-wise"), upcoming: true },
+      // { name: "Script Wise / Cleint",   path: _comingSoon("script-wise-client"), upcoming: true },
+      // { name: "Script Wise / Broker",   path: _comingSoon("script-wise-broker"), upcoming: true },
     ],
   },
   {
@@ -119,15 +110,15 @@ const sections: NavSection[] = [
       { name: "Ledger Report",             path: "/ledger",                               icon: BookText },
       { name: "Voucher Entry",             path: "/vouchers",                             icon: Receipt },
       { name: "Trial Balance",             path: "/trial-balance",                        icon: Scale },
-      { name: "Collection Book",           path: comingSoon("collection-book"),           icon: BookText, upcoming: true },
-      { name: "Cash Book",                 path: comingSoon("cash-book"),                 icon: CircleDollarSign, upcoming: true },
-      { name: "Bank Book",                 path: comingSoon("bank-book"),                 icon: Building2, upcoming: true },
-      { name: "JV / Contra Register",      path: comingSoon("jv-contra-register"),        icon: GitCompare, upcoming: true },
-      { name: "Payment / Receipt Register",path: comingSoon("payment-receipt-register"),  icon: Scale, upcoming: true },
-      { name: "Margine Report",            path: comingSoon("margine-report"),            icon: AlertTriangle, upcoming: true },
-      { name: "Expance Register",          path: comingSoon("expance-register"),          icon: Receipt, upcoming: true },
-      { name: "Profit & Loss",             path: comingSoon("profit-loss"),               icon: Percent, upcoming: true },
-      { name: "Balancesheet",              path: comingSoon("balancesheet"),              icon: PieChart, upcoming: true },
+      // { name: "Collection Book",           path: _comingSoon("collection-book"), upcoming: true },
+      // { name: "Cash Book",                 path: _comingSoon("cash-book"), upcoming: true },
+      // { name: "Bank Book",                 path: _comingSoon("bank-book"), upcoming: true },
+      // { name: "JV / Contra Register",      path: _comingSoon("jv-contra-register"), upcoming: true },
+      // { name: "Payment / Receipt Register",path: _comingSoon("payment-receipt-register"), upcoming: true },
+      // { name: "Margine Report",            path: _comingSoon("margine-report"), upcoming: true },
+      // { name: "Expance Register",          path: _comingSoon("expance-register"), upcoming: true },
+      // { name: "Profit & Loss",             path: _comingSoon("profit-loss"), upcoming: true },
+      // { name: "Balancesheet",              path: _comingSoon("balancesheet"), upcoming: true },
     ],
   },
 ];
