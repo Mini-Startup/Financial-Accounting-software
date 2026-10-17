@@ -110,8 +110,22 @@ export function TradesPageManager({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const clients = useMemo(() => accounts.filter((a) => a.group?.name === 'Sundry Debtors'), [accounts]);
-  const brokers = useMemo(() => accounts.filter((a) => a.group?.name === 'Sundry Creditors'), [accounts]);
+  const clients = useMemo(
+    () =>
+      (accounts || []).filter((a) => {
+        const name = (a.group?.name || a.groupName || (typeof a.group === 'string' ? a.group : '') || '').toLowerCase().trim();
+        return name === 'sundry debtors';
+      }),
+    [accounts]
+  );
+  const brokers = useMemo(
+    () =>
+      (accounts || []).filter((a) => {
+        const name = (a.group?.name || a.groupName || (typeof a.group === 'string' ? a.group : '') || '').toLowerCase().trim();
+        return name === 'sundry creditors';
+      }),
+    [accounts]
+  );
 
   const exchangeOptions = useMemo(() => [
     { value: '', label: 'All Exchanges' },

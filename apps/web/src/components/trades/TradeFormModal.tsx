@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { calculateBrokerage, round, type BrokerageRule, type CalcResult } from '@/utils/brokerage';
 import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
+import { useScrollLock } from '../../hooks/useScrollLock';
 import { X, AlertCircle, Lock } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
@@ -19,22 +20,23 @@ function todayISO() {
 }
 
 export function TradeFormModal({
-  exchanges: _exchanges,
-  scripts,
-  clients,
-  brokers,
+  exchanges: _exchanges = [],
+  scripts = [],
+  clients = [],
+  brokers = [],
   initialTrade,
   onClose,
   onSave,
 }: {
-  exchanges: any[];
-  scripts: any[];
-  clients: any[];
-  brokers: any[];
+  exchanges?: any[];
+  scripts?: any[];
+  clients?: any[];
+  brokers?: any[];
   initialTrade?: any;
   onClose: () => void;
   onSave: (row: any) => void;
 }) {
+  useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const quantityInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,13 +77,13 @@ export function TradeFormModal({
   const [isSaving, setIsSaving] = useState(false);
 
   // Derive exchange directly from selected script
-  const script = useMemo(() => scripts.find((s) => s.id === scriptId), [scripts, scriptId]);
+  const script = useMemo(() => (scripts || []).find((s) => s.id === scriptId), [scripts, scriptId]);
   const exchangeId = useMemo(
     () => script?.exchangeId || script?.exchange?.id || initialTrade?.exchangeId || initialTrade?.exchange?.id || '',
     [script, initialTrade]
   );
-  const client = useMemo(() => clients.find((c) => c.id === clientId), [clients, clientId]);
-  const broker = useMemo(() => brokers.find((b) => b.id === brokerId), [brokers, brokerId]);
+  const client = useMemo(() => (clients || []).find((c) => c.id === clientId), [clients, clientId]);
+  const broker = useMemo(() => (brokers || []).find((b) => b.id === brokerId), [brokers, brokerId]);
 
   const currSym = script?.currency?.symbol || '₹';
 
@@ -300,7 +302,14 @@ export function TradeFormModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+    <div
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm"
+    >
       <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         {/* Header */}
         <div className="card__header bg-[var(--color-snow)] shrink-0">
@@ -333,9 +342,9 @@ export function TradeFormModal({
                   <label className="form-label form-label--required">Script</label>
                   <UniversalDropdown
                     value={scriptId}
-                    options={scripts.map((s) => ({
+                    options={(scripts || []).map((s) => ({
                       value: s.id,
-                      label: `${s.shortName}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
+                      label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
                       sublabel: s.fullName,
                     }))}
                     onChange={(val) => setScriptId(val)}
@@ -386,9 +395,9 @@ export function TradeFormModal({
                   <label className="form-label form-label--required">Client</label>
                   <UniversalDropdown
                     value={clientId}
-                    options={clients.map((c) => ({
+                    options={(clients || []).map((c) => ({
                       value: c.id,
-                      label: `${c.code} - ${c.name}`,
+                      label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
                     }))}
                     onChange={(val) => setClientId(val)}
                     placeholder="Select Client"
@@ -399,9 +408,9 @@ export function TradeFormModal({
                   <label className="form-label form-label--required">Broker</label>
                   <UniversalDropdown
                     value={brokerId}
-                    options={brokers.map((b) => ({
+                    options={(brokers || []).map((b) => ({
                       value: b.id,
-                      label: `${b.code} - ${b.name}`,
+                      label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
                     }))}
                     onChange={(val) => setBrokerId(val)}
                     placeholder="Select Broker"

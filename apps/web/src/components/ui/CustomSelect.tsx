@@ -196,6 +196,9 @@ export function CustomSelect({
         createPortal(
           <div
             ref={dropdownRef}
+            data-portal="custom-select"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
               top: coords.top,

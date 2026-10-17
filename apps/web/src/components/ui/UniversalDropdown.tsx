@@ -331,6 +331,15 @@ export function UniversalDropdown({
         createPortal(
           <div
             ref={dropdownRef}
+            data-portal="dropdown"
+            data-universal-dropdown="true"
+            onMouseDown={(e) => {
+              // Prevent mousedown from bubbling to parent backdrop / outside click listeners
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             style={{
               position: 'fixed',
               ...(coords.openUpward

@@ -175,6 +175,9 @@ export function CustomDatePicker({
         createPortal(
           <div
             ref={dropdownRef}
+            data-portal="custom-datepicker"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
               top: coords.top,
