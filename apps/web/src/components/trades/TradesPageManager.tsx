@@ -10,6 +10,7 @@ import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
 import {
   sortRecords,
@@ -18,9 +19,39 @@ import {
   type SortDirection,
   type AdvancedCondition,
 } from '@/utils/tableFilter';
-import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
+
+type DateFilterMode = 'ALL' | 'DATE' | 'MONTH' | 'RANGE';
+
+function parseTradeDateString(dateVal: any): { yyyyMmDd: string; yyyyMm: string; time: number } | null {
+  if (!dateVal) return null;
+  if (typeof dateVal === 'string') {
+    const isoMatch = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const yyyy = isoMatch[1];
+      const mm = isoMatch[2];
+      const dd = isoMatch[3];
+      const d = new Date(dateVal);
+      return {
+        yyyyMmDd: `${yyyy}-${mm}-${dd}`,
+        yyyyMm: `${yyyy}-${mm}`,
+        time: isNaN(d.getTime()) ? new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`).getTime() : d.getTime(),
+      };
+    }
+  }
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return null;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return {
+    yyyyMmDd: `${yyyy}-${mm}-${dd}`,
+    yyyyMm: `${yyyy}-${mm}`,
+    time: d.getTime(),
+  };
+}
 
 const TRADE_COLUMNS = [
   { key: 'securityName', label: 'Security / Script' },
@@ -79,6 +110,13 @@ export function TradesPageManager({
   const [typeFilter, setTypeFilter] = useState('');
   const [tradeTypeFilter, setTradeTypeFilter] = useState('');
   const [findReplaceMatch, setFindReplaceMatch] = useState<FindReplaceMatchState | null>(null);
+
+  // Date filter state: particular date, particular month, or date range
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('ALL');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
 
   // Sorting & Pagination
   const [sortKey, setSortKey] = useState<string | null>('tradeDate');
@@ -147,6 +185,13 @@ export function TradesPageManager({
     { value: 'REGULAR', label: 'Regular / Import' },
   ], []);
 
+  const dateFilterModeOptions = useMemo(() => [
+    { value: 'ALL', label: 'All Dates' },
+    { value: 'DATE', label: 'Single Date' },
+    { value: 'MONTH', label: 'By Month' },
+    { value: 'RANGE', label: 'Date Range' },
+  ], []);
+
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDir(sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? null : 'asc');
@@ -157,7 +202,7 @@ export function TradesPageManager({
     }
   };
 
-  // Filter trades list with column targeting + advanced conditions
+  // Filter trades list with column targeting + advanced conditions + date filter
   const filteredTrades = useMemo(() => {
     let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions);
     if (exchangeFilter) list = list.filter((t) => t.exchange?.code === exchangeFilter);
@@ -169,8 +214,48 @@ export function TradesPageManager({
           : t.tradeType === tradeTypeFilter
       );
     }
+
+    // Date filter: Particular Date, Particular Month, or Date Range
+    if (dateFilterMode === 'DATE' && selectedDate) {
+      list = list.filter((t) => {
+        const parts = parseTradeDateString(t.tradeDate);
+        return parts ? parts.yyyyMmDd === selectedDate : false;
+      });
+    } else if (dateFilterMode === 'MONTH' && selectedMonth) {
+      list = list.filter((t) => {
+        const parts = parseTradeDateString(t.tradeDate);
+        return parts ? parts.yyyyMm === selectedMonth : false;
+      });
+    } else if (dateFilterMode === 'RANGE') {
+      const from = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
+      const to = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
+      if (from !== null || to !== null) {
+        list = list.filter((t) => {
+          const parts = parseTradeDateString(t.tradeDate);
+          if (!parts) return false;
+          const tradeTime = parts.time;
+          if (from !== null && tradeTime < from) return false;
+          if (to !== null && tradeTime > to) return false;
+          return true;
+        });
+      }
+    }
+
     return list;
-  }, [trades, searchQuery, searchColumn, advancedConditions, exchangeFilter, typeFilter, tradeTypeFilter]);
+  }, [
+    trades,
+    searchQuery,
+    searchColumn,
+    advancedConditions,
+    exchangeFilter,
+    typeFilter,
+    tradeTypeFilter,
+    dateFilterMode,
+    selectedDate,
+    selectedMonth,
+    fromDate,
+    toDate,
+  ]);
 
   // Sorted and Paginated trades
   const sortedTrades = useMemo(() => {
@@ -430,7 +515,7 @@ export function TradesPageManager({
             setSearchQuery(q);
             setCurrentPage(1);
           }}
-          searchPlaceholder="Search trades by security, client, broker, terminal..."
+          searchPlaceholder="Search trades (supports OR via comma/space: e.g. TCS, INFY)..."
           columns={TRADE_COLUMNS}
           searchColumn={searchColumn}
           onSearchColumnChange={(col) => {
@@ -457,7 +542,7 @@ export function TradesPageManager({
           pageSizeOptions={[25, 50, 100, 200]}
           className="border-0 rounded-none border-b border-[var(--color-border-light)]"
           filterSlot={
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center flex-wrap">
               <div className="w-36">
                 <UniversalDropdown
                   options={exchangeOptions}
@@ -491,6 +576,92 @@ export function TradesPageManager({
                   placeholder="All Trade Types"
                 />
               </div>
+
+              {/* Date Filters: Particular Date, Month, or Range */}
+              <div className="w-34">
+                <UniversalDropdown
+                  options={dateFilterModeOptions}
+                  value={dateFilterMode}
+                  onChange={(val) => {
+                    setDateFilterMode(val as DateFilterMode);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Filter Date"
+                />
+              </div>
+
+              {dateFilterMode === 'DATE' && (
+                <div className="w-38">
+                  <UniversalDatePicker
+                    value={selectedDate}
+                    onChange={(val) => {
+                      setSelectedDate(val);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Select date"
+                  />
+                </div>
+              )}
+
+              {dateFilterMode === 'MONTH' && (
+                <div className="w-38">
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => {
+                      setSelectedMonth(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-8.5 w-full px-2.5 text-xs rounded-lg border border-[var(--color-border-medium)] bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[var(--color-leaf)] shadow-2xs cursor-pointer"
+                    title="Select month"
+                  />
+                </div>
+              )}
+
+              {dateFilterMode === 'RANGE' && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-34">
+                    <UniversalDatePicker
+                      value={fromDate}
+                      onChange={(val) => {
+                        setFromDate(val);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="From date"
+                    />
+                  </div>
+                  <span className="text-xs text-slate-400 font-semibold">to</span>
+                  <div className="w-34">
+                    <UniversalDatePicker
+                      value={toDate}
+                      onChange={(val) => {
+                        setToDate(val);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="To date"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {dateFilterMode !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFilterMode('ALL');
+                    setSelectedDate('');
+                    setSelectedMonth('');
+                    setFromDate('');
+                    setToDate('');
+                    setCurrentPage(1);
+                  }}
+                  className="h-8.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center gap-1 cursor-pointer"
+                  title="Clear date filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Clear Date</span>
+                </button>
+              )}
             </div>
           }
         />

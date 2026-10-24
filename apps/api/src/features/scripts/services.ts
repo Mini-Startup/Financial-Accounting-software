@@ -1,4 +1,4 @@
-import { NotFoundException } from '../../errors';
+import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 
 export class ScriptsService {
@@ -11,13 +11,37 @@ export class ScriptsService {
     currencyId?: string | null;
     isActive?: boolean;
   }) {
+    const sName = data.shortName.trim();
+    const fName = data.fullName.trim();
+    const exId = data.exchangeId || null;
+
+    if (exId) {
+      const existingScript = await prisma.script.findFirst({
+        where: {
+          exchangeId: exId,
+          OR: [
+            { shortName: { equals: sName, mode: 'insensitive' } },
+            { fullName: { equals: fName, mode: 'insensitive' } },
+          ],
+        },
+        include: { exchange: true },
+      });
+
+      if (existingScript) {
+        const exName = existingScript.exchange?.code || 'this exchange';
+        throw new BadRequestException(
+          `A script with symbol '${sName}' or name '${fName}' already exists on ${exName}`
+        );
+      }
+    }
+
     return prisma.script.create({
       data: {
-        shortName: data.shortName.trim(),
-        fullName: data.fullName.trim(),
+        shortName: sName,
+        fullName: fName,
         isin: data.isin?.trim() || null,
         lotSize: Number(data.lotSize),
-        exchangeId: data.exchangeId || null,
+        exchangeId: exId,
         currencyId: data.currencyId || null,
         isActive: data.isActive ?? true,
       },
@@ -72,7 +96,32 @@ export class ScriptsService {
       isActive?: boolean;
     },
   ) {
-    await this.findOne(id); // ensure exists
+    const existing = await this.findOne(id); // ensure exists
+
+    const targetExchangeId = data.exchangeId !== undefined ? (data.exchangeId || null) : existing.exchangeId;
+    const targetShortName = data.shortName !== undefined ? data.shortName.trim() : existing.shortName;
+    const targetFullName = data.fullName !== undefined ? data.fullName.trim() : existing.fullName;
+
+    if (targetExchangeId && (targetShortName || targetFullName)) {
+      const duplicate = await prisma.script.findFirst({
+        where: {
+          id: { not: id },
+          exchangeId: targetExchangeId,
+          OR: [
+            ...(targetShortName ? [{ shortName: { equals: targetShortName, mode: 'insensitive' as const } }] : []),
+            ...(targetFullName ? [{ fullName: { equals: targetFullName, mode: 'insensitive' as const } }] : []),
+          ],
+        },
+        include: { exchange: true },
+      });
+
+      if (duplicate) {
+        const exName = duplicate.exchange?.code || 'this exchange';
+        throw new BadRequestException(
+          `A script with symbol '${targetShortName}' or name '${targetFullName}' already exists on ${exName}`
+        );
+      }
+    }
 
     return prisma.script.update({
       where: { id },

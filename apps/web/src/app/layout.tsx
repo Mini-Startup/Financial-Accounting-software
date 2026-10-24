@@ -6,6 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 import { syncUser } from "../utils/syncUser";
 import { Sidebar } from "../components/navigation/Sidebar";
 import { TradeImportProvider } from "../components/trades/TradeImportContext";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -71,6 +72,7 @@ export default async function RootLayout({
               </div>
             )}
           </TradeImportProvider>
+          <Toaster position="top-right" richColors closeButton />
         </ClerkProvider>
       </body>
     </html>

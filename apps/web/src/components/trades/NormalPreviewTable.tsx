@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, FileSpreadsheet, RefreshCw, Edit3, Plus } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, FileSpreadsheet, RefreshCw, Edit3, Plus, CheckSquare } from 'lucide-react';
 import { TradeRowDrawer } from './TradeRowDrawer';
+import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { splitSearchTokens } from '@/utils/tableFilter';
 
 interface NormalPreviewTableProps {
   totalRows: number;
@@ -65,12 +67,16 @@ export function NormalPreviewTable({
     if (statusFilter === 'UNMAPPED_EXCHANGE' && row.resolvedExchangeId) return false;
 
     if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
+    const tokens = splitSearchTokens(searchQuery);
+    if (tokens.length === 0) return true;
 
     const matches = (fieldVal: string | number | null | undefined) => {
       if (fieldVal === null || fieldVal === undefined) return false;
       const target = String(fieldVal).toLowerCase();
-      return exactMatch ? target === q : target.includes(q);
+      if (exactMatch) {
+        return tokens.some((token) => target === token);
+      }
+      return tokens.some((token) => target.includes(token));
     };
 
     if (searchColumn === 'clientCode') return matches(row.clientCode);
@@ -102,6 +108,53 @@ export function NormalPreviewTable({
     (safePage - 1) * pageSize,
     safePage * pageSize
   );
+
+  // Selection calculations (default: deselected)
+  const selectedCount = futureRows.filter((r) => r.selected === true).length;
+  const isAllFilteredSelected =
+    filteredFutureRows.length > 0 && filteredFutureRows.every((r) => r.selected === true);
+
+  const handleToggleSelectAll = () => {
+    const target = !isAllFilteredSelected;
+    const filteredSet = new Set(filteredFutureRows);
+    setPreviewRows((prev) =>
+      prev.map((r) => (filteredSet.has(r) ? { ...r, selected: target } : r))
+    );
+    setNormalizedRows((prev) =>
+      prev.map((r) => (filteredSet.has(r) ? { ...r, selected: target } : r))
+    );
+  };
+
+  const handleToggleRow = (rowIdOrNo: string) => {
+    setPreviewRows((prev) =>
+      prev.map((r) => {
+        const id = r.uniqueTradeId || r.tradeNumber;
+        if (id === rowIdOrNo) {
+          return { ...r, selected: !r.selected };
+        }
+        return r;
+      })
+    );
+    setNormalizedRows((prev) =>
+      prev.map((r) => {
+        const id = r.uniqueTradeId || r.tradeNumber;
+        if (id === rowIdOrNo) {
+          return { ...r, selected: !r.selected };
+        }
+        return r;
+      })
+    );
+  };
+
+  const handleSelectAllValid = () => {
+    setPreviewRows((prev) => prev.map((r) => ({ ...r, selected: r.status === 'Valid' })));
+    setNormalizedRows((prev) => prev.map((r) => ({ ...r, selected: r.status === 'Valid' })));
+  };
+
+  const handleDeselectAll = () => {
+    setPreviewRows((prev) => prev.map((r) => ({ ...r, selected: false })));
+    setNormalizedRows((prev) => prev.map((r) => ({ ...r, selected: false })));
+  };
 
   const handleCellChange = (index: number, field: string, value: any) => {
     setPreviewRows((prev) => {
@@ -198,6 +251,34 @@ export function NormalPreviewTable({
         </button>
       </div>
 
+      {/* Batch Selection & Action Controls Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+            <CheckSquare className="w-4 h-4 text-emerald-600" />
+            <span>
+              <strong>{selectedCount}</strong> of {futureRows.length} trades selected for import
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSelectAllValid}
+            className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+          >
+            Select All Valid
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeselectAll}
+            className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
+          >
+            Deselect All
+          </button>
+        </div>
+      </div>
+
       {/* Future Trades Table */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-[var(--color-charcoal)] flex items-center gap-2">
@@ -211,6 +292,12 @@ export function NormalPreviewTable({
             <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
               <thead>
                 <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider select-none text-[11px]">
+                  <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
+                    <CustomCheckbox
+                      checked={isAllFilteredSelected}
+                      onChange={handleToggleSelectAll}
+                    />
+                  </th>
                   <th className="py-3 px-3">Trade No</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Script</th>
@@ -227,7 +314,7 @@ export function NormalPreviewTable({
               <tbody className="divide-y divide-slate-100">
                 {paginatedFutureRows.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-8 text-center text-slate-400 italic">
+                    <td colSpan={12} className="py-8 text-center text-slate-400 italic">
                       No matching future trades found.
                     </td>
                   </tr>
@@ -246,6 +333,17 @@ export function NormalPreviewTable({
                           row.status === 'Invalid' ? 'bg-red-50/20' : ''
                         }`}
                       >
+                        {/* Checkbox column */}
+                        <td
+                          className="py-3 px-3 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <CustomCheckbox
+                            checked={row.selected === true}
+                            onChange={() => handleToggleRow(row.uniqueTradeId || row.tradeNumber)}
+                          />
+                        </td>
+
                         {/* Trade No */}
                         <td className="py-3 px-3 font-mono text-slate-600 font-semibold">{row.tradeNumber || '—'}</td>
 

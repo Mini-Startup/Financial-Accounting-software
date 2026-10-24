@@ -7,6 +7,7 @@ import { TradeRowDrawer } from './TradeRowDrawer';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { FindAndReplace, type FindAndReplaceColumn } from '../ui/FindAndReplace';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import { splitSearchTokens } from '@/utils/tableFilter';
 
 interface DubaiPreviewTableProps {
   dubaiPreviewRows: DubaiParsedTrade[];
@@ -79,7 +80,8 @@ export function DubaiPreviewTable({
     if (statusFilter === 'UNMAPPED_EXCHANGE' && val.resolvedExchangeId) return false;
 
     if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
+    const tokens = splitSearchTokens(searchQuery);
+    if (tokens.length === 0) return true;
 
     const scriptObj = scripts.find((s) => s.shortName.toUpperCase() === (row.tickCode || '').toUpperCase());
     const secName = generateDubaiSecurityName(row, scriptObj) || row.securityName || '';
@@ -87,7 +89,10 @@ export function DubaiPreviewTable({
     const matches = (fieldVal: string | number | null | undefined) => {
       if (fieldVal === null || fieldVal === undefined) return false;
       const target = String(fieldVal).toLowerCase();
-      return exactMatch ? target === q : target.includes(q);
+      if (exactMatch) {
+        return tokens.some((token) => target === token);
+      }
+      return tokens.some((token) => target.includes(token));
     };
 
     if (searchColumn === 'clientCode') return matches(row.clientCode);
@@ -133,10 +138,10 @@ export function DubaiPreviewTable({
 
   const [showFindAndReplace, setShowFindAndReplace] = useState(false);
 
-  // Selection calculations
-  const selectedCount = activeDubaiRows.filter((r) => r.selected !== false).length;
+  // Selection calculations (default: deselected)
+  const selectedCount = activeDubaiRows.filter((r) => r.selected === true).length;
   const isAllFilteredSelected =
-    filteredDubaiRows.length > 0 && filteredDubaiRows.every((r) => r.selected !== false);
+    filteredDubaiRows.length > 0 && filteredDubaiRows.every((r) => r.selected === true);
 
   const handleToggleSelectAll = () => {
     const target = !isAllFilteredSelected;
@@ -154,7 +159,7 @@ export function DubaiPreviewTable({
   const handleToggleRow = (mainIdx: number) => {
     setDubaiPreviewRows((prev) => {
       const copy = [...prev];
-      const current = copy[mainIdx].selected !== false;
+      const current = copy[mainIdx].selected === true;
       copy[mainIdx] = { ...copy[mainIdx], selected: !current };
       return copy;
     });
@@ -403,7 +408,7 @@ export function DubaiPreviewTable({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <CustomCheckbox
-                          checked={row.selected !== false}
+                          checked={row.selected === true}
                           onChange={() => handleToggleRow(mainIdx)}
                         />
                       </td>

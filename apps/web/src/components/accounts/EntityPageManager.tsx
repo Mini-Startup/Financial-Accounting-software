@@ -42,6 +42,7 @@ export function EntityPageManager({
         <FormModal 
           entityLabel={entityLabel}
           groupName={groupName}
+          accounts={accounts}
           onClose={() => setIsAdding(false)} 
         />
       )}

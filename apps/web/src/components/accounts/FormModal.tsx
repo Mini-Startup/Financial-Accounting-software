@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
@@ -13,12 +13,14 @@ export function FormModal({
   initialData,
   entityLabel,
   groupName,
+  accounts: initialAccounts = [],
   onClose,
   onSuccess,
 }: {
   initialData?: any;
   entityLabel: string;
   groupName: string;
+  accounts?: any[];
   onClose: () => void;
   onSuccess?: () => void;
 }) {
@@ -57,6 +59,46 @@ export function FormModal({
 
   const [directClients, setDirectClients] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingAccounts, setExistingAccounts] = useState<any[]>(initialAccounts);
+
+  useEffect(() => {
+    if (!initialAccounts || initialAccounts.length === 0) {
+      const fetchAccounts = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
+          if (res.ok) {
+            const data = await res.json();
+            setExistingAccounts(data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch accounts:', err);
+        }
+      };
+      fetchAccounts();
+    }
+  }, [initialAccounts]);
+
+  const duplicateCodeAccount = useMemo(() => {
+    const code = (formData.code || '').trim().toUpperCase();
+    if (!code) return null;
+    return existingAccounts.find((a) => {
+      if (initialData?.id && a.id === initialData.id) return false;
+      return (a.code || '').trim().toUpperCase() === code;
+    }) || null;
+  }, [formData.code, existingAccounts, initialData?.id]);
+
+  const duplicateNameAccount = useMemo(() => {
+    const name = (formData.name || '').trim().toUpperCase();
+    if (!name) return null;
+    return existingAccounts.find((a) => {
+      if (initialData?.id && a.id === initialData.id) return false;
+      const aGroup = a.group?.name || a.groupName || '';
+      if (groupName && aGroup && aGroup.toLowerCase() !== groupName.toLowerCase()) return false;
+      return (a.name || '').trim().toUpperCase() === name;
+    }) || null;
+  }, [formData.name, groupName, existingAccounts, initialData?.id]);
+
+  const isDuplicate = Boolean(duplicateCodeAccount || duplicateNameAccount);
 
   useEffect(() => {
     if (groupName === 'Sundry Debtors') {
@@ -204,9 +246,24 @@ export function FormModal({
               </div>
             </div>
           )}
-
-
           <form id="accountForm" onSubmit={handleSubmit} className="space-y-6">
+            {/* Duplicate Warning Banner */}
+            {isDuplicate && (
+              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+                <div className="space-y-0.5">
+                  <div className="font-bold text-amber-950">{entityLabel} Already Exists in Database</div>
+                  <div className="text-[11px] text-amber-850">
+                    {duplicateCodeAccount && (
+                      <p>An account with code <strong>&quot;{formData.code.trim()}&quot;</strong> already exists ({duplicateCodeAccount.name}).</p>
+                    )}
+                    {duplicateNameAccount && (
+                      <p>An account with name <strong>&quot;{formData.name.trim()}&quot;</strong> already exists in {groupName}.</p>
+                    )}
+                    Duplicate entries are not permitted.
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -380,8 +437,29 @@ export function FormModal({
             </div>
             
             <div className="mt-8 pt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
-               <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-               <button type="submit" form="accountForm" className="btn btn--primary">Save</button>
+               <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary">Cancel</button>
+               <button
+                 type="submit"
+                 form="accountForm"
+                 disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
+                 className={cn(
+                   "btn btn--primary flex items-center gap-2 min-w-[110px] justify-center",
+                   (isDuplicate || !formData.code?.trim() || !formData.name?.trim()) && "opacity-60 cursor-not-allowed bg-slate-400 border-slate-400 hover:bg-slate-400"
+                 )}
+               >
+                 {isSubmitting ? (
+                   <>
+                     <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                     <span>Saving…</span>
+                   </>
+                 ) : isDuplicate ? (
+                   `${entityLabel} Exists`
+                 ) : initialData?.id ? (
+                   `Update ${entityLabel}`
+                 ) : (
+                   `Add ${entityLabel}`
+                 )}
+               </button>
             </div>
           </form>
         </div>

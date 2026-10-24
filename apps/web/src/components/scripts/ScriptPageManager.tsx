@@ -36,6 +36,7 @@ export function ScriptPageManager({
       {isAdding && (
         <ScriptFormModal 
           exchanges={exchanges}
+          scripts={scripts}
           onClose={() => setIsAdding(false)} 
         />
       )}

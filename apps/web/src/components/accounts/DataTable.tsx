@@ -458,6 +458,7 @@ export function DataTable({
           initialData={editingAccount}
           entityLabel={entityLabel}
           groupName={groupName}
+          accounts={accountsList}
           onClose={() => setEditingAccount(null)}
         />
       )}

@@ -19,7 +19,7 @@ export function PositionSummaryTable({
 }: PositionSummaryTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'CLIENT' | 'BROKER'>('ALL');
-  const [positionFilter, setPositionFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
+  const [positionFilter, setPositionFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('OPEN');
   const [sortField, setSortField] = useState<keyof SettlementItem | 'finalPnL'>('accountCode');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -244,7 +244,9 @@ export function PositionSummaryTable({
               ) : sortedRows.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="py-12 text-center text-slate-400 italic">
-                    No position records matching active filters.
+                    {positionFilter === 'OPEN'
+                      ? 'No open positions found. Toggle filter to "All Positions" to view closed contracts.'
+                      : 'No position records matching active filters.'}
                   </td>
                 </tr>
               ) : (

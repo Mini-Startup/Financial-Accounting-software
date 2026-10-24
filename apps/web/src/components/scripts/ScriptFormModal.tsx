@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
@@ -10,17 +10,20 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
 import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { cn } from '@/utils/cn';
 
 export function ScriptFormModal({
   initialData,
   exchanges: initialExchanges = [],
   currencies: initialCurrencies = [],
+  scripts: initialScripts = [],
   onClose,
   onSuccess,
 }: {
   initialData?: any;
   exchanges: any[];
   currencies?: any[];
+  scripts?: any[];
   onClose: () => void;
   onSuccess?: (createdScript?: any) => void;
 }) {
@@ -31,6 +34,7 @@ export function ScriptFormModal({
 
   const [exchanges, setExchanges] = useState<any[]>(initialExchanges);
   const [currencies, setCurrencies] = useState<any[]>(initialCurrencies);
+  const [scriptList, setScriptList] = useState<any[]>(initialScripts);
 
   const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [exchangeModalInitialData, setExchangeModalInitialData] = useState<any>(null);
@@ -80,25 +84,65 @@ export function ScriptFormModal({
     shortName: initialData?.shortName || '',
     fullName: initialData?.fullName || '',
     isin: initialData?.isin || '',
-    lotSize: initialData?.lotSize !== undefined && initialData?.lotSize !== null ? initialData.lotSize : 1,
+    lotSize: String(initialData?.lotSize !== undefined && initialData?.lotSize !== null ? initialData.lotSize : '1'),
     exchangeId: resolveInitialExchangeId(initialExchanges, initialData, targetExchangeCode),
     currencyId: resolveInitialCurrencyId(initialCurrencies, initialData, targetCurrencyCode),
     isActive: initialData?.isActive ?? true,
   });
 
+  const lastInitialIdRef = useRef(initialData?.id);
   useEffect(() => {
-    if (initialData) {
-      setFormData((prev) => ({
-        shortName: initialData.shortName || prev.shortName,
-        fullName: initialData.fullName || prev.fullName,
-        isin: initialData.isin || prev.isin,
-        lotSize: initialData.lotSize !== undefined && initialData.lotSize !== null ? initialData.lotSize : prev.lotSize,
+    if (initialData && initialData.id !== lastInitialIdRef.current) {
+      lastInitialIdRef.current = initialData.id;
+      setFormData({
+        shortName: initialData.shortName || '',
+        fullName: initialData.fullName || '',
+        isin: initialData.isin || '',
+        lotSize: String(initialData.lotSize !== undefined && initialData.lotSize !== null ? initialData.lotSize : '1'),
         exchangeId: resolveInitialExchangeId(exchanges, initialData, targetExchangeCode),
         currencyId: resolveInitialCurrencyId(currencies, initialData, targetCurrencyCode),
-        isActive: initialData.isActive ?? prev.isActive,
-      }));
+        isActive: initialData.isActive ?? true,
+      });
     }
   }, [initialData, exchanges, currencies, targetExchangeCode, targetCurrencyCode]);
+
+  const fetchScripts = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setScriptList(data);
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to fetch scripts:', err);
+    }
+    return [];
+  };
+
+  useEffect(() => {
+    if (!initialScripts || initialScripts.length === 0) {
+      fetchScripts();
+    }
+  }, [initialScripts]);
+
+  const duplicateScript = useMemo(() => {
+    const sName = (formData.shortName || '').trim().toUpperCase();
+    const fName = (formData.fullName || '').trim().toUpperCase();
+    const exId = formData.exchangeId;
+    if (!sName || !exId) return null;
+
+    return scriptList.find((s) => {
+      if (initialData?.id && s.id === initialData.id) return false;
+      const sExId = s.exchangeId || s.exchange?.id;
+      if (sExId !== exId) return false;
+      const matchShort = (s.shortName || '').trim().toUpperCase() === sName;
+      const matchFull = fName && (s.fullName || '').trim().toUpperCase() === fName;
+      return matchShort || matchFull;
+    }) || null;
+  }, [formData.shortName, formData.fullName, formData.exchangeId, scriptList, initialData?.id]);
+
+  const isDuplicate = Boolean(duplicateScript);
 
   const fetchExchanges = async () => {
     try {
@@ -328,6 +372,19 @@ export function ScriptFormModal({
               </div>
             )}
 
+            {/* Warning Banner: Duplicate Script in Database */}
+            {isDuplicate && (
+              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-bold text-amber-950">Script Already Exists in Database</div>
+                  <div className="text-[11px] text-amber-800">
+                    A script with symbol <strong>&quot;{formData.shortName.trim()}&quot;</strong> or name <strong>&quot;{formData.fullName.trim()}&quot;</strong> already exists on the selected exchange. Duplicate entries are blocked.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Basic Info */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">
@@ -352,13 +409,23 @@ export function ScriptFormModal({
                   <label className="form-label form-label--required text-xs font-semibold text-slate-700">Market Lot / Lot Size</label>
                   <input
                     required
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     name="lotSize"
                     value={formData.lotSize}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setFormData((prev) => ({ ...prev, lotSize: val }));
+                    }}
+                    onBlur={() => {
+                      if (!formData.lotSize || parseInt(formData.lotSize, 10) < 1) {
+                        setFormData((prev) => ({ ...prev, lotSize: '1' }));
+                      }
+                    }}
                     className="input text-xs font-mono text-right font-bold"
-                    min="1"
+                    placeholder="1"
                   />
+                  <p className="form-hint text-[10px]">Positive integer (defaults to 1)</p>
                 </div>
 
                 <div className="form-field col-span-2">
@@ -448,10 +515,24 @@ export function ScriptFormModal({
               <button
                 type="submit"
                 form="scriptForm"
-                disabled={isSubmitting || !formData.exchangeId}
-                className="btn btn--primary text-xs py-2 px-4 shadow-xs"
+                disabled={isSubmitting || isDuplicate || !formData.exchangeId || !formData.currencyId || !formData.shortName.trim()}
+                className={cn(
+                  "btn btn--primary text-xs py-2 px-4 shadow-xs flex items-center gap-1.5",
+                  (isDuplicate || !formData.exchangeId) && "opacity-60 cursor-not-allowed bg-slate-400 border-slate-400 hover:bg-slate-400"
+                )}
               >
-                {isSubmitting ? 'Saving...' : 'Save Script'}
+                {isSubmitting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : isDuplicate ? (
+                  'Script Already Exists'
+                ) : initialData && initialData.id ? (
+                  'Update Script'
+                ) : (
+                  'Add Script'
+                )}
               </button>
             </div>
           </form>

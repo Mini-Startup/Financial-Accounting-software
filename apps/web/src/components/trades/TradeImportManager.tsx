@@ -379,7 +379,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         if (dubaiResult.trades.length === 0) {
           throw new Error('No valid trade rows found in the Dubai file.');
         }
-        setDubaiPreviewRows(dubaiResult.trades);
+        const deselectedTrades = dubaiResult.trades.map((t) => ({ ...t, selected: false }));
+        setDubaiPreviewRows(deselectedTrades);
         setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
@@ -433,6 +434,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         uniqueTradeId: t.uniqueTradeId,
         orderTime: t.orderTime,
         instrumentType: t.instrumentType,
+        selected: false,
       }));
 
       setPreviewRows(instantPreview);
@@ -453,8 +455,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       }
 
       const previewData = await previewRes.json();
-      setPreviewRows(previewData);
-      setNormalizedRows(previewData);
+      const deselectedPreview = previewData.map((r: any) => ({ ...r, selected: false }));
+      setPreviewRows(deselectedPreview);
+      setNormalizedRows(deselectedPreview);
       toast.success('Validation complete.');
     } catch (err: any) {
       toast.error(err.message || 'Error uploading file');
@@ -501,8 +504,20 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       }
 
       const previewData = await previewRes.json();
-      setPreviewRows(previewData);
-      setNormalizedRows(previewData);
+      setPreviewRows((prev) => {
+        const selectionMap = new Map(prev.map((r) => [r.uniqueTradeId || r.tradeNumber, r.selected]));
+        return previewData.map((r: any) => ({
+          ...r,
+          selected: selectionMap.get(r.uniqueTradeId || r.tradeNumber) || false,
+        }));
+      });
+      setNormalizedRows((prev) => {
+        const selectionMap = new Map(prev.map((r) => [r.uniqueTradeId || r.tradeNumber, r.selected]));
+        return previewData.map((r: any) => ({
+          ...r,
+          selected: selectionMap.get(r.uniqueTradeId || r.tradeNumber) || false,
+        }));
+      });
       toast.success('Validation updated with latest database records.');
     } catch (err: any) {
       toast.error(err.message || 'Error re-validating trades');
@@ -514,9 +529,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const handleConfirmImport = async () => {
     setIsProcessing(true);
     try {
-      const validRowsToImport = normalizedRows.filter((r) => r.status === 'Valid');
+      const validRowsToImport = normalizedRows.filter((r) => r.selected === true && r.status === 'Valid');
       if (validRowsToImport.length === 0) {
-        toast.error('No valid trades found to import.');
+        toast.error('No selected valid trades found to import. Please select at least one trade.');
         setIsProcessing(false);
         return;
       }
@@ -568,11 +583,11 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       const activeDubaiRows = dubaiPreviewRows.filter((r) => !r.typeCode.toUpperCase().includes('X'));
       // Only import rows that are selected and pass validation
       const validActiveRows = activeDubaiRows.filter(
-        (r) => r.selected !== false && getDubaiRowValidation(r).isValid
+        (r) => r.selected === true && getDubaiRowValidation(r).isValid
       );
 
       if (validActiveRows.length === 0) {
-        toast.error('No selected valid trades found to import.');
+        toast.error('No selected valid trades found to import. Please select at least one trade.');
         setIsProcessing(false);
         setImportProgress(null);
         return;
@@ -1004,6 +1019,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           <FormModal
             entityLabel="Broker"
             groupName="Sundry Creditors"
+            accounts={brokers}
             onClose={() => setShowBrokerModal(false)}
             onSuccess={async () => {
               setShowBrokerModal(false);
@@ -1019,6 +1035,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             entityLabel="Client"
             groupName="Sundry Debtors"
             initialData={clientModalInitialData}
+            accounts={clients}
             onClose={() => setShowClientModal(false)}
             onSuccess={async () => {
               setShowClientModal(false);
@@ -1035,6 +1052,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             initialData={scriptModalInitialData}
             exchanges={exchanges}
             currencies={currencies}
+            scripts={scripts}
             onClose={() => setShowScriptModal(false)}
             onSuccess={async () => {
               setShowScriptModal(false);

@@ -276,13 +276,13 @@ export function TradeFormModal({
       onSave(savedData);
 
       if (!isEdit) {
-        toast.success('Trade saved! Ready for next entry.');
+        toast.success(`Trade ${savedData.tradeNumber || ''} added successfully! Ready for next entry.`);
         // Rapid entry persistence: keep scriptId, exchangeId, date, brokerId, tradeType
         setQuantity('');
         setMarketRate('');
         setTimeout(() => quantityInputRef.current?.focus(), 50);
       } else {
-        toast.success('Trade updated successfully');
+        toast.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
         onClose();
       }
     } catch (err: any) {
@@ -584,10 +584,19 @@ export function TradeFormModal({
           <button
             type="button"
             onClick={handleSave}
-            className="btn btn--primary"
-            disabled={!isFormValid || isSaving || isLocked}
+            className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
+            disabled={isSaving || isLocked}
           >
-            {isSaving ? 'Saving…' : initialTrade ? 'Update Trade' : 'Add Trade'}
+            {isSaving ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                <span>Saving…</span>
+              </>
+            ) : initialTrade ? (
+              'Update Trade'
+            ) : (
+              'Add Trade'
+            )}
           </button>
         </div>
       </div>

@@ -397,6 +397,7 @@ export function ScriptDataTable({
         <ScriptFormModal
           initialData={editingScript}
           exchanges={exchanges}
+          scripts={scriptsList}
           onClose={() => setEditingScript(null)}
         />
       )}

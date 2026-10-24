@@ -99,6 +99,25 @@ export class AccountMastersService {
       throw new BadRequestException('Account Group is required');
     }
 
+    const existingCode = await prisma.account.findFirst({
+      where: {
+        code: { equals: cleanData.code, mode: 'insensitive' },
+      },
+    });
+    if (existingCode) {
+      throw new BadRequestException(`An account with code '${cleanData.code}' already exists`);
+    }
+
+    const existingName = await prisma.account.findFirst({
+      where: {
+        name: { equals: cleanData.name, mode: 'insensitive' },
+        groupId: cleanData.groupId,
+      },
+    });
+    if (existingName) {
+      throw new BadRequestException(`An account with name '${cleanData.name}' already exists in this group`);
+    }
+
     return prisma.account.create({
       data: cleanData as Prisma.AccountUncheckedCreateInput,
       include: {
@@ -161,8 +180,34 @@ export class AccountMastersService {
   }
 
   async update(id: string, data: any) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
     const cleanData = await sanitizeAndPrepareAccountData(data, true);
+
+    if (cleanData.code) {
+      const duplicateCode = await prisma.account.findFirst({
+        where: {
+          id: { not: id },
+          code: { equals: cleanData.code, mode: 'insensitive' },
+        },
+      });
+      if (duplicateCode) {
+        throw new BadRequestException(`An account with code '${cleanData.code}' already exists`);
+      }
+    }
+
+    if (cleanData.name) {
+      const targetGroupId = cleanData.groupId !== undefined ? cleanData.groupId : existing.groupId;
+      const duplicateName = await prisma.account.findFirst({
+        where: {
+          id: { not: id },
+          groupId: targetGroupId,
+          name: { equals: cleanData.name, mode: 'insensitive' },
+        },
+      });
+      if (duplicateName) {
+        throw new BadRequestException(`An account with name '${cleanData.name}' already exists in this group`);
+      }
+    }
 
     return prisma.account.update({
       where: { id },

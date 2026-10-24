@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,11 +9,13 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 export function AccountMasterFormModal({
   initialData,
   groups,
+  accounts: initialAccounts = [],
   onClose,
   onSave,
 }: {
   initialData?: any;
   groups: any[];
+  accounts?: any[];
   onClose: () => void;
   onSave: () => void;
 }) {
@@ -60,6 +62,46 @@ export function AccountMasterFormModal({
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingAccounts, setExistingAccounts] = useState<any[]>(initialAccounts);
+
+  useEffect(() => {
+    if (!initialAccounts || initialAccounts.length === 0) {
+      const fetchAccounts = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
+          if (res.ok) {
+            const data = await res.json();
+            setExistingAccounts(data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch accounts:', err);
+        }
+      };
+      fetchAccounts();
+    }
+  }, [initialAccounts]);
+
+  const duplicateCodeAccount = useMemo(() => {
+    const code = (formData.code || '').trim().toUpperCase();
+    if (!code) return null;
+    return existingAccounts.find((a) => {
+      if (initialData?.id && a.id === initialData.id) return false;
+      return (a.code || '').trim().toUpperCase() === code;
+    }) || null;
+  }, [formData.code, existingAccounts, initialData?.id]);
+
+  const duplicateNameAccount = useMemo(() => {
+    const name = (formData.name || '').trim().toUpperCase();
+    const gId = Number(formData.groupId);
+    if (!name || !gId) return null;
+    return existingAccounts.find((a) => {
+      if (initialData?.id && a.id === initialData.id) return false;
+      if (a.groupId !== gId) return false;
+      return (a.name || '').trim().toUpperCase() === name;
+    }) || null;
+  }, [formData.name, formData.groupId, existingAccounts, initialData?.id]);
+
+  const isDuplicate = Boolean(duplicateCodeAccount || duplicateNameAccount);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +168,24 @@ export function AccountMasterFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="card__body p-6 space-y-6 overflow-y-auto">
+          {/* Duplicate Warning Banner */}
+          {isDuplicate && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+              <div className="space-y-0.5">
+                <div className="font-bold text-amber-950">Account Master Already Exists</div>
+                <div className="text-[11px] text-amber-850">
+                  {duplicateCodeAccount && (
+                    <p>An account with code <strong>&quot;{formData.code.trim()}&quot;</strong> already exists ({duplicateCodeAccount.name}).</p>
+                  )}
+                  {duplicateNameAccount && (
+                    <p>An account with name <strong>&quot;{formData.name.trim()}&quot;</strong> already exists in this group.</p>
+                  )}
+                  Duplicate entries are blocked.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Basic Account Master Section */}
           <div className="space-y-4">
             <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic Information</h3>
@@ -259,8 +319,25 @@ export function AccountMasterFormModal({
           )}
 
           <div className="mt-5 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
-            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-            <button type="submit" className="btn btn--primary">Save</button>
+            <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary">Cancel</button>
+            <button
+              type="submit"
+              disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
+              className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:border-slate-400"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span>Saving…</span>
+                </>
+              ) : isDuplicate ? (
+                'Account Exists'
+              ) : initialData?.id ? (
+                'Update Account'
+              ) : (
+                'Add Account'
+              )}
+            </button>
           </div>
         </form>
       </div>

@@ -2,6 +2,23 @@
  * Reusable data table utilities for search filtering, multi-key sorting, and column totals.
  */
 
+/**
+ * Split search query by comma or whitespace, respecting quoted strings e.g. "State Bank" or HDFC, TCS
+ */
+export function splitSearchTokens(query: string): string[] {
+  if (!query || !query.trim()) return [];
+  const tokens: string[] = [];
+  const regex = /"([^"]+)"|'([^']+)'|([^,\s]+)/g;
+  let match;
+  while ((match = regex.exec(query)) !== null) {
+    const token = match[1] ?? match[2] ?? match[3];
+    if (token && token.trim()) {
+      tokens.push(token.trim().toLowerCase());
+    }
+  }
+  return tokens;
+}
+
 export function filterRecordsBySearch<T extends Record<string, any>>(
   records: T[],
   query: string,
@@ -9,14 +26,16 @@ export function filterRecordsBySearch<T extends Record<string, any>>(
 ): T[] {
   if (!query || !query.trim()) return records;
 
-  const normalizedQuery = query.toLowerCase().trim();
+  const tokens = splitSearchTokens(query);
+  if (tokens.length === 0) return records;
 
   return records.filter((record) => {
     if (searchKeys && searchKeys.length > 0) {
       return searchKeys.some((key) => {
         const val = getNestedValue(record, String(key));
         if (val === null || val === undefined) return false;
-        return String(val).toLowerCase().includes(normalizedQuery);
+        const strVal = String(val).toLowerCase();
+        return tokens.some((token) => strVal.includes(token));
       });
     }
 
@@ -26,10 +45,12 @@ export function filterRecordsBySearch<T extends Record<string, any>>(
       if (typeof val === 'object') {
         return Object.values(val).some((nestedVal) => {
           if (nestedVal === null || nestedVal === undefined) return false;
-          return String(nestedVal).toLowerCase().includes(normalizedQuery);
+          const strVal = String(nestedVal).toLowerCase();
+          return tokens.some((token) => strVal.includes(token));
         });
       }
-      return String(val).toLowerCase().includes(normalizedQuery);
+      const strVal = String(val).toLowerCase();
+      return tokens.some((token) => strVal.includes(token));
     });
   });
 }
@@ -88,25 +109,31 @@ export function filterRecordsWithAdvanced<T extends Record<string, any>>(
 ): T[] {
   let result = records;
 
-  // 1. Simple search query (by specific column or all columns)
+  // 1. Simple search query with OR tokens (by specific column or all columns)
   if (searchQuery && searchQuery.trim()) {
-    const q = searchQuery.toLowerCase().trim();
-    result = result.filter((row) => {
-      if (searchColumn && searchColumn !== 'ALL') {
-        const val = getNestedValue(row, searchColumn);
-        return val !== null && val !== undefined && String(val).toLowerCase().includes(q);
-      }
-      return Object.values(row).some((val) => {
-        if (val === null || val === undefined) return false;
-        if (typeof val === 'object') {
-          return Object.values(val).some((nestedVal) => {
-            if (nestedVal === null || nestedVal === undefined) return false;
-            return String(nestedVal).toLowerCase().includes(q);
-          });
+    const tokens = splitSearchTokens(searchQuery);
+    if (tokens.length > 0) {
+      result = result.filter((row) => {
+        if (searchColumn && searchColumn !== 'ALL') {
+          const val = getNestedValue(row, searchColumn);
+          if (val === null || val === undefined) return false;
+          const strVal = String(val).toLowerCase();
+          return tokens.some((token) => strVal.includes(token));
         }
-        return String(val).toLowerCase().includes(q);
+        return Object.values(row).some((val) => {
+          if (val === null || val === undefined) return false;
+          if (typeof val === 'object') {
+            return Object.values(val).some((nestedVal) => {
+              if (nestedVal === null || nestedVal === undefined) return false;
+              const strVal = String(nestedVal).toLowerCase();
+              return tokens.some((token) => strVal.includes(token));
+            });
+          }
+          const strVal = String(val).toLowerCase();
+          return tokens.some((token) => strVal.includes(token));
+        });
       });
-    });
+    }
   }
 
   // 2. Advanced conditions (AND / OR)

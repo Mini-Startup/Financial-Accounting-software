@@ -69,7 +69,7 @@ export function ImportFilterBar({
               type="text"
               placeholder={
                 searchColumn === 'ALL'
-                  ? 'Search across all columns...'
+                  ? 'Search all columns (OR via comma/space: e.g. TCS, INFY)...'
                   : `Search in ${
                       searchColumn === 'clientCode'
                         ? 'Client'
@@ -90,7 +90,7 @@ export function ImportFilterBar({
                         : searchColumn === 'price'
                         ? 'Price / Rate'
                         : searchColumn
-                    }...`
+                    } (supports OR: e.g. TCS, INFY)...`
               }
               value={searchQuery}
               onChange={(e) => {

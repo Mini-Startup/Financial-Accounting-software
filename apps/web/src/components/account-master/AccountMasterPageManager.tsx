@@ -454,6 +454,7 @@ export function AccountMasterPageManager({
       {isAdding && (
         <AccountMasterFormModal
           groups={groups}
+          accounts={accounts}
           onClose={() => setIsAdding(false)}
           onSave={handleSave}
         />
@@ -463,6 +464,7 @@ export function AccountMasterPageManager({
         <AccountMasterFormModal
           initialData={editingAccount}
           groups={groups}
+          accounts={accounts}
           onClose={() => setEditingAccount(null)}
           onSave={handleSave}
         />

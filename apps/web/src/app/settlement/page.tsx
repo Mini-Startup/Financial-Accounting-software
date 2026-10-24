@@ -60,8 +60,19 @@ export default function SettlementPage() {
 
   useEffect(() => {
     const today = new Date();
-    setReportDate(today.toISOString().split('T')[0]);
+    const todayStr = today.toISOString().split('T')[0];
+    setReportDate(todayStr);
     fetchSettlementsList();
+
+    // Automatically load live data on landing
+    setLoading(true);
+    fetchSettlementSummary(todayStr, 'LIVE')
+      .catch((err) => {
+        console.error('Failed to auto-load live settlement data:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const fetchSettlementSummary = async (date: string, settlementId: string = 'LIVE') => {
@@ -151,7 +162,14 @@ export default function SettlementPage() {
       }
     } else {
       setSettlementDetail(null);
-      setHasGenerated(false);
+      setLoading(true);
+      try {
+        await fetchSettlementSummary(reportDate, 'LIVE');
+      } catch (err: any) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
