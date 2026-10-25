@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Search, SlidersHorizontal, X, Plus, RotateCcw } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { UniversalDropdown } from './UniversalDropdown';
+import { CustomSelect } from './CustomSelect';
 
 export type SearchOperator = 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'gt' | 'lt';
 
@@ -171,50 +172,47 @@ export function UniversalSearchBar({
               conditions.map((cond, idx) => (
                 <div key={cond.id} className="flex flex-wrap items-center gap-2 text-xs">
                   {idx > 0 && (
-                    <select
+                    <CustomSelect<'AND' | 'OR'>
                       value={cond.conjunction}
-                      onChange={(e) =>
+                      options={['AND', 'OR']}
+                      onChange={(val) =>
                         handleUpdateCondition(cond.id, {
-                          conjunction: e.target.value as 'AND' | 'OR',
+                          conjunction: val,
                         })
                       }
-                      className="h-8 px-2 bg-[var(--color-mist)] text-[var(--color-forest)] font-bold rounded border border-[var(--color-border-medium)] outline-none text-[11px]"
-                    >
-                      <option value="AND">AND</option>
-                      <option value="OR">OR</option>
-                    </select>
+                      size="xs"
+                      menuWidth={75}
+                    />
                   )}
 
                   {/* Column */}
-                  <select
+                  <CustomSelect<string>
                     value={cond.column}
-                    onChange={(e) => handleUpdateCondition(cond.id, { column: e.target.value })}
-                    className="h-8 px-2 bg-white border border-[var(--color-border-medium)] rounded text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
-                  >
-                    {columns.map((c) => (
-                      <option key={c.key} value={c.key}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={columns.map((c) => ({ value: c.key, label: c.label }))}
+                    onChange={(val) => handleUpdateCondition(cond.id, { column: val })}
+                    size="xs"
+                    menuWidth={130}
+                  />
 
                   {/* Operator */}
-                  <select
+                  <CustomSelect<string>
                     value={cond.operator}
-                    onChange={(e) =>
+                    options={[
+                      { value: 'contains', label: 'contains' },
+                      { value: 'equals', label: 'equals' },
+                      { value: 'starts_with', label: 'starts with' },
+                      { value: 'ends_with', label: 'ends with' },
+                      { value: 'gt', label: '> greater than' },
+                      { value: 'lt', label: '< less than' },
+                    ]}
+                    onChange={(val) =>
                       handleUpdateCondition(cond.id, {
-                        operator: e.target.value as SearchOperator,
+                        operator: val as SearchOperator,
                       })
                     }
-                    className="h-8 px-2 bg-white border border-[var(--color-border-medium)] rounded text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
-                  >
-                    <option value="contains">contains</option>
-                    <option value="equals">equals</option>
-                    <option value="starts_with">starts with</option>
-                    <option value="ends_with">ends with</option>
-                    <option value="gt">&gt; greater than</option>
-                    <option value="lt">&lt; less than</option>
-                  </select>
+                    size="xs"
+                    menuWidth={130}
+                  />
 
                   {/* Value */}
                   <input

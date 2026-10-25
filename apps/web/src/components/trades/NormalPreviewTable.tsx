@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, FileSpreadsheet, RefreshCw, Edit3, Plus, CheckSquare } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, FileSpreadsheet, CheckSquare, RefreshCw, Plus, Edit3 } from 'lucide-react';
 import { TradeRowDrawer } from './TradeRowDrawer';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
+import { CustomSelect } from '../ui/CustomSelect';
 import { splitSearchTokens } from '@/utils/tableFilter';
 import {
   calculateTradeRates,
@@ -571,20 +572,16 @@ export function NormalPreviewTable({
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 p-4 bg-slate-50 gap-4 text-xs">
             <div className="flex items-center gap-2">
               <span className="text-slate-600 font-semibold">Rows per page:</span>
-              <select
+              <CustomSelect<number>
                 value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
+                options={[20, 50, 100, 200, 500]}
+                onChange={(val) => {
+                  setPageSize(Number(val));
                   setCurrentPage(1);
                 }}
-                className="input py-1 px-2 text-xs w-[80px]"
-              >
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={200}>200</option>
-                <option value={500}>500</option>
-              </select>
+                size="xs"
+                menuWidth={80}
+              />
             </div>
             <div className="flex items-center gap-3">
               <span className="text-slate-600 font-semibold">

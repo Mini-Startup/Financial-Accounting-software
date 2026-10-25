@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { ParsedTrade } from '../../lib/tradeParser';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface TradeDataGridProps {
   trades: ParsedTrade[];
@@ -64,22 +65,21 @@ export function TradeDataGrid({ trades }: TradeDataGridProps) {
       <div className="trade-grid-toolbar">
         <div className="trade-grid-toolbar-left">
           {/* Client filter */}
-          <select
-            className="trade-grid-filter"
+          <CustomSelect<string>
             value={clientFilter}
-            onChange={(e) => {
-              setClientFilter(e.target.value);
+            options={[
+              { value: '', label: 'All Clients' },
+              ...uniqueClients.map((code) => ({ value: code, label: code })),
+            ]}
+            onChange={(val) => {
+              setClientFilter(val);
               setVisibleCount(PAGE_SIZE);
             }}
+            placeholder="All Clients"
+            size="sm"
+            menuWidth={160}
             aria-label="Filter by client"
-          >
-            <option value="">All Clients</option>
-            {uniqueClients.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+          />
 
           {/* Script search */}
           <input

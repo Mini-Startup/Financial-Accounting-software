@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Filter, X, RotateCcw, ChevronDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { UniversalDatePicker } from './UniversalDatePicker';
+import { CustomSelect } from './CustomSelect';
 
 export interface FilterOption {
   label: string;
@@ -145,18 +146,19 @@ export function UniversalFilterPanel({
                   <label className="font-semibold text-[var(--color-charcoal)] text-[11px]">
                     {filter.label}
                   </label>
-                  <select
+                  <CustomSelect<string>
                     value={currentVal || 'ALL'}
-                    onChange={(e) => handleUpdate(filter.key, e.target.value)}
-                    className="h-8 px-2.5 bg-[var(--color-snow)] border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)] transition-colors"
-                  >
-                    <option value="ALL">All {filter.label}</option>
-                    {filter.options?.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'ALL', label: `All ${filter.label}` },
+                      ...(filter.options || []).map((opt) => ({
+                        value: opt.value,
+                        label: opt.label,
+                      })),
+                    ]}
+                    onChange={(val) => handleUpdate(filter.key, val)}
+                    size="sm"
+                    triggerClassName="w-full justify-between"
+                  />
                 </div>
               );
             }

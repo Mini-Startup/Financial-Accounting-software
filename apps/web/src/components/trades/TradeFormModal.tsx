@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { calculateTradeRates, round, type TradeRateResult } from '@/utils/brokerage';
+import { calculateTradeRates, type TradeRateResult } from '@/utils/brokerage';
 import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
@@ -534,7 +534,7 @@ export function TradeFormModal({
             type="button"
             onClick={handleSave}
             className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
-            disabled={isSaving || isLocked}
+            disabled={isSaving || isLocked || !isFormValid}
           >
             {isSaving ? (
               <>

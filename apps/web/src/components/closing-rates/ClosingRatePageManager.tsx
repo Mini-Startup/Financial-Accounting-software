@@ -12,8 +12,9 @@ import { ClosingRateFormModal } from './ClosingRateFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { UniversalFileUploader } from '@/components/ui/UniversalFileUploader';
-import { CustomCheckbox } from '@/components/ui/CustomCheckbox';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
+import { CustomSelect } from '@/components/ui/CustomSelect';
+import { CustomCheckbox } from '@/components/ui/CustomCheckbox';
 import { FindAndReplace, type FindAndReplaceColumn } from '@/components/ui/FindAndReplace';
 import { 
   Plus, UploadCloud, ArrowLeft, CheckCircle2, AlertTriangle, FileSpreadsheet, 
@@ -1029,18 +1030,16 @@ export function ClosingRatePageManager({
                 <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-slate-600 font-semibold">Rows per page:</span>
-                    <select
+                    <CustomSelect<number>
                       value={tablePageSize}
-                      onChange={(e) => {
-                        setTablePageSize(Number(e.target.value));
+                      options={[20, 50, 100]}
+                      onChange={(val) => {
+                        setTablePageSize(Number(val));
                         setTablePage(1);
                       }}
-                      className="input py-1 px-2 text-xs w-[70px] bg-white"
-                    >
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
+                      size="xs"
+                      menuWidth={75}
+                    />
                   </div>
 
                   <div className="flex items-center gap-3">

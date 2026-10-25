@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { CustomCheckbox } from './CustomCheckbox';
+import { CustomSelect } from './CustomSelect';
 
 export interface ColumnDef<T> {
   key: string;
@@ -336,19 +337,16 @@ export function UniversalDataTable<T>({
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-[var(--color-border-light)] bg-white text-xs text-[var(--color-slate)] select-none">
           <div className="flex items-center gap-2">
             <span>Show</span>
-            <select
+            <CustomSelect<number>
               value={currentPageSize}
-              onChange={(e) => {
-                setCurrentPageSize(Number(e.target.value));
+              options={[25, 50, 100, 250]}
+              onChange={(val) => {
+                setCurrentPageSize(Number(val));
                 setCurrentPage(1);
               }}
-              className="h-7 px-2 bg-[var(--color-snow)] border border-[var(--color-border-medium)] rounded text-xs text-[var(--color-charcoal)] outline-none"
-            >
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="250">250</option>
-            </select>
+              size="xs"
+              menuWidth={80}
+            />
             <span>rows per page</span>
             <span className="text-[var(--color-fog)]">|</span>
             <span>

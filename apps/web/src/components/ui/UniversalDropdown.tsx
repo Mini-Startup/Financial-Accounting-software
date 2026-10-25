@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
 import { Plus, ChevronDown, Check, X } from 'lucide-react';
@@ -81,7 +81,7 @@ export function UniversalDropdown({
   });
 
   // Calculate coordinates with space collision detection (flip upward if close to bottom)
-  const calculateCoords = (): Coords | null => {
+  const calculateCoords = useCallback((): Coords | null => {
     if (!containerRef.current) return null;
     const rect = containerRef.current.getBoundingClientRect();
 
@@ -114,14 +114,20 @@ export function UniversalDropdown({
       width: minWidth,
       openUpward: false,
     };
-  };
+  }, []);
 
-  const updateCoords = () => {
+  const updateCoords = useCallback(() => {
     const newCoords = calculateCoords();
     if (newCoords) {
       setCoords(newCoords);
     }
-  };
+  }, [calculateCoords]);
+
+  const closeDropdown = useCallback(() => {
+    setIsOpen(false);
+    setSearchQuery('');
+    setInputValue(selectedOption ? selectedOption.label : '');
+  }, [selectedOption]);
 
   const openDropdown = () => {
     if (disabled) return;
@@ -136,12 +142,6 @@ export function UniversalDropdown({
     setTimeout(() => {
       inputRef.current?.select();
     }, 10);
-  };
-
-  const closeDropdown = () => {
-    setIsOpen(false);
-    setSearchQuery('');
-    setInputValue(selectedOption ? selectedOption.label : '');
   };
 
   const handleToggle = () => {
@@ -164,7 +164,7 @@ export function UniversalDropdown({
         window.removeEventListener('scroll', handleScrollResize, true);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, updateCoords]);
 
   // Handle outside click
   useEffect(() => {
@@ -185,7 +185,7 @@ export function UniversalDropdown({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, selectedOption]);
+  }, [isOpen, closeDropdown]);
 
   const handleSelect = (val: string) => {
     onChange(val);

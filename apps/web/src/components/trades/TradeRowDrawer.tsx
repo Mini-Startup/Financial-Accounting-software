@@ -4,6 +4,7 @@ import React from 'react';
 import { X, AlertTriangle, Building2, TrendingUp, Calendar, DollarSign, Edit3 } from 'lucide-react';
 import { SearchableSelect } from './SearchableSelect';
 import { CustomDatePicker } from '../ui/CustomDatePicker';
+import { CustomSelect } from '../ui/CustomSelect';
 import { formatExpiryForInput, generateDubaiSecurityName } from './tradeImportHelpers';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
@@ -251,16 +252,23 @@ export function TradeRowDrawer({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Side</label>
-                <select
+                <CustomSelect<string>
                   value={isDubai ? row.buySellFlag : row.buySell}
-                  onChange={(e) => handleChange(isDubai ? 'buySellFlag' : 'buySell', e.target.value)}
-                  className="input text-xs font-bold"
-                >
-                  <option value="Buy">Buy / Long</option>
-                  <option value="Sell">Sell / Short</option>
-                  <option value="BUY">BUY</option>
-                  <option value="SELL">SELL</option>
-                </select>
+                  options={
+                    isDubai
+                      ? [
+                          { value: 'Buy', label: 'Buy' },
+                          { value: 'Sell', label: 'Sell' },
+                        ]
+                      : [
+                          { value: 'BUY', label: 'BUY' },
+                          { value: 'SELL', label: 'SELL' },
+                        ]
+                  }
+                  onChange={(val) => handleChange(isDubai ? 'buySellFlag' : 'buySell', val)}
+                  size="sm"
+                  triggerClassName="w-full justify-between font-bold"
+                />
               </div>
 
               <div>
@@ -307,14 +315,16 @@ export function TradeRowDrawer({
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Call / Put</label>
-                  <select
-                    value={row.callPut}
-                    onChange={(e) => handleChange('callPut', e.target.value)}
-                    className="input text-xs"
-                  >
-                    <option value="Future">Future</option>
-                    <option value="Options">Options</option>
-                  </select>
+                  <CustomSelect<string>
+                    value={row.callPut || 'Future'}
+                    options={[
+                      { value: 'Future', label: 'Future' },
+                      { value: 'Options', label: 'Options' },
+                    ]}
+                    onChange={(val) => handleChange('callPut', val)}
+                    size="sm"
+                    triggerClassName="w-full justify-between"
+                  />
                 </div>
 
                 <div>

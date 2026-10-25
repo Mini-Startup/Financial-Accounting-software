@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Plus, AlertCircle } from 'lucide-react';
 import { round } from '@/utils/brokerage';
+import { CustomSelect } from '../ui/CustomSelect';
 
 export interface ScriptRuleRow {
   scriptId: string;
@@ -177,7 +178,7 @@ export function AllScriptsBrokerageTable({
 
                       {/* 6. Direction Dropdown */}
                       <td className="py-2.5 px-3 text-center">
-                        <select
+                        <CustomSelect<string>
                           value={
                             row.mode === 'BOTH'
                               ? 'BOTH'
@@ -187,16 +188,19 @@ export function AllScriptsBrokerageTable({
                               ? 'BUY'
                               : 'SELL'
                           }
-                          onChange={(e) => handleDirectionChange(e.target.value)}
-                          className="input text-xs py-1 px-2 font-medium w-24 cursor-pointer"
-                        >
-                          <option value="BOTH">Both</option>
-                          <option value="BUY">Buy</option>
-                          <option value="SELL">Sell</option>
-                          {row.mode === 'SPLIT' && row.buyActive && row.sellActive && (
-                            <option value="SPLIT">Buy & Sell</option>
-                          )}
-                        </select>
+                          options={[
+                            { value: 'BOTH', label: 'Both' },
+                            { value: 'BUY', label: 'Buy' },
+                            { value: 'SELL', label: 'Sell' },
+                            ...(row.mode === 'SPLIT' && row.buyActive && row.sellActive
+                              ? [{ value: 'SPLIT', label: 'Buy & Sell' }]
+                              : []),
+                          ]}
+                          onChange={(val) => handleDirectionChange(val)}
+                          size="xs"
+                          menuWidth={110}
+                          triggerClassName="w-24 justify-between"
+                        />
                       </td>
 
                       {/* 7. Rule Configuration Area */}

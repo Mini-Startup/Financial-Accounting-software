@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { UploadCloud, FileSpreadsheet, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -36,7 +36,7 @@ export function UniversalFileUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const validateAndSelect = (file: File) => {
+  const validateAndSelect = useCallback((file: File) => {
     setErrorMsg(null);
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
@@ -44,7 +44,7 @@ export function UniversalFileUploader({
       return;
     }
     onFileSelect(file);
-  };
+  }, [maxSizeMB, onFileSelect]);
 
   // Drag and drop handlers
   const handleDragEnter = (e: React.DragEvent) => {
@@ -94,7 +94,7 @@ export function UniversalFileUploader({
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, []);
+  }, [validateAndSelect]);
 
   return (
     <div className={cn('flex flex-col gap-2 w-full', className)}>

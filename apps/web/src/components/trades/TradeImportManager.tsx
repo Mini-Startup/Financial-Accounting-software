@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { toast } from 'sonner';
@@ -83,7 +83,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     if (step === 'RESULT') {
       resetImportState();
     }
-  }, []);
+  }, [step, resetImportState]);
 
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
@@ -102,8 +102,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         if (exRes.ok) {
           const exData = await exRes.json();
           setExchanges(exData);
-          if (exData.length > 0 && !selectedExchangeId) {
-            setSelectedExchangeId(exData[0].id);
+          if (exData.length > 0) {
+            setSelectedExchangeId((prev) => prev || exData[0].id);
           }
         }
 
@@ -111,8 +111,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         if (brRes.ok) {
           const brData = await brRes.json();
           setBrokers(brData);
-          if (brData.length > 0 && !selectedBrokerId) {
-            setSelectedBrokerId(brData[0].id);
+          if (brData.length > 0) {
+            setSelectedBrokerId((prev) => prev || brData[0].id);
           }
         }
 
@@ -144,7 +144,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       }
     };
     fetchInitialData();
-  }, []);
+  }, [setSelectedBrokerId, setSelectedExchangeId]);
 
   const fetchExchanges = async () => {
     try {
@@ -292,7 +292,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setShowScriptModal(true);
   };
 
-  const getDubaiRowValidation = (row: DubaiParsedTrade) => {
+  const getDubaiRowValidation = useCallback((row: DubaiParsedTrade) => {
     const errors: string[] = [];
     const client = clients.find((c) => c.code.toUpperCase() === row.clientCode.toUpperCase());
     const script = scripts.find((s) => s.shortName.toUpperCase() === row.tickCode.toUpperCase());
@@ -328,7 +328,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       resolvedCurrencyId: currency?.id,
       dealerCode: client?.dealerCode || '-',
     };
-  };
+  }, [clients, scripts, exchanges, currencies]);
 
   const processFile = (file: File) => {
     setFileName(file.name);

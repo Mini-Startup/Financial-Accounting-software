@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -52,7 +52,7 @@ export function UniversalDatePicker({
     setLocalError(null);
   }
 
-  const calculateCoords = (): Coords | null => {
+  const calculateCoords = useCallback((): Coords | null => {
     if (!containerRef.current) return null;
     const rect = containerRef.current.getBoundingClientRect();
 
@@ -84,14 +84,14 @@ export function UniversalDatePicker({
       left,
       openUpward: false,
     };
-  };
+  }, []);
 
-  const updateCoords = () => {
+  const updateCoords = useCallback(() => {
     const newCoords = calculateCoords();
     if (newCoords) {
       setCoords(newCoords);
     }
-  };
+  }, [calculateCoords]);
 
   // Calendar View month/year state
   const parseToDate = (str: string): Date => {
@@ -140,7 +140,7 @@ export function UniversalDatePicker({
         window.removeEventListener('scroll', handleScrollResize, true);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, updateCoords]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

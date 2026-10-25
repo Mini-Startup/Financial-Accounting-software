@@ -79,7 +79,7 @@ export default async function Dashboard() {
     let volume = 0;
     let buys = 0;
     let sells = 0;
-    allTrades.forEach((t) => {
+    allTrades.forEach((t: any) => {
       const val = t.quantity * t.rate;
       volume += val;
       if (t.transactionType?.toUpperCase() === "BUY") {

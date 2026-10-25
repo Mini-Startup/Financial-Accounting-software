@@ -26,12 +26,6 @@ export function AccountMasterFormModal({
     return groups.filter(g => g.name !== 'Sundry Debtors' && g.name !== 'Sundry Creditors');
   }, [groups]);
 
-  // Find corresponding group name for conditional rendering of Bank Accounts
-  const getGroupNameById = (id: number) => {
-    const group = groups.find(g => g.id === Number(id));
-    return group ? group.name : '';
-  };
-
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
     name: initialData?.name || '',
@@ -54,7 +48,8 @@ export function AccountMasterFormModal({
   });
 
   const selectedGroupName = useMemo(() => {
-    return getGroupNameById(Number(formData.groupId));
+    const group = groups.find(g => g.id === Number(formData.groupId));
+    return group ? group.name : '';
   }, [formData.groupId, groups]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

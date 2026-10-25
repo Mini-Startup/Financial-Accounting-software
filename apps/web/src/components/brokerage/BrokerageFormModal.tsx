@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { X, Calculator, Building2, User, Layers, ArrowRight } from 'lucide-react';
@@ -461,15 +461,17 @@ export function BrokerageFormModal({
               <div className="grid grid-cols-3 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Direction</label>
-                  <select
+                  <UniversalDropdown
                     value={direction}
-                    onChange={(e) => setDirection(e.target.value as any)}
-                    className="input text-xs font-medium py-2.5"
-                  >
-                    <option value="BOTH">Both</option>
-                    <option value="BUY">Buy</option>
-                    <option value="SELL">Sell</option>
-                  </select>
+                    options={[
+                      { value: 'BOTH', label: 'Both' },
+                      { value: 'BUY', label: 'Buy' },
+                      { value: 'SELL', label: 'Sell' },
+                    ]}
+                    onChange={(val) => setDirection(val as 'BOTH' | 'BUY' | 'SELL')}
+                    searchable={false}
+                    placeholder="Select Direction"
+                  />
                 </div>
 
                 <div className="form-field">

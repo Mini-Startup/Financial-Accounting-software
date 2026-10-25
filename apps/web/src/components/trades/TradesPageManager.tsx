@@ -19,7 +19,7 @@ import {
   type SortDirection,
   type AdvancedCondition,
 } from '@/utils/tableFilter';
-import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, X } from 'lucide-react';
+import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 

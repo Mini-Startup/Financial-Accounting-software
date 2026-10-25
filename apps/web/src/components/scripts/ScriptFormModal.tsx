@@ -175,21 +175,27 @@ export function ScriptFormModal({
   useEffect(() => {
     if (!initialCurrencies || initialCurrencies.length === 0) {
       fetchCurrencies().then((data) => {
-        if (!formData.currencyId && data.length > 0) {
-          const curId = resolveInitialCurrencyId(data, initialData, targetCurrencyCode);
-          setFormData((prev) => ({ ...prev, currencyId: curId }));
-        }
+        setFormData((prev) => {
+          if (!prev.currencyId && data.length > 0) {
+            const curId = resolveInitialCurrencyId(data, initialData, targetCurrencyCode);
+            return { ...prev, currencyId: curId };
+          }
+          return prev;
+        });
       });
     }
     if (!initialExchanges || initialExchanges.length === 0) {
       fetchExchanges().then((data) => {
-        if (!formData.exchangeId && data.length > 0) {
-          const exId = resolveInitialExchangeId(data, initialData, targetExchangeCode);
-          setFormData((prev) => ({ ...prev, exchangeId: exId }));
-        }
+        setFormData((prev) => {
+          if (!prev.exchangeId && data.length > 0) {
+            const exId = resolveInitialExchangeId(data, initialData, targetExchangeCode);
+            return { ...prev, exchangeId: exId };
+          }
+          return prev;
+        });
       });
     }
-  }, [initialCurrencies, initialExchanges]);
+  }, [initialCurrencies, initialExchanges, initialData, targetCurrencyCode, targetExchangeCode]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
