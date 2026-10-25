@@ -72,16 +72,7 @@ export class TrialBalanceService {
   }): Promise<TrialBalanceReport> {
     const { toDate: toDateStr, fromDate: fromDateStr, groupId, category } = options || {};
 
-    // 1. Fetch all accounts with groups
-    const accounts = await prisma.account.findMany({
-      include: { group: true },
-      orderBy: [
-        { group: { name: 'asc' } },
-        { code: 'asc' },
-      ],
-    });
-
-    // 2. Fetch relevant ledger entries
+    // 1. Prepare ledger where clause
     const ledgerWhere: any = {};
     if (toDateStr) {
       const toDate = new Date(toDateStr);
@@ -94,14 +85,33 @@ export class TrialBalanceService {
       ledgerWhere.date = { ...(ledgerWhere.date || {}), gte: fromDate };
     }
 
-    const ledgerEntries = await prisma.ledger.findMany({
-      where: ledgerWhere,
-      select: {
-        accountId: true,
-        amount: true,
-        date: true,
-      },
-    });
+    // 2. Fetch accounts and ledger entries in parallel with lean projection
+    const [accounts, ledgerEntries] = await Promise.all([
+      prisma.account.findMany({
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          groupId: true,
+          openingBalance: true,
+          isActive: true,
+          isDirectClient: true,
+          group: { select: { id: true, name: true } },
+        },
+        orderBy: [
+          { group: { name: 'asc' } },
+          { code: 'asc' },
+        ],
+      }),
+      prisma.ledger.findMany({
+        where: ledgerWhere,
+        select: {
+          accountId: true,
+          amount: true,
+          date: true,
+        },
+      }),
+    ]);
 
     // 3. Aggregate ledger entries per account
     const ledgerMap = new Map<string, { totalDebit: number; totalCredit: number; netMovement: number }>();

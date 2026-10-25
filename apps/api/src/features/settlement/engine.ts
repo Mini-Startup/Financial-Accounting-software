@@ -454,14 +454,19 @@ export class SettlementEngine {
           });
         }
 
-        // 5. Create Ledger entries per Client and per Broker
+        // 5. Create Ledger entries per Client and per Broker (lean select projection)
         const settledTrades = await tx.trade.findMany({
           where: {
             settlementId: settlement.id,
           },
-          include: {
-            account: true,
-            broker: true,
+          select: {
+            accountId: true,
+            brokerId: true,
+            quantity: true,
+            rate: true,
+            clientRate: true,
+            brokerRate: true,
+            transactionType: true,
           },
         });
 

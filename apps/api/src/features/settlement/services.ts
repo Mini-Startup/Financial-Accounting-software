@@ -69,24 +69,25 @@ export class SettlementService {
       whereClause.tradeDate = { lte: end };
     }
 
-    // Fetch all matching trades
-    const trades = await prisma.trade.findMany({
-      where: whereClause,
-      include: {
-        account: true,
-        broker: true,
-        script: {
-          include: { currency: true },
+    // Fetch matching trades and currency map in parallel
+    const [trades, currencies] = await Promise.all([
+      prisma.trade.findMany({
+        where: whereClause,
+        include: {
+          account: true,
+          broker: true,
+          script: {
+            include: { currency: true },
+          },
+          exchange: true,
         },
-        exchange: true,
-      },
-      orderBy: {
-        tradeDate: 'asc',
-      },
-    });
+        orderBy: {
+          tradeDate: 'asc',
+        },
+      }),
+      prisma.currency.findMany(),
+    ]);
 
-    // Fetch currency map
-    const currencies = await prisma.currency.findMany();
     const currencySymbolMap = new Map<string, string>();
     for (const c of currencies) {
       currencySymbolMap.set(c.code.toUpperCase(), c.symbol || c.code);

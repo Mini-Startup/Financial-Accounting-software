@@ -3,35 +3,12 @@ import { NotFoundException } from '../../errors';
 
 export class LedgerReportService {
   async generateLedgerReport(accountId: string, fromDateStr?: string, toDateStr?: string) {
-    const account = await prisma.account.findUnique({
-      where: { id: accountId },
-      include: { group: true },
-    });
-
-    if (!account) {
-      throw new NotFoundException(`Account with ID ${accountId} not found.`);
-    }
-
-    const baseOpeningBalance = Number(account.openingBalance) || 0;
-    let openingBalance = baseOpeningBalance;
     const whereClause: any = { accountId };
+    let fromDate: Date | null = null;
 
     if (fromDateStr) {
-      const fromDate = new Date(fromDateStr);
+      fromDate = new Date(fromDateStr);
       fromDate.setUTCHours(0, 0, 0, 0);
-
-      // Sum all prior ledger entries (date < fromDate)
-      const priorLedgerSum = await prisma.ledger.aggregate({
-        _sum: { amount: true },
-        where: {
-          accountId,
-          date: { lt: fromDate },
-        },
-      });
-
-      const priorEntriesAmount = priorLedgerSum._sum.amount || 0;
-      openingBalance = baseOpeningBalance + priorEntriesAmount;
-
       whereClause.date = { ...(whereClause.date || {}), gte: fromDate };
     }
 
@@ -41,14 +18,40 @@ export class LedgerReportService {
       whereClause.date = { ...(whereClause.date || {}), lte: toDate };
     }
 
-    // Fetch Ledger Entries in Date Range (or all if not filtered)
-    const ledgerEntries = await prisma.ledger.findMany({
-      where: whereClause,
-      orderBy: [
-        { date: 'asc' },
-        { createdAt: 'asc' },
-      ],
-    });
+    // Execute account fetch, prior ledger sum, and current entries concurrently
+    const [account, priorLedgerSum, ledgerEntries] = await Promise.all([
+      prisma.account.findUnique({
+        where: { id: accountId },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          openingBalance: true,
+          group: { select: { id: true, name: true } },
+        },
+      }),
+      fromDate
+        ? prisma.ledger.aggregate({
+            _sum: { amount: true },
+            where: {
+              accountId,
+              date: { lt: fromDate },
+            },
+          })
+        : Promise.resolve({ _sum: { amount: 0 } }),
+      prisma.ledger.findMany({
+        where: whereClause,
+        orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+      }),
+    ]);
+
+    if (!account) {
+      throw new NotFoundException(`Account with ID ${accountId} not found.`);
+    }
+
+    const baseOpeningBalance = Number(account.openingBalance) || 0;
+    const priorEntriesAmount = priorLedgerSum._sum.amount || 0;
+    const openingBalance = baseOpeningBalance + priorEntriesAmount;
 
     // Build Passbook Statement with Running Balance
     let runningBalance = openingBalance;

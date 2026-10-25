@@ -1,12 +1,37 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { registerRoutes } from './routes';
 import { errorHandler } from './errors';
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://finance-frontend-weld.vercel.app"
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://finance-frontend-weld.vercel.app";
+
+// ─── Security & Performance Optimizations ────────────
+app.disable('x-powered-by');
+
+// Response timing header for debugging and profiling
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (duration > 300) {
+      console.warn(`[SLOW API] ${req.method} ${req.originalUrl} - ${duration}ms`);
+    }
+  });
+  next();
+});
+
+// Gzip/Brotli compression: compresses JSON responses by 70-90%
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024, // only compress responses above 1KB
+  })
+);
+
 // ─── Middleware ──────────────────────────────────────
 app.use(cors({
   origin: ["http://localhost:3000", FRONTEND_URL]

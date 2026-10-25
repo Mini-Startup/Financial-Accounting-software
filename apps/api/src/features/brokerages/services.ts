@@ -303,49 +303,74 @@ export class BrokeragesService {
       throw new BadRequestException('rules array is required and must not be empty');
     }
 
-    const saved: any[] = [];
-    for (const item of rules) {
-      if (!item.accountId || !item.appliesTo || !item.scriptId) continue;
+    // Filter valid items
+    const validRules = rules.filter((item) => {
+      if (!item.accountId || !item.appliesTo || !item.scriptId) return false;
       const q = Number(item.quantity);
       const b = Number(item.brokerage);
-      if (isNaN(q) || q <= 0 || isNaN(b) || b < 0) continue;
+      return !isNaN(q) && q > 0 && !isNaN(b) && b >= 0;
+    });
 
+    if (validRules.length === 0) {
+      return { success: true, count: 0, saved: [] };
+    }
+
+    // Pre-fetch all existing brokerage rules for these accounts in 1 single query
+    const accountIds = Array.from(new Set(validRules.map((r) => r.accountId)));
+    const existingRules = await prisma.brokerage.findMany({
+      where: {
+        accountId: { in: accountIds },
+        scope: 'SCRIPT',
+      },
+      select: {
+        id: true,
+        accountId: true,
+        appliesTo: true,
+        scriptId: true,
+        direction: true,
+      },
+    });
+
+    // O(1) lookup map
+    const existingMap = new Map<string, string>();
+    for (const er of existingRules) {
+      const key = `${er.accountId}_${er.appliesTo}_${er.scriptId}_${er.direction}`;
+      existingMap.set(key, er.id);
+    }
+
+    // Build batch operations
+    const ops = validRules.map((item) => {
       const direction: DirectionType = item.direction || 'BOTH';
+      const key = `${item.accountId}_${item.appliesTo}_${item.scriptId}_${direction}`;
+      const existingId = existingMap.get(key);
+      const q = Number(item.quantity);
+      const b = Number(item.brokerage);
 
-      const existing = await prisma.brokerage.findFirst({
-        where: {
-          accountId: item.accountId,
-          appliesTo: item.appliesTo,
-          scope: 'SCRIPT',
-          scriptId: item.scriptId,
-          direction,
-        },
-      });
-
-      let res;
-      if (existing) {
-        res = await prisma.brokerage.update({
-          where: { id: existing.id },
+      if (existingId) {
+        return prisma.brokerage.update({
+          where: { id: existingId },
           data: {
-            quantity: q,
-            brokerage: b,
-          },
-        });
-      } else {
-        res = await prisma.brokerage.create({
-          data: {
-            accountId: item.accountId,
-            appliesTo: item.appliesTo,
-            scope: 'SCRIPT',
-            scriptId: item.scriptId,
-            direction,
             quantity: q,
             brokerage: b,
           },
         });
       }
-      saved.push(res);
-    }
+
+      return prisma.brokerage.create({
+        data: {
+          accountId: item.accountId,
+          appliesTo: item.appliesTo,
+          scope: 'SCRIPT',
+          scriptId: item.scriptId,
+          direction,
+          quantity: q,
+          brokerage: b,
+        },
+      });
+    });
+
+    // Execute in a single round-trip transaction
+    const saved = await prisma.$transaction(ops);
 
     return {
       success: true,

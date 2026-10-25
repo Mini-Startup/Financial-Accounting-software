@@ -31,15 +31,20 @@ export class VouchersService {
       );
     }
 
-    // Verify all accounts exist
-    for (const line of data.lines) {
-      if (!line.accountId) {
-        throw new BadRequestException('All voucher lines must have an account selected.');
-      }
-      const account = await prisma.account.findUnique({ where: { id: line.accountId } });
-      if (!account) {
-        throw new BadRequestException(`Account ID ${line.accountId} does not exist.`);
-      }
+    // Verify all accounts exist in 1 single query
+    const accountIds = data.lines.map((l) => l.accountId).filter(Boolean);
+    if (accountIds.length !== data.lines.length) {
+      throw new BadRequestException('All voucher lines must have an account selected.');
+    }
+
+    const uniqueAccountIds = Array.from(new Set(accountIds));
+    const existingAccounts = await prisma.account.findMany({
+      where: { id: { in: uniqueAccountIds } },
+      select: { id: true },
+    });
+
+    if (existingAccounts.length !== uniqueAccountIds.length) {
+      throw new BadRequestException('One or more selected accounts do not exist.');
     }
 
     const voucherDate = new Date(data.date);

@@ -3,9 +3,9 @@ import { tradesService } from './services';
 
 const router = Router();
 
-router.get('/trades', async (_req, res, next) => {
+router.get('/trades', async (req, res, next) => {
   try {
-    const result = await tradesService.findAll();
+    const result = await tradesService.findAll(req.query as any);
     res.json(result);
   } catch (err) { next(err); }
 });

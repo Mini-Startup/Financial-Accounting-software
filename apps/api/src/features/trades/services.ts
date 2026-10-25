@@ -77,9 +77,52 @@ export class TradesService {
     });
   }
 
-  async findAll() {
+  async findAll(params?: {
+    limit?: number | string;
+    offset?: number | string;
+    fromDate?: string;
+    toDate?: string;
+    accountId?: string;
+    brokerId?: string;
+    scriptId?: string;
+    exchangeId?: string;
+    tradeType?: string;
+    settlementId?: string;
+  }) {
+    const where: Prisma.TradeWhereInput = {};
+
+    if (params) {
+      if (params.accountId) where.accountId = params.accountId;
+      if (params.brokerId) where.brokerId = params.brokerId;
+      if (params.scriptId) where.scriptId = params.scriptId;
+      if (params.exchangeId) where.exchangeId = params.exchangeId;
+      if (params.tradeType) where.tradeType = params.tradeType;
+      if (params.settlementId) where.settlementId = params.settlementId;
+
+      if (params.fromDate || params.toDate) {
+        const dateFilter: Prisma.DateTimeFilter = {};
+        if (params.fromDate) {
+          const from = parseFlexibleDate(params.fromDate);
+          from.setUTCHours(0, 0, 0, 0);
+          dateFilter.gte = from;
+        }
+        if (params.toDate) {
+          const to = parseFlexibleDate(params.toDate);
+          to.setUTCHours(23, 59, 59, 999);
+          dateFilter.lte = to;
+        }
+        where.tradeDate = dateFilter;
+      }
+    }
+
+    const take = params?.limit ? Math.min(Math.max(parseInt(String(params.limit), 10), 1), 1000) : undefined;
+    const skip = params?.offset ? Math.max(parseInt(String(params.offset), 10), 0) : undefined;
+
     return prisma.trade.findMany({
-      orderBy: { tradeDate: 'desc' },
+      where,
+      orderBy: [{ tradeDate: 'desc' }, { createdAt: 'desc' }],
+      take,
+      skip,
       include: {
         account: true,
         script: {

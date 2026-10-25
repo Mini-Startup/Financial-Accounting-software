@@ -114,7 +114,9 @@ model Script {
   trades       Trade[]
   closingRates ClosingRate[]
 
+  @@index([shortName])
   @@index([fullName])
+  @@index([exchangeId])
   @@map("scripts")
 }
 
@@ -243,6 +245,9 @@ model Trade {
   @@index([scriptId])
   @@index([exchangeId])
   @@index([settlementId])
+  @@index([tradeDate])
+  @@index([settlementId, tradeDate])
+  @@index([tradeType])
   @@map("trades")
 }
 
@@ -303,6 +308,8 @@ model ClosingRate {
   @@index([exchangeId])
   @@index([scriptId])
   @@index([securityName])
+  @@index([rateDate])
+  @@index([rateDate, securityName])
   @@map("closing_rates")
 }
 
@@ -342,6 +349,7 @@ model Ledger {
 
   @@index([accountId])
   @@index([date])
+  @@index([accountId, date])
   @@map("ledger_entries")
 }
 

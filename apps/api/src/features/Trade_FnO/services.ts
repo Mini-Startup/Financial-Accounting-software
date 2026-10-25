@@ -399,21 +399,28 @@ export class TradeImportService {
       },
     });
 
-    const resolveRuleFast = (accId: string, scriptId: string, direction: 'BUY' | 'SELL') => {
-      const forAcc = allBrokerageRules.filter((r) => r.accountId === accId);
-      if (forAcc.length === 0) return null;
+    // O(1) hash map lookup indexing
+    const ruleLookupMap = new Map<string, (typeof allBrokerageRules)[0]>();
+    for (const r of allBrokerageRules) {
+      const scriptKey = r.scriptId || 'DEFAULT';
+      ruleLookupMap.set(`${r.accountId}_${scriptKey}_${r.direction}`, r);
+    }
 
-      const scriptExact = forAcc.find((r) => r.scriptId === scriptId && r.direction === direction);
+    const resolveRuleFast = (accId: string, scriptId: string, direction: 'BUY' | 'SELL') => {
+      // 1. Exact script + exact direction
+      const scriptExact = ruleLookupMap.get(`${accId}_${scriptId}_${direction}`);
       if (scriptExact) return scriptExact;
 
-      const scriptBoth = forAcc.find((r) => r.scriptId === scriptId && r.direction === 'BOTH');
+      // 2. Exact script + BOTH direction
+      const scriptBoth = ruleLookupMap.get(`${accId}_${scriptId}_BOTH`);
       if (scriptBoth) return scriptBoth;
 
-      const defaultExact = forAcc.find((r) => !r.scriptId && r.direction === direction);
+      // 3. Default + exact direction
+      const defaultExact = ruleLookupMap.get(`${accId}_DEFAULT_${direction}`);
       if (defaultExact) return defaultExact;
 
-      const defaultBoth = forAcc.find((r) => !r.scriptId && r.direction === 'BOTH');
-      return defaultBoth || null;
+      // 4. Default + BOTH direction
+      return ruleLookupMap.get(`${accId}_DEFAULT_BOTH`) || null;
     };
 
     const validRowsWithCalcs = validRows.map((row) => {
