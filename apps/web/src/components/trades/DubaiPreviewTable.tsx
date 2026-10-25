@@ -8,6 +8,7 @@ import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { FindAndReplace, type FindAndReplaceColumn } from '../ui/FindAndReplace';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
 import { splitSearchTokens } from '@/utils/tableFilter';
+import { DubaiTableRow } from './DubaiTableRow';
 
 interface DubaiPreviewTableProps {
   dubaiPreviewRows: DubaiParsedTrade[];
@@ -15,6 +16,7 @@ interface DubaiPreviewTableProps {
   clients: any[];
   exchanges: any[];
   scripts: any[];
+  brokerages?: any[];
   getDubaiRowValidation: (row: DubaiParsedTrade) => {
     isValid: boolean;
     errors: string[];
@@ -47,6 +49,7 @@ export function DubaiPreviewTable({
   clients,
   exchanges,
   scripts,
+  brokerages,
   getDubaiRowValidation,
   searchQuery,
   searchColumn,
@@ -359,7 +362,24 @@ export function DubaiPreviewTable({
                 <th className="py-3 px-3 text-center">Side</th>
                 <th className="py-3 px-3 text-right font-bold">Qty</th>
                 <th className="py-3 px-3 text-right font-bold">Price</th>
-                <th className="py-3 px-3 text-right font-bold">Mkt Value</th>
+
+                {/* 5 Highlighted Columns with slightly darker color, keeping Mkt Value, Client Rate & Broker Rate together */}
+                <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-l border-r border-slate-300">
+                  Mkt Value
+                </th>
+                <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Client Rate
+                </th>
+                <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Broker Rate
+                </th>
+                <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Client Brk
+                </th>
+                <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Broker Brk
+                </th>
+
                 <th className="py-3 px-3 text-right">Commission</th>
                 <th className="py-3 px-3 text-right">Ex Charges</th>
                 <th className="py-3 px-3 text-right">Charges 1</th>
@@ -371,7 +391,7 @@ export function DubaiPreviewTable({
             <tbody className="divide-y divide-slate-100 text-xs">
               {paginatedDubaiRows.length === 0 ? (
                 <tr>
-                  <td colSpan={26} className="py-8 text-center text-slate-400 italic">
+                  <td colSpan={30} className="py-8 text-center text-slate-400 italic">
                     No matching Dubai trade rows found.
                   </td>
                 </tr>
@@ -380,247 +400,25 @@ export function DubaiPreviewTable({
                   const mainIdx = dubaiPreviewRows.findIndex((r) => r === row);
                   const val = getDubaiRowValidation(row);
 
-                  const scriptObj = scripts.find(
-                    (s) => s.shortName.toUpperCase() === (row.tickCode || '').toUpperCase()
-                  );
-                  const generatedSecurityName = generateDubaiSecurityName(row, scriptObj);
-
-                  const isMappedScript = Boolean(val.resolvedScriptId);
-                  const displaySecName = generatedSecurityName || row.securityName || row.tickCode || '—';
-
-                  const isBuy = (row.buySellFlag || '').toUpperCase().startsWith('B') || row.buySellFlag === '1';
-
-                  // Strip time from Trade Date & Expiry Date
-                  const cleanTradeDate = row.tradeDate ? row.tradeDate.split(' ')[0] : '—';
-                  const cleanExpiryDate = row.expiryDate ? row.expiryDate.split(' ')[0] : '—';
-
                   return (
-                    <tr
+                    <DubaiTableRow
                       key={mainIdx}
-                      onClick={() => setSelectedRowIndex(mainIdx)}
-                      className={`group hover:bg-slate-50 transition-colors cursor-pointer ${
-                        !val.isValid && !isValidatingMasterData ? 'bg-rose-50/20' : ''
-                      }`}
-                    >
-                      {/* Checkbox column */}
-                      <td
-                        className="py-3 px-3 text-center"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <CustomCheckbox
-                          checked={row.selected === true}
-                          onChange={() => handleToggleRow(mainIdx)}
-                        />
-                      </td>
-
-                      {/* 1. # */}
-                      <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px]">
-                        {(dubaiCurrentPage - 1) * dubaiPageSize + relativeIdx + 1}
-                      </td>
-
-                      {/* 2. Trade Date */}
-                      <td className="py-3 px-3 font-mono text-slate-700">{cleanTradeDate}</td>
-
-                      {/* 3. Trade Time */}
-                      <td className="py-3 px-3 font-mono text-slate-600">{row.tradeTime || '—'}</td>
-
-                      {/* 4. Client */}
-                      <td className="py-3 px-3">
-                        {val.resolvedClientId || isValidatingMasterData ? (
-                          <span className="font-bold text-slate-800 font-mono">{row.clientCode}</span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDoubleClickClient(row.clientCode);
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
-                            title="Unmapped client. Click to create."
-                          >
-                            <span>{row.clientCode || 'Missing'}</span>
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-
-                      {/* 5. Dealer Code */}
-                      <td className="py-3 px-3 font-mono text-slate-600">{val.dealerCode || '-'}</td>
-
-                      {/* Exchange */}
-                      <td className="py-3 px-3">
-                        {val.resolvedExchangeId || isValidatingMasterData ? (
-                          <span className="font-mono font-bold text-slate-800">{row.marketCode || '—'}</span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDoubleClickExchange(row.marketCode);
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors border border-rose-200"
-                            title={`Unmapped Exchange '${row.marketCode}'. Click to add to database.`}
-                          >
-                            <span>{row.marketCode || 'Missing'}</span>
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-
-                      {/* 6. Curr */}
-                      <td className="py-3 px-3">
-                        {val.resolvedCurrencyId || isValidatingMasterData ? (
-                          <span className="font-mono text-slate-700 font-bold">{row.currencyCode || 'USD'}</span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDoubleClickCurrency(row.currencyCode || 'USD');
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
-                            title="Unmapped currency. Click to add."
-                          >
-                            <span>{row.currencyCode || 'USD'}</span>
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-
-                      {/* 7. Security Name */}
-                      <td className="py-3 px-3">
-                        {isMappedScript || isValidatingMasterData ? (
-                          <div className="font-semibold text-slate-800" title={displaySecName}>
-                            {displaySecName}
-                          </div>
-                        ) : (
-                          <div className="font-serif italic font-semibold text-rose-600 flex items-center gap-1.5" title="Unmapped script raw name">
-                            <span>{displaySecName}</span>
-                            <span className="not-italic text-[10px] px-1.5 py-0.2 bg-rose-100 text-rose-700 font-sans rounded font-bold">Unmapped</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 8. Del Month */}
-                      <td className="py-3 px-3 font-mono text-slate-600">{row.delMonth || '—'}</td>
-
-                      {/* 9. Expiry Date */}
-                      <td className="py-3 px-3 font-mono text-slate-600">{cleanExpiryDate}</td>
-
-                      {/* 10. Market Lot */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.marketLot ? Number(row.marketLot).toLocaleString() : '—'}
-                      </td>
-
-                      {/* 11. Call/Put */}
-                      <td className="py-3 px-3 font-semibold text-slate-700">{row.callPut || 'Future'}</td>
-
-                      {/* 12. Strike Price */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.strikePrice ? Number(row.strikePrice).toLocaleString() : '—'}
-                      </td>
-
-                      {/* 13. Tick Code */}
-                      <td className="py-3 px-3 font-mono">
-                        {val.resolvedScriptId || isValidatingMasterData ? (
-                          <span className="font-bold text-slate-800">{row.tickCode}</span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDoubleClickScript(row.tickCode, row.securityName || row.tickCode, row.marketCode, row.marketLot, row.currencyCode);
-                            }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200"
-                          >
-                            <span>{row.tickCode}</span>
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-
-                      {/* 14. Bloomberg */}
-                      <td className="py-3 px-3 font-mono text-slate-600">{row.bloombergCode || '—'}</td>
-
-                      {/* 15. Side */}
-                      <td className="py-3 px-3 text-center">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded font-bold text-[11px] ${
-                            isBuy ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {isBuy ? 'BUY' : 'SELL'}
-                        </span>
-                      </td>
-
-                      {/* 16. Qty */}
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">
-                        {Number(row.qty).toLocaleString()}
-                      </td>
-
-                      {/* 17. Price */}
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                        {Number(row.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-
-                      {/* 18. Mkt Value */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-700 font-bold">
-                        {row.mktValue ? Number(row.mktValue).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
-                      </td>
-
-                      {/* 19. Commission */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.clnCommission ? Number(row.clnCommission).toFixed(2) : '—'}
-                      </td>
-
-                      {/* 20. Ex Charges */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.clnExCharges ? Number(row.clnExCharges).toFixed(2) : '—'}
-                      </td>
-
-                      {/* 21. Charges 1 */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.clnCharges1 ? Number(row.clnCharges1).toFixed(2) : '—'}
-                      </td>
-
-                      {/* 22. Charges 2 */}
-                      <td className="py-3 px-3 text-right font-mono text-slate-600">
-                        {row.clnCharges2 ? Number(row.clnCharges2).toFixed(2) : '—'}
-                      </td>
-
-                      {/* 23. Status */}
-                      <td className="py-3 px-3 text-center">
-                        {isValidatingMasterData ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700">
-                            <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-                            <span>Checking...</span>
-                          </span>
-                        ) : val.isValid ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Valid</span>
-                          </span>
-                        ) : (
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700"
-                            title={val.errors.join(', ')}
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                            <span>Error ({val.errors.length})</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 25. Edit Action */}
-                      <td className="py-3 px-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRowIndex(mainIdx);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition-colors"
-                          title="Inspect / Edit Row"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                      row={row}
+                      mainIdx={mainIdx}
+                      relativeIdx={relativeIdx}
+                      dubaiCurrentPage={dubaiCurrentPage}
+                      dubaiPageSize={dubaiPageSize}
+                      val={val}
+                      scripts={scripts}
+                      brokerages={brokerages}
+                      isValidatingMasterData={isValidatingMasterData}
+                      onToggleRow={handleToggleRow}
+                      onSelectRow={setSelectedRowIndex}
+                      onDoubleClickClient={onDoubleClickClient}
+                      onDoubleClickScript={onDoubleClickScript}
+                      onDoubleClickExchange={onDoubleClickExchange}
+                      onDoubleClickCurrency={onDoubleClickCurrency}
+                    />
                   );
                 })
               )}

@@ -1,7 +1,6 @@
 import { prisma } from '../../database';
 import { brokeragesService } from '../brokerages/services';
-import { calculateTrade } from '../../utils/brokerage';
-import type { BrokerageRule } from '../../utils/brokerage';
+import { calculateTradeRates, calculateBrokerBrokerage, round } from '../../utils/brokerage';
 
 export interface ParsedTrade {
   tradeNo: string;
@@ -384,18 +383,6 @@ export class TradeImportService {
       return { importedCount: 0, failedCount: rows.length };
     }
 
-    const toRule = (r: any): BrokerageRule => ({
-      type: r.type as 'AMOUNT' | 'PERCENT',
-      baseAmount: r.baseAmount,
-      flatFee: r.flatFee,
-      tradingBuyPct: r.tradingBuyPct,
-      tradingSellPct: r.tradingSellPct,
-      tradingMinFee: r.tradingMinFee,
-      deliveryBuyPct: r.deliveryBuyPct,
-      deliverySellPct: r.deliverySellPct,
-      deliveryMinFee: r.deliveryMinFee,
-    });
-
     const accountIds = Array.from(
       new Set(
         validRows
@@ -406,26 +393,33 @@ export class TradeImportService {
     );
 
     const allBrokerageRules = await prisma.brokerage.findMany({
-      where: { accountId: { in: accountIds } },
+      where: {
+        accountId: { in: accountIds },
+        appliesTo: 'CLIENT',
+      },
     });
 
-    const brokerageMap = new Map<string, any>();
-    for (const rule of allBrokerageRules) {
-      const key = `${rule.accountId}:${rule.exchangeId}:${rule.scriptId || 'ALL'}:${rule.scope}`;
-      brokerageMap.set(key, rule);
-    }
+    const resolveRuleFast = (accId: string, scriptId: string, direction: 'BUY' | 'SELL') => {
+      const forAcc = allBrokerageRules.filter((r) => r.accountId === accId);
+      if (forAcc.length === 0) return null;
 
-    const resolveRuleFast = (accId: string, exchId: string, scope: 'CLIENT' | 'BROKER', scriptId: string) => {
-      return (
-        brokerageMap.get(`${accId}:${exchId}:${scriptId}:SCRIPT`) ||
-        brokerageMap.get(`${accId}:${exchId}:ALL:DEFAULT`) ||
-        brokerageMap.get(`${accId}:${exchId}:ALL:SCRIPT`) ||
-        null
-      );
+      const scriptExact = forAcc.find((r) => r.scriptId === scriptId && r.direction === direction);
+      if (scriptExact) return scriptExact;
+
+      const scriptBoth = forAcc.find((r) => r.scriptId === scriptId && r.direction === 'BOTH');
+      if (scriptBoth) return scriptBoth;
+
+      const defaultExact = forAcc.find((r) => !r.scriptId && r.direction === direction);
+      if (defaultExact) return defaultExact;
+
+      const defaultBoth = forAcc.find((r) => !r.scriptId && r.direction === 'BOTH');
+      return defaultBoth || null;
     };
 
     const validRowsWithCalcs = validRows.map((row) => {
       const targetExchangeId = row.resolvedExchangeId || '';
+      const side: 'BUY' | 'SELL' = row.buySell === 'BUY' ? 'BUY' : 'SELL';
+
       let clientRate = row.rate;
       let brokerRate = row.rate;
       let clientBrokerage = 0;
@@ -435,50 +429,50 @@ export class TradeImportService {
       try {
         const clientRuleRow = resolveRuleFast(
           row.resolvedAccountId!,
-          targetExchangeId,
-          'CLIENT',
-          row.resolvedScriptId!
+          row.resolvedScriptId!,
+          side,
         );
 
-        if (clientRuleRow) {
-          const clientRule = toRule(clientRuleRow);
+        const brokerCharges = calculateBrokerBrokerage(
+          row.clnCommission,
+          row.clnExCharges,
+          row.clnCharges1,
+          row.clnCharges2,
+        );
 
-          let brokerRuleRow: any = null;
-          if (brokerId) {
-            brokerRuleRow = resolveRuleFast(
-              brokerId,
-              targetExchangeId,
-              'BROKER',
-              row.resolvedScriptId!
-            );
-          }
+        const clientRule = clientRuleRow
+          ? {
+              quantity: clientRuleRow.quantity,
+              brokerage: clientRuleRow.brokerage,
+              direction: clientRuleRow.direction as any,
+            }
+          : null;
 
-          const brokerFallbackMode = Boolean(clientRule && !brokerRuleRow);
+        const calc = calculateTradeRates({
+          rate: row.rate,
+          quantity: row.quantity,
+          marketLot: row.marketLot ? Number(row.marketLot) : null,
+          side,
+          clientRule,
+          brokerBrokerage: brokerCharges,
+        });
 
-          if (!brokerFallbackMode && brokerId && brokerRuleRow) {
-            const brokerRule = toRule(brokerRuleRow);
-            const calc = calculateTrade({
-              quantity: row.quantity,
-              marketRate: row.rate,
-              segment: 'TRADING',
-              clientRule,
-              brokerRule,
-            });
+        const effectiveMktVal =
+          row.mktValue && Number(row.mktValue) > 0
+            ? Number(row.mktValue)
+            : calc.marketValue;
 
-            clientRate = calc.clientRate;
-            brokerRate = calc.brokerRate;
-            clientBrokerage = calc.clientBrokerage;
-            brokerBrokerage = calc.brokerBrokerage;
-            profitTotal = calc.totalProfit;
-          } else {
-            const marketRounded = Number(row.rate.toFixed(4));
-            clientRate = marketRounded;
-            brokerRate = marketRounded;
-            clientBrokerage = 0;
-            brokerBrokerage = 0;
-            profitTotal = 0;
-          }
-        }
+        clientRate = side === 'BUY'
+          ? round(effectiveMktVal + calc.clientBrokerage)
+          : round(effectiveMktVal - calc.clientBrokerage);
+
+        brokerRate = side === 'BUY'
+          ? round(effectiveMktVal + calc.brokerBrokerage)
+          : round(effectiveMktVal - calc.brokerBrokerage);
+
+        clientBrokerage = calc.clientBrokerage;
+        brokerBrokerage = calc.brokerBrokerage;
+        profitTotal = calc.profitTotal;
       } catch (err) {
         console.error('Failed to calculate brokerage for imported row:', err);
       }

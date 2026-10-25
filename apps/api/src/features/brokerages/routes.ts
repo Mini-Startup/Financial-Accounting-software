@@ -18,13 +18,29 @@ router.post('/calculate', async (req, res, next) => {
  */
 router.get('/resolve', async (req, res, next) => {
   try {
-    const { accountId, exchangeId, appliesTo, scriptId } = req.query;
+    const { accountId, appliesTo, scriptId, direction } = req.query;
     const result = await brokeragesService.resolve(
       accountId as string,
-      exchangeId as string,
       appliesTo as 'CLIENT' | 'BROKER',
       scriptId as string | undefined,
+      direction as 'BUY' | 'SELL' | undefined,
     );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/bulk', async (req, res, next) => {
+  try {
+    const rules = Array.isArray(req.body) ? req.body : req.body.rules;
+    const result = await brokeragesService.upsertBulk(rules);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/bulk-delete', async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body) ? req.body : req.body.ids;
+    const result = await brokeragesService.removeBulk(ids);
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -38,11 +54,11 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { accountId, exchangeId, appliesTo } = req.query;
+    const { accountId, appliesTo, scriptId } = req.query;
     const result = await brokeragesService.findAll({
       accountId: accountId as string | undefined,
-      exchangeId: exchangeId as string | undefined,
       appliesTo: appliesTo as string | undefined,
+      scriptId: scriptId as string | undefined,
     });
     res.json(result);
   } catch (err) { next(err); }

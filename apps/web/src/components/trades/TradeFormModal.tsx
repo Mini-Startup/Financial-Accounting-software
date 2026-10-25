@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { calculateBrokerage, round, type BrokerageRule, type CalcResult } from '@/utils/brokerage';
+import { calculateTradeRates, round, type TradeRateResult } from '@/utils/brokerage';
 import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
@@ -70,10 +70,10 @@ export function TradeFormModal({
     // Initial setup if needed
   }, []);
 
-  const [clientRule, setClientRule] = useState<BrokerageRule | null>(null);
-  const [brokerRule, setBrokerRule] = useState<BrokerageRule | null>(null);
+  const [clientRule, setClientRule] = useState<any | null>(null);
+  const [brokerRule, setBrokerRule] = useState<any | null>(null);
   const [isLoadingRules, setIsLoadingRules] = useState(false);
-  const [calc, setCalc] = useState<CalcResult | null>(null);
+  const [calc, setCalc] = useState<TradeRateResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Derive exchange directly from selected script
@@ -87,11 +87,10 @@ export function TradeFormModal({
 
   const currSym = script?.currency?.symbol || '₹';
 
-  // Fetch brokerage rules whenever client, broker, script, or derived exchange changes
+  // Fetch brokerage rules whenever client, broker, or script changes
   useEffect(() => {
-    if (!exchangeId || !clientId || !brokerId) {
+    if (!clientId) {
       setClientRule(null);
-      setBrokerRule(null);
       return;
     }
 
@@ -99,16 +98,19 @@ export function TradeFormModal({
       setIsLoadingRules(true);
       try {
         const scriptQuery = scriptId ? `&scriptId=${scriptId}` : '';
-        const [clientRes, brokerRes] = await Promise.all([
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${clientId}&exchangeId=${exchangeId}&appliesTo=CLIENT${scriptQuery}`
-          ),
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${brokerId}&exchangeId=${exchangeId}&appliesTo=BROKER${scriptQuery}`
-          ),
-        ]);
+        const clientRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${clientId}&appliesTo=CLIENT${scriptQuery}`
+        );
 
-        const parseSafe = async (res: Response) => {
+        let brokerRes: Response | null = null;
+        if (brokerId) {
+          brokerRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${brokerId}&appliesTo=BROKER${scriptQuery}`
+          );
+        }
+
+        const parseSafe = async (res: Response | null) => {
+          if (!res) return null;
           const raw = await res.text();
           if (!raw || !raw.trim()) return null;
           try {
@@ -123,11 +125,8 @@ export function TradeFormModal({
           parseSafe(brokerRes),
         ]);
 
-        const resolvedClientRule = clientData && clientData.id ? clientData : null;
-        const resolvedBrokerRule = brokerData && brokerData.id ? brokerData : null;
-
-        setClientRule(resolvedClientRule);
-        setBrokerRule(resolvedBrokerRule);
+        setClientRule(clientData?.id ? clientData : null);
+        setBrokerRule(brokerData?.id ? brokerData : null);
       } catch (e) {
         console.error(e);
         setClientRule(null);
@@ -138,9 +137,9 @@ export function TradeFormModal({
     };
 
     fetchRules();
-  }, [exchangeId, clientId, brokerId, scriptId]);
+  }, [clientId, brokerId, scriptId]);
 
-  // Live calculation: Non-blocking, defaults to 0 / market rate if rules are not set
+  // Live calculation: Non-blocking
   useEffect(() => {
     const qtyNum = parseFloat(quantity || '0');
     const rateNum = parseFloat(marketRate || '0');
@@ -151,65 +150,25 @@ export function TradeFormModal({
 
     const side: 'BUY' | 'SELL' = qtyNum >= 0 ? 'BUY' : 'SELL';
     const absQuantity = Math.abs(qtyNum);
-    const tradeValue = round(absQuantity * rateNum);
-    const marketRounded = round(rateNum);
+    const lot = script?.lotSize || 1;
 
-    // Client calculation
-    let clientBrokerage = 0;
-    let clientPerUnit = 0;
-    let clientRate = marketRounded;
-    let clientIsFixed = false;
-    let clientRuleType: 'AMOUNT' | 'PERCENT' = 'PERCENT';
-
-    if (clientRule) {
-      clientRuleType = clientRule.type;
-      clientIsFixed = clientRule.type === 'AMOUNT';
-      if (!clientIsFixed) {
-        clientBrokerage = calculateBrokerage(clientRule, tradeValue, side, 'TRADING');
-        clientPerUnit = absQuantity > 0 ? round(clientBrokerage / absQuantity) : 0;
-        clientRate = side === 'BUY' ? round(rateNum + clientPerUnit) : round(rateNum - clientPerUnit);
-      }
-    }
-
-    // Broker calculation
-    let brokerBrokerage = 0;
-    let brokerPerUnit = 0;
-    let brokerRate = marketRounded;
-    let brokerIsFixed = false;
-    let brokerRuleType: 'AMOUNT' | 'PERCENT' = 'PERCENT';
-
-    if (brokerRule) {
-      brokerRuleType = brokerRule.type;
-      brokerIsFixed = brokerRule.type === 'AMOUNT';
-      if (!brokerIsFixed) {
-        brokerBrokerage = calculateBrokerage(brokerRule, tradeValue, side, 'TRADING');
-        brokerPerUnit = absQuantity > 0 ? round(brokerBrokerage / absQuantity) : 0;
-        brokerRate = side === 'BUY' ? round(rateNum + brokerPerUnit) : round(rateNum - brokerPerUnit);
-      }
-    }
-
-    // Spread profit
-    const profit = side === 'BUY' ? round(clientRate - brokerRate) : round(brokerRate - clientRate);
-    const totalProfit = round(profit * absQuantity);
-
-    setCalc({
+    const result = calculateTradeRates({
+      rate: rateNum,
+      quantity: absQuantity,
+      marketLot: lot,
       side,
-      absQuantity,
-      tradeValue,
-      clientBrokerage,
-      clientPerUnit,
-      clientRate,
-      clientIsFixed,
-      clientRuleType,
-      brokerBrokerage,
-      brokerPerUnit,
-      brokerRate,
-      brokerIsFixed,
-      brokerRuleType,
-      profit,
-      totalProfit,
+      clientRule: clientRule
+        ? {
+            quantity: clientRule.quantity,
+            brokerage: clientRule.brokerage,
+            direction: clientRule.direction,
+          }
+        : null,
+      brokerBrokerage: brokerRule?.brokerage || 0,
     });
-  }, [quantity, marketRate, clientRule, brokerRule]);
+
+    setCalc(result);
+  }, [quantity, marketRate, clientRule, brokerRule, script]);
 
   const handleSave = async () => {
     if (isLocked) {
@@ -453,9 +412,7 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : clientRule
-                    ? clientRule.type === 'AMOUNT'
-                      ? 'Fixed amount (invoice)'
-                      : 'Percentage'
+                    ? `₹${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
                     : 'Not set'}
                 </div>
                 <div className="text-xs text-[var(--color-slate)] text-right">
@@ -463,10 +420,8 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : brokerRule
-                    ? brokerRule.type === 'AMOUNT'
-                      ? 'Fixed amount (invoice)'
-                      : 'Percentage'
-                    : 'Not set'}
+                    ? `₹${brokerRule.brokerage} / ${brokerRule.quantity} qty`
+                    : 'From file charges / Not set'}
                 </div>
               </div>
             </fieldset>
@@ -522,8 +477,6 @@ export function TradeFormModal({
                             <span className="font-mono text-[var(--color-slate)]">
                               {!clientRule
                                 ? 'Not set'
-                                : calc.clientIsFixed
-                                ? 'Fixed (invoice)'
                                 : `${currSym}${calc.clientBrokerage.toFixed(4)}`}
                             </span>
                           </div>
@@ -540,11 +493,7 @@ export function TradeFormModal({
                           <div className="flex justify-between text-xs">
                             <span className="text-[var(--color-fog)]">Brokerage</span>
                             <span className="font-mono text-[var(--color-slate)]">
-                              {!brokerRule
-                                ? 'Not set'
-                                : calc.brokerIsFixed
-                                ? 'Fixed (invoice)'
-                                : `${currSym}${calc.brokerBrokerage.toFixed(4)}`}
+                              {currSym}{calc.brokerBrokerage.toFixed(4)}
                             </span>
                           </div>
                         </div>
@@ -552,22 +501,22 @@ export function TradeFormModal({
                     </div>
 
                     <div className={cn("border rounded-xl p-4",
-                      calc.totalProfit > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
-                      calc.totalProfit < 0 ? 'bg-red-50 border-red-200' :
+                      calc.profitTotal > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
+                      calc.profitTotal < 0 ? 'bg-red-50 border-red-200' :
                       'bg-[var(--color-snow)] border-[var(--color-border-light)]'
                     )}>
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-semibold text-[var(--color-charcoal)]">Profit</span>
                         <span className={cn("font-mono text-lg font-bold",
-                          calc.totalProfit > 0 ? 'text-[var(--color-positive)]' :
-                          calc.totalProfit < 0 ? 'text-[var(--color-negative)]' :
+                          calc.profitTotal > 0 ? 'text-[var(--color-positive)]' :
+                          calc.profitTotal < 0 ? 'text-[var(--color-negative)]' :
                           'text-[var(--color-charcoal)]'
                         )}>
-                          {calc.totalProfit > 0 ? '+' : ''}{currSym}{calc.totalProfit.toFixed(4)}
+                          {calc.profitTotal > 0 ? '+' : ''}{currSym}{calc.profitTotal.toFixed(4)}
                         </span>
                       </div>
                       <p className="text-[11px] text-[var(--color-slate)] mt-1">
-                        Trade value {currSym}{calc.tradeValue.toFixed(4)} • per-unit {currSym}{calc.profit.toFixed(4)}
+                        Market value {currSym}{calc.marketValue.toFixed(4)} • per-unit {currSym}{calc.profitPerUnit.toFixed(4)}
                       </p>
                     </div>
                   </div>

@@ -55,6 +55,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const [brokers, setBrokers] = useState<any[]>([]);
   const [scripts, setScripts] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
+  const [brokerages, setBrokerages] = useState<any[]>([]);
   const [isValidatingMasterData, setIsValidatingMasterData] = useState(false);
 
   const [showBrokerModal, setShowBrokerModal] = useState(false);
@@ -131,6 +132,12 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         if (curRes.ok) {
           const curData = await curRes.json();
           setCurrencies(curData);
+        }
+
+        const brkRes = await fetch(`${apiUrl}/brokerages`);
+        if (brkRes.ok) {
+          const brkData = await brkRes.json();
+          setBrokerages(brkData);
         }
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
@@ -212,12 +219,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setIsValidatingMasterData(true);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const [exRes, brRes, clRes, scRes, curRes] = await Promise.all([
+      const [exRes, brRes, clRes, scRes, curRes, brkRes] = await Promise.all([
         fetch(`${apiUrl}/exchanges`),
         fetch(`${apiUrl}/account-masters?group=Sundry Creditors`),
         fetch(`${apiUrl}/account-masters?group=Sundry Debtors`),
         fetch(`${apiUrl}/scripts`),
         fetch(`${apiUrl}/currencies`),
+        fetch(`${apiUrl}/brokerages`),
       ]);
 
       if (exRes.ok) setExchanges(await exRes.json());
@@ -225,6 +233,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       if (clRes.ok) setClients(await clRes.json());
       if (scRes.ok) setScripts(await scRes.json());
       if (curRes.ok) setCurrencies(await curRes.json());
+      if (brkRes.ok) setBrokerages(await brkRes.json());
 
       if (!isDubaiImport) {
         handleRevalidate();
@@ -956,6 +965,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           clients={clients}
           exchanges={exchanges}
           scripts={scripts}
+          brokerages={brokerages}
           getDubaiRowValidation={getDubaiRowValidation}
           searchQuery={searchQuery}
           searchColumn={searchColumn}
@@ -991,6 +1001,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           clients={clients}
           exchanges={exchanges}
           scripts={scripts}
+          brokerages={brokerages}
           isProcessing={isProcessing}
           handleRevalidate={handleRevalidate}
           searchQuery={searchQuery}

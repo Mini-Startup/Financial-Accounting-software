@@ -7,188 +7,149 @@ export const ROUND_DECIMALS = 4;
  * Uses the multiply-round-divide pattern to avoid floating point drift.
  * Example: round(0.10000000000000001) => 0.1
  */
-export function round(value: number): number {
-  const factor = Math.pow(10, ROUND_DECIMALS);
-  return Math.round(value * factor) / factor;
+export function round(value: number, decimals: number = ROUND_DECIMALS): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 // ─── Types ─────────────────────────────────────────
 
-export interface BrokerageRule {
-  type: 'AMOUNT' | 'PERCENT';
-  baseAmount?: number | null;
-  flatFee?: number | null;
-  tradingBuyPct?: number | null;
-  tradingSellPct?: number | null;
-  tradingMinFee?: number | null;
-  deliveryBuyPct?: number | null;
-  deliverySellPct?: number | null;
-  deliveryMinFee?: number | null;
+export type DirectionType = 'BOTH' | 'BUY' | 'SELL';
+
+export interface ClientBrokerageRule {
+  quantity: number;          // Base quantity in rule (e.g. 50, or market lot)
+  brokerage: number;         // Brokerage amount for that quantity (e.g. 10)
+  direction?: DirectionType; // BOTH, BUY, SELL
 }
 
-export interface CalcInput {
-  quantity: number;       // positive = BUY, negative = SELL
-  marketRate: number;
-  segment: 'TRADING' | 'DELIVERY';
-  clientRule: BrokerageRule;
-  brokerRule: BrokerageRule;
-}
-
-export interface CalcResult {
+export interface TradeRateInput {
+  rate: number;              // Market rate (price per unit)
+  quantity: number;          // Trade quantity (number of lots/units)
+  marketLot?: number | null; // Multiplier per lot (default: 1)
   side: 'BUY' | 'SELL';
-  absQuantity: number;
-  tradeValue: number;
+  clientRule?: ClientBrokerageRule | null;
+  brokerBrokerage?: number | null; // Sum of 4 import fields (commission + exCharge + charge1 + charge2)
+}
+
+export interface TradeRateResult {
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  marketLot: number;
+  totalUnits: number;
+  marketValue: number;
 
   // Client side
-  clientBrokerage: number;   // total brokerage charged to client (0 if AMOUNT type)
-  clientPerUnit: number;     // per-unit brokerage for client
-  clientRate: number;        // effective rate for client
-  clientIsFixed: boolean;    // true when client rule is AMOUNT (brokerage at invoice)
-  clientRuleType: 'AMOUNT' | 'PERCENT';
+  clientBrokerage: number;   // Total brokerage charged to client
+  clientPerUnit: number;     // Per unit brokerage
+  clientRate: number;        // Effective price per unit
+  clientMarketValue: number; // Total net amount for client
 
   // Broker side
-  brokerBrokerage: number;   // total brokerage from broker (0 if AMOUNT type)
-  brokerPerUnit: number;     // per-unit brokerage for broker
-  brokerRate: number;        // effective rate for broker
-  brokerIsFixed: boolean;    // true when broker rule is AMOUNT (brokerage at invoice)
-  brokerRuleType: 'AMOUNT' | 'PERCENT';
+  brokerBrokerage: number;   // Total brokerage paid to broker
+  brokerPerUnit: number;     // Per unit brokerage
+  brokerRate: number;        // Effective price per unit
+  brokerMarketValue: number; // Total net amount for broker
 
-  profit: number;            // spread earned (per unit)
-  totalProfit: number;       // spread earned (total for all units)
+  // Profit
+  profitPerUnit: number;
+  profitTotal: number;
 }
 
-// ─── Core Calculation ──────────────────────────────
-
 /**
- * Calculate brokerage for ONE side (client OR broker).
- *
- * ONLY called for PERCENT type rules.
- *
- * PERCENT type:
- *   Pick the correct pct based on segment (TRADING/DELIVERY) + side (BUY/SELL).
- *   brokerage = tradeValue * (pct / 100)
- *   If result < minFee → use minFee instead.
- *   Edge: null pct fields → treated as 0%.
+ * Sum broker charges from import file fields.
  */
-export function calculateBrokerage(
-  rule: BrokerageRule,
-  tradeValue: number,
-  side: 'BUY' | 'SELL',
-  segment: 'TRADING' | 'DELIVERY',
+export function calculateBrokerBrokerage(
+  commission?: number | null,
+  exCharge?: number | null,
+  charge1?: number | null,
+  charge2?: number | null,
 ): number {
-  // PERCENT type
-  let pct: number;
-  let minFee: number;
-
-  if (segment === 'TRADING') {
-    pct = (side === 'BUY' ? rule.tradingBuyPct : rule.tradingSellPct) ?? 0;
-    minFee = rule.tradingMinFee ?? 0;
-  } else {
-    pct = (side === 'BUY' ? rule.deliveryBuyPct : rule.deliverySellPct) ?? 0;
-    minFee = rule.deliveryMinFee ?? 0;
-  }
-
-  const brokerage = round(tradeValue * (pct / 100));
-  return brokerage < minFee ? minFee : brokerage;
+  return round((commission || 0) + (exCharge || 0) + (charge1 || 0) + (charge2 || 0));
 }
 
 /**
- * Full trade calculation with both sides.
- *
- * CRITICAL LOGIC:
- *   quantity >= 0 → BUY    |    quantity < 0 → SELL
- *
- *   tradeValue = |quantity| * marketRate
- *
- * FOR EACH SIDE (client / broker):
- *   If rule.type === 'AMOUNT':
- *     → Skip brokerage calculation entirely.
- *     → The rate stays exactly equal to marketRate.
- *     → Mark as "fixed" — this brokerage is settled at invoice time.
- *
- *   If rule.type === 'PERCENT':
- *     → Calculate brokerage using buy/sell percentage + minFee.
- *     → perUnitBrokerage = totalBrokerage / |quantity|
- *     → BUY:  rate = marketRate + perUnit  (client/broker pays more)
- *     → SELL: rate = marketRate - perUnit  (client/broker receives less)
- *
- * PROFIT (middleman spread):
- *   BUY:  profit per unit = clientRate - brokerRate
- *   SELL: profit per unit = brokerRate - clientRate
- *   totalProfit = profit per unit * |quantity|
- *
- *   Profit > 0 means the system earns on this trade.
- *   Profit < 0 means the system loses (warning, but allowed).
- *
- * EDGE CASES:
- *   quantity = 0 → side=BUY, everything = 0
- *   marketRate = 0 → tradeValue=0, pct brokerage=0, may still hit minFee
+ * Calculate client brokerage amount based on trade quantity (NOT market lot).
+ * clientBrokerage = (tradeQuantity / ruleQuantity) * ruleBrokerage
  */
-export function calculateTrade(input: CalcInput): CalcResult {
-  const side: 'BUY' | 'SELL' = input.quantity >= 0 ? 'BUY' : 'SELL';
-  const absQuantity = Math.abs(input.quantity);
-  const tradeValue = round(absQuantity * input.marketRate);
+export function calculateClientBrokerage(
+  tradeQuantity: number,
+  ruleQuantity: number,
+  ruleBrokerage: number,
+): number {
+  if (ruleQuantity <= 0 || tradeQuantity <= 0) return 0;
+  return round((tradeQuantity / ruleQuantity) * ruleBrokerage);
+}
 
-  // ── Client side ──────────────────────────────────
-  const clientIsFixed = input.clientRule.type === 'AMOUNT';
+/**
+ * Calculate all rates and total market values for a trade.
+ * Market Value = rate * quantity * marketLot
+ * Client Rate = Market Value ± Client Brokerage
+ * Broker Rate = Market Value ± Broker Brokerage
+ */
+export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
+  const side = input.side;
+  const absQty = Math.abs(input.quantity);
+  const lot = input.marketLot && input.marketLot > 0 ? input.marketLot : 1;
+  const totalUnits = round(absQty * lot);
+  const marketValue = round(input.rate * totalUnits);
+
+  // Client calculation: based purely on tradeQuantity (not market lot!)
   let clientBrokerage = 0;
-  let clientPerUnit = 0;
-  let clientRate = input.marketRate;
-
-  if (!clientIsFixed) {
-    clientBrokerage = calculateBrokerage(
-      input.clientRule, tradeValue, side, input.segment,
-    );
-    clientPerUnit = absQuantity > 0 ? round(clientBrokerage / absQuantity) : 0;
-
-    if (side === 'BUY') {
-      clientRate = round(input.marketRate + clientPerUnit);
-    } else {
-      clientRate = round(input.marketRate - clientPerUnit);
+  if (input.clientRule && input.clientRule.quantity > 0) {
+    const dir = input.clientRule.direction || 'BOTH';
+    if (dir === 'BOTH' || dir === side) {
+      clientBrokerage = calculateClientBrokerage(
+        absQty,
+        input.clientRule.quantity,
+        input.clientRule.brokerage,
+      );
     }
   }
 
-  // ── Broker side ──────────────────────────────────
-  const brokerIsFixed = input.brokerRule.type === 'AMOUNT';
-  let brokerBrokerage = 0;
-  let brokerPerUnit = 0;
-  let brokerRate = input.marketRate;
+  // Broker calculation: sum of file charges or rule
+  const brokerBrokerage = round(input.brokerBrokerage || 0);
 
-  if (!brokerIsFixed) {
-    brokerBrokerage = calculateBrokerage(
-      input.brokerRule, tradeValue, side, input.segment,
-    );
-    brokerPerUnit = absQuantity > 0 ? round(brokerBrokerage / absQuantity) : 0;
-
-    if (side === 'BUY') {
-      brokerRate = round(input.marketRate + brokerPerUnit);
-    } else {
-      brokerRate = round(input.marketRate - brokerPerUnit);
-    }
+  // Client Rate & Market Value: Market Value ± Client Brokerage
+  let clientRate = marketValue;
+  if (side === 'BUY') {
+    clientRate = round(marketValue + clientBrokerage);
+  } else {
+    clientRate = round(marketValue - clientBrokerage);
   }
+  const clientMarketValue = clientRate;
 
-  // ── Profit ───────────────────────────────────────
-  const profit = side === 'BUY'
-    ? round(clientRate - brokerRate)
-    : round(brokerRate - clientRate);
+  // Broker Rate & Market Value: Market Value ± Broker Brokerage
+  let brokerRate = marketValue;
+  if (side === 'BUY') {
+    brokerRate = round(marketValue + brokerBrokerage);
+  } else {
+    brokerRate = round(marketValue - brokerBrokerage);
+  }
+  const brokerMarketValue = brokerRate;
 
-  const totalProfit = round(profit * absQuantity);
+  // Profit: middleman spread
+  const profitTotal = side === 'BUY'
+    ? round(clientMarketValue - brokerMarketValue)
+    : round(brokerMarketValue - clientMarketValue);
+  const profitPerUnit = totalUnits > 0 ? round(profitTotal / totalUnits) : 0;
+  const clientPerUnit = absQty > 0 ? round(clientBrokerage / absQty) : 0;
+  const brokerPerUnit = absQty > 0 ? round(brokerBrokerage / absQty) : 0;
 
   return {
     side,
-    absQuantity,
-    tradeValue,
+    quantity: absQty,
+    marketLot: lot,
+    totalUnits,
+    marketValue,
     clientBrokerage,
     clientPerUnit,
     clientRate,
-    clientIsFixed,
-    clientRuleType: input.clientRule.type,
+    clientMarketValue,
     brokerBrokerage,
     brokerPerUnit,
     brokerRate,
-    brokerIsFixed,
-    brokerRuleType: input.brokerRule.type,
-    profit,
-    totalProfit,
+    brokerMarketValue,
+    profitPerUnit,
+    profitTotal,
   };
 }

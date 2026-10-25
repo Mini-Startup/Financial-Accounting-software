@@ -33,10 +33,10 @@ const variantConfig = {
   },
   info: {
     icon: Info,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    confirmBtn: 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white',
-    accentBorder: 'border-blue-200',
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-700',
+    confirmBtn: 'bg-emerald-700 hover:bg-emerald-800 text-white',
+    accentBorder: 'border-emerald-200',
   },
 };
 

@@ -5,6 +5,12 @@ import { CheckCircle2, AlertTriangle, FileSpreadsheet, RefreshCw, Edit3, Plus, C
 import { TradeRowDrawer } from './TradeRowDrawer';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { splitSearchTokens } from '@/utils/tableFilter';
+import {
+  calculateTradeRates,
+  calculateBrokerBrokerage,
+  resolveClientRule,
+  round,
+} from '@/utils/brokerage';
 
 interface NormalPreviewTableProps {
   totalRows: number;
@@ -20,6 +26,7 @@ interface NormalPreviewTableProps {
   clients: any[];
   exchanges: any[];
   scripts: any[];
+  brokerages?: any[];
   isProcessing: boolean;
   handleRevalidate: () => void;
   searchQuery: string;
@@ -44,6 +51,7 @@ export function NormalPreviewTable({
   clients,
   exchanges,
   scripts,
+  brokerages,
   isProcessing,
   handleRevalidate,
   searchQuery,
@@ -304,6 +312,24 @@ export function NormalPreviewTable({
                   <th className="py-3 px-3 text-center">Side</th>
                   <th className="py-3 px-3 text-right font-bold">Qty</th>
                   <th className="py-3 px-3 text-right font-bold">Rate</th>
+
+                  {/* 5 Highlighted Columns with slightly darker color, keeping Mkt Value, Client Rate & Broker Rate together */}
+                  <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-l border-r border-slate-300">
+                    Mkt Value
+                  </th>
+                  <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                    Client Rate
+                  </th>
+                  <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                    Broker Rate
+                  </th>
+                  <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                    Client Brk
+                  </th>
+                  <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                    Broker Brk
+                  </th>
+
                   <th className="py-3 px-3">Client</th>
                   <th className="py-3 px-3">Terminal</th>
                   <th className="py-3 px-3">Expiry</th>
@@ -314,7 +340,7 @@ export function NormalPreviewTable({
               <tbody className="divide-y divide-slate-100">
                 {paginatedFutureRows.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="py-8 text-center text-slate-400 italic">
+                    <td colSpan={17} className="py-8 text-center text-slate-400 italic">
                       No matching future trades found.
                     </td>
                   </tr>
@@ -324,6 +350,55 @@ export function NormalPreviewTable({
                       (r) => r.tradeNumber === row.tradeNumber && r.uniqueTradeId === row.uniqueTradeId
                     );
                     const isBuy = (row.buySell || '').toUpperCase().startsWith('B');
+                    const side: 'BUY' | 'SELL' = isBuy ? 'BUY' : 'SELL';
+                    const qtyNum = Math.abs(parseFloat(String(row.quantity || 0))) || 0;
+                    const rateNum = parseFloat(String(row.rate || 0)) || 0;
+                    const lotNum =
+                      row.marketLot && parseFloat(String(row.marketLot)) > 0
+                        ? parseFloat(String(row.marketLot))
+                        : 1;
+
+                    const brokerChargesSum = calculateBrokerBrokerage(
+                      row.clnCommission ? parseFloat(String(row.clnCommission)) : 0,
+                      row.clnExCharges ? parseFloat(String(row.clnExCharges)) : 0,
+                      row.clnCharges1 ? parseFloat(String(row.clnCharges1)) : 0,
+                      row.clnCharges2 ? parseFloat(String(row.clnCharges2)) : 0
+                    );
+
+                    const clientRule = resolveClientRule(
+                      brokerages,
+                      row.resolvedAccountId,
+                      row.resolvedScriptId,
+                      side
+                    );
+
+                    const calc = calculateTradeRates({
+                      rate: rateNum,
+                      quantity: qtyNum,
+                      marketLot: lotNum,
+                      side,
+                      clientRule: clientRule
+                        ? {
+                            quantity: clientRule.quantity,
+                            brokerage: clientRule.brokerage,
+                            direction: clientRule.direction as any,
+                          }
+                        : null,
+                      brokerBrokerage: brokerChargesSum,
+                    });
+
+                    const displayMktValue =
+                      (row as any).mktValue && parseFloat(String((row as any).mktValue)) > 0
+                        ? parseFloat(String((row as any).mktValue))
+                        : calc.marketValue;
+
+                    const clientRate = isBuy
+                      ? round(displayMktValue + calc.clientBrokerage)
+                      : round(displayMktValue - calc.clientBrokerage);
+
+                    const brokerRate = isBuy
+                      ? round(displayMktValue + calc.brokerBrokerage)
+                      : round(displayMktValue - calc.brokerBrokerage);
 
                     return (
                       <tr
@@ -391,6 +466,37 @@ export function NormalPreviewTable({
                         {/* Rate */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
                           ₹{Number(row.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+
+                        {/* Mkt Value - Highlighted */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-l border-r border-slate-200/80">
+                          ₹{displayMktValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+
+                        {/* Client Rate - Highlighted */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
+                          ₹{clientRate.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 4,
+                          })}
+                        </td>
+
+                        {/* Broker Rate - Highlighted */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
+                          ₹{brokerRate.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 4,
+                          })}
+                        </td>
+
+                        {/* Client Brokerage - Highlighted */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
+                          {calc.clientBrokerage > 0 ? `₹${calc.clientBrokerage.toFixed(2)}` : '₹0.00'}
+                        </td>
+
+                        {/* Broker Brokerage - Highlighted */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
+                          {calc.brokerBrokerage > 0 ? `₹${calc.brokerBrokerage.toFixed(2)}` : '₹0.00'}
                         </td>
 
                         {/* Client */}

@@ -4,75 +4,69 @@ import {
   ConflictException,
 } from '../../errors';
 import { prisma, Prisma } from '../../database';
-import { calculateTrade } from '../../utils/brokerage';
-import type { BrokerageRule } from '../../utils/brokerage';
-
-// ─── Helper: convert Prisma row → BrokerageRule ────
-
-function toRule(row: any): BrokerageRule {
-  return {
-    type: row.type as 'AMOUNT' | 'PERCENT',
-    baseAmount: row.baseAmount,
-    flatFee: row.flatFee,
-    tradingBuyPct: row.tradingBuyPct,
-    tradingSellPct: row.tradingSellPct,
-    tradingMinFee: row.tradingMinFee,
-    deliveryBuyPct: row.deliveryBuyPct,
-    deliverySellPct: row.deliverySellPct,
-    deliveryMinFee: row.deliveryMinFee,
-  };
-}
-
-// ─── Helper: sanitize numeric fields ───────────────
-
-function sanitizePayload(payload: any) {
-  const numberFields = [
-    'baseAmount', 'flatFee',
-    'tradingBuyPct', 'tradingSellPct', 'tradingMinFee',
-    'deliveryBuyPct', 'deliverySellPct', 'deliveryMinFee',
-  ];
-  for (const field of numberFields) {
-    if (payload[field] === '' || payload[field] === undefined) {
-      payload[field] = null;
-    } else if (payload[field] !== null) {
-      payload[field] = Number(payload[field]);
-    }
-  }
-  return payload;
-}
+import {
+  calculateTradeRates,
+  calculateClientBrokerage,
+  calculateBrokerBrokerage,
+  DirectionType,
+} from '../../utils/brokerage';
 
 export class BrokeragesService {
   /**
    * Create a brokerage rule with full validation.
    */
   async create(data: any) {
-    // Validate scope + scriptId
-    if (data.scope === 'SCRIPT' && !data.scriptId) {
-      throw new BadRequestException('scriptId is required when scope is SCRIPT');
+    if (!data.accountId) {
+      throw new BadRequestException('accountId is required');
     }
-    if (data.scope === 'DEFAULT') {
+    if (!data.appliesTo) {
+      throw new BadRequestException('appliesTo is required');
+    }
+
+    // Validate scope + scriptId
+    if (data.scope === 'SCRIPT') {
+      if (!data.scriptId) {
+        throw new BadRequestException('scriptId is required when scope is SCRIPT');
+      }
+    } else {
+      data.scope = 'DEFAULT';
       data.scriptId = null;
     }
 
-    // Validate type-specific required fields
-    if (data.type === 'AMOUNT') {
-      if (data.baseAmount == null || data.flatFee == null) {
-        throw new BadRequestException('baseAmount and flatFee are required for AMOUNT type');
-      }
+    const quantity = Number(data.quantity);
+    const brokerage = Number(data.brokerage);
+
+    if (isNaN(quantity) || quantity <= 0) {
+      throw new BadRequestException('quantity must be a positive number');
+    }
+    if (isNaN(brokerage) || brokerage < 0) {
+      throw new BadRequestException('brokerage must be a non-negative number');
     }
 
-    const payload = sanitizePayload({ ...data });
+    const direction: DirectionType = data.direction || 'BOTH';
 
     try {
       return await prisma.brokerage.create({
-        data: payload as Prisma.BrokerageUncheckedCreateInput,
-        include: { account: true, exchange: true, script: true },
+        data: {
+          accountId: data.accountId,
+          appliesTo: data.appliesTo,
+          scope: data.scope,
+          scriptId: data.scriptId,
+          direction,
+          quantity,
+          brokerage,
+        },
+        include: {
+          account: true,
+          script: {
+            include: { exchange: true },
+          },
+        },
       });
     } catch (err: any) {
-      // Unique constraint violation
       if (err.code === 'P2002') {
         throw new ConflictException(
-          'A brokerage rule with this exact combination (account + exchange + appliesTo + scope + script) already exists.',
+          'A brokerage rule with this exact combination (account + appliesTo + scope + script + direction) already exists.',
         );
       }
       throw err;
@@ -84,21 +78,24 @@ export class BrokeragesService {
    */
   async findAll(filters: {
     accountId?: string;
-    exchangeId?: string;
     appliesTo?: string;
+    scriptId?: string;
   }) {
     const where: Prisma.BrokerageWhereInput = {};
 
     if (filters.accountId) where.accountId = filters.accountId;
-    if (filters.exchangeId) where.exchangeId = filters.exchangeId;
-    if (filters.appliesTo) {
-      where.appliesTo = filters.appliesTo as any;
-    }
+    if (filters.appliesTo) where.appliesTo = filters.appliesTo as any;
+    if (filters.scriptId) where.scriptId = filters.scriptId;
 
     return prisma.brokerage.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { account: true, exchange: true, script: true },
+      include: {
+        account: true,
+        script: {
+          include: { exchange: true },
+        },
+      },
     });
   }
 
@@ -108,7 +105,12 @@ export class BrokeragesService {
   async findOne(id: string) {
     const rule = await prisma.brokerage.findUnique({
       where: { id },
-      include: { account: true, exchange: true, script: true },
+      include: {
+        account: true,
+        script: {
+          include: { exchange: true },
+        },
+      },
     });
     if (!rule) throw new NotFoundException(`Brokerage rule ${id} not found`);
     return rule;
@@ -118,22 +120,55 @@ export class BrokeragesService {
    * Update a brokerage rule.
    */
   async update(id: string, data: any) {
-    await this.findOne(id); // ensure exists
+    await this.findOne(id);
 
-    if (data.scope === 'SCRIPT' && !data.scriptId) {
-      throw new BadRequestException('scriptId is required when scope is SCRIPT');
-    }
-    if (data.scope === 'DEFAULT') {
-      data.scriptId = null;
+    const updateData: Prisma.BrokerageUpdateInput = {};
+
+    if (data.scope !== undefined) {
+      if (data.scope === 'SCRIPT') {
+        if (!data.scriptId) {
+          throw new BadRequestException('scriptId is required when scope is SCRIPT');
+        }
+        updateData.scope = 'SCRIPT';
+        updateData.script = { connect: { id: data.scriptId } };
+      } else {
+        updateData.scope = 'DEFAULT';
+        updateData.script = { disconnect: true };
+      }
+    } else if (data.scriptId !== undefined) {
+      updateData.script = data.scriptId ? { connect: { id: data.scriptId } } : { disconnect: true };
     }
 
-    const payload = sanitizePayload({ ...data });
+    if (data.direction !== undefined) {
+      updateData.direction = data.direction;
+    }
+
+    if (data.quantity !== undefined) {
+      const q = Number(data.quantity);
+      if (isNaN(q) || q <= 0) throw new BadRequestException('quantity must be a positive number');
+      updateData.quantity = q;
+    }
+
+    if (data.brokerage !== undefined) {
+      const b = Number(data.brokerage);
+      if (isNaN(b) || b < 0) throw new BadRequestException('brokerage must be a non-negative number');
+      updateData.brokerage = b;
+    }
+
+    if (data.appliesTo !== undefined) {
+      updateData.appliesTo = data.appliesTo;
+    }
 
     try {
       return await prisma.brokerage.update({
         where: { id },
-        data: payload as Prisma.BrokerageUncheckedUpdateInput,
-        include: { account: true, exchange: true, script: true },
+        data: updateData,
+        include: {
+          account: true,
+          script: {
+            include: { exchange: true },
+          },
+        },
       });
     } catch (err: any) {
       if (err.code === 'P2002') {
@@ -154,43 +189,59 @@ export class BrokeragesService {
   }
 
   /**
-   * Resolve the applicable brokerage rule.
+   * Resolve the applicable brokerage rule for an account, script, and direction.
+   * Priority:
+   * 1. Script-specific + direction match
+   * 2. Script-specific + BOTH
+   * 3. Default (All scripts) + direction match
+   * 4. Default (All scripts) + BOTH
    */
   async resolve(
     accountId: string,
-    exchangeId: string,
     appliesTo: 'CLIENT' | 'BROKER',
-    scriptId?: string,
+    scriptId?: string | null,
+    direction?: 'BUY' | 'SELL',
   ) {
-    const rows = await prisma.brokerage.findMany({
+    const rules = await prisma.brokerage.findMany({
       where: {
         accountId,
-        exchangeId,
         appliesTo,
-        scriptId: scriptId ? { in: [scriptId] } : null,
+        OR: [
+          ...(scriptId ? [{ scriptId }] : []),
+          { scriptId: null },
+        ],
       },
-      include: { account: true, exchange: true, script: true },
+      include: {
+        account: true,
+        script: {
+          include: { exchange: true },
+        },
+      },
     });
 
-    let allRows = [...rows];
-    if (scriptId) {
-      const defaultRows = await prisma.brokerage.findMany({
-        where: {
-          accountId,
-          exchangeId,
-          appliesTo,
-          scriptId: null,
-        },
-        include: { account: true, exchange: true, script: true },
-      });
-      allRows = [...rows, ...defaultRows];
+    if (rules.length === 0) return null;
+
+    // 1. Script-specific + direction match
+    if (scriptId && direction) {
+      const match = rules.find(r => r.scriptId === scriptId && r.direction === direction);
+      if (match) return match;
     }
 
-    if (allRows.length === 0) return null;
+    // 2. Script-specific + BOTH
+    if (scriptId) {
+      const match = rules.find(r => r.scriptId === scriptId && r.direction === 'BOTH');
+      if (match) return match;
+    }
 
-    // Prefer script-specific over default
-    const scriptRow = allRows.find(r => r.scriptId !== null);
-    return scriptRow || allRows[0];
+    // 3. Default (All scripts) + direction match
+    if (direction) {
+      const match = rules.find(r => !r.scriptId && r.direction === direction);
+      if (match) return match;
+    }
+
+    // 4. Default (All scripts) + BOTH
+    const match = rules.find(r => !r.scriptId && r.direction === 'BOTH');
+    return match || null;
   }
 
   /**
@@ -198,46 +249,122 @@ export class BrokeragesService {
    */
   async calculate(body: {
     clientAccountId: string;
-    brokerAccountId: string;
-    exchangeId: string;
     scriptId?: string;
     quantity: number;
     marketRate: number;
-    segment: 'TRADING' | 'DELIVERY';
+    marketLot?: number;
+    side?: 'BUY' | 'SELL';
+    brokerBrokerage?: number;
   }) {
+    const side = body.side || (body.quantity >= 0 ? 'BUY' : 'SELL');
     const clientRuleRow = await this.resolve(
-      body.clientAccountId, body.exchangeId, 'CLIENT', body.scriptId,
-    );
-    const brokerRuleRow = await this.resolve(
-      body.brokerAccountId, body.exchangeId, 'BROKER', body.scriptId,
+      body.clientAccountId,
+      'CLIENT',
+      body.scriptId,
+      side,
     );
 
-    if (!clientRuleRow) {
-      throw new BadRequestException(
-        'No brokerage rule configured for the selected client on this exchange.',
-      );
-    }
-    if (!brokerRuleRow) {
-      throw new BadRequestException(
-        'No brokerage rule configured for the selected broker on this exchange.',
-      );
-    }
+    const clientRule = clientRuleRow
+      ? {
+          quantity: clientRuleRow.quantity,
+          brokerage: clientRuleRow.brokerage,
+          direction: clientRuleRow.direction as DirectionType,
+        }
+      : null;
 
-    const result = calculateTrade({
+    const result = calculateTradeRates({
+      rate: body.marketRate,
       quantity: body.quantity,
-      marketRate: body.marketRate,
-      segment: body.segment,
-      clientRule: toRule(clientRuleRow),
-      brokerRule: toRule(brokerRuleRow),
+      marketLot: body.marketLot,
+      side,
+      clientRule,
+      brokerBrokerage: body.brokerBrokerage,
     });
 
     return {
       ...result,
-      clientRuleId: clientRuleRow.id,
-      brokerRuleId: brokerRuleRow.id,
-      clientRuleScope: clientRuleRow.scope,
-      brokerRuleScope: brokerRuleRow.scope,
+      clientRuleId: clientRuleRow?.id || null,
     };
+  }
+
+  /**
+   * Bulk upsert brokerage rules (e.g. for All Scripts for a client).
+   */
+  async upsertBulk(rules: Array<{
+    accountId: string;
+    appliesTo: 'CLIENT' | 'BROKER';
+    scope?: 'SCRIPT' | 'DEFAULT';
+    scriptId?: string | null;
+    direction?: DirectionType;
+    quantity: number;
+    brokerage: number;
+  }>) {
+    if (!Array.isArray(rules) || rules.length === 0) {
+      throw new BadRequestException('rules array is required and must not be empty');
+    }
+
+    const saved: any[] = [];
+    for (const item of rules) {
+      if (!item.accountId || !item.appliesTo || !item.scriptId) continue;
+      const q = Number(item.quantity);
+      const b = Number(item.brokerage);
+      if (isNaN(q) || q <= 0 || isNaN(b) || b < 0) continue;
+
+      const direction: DirectionType = item.direction || 'BOTH';
+
+      const existing = await prisma.brokerage.findFirst({
+        where: {
+          accountId: item.accountId,
+          appliesTo: item.appliesTo,
+          scope: 'SCRIPT',
+          scriptId: item.scriptId,
+          direction,
+        },
+      });
+
+      let res;
+      if (existing) {
+        res = await prisma.brokerage.update({
+          where: { id: existing.id },
+          data: {
+            quantity: q,
+            brokerage: b,
+          },
+        });
+      } else {
+        res = await prisma.brokerage.create({
+          data: {
+            accountId: item.accountId,
+            appliesTo: item.appliesTo,
+            scope: 'SCRIPT',
+            scriptId: item.scriptId,
+            direction,
+            quantity: q,
+            brokerage: b,
+          },
+        });
+      }
+      saved.push(res);
+    }
+
+    return {
+      success: true,
+      count: saved.length,
+      saved,
+    };
+  }
+
+  /**
+   * Bulk delete brokerage rules by an array of IDs.
+   */
+  async removeBulk(ids: string[]) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BadRequestException('ids array is required and must not be empty');
+    }
+    const result = await prisma.brokerage.deleteMany({
+      where: { id: { in: ids } },
+    });
+    return { success: true, count: result.count };
   }
 }
 

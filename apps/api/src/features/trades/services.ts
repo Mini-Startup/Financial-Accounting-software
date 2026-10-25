@@ -1,8 +1,7 @@
 import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 import { brokeragesService } from '../brokerages/services';
-import { calculateBrokerage, round } from '../../utils/brokerage';
-import type { BrokerageRule } from '../../utils/brokerage';
+import { calculateTradeRates, round } from '../../utils/brokerage';
 
 import { parseFlexibleDate } from '../Trade_FnO/services';
 
@@ -37,10 +36,10 @@ export class TradesService {
     const calcs = await this.calculateBrokerageForTrade({
       accountId: data.accountId,
       brokerId: data.brokerId,
-      exchangeId: exchangeId,
       scriptId: data.scriptId,
       quantity: Number(data.quantity),
       marketRate: Number(data.rate),
+      transactionType: data.transactionType,
     });
 
     return prisma.trade.create({
@@ -152,10 +151,10 @@ export class TradesService {
     const calcs = await this.calculateBrokerageForTrade({
       accountId: updatedData.accountId,
       brokerId: updatedData.brokerId,
-      exchangeId: updatedData.exchangeId,
       scriptId: updatedData.scriptId,
       quantity: Number(updatedData.quantity),
       marketRate: Number(updatedData.rate),
+      transactionType: updatedData.transactionType,
     });
 
     const updatePayload: Prisma.TradeUncheckedUpdateInput = {
@@ -284,80 +283,56 @@ export class TradesService {
   private async calculateBrokerageForTrade(params: {
     accountId: string;
     brokerId?: string | null;
-    exchangeId: string;
     scriptId: string;
     quantity: number;
     marketRate: number;
+    transactionType: string;
+    marketLot?: number | null;
+    brokerBrokerage?: number | null;
   }) {
-    const { accountId, brokerId, exchangeId, scriptId, quantity, marketRate } = params;
+    const { accountId, brokerId, scriptId, quantity, marketRate, transactionType, marketLot, brokerBrokerage } = params;
+
+    const side: 'BUY' | 'SELL' = transactionType.toUpperCase() === 'BUY' ? 'BUY' : 'SELL';
 
     const clientRuleRow = await brokeragesService.resolve(
       accountId,
-      exchangeId,
       'CLIENT',
-      scriptId
+      scriptId,
+      side,
     );
 
-    const toRule = (row: any): BrokerageRule => ({
-      type: row.type as 'AMOUNT' | 'PERCENT',
-      baseAmount: row.baseAmount,
-      flatFee: row.flatFee,
-      tradingBuyPct: row.tradingBuyPct,
-      tradingSellPct: row.tradingSellPct,
-      tradingMinFee: row.tradingMinFee,
-      deliveryBuyPct: row.deliveryBuyPct,
-      deliverySellPct: row.deliverySellPct,
-      deliveryMinFee: row.deliveryMinFee,
+    const clientRule = clientRuleRow
+      ? {
+          quantity: clientRuleRow.quantity,
+          brokerage: clientRuleRow.brokerage,
+          direction: clientRuleRow.direction as any,
+        }
+      : null;
+
+    let lot = marketLot;
+    if (!lot) {
+      const script = await prisma.script.findUnique({
+        where: { id: scriptId },
+        select: { lotSize: true },
+      });
+      lot = script?.lotSize || 1;
+    }
+
+    const result = calculateTradeRates({
+      rate: marketRate,
+      quantity,
+      marketLot: lot,
+      side,
+      clientRule,
+      brokerBrokerage: brokerBrokerage || 0,
     });
 
-    const clientRule = clientRuleRow ? toRule(clientRuleRow) : null;
-
-    let brokerRuleRow: any = null;
-    if (brokerId) {
-      brokerRuleRow = await brokeragesService.resolve(
-        brokerId,
-        exchangeId,
-        'BROKER',
-        scriptId
-      );
-    }
-    const brokerRule = brokerRuleRow ? toRule(brokerRuleRow) : null;
-
-    const side: 'BUY' | 'SELL' = quantity >= 0 ? 'BUY' : 'SELL';
-    const absQuantity = Math.abs(quantity);
-    const tradeValue = round(absQuantity * marketRate);
-
-    let clientBrokerage = 0;
-    let clientRate = marketRate;
-    if (clientRule) {
-      if (clientRule.type !== 'AMOUNT') {
-        clientBrokerage = calculateBrokerage(clientRule, tradeValue, side, 'TRADING');
-        const clientPerUnit = absQuantity > 0 ? round(clientBrokerage / absQuantity) : 0;
-        clientRate = side === 'BUY' ? round(marketRate + clientPerUnit) : round(marketRate - clientPerUnit);
-      }
-    }
-
-    let brokerBrokerage = 0;
-    let brokerRate = marketRate;
-    if (brokerRule) {
-      if (brokerRule.type !== 'AMOUNT') {
-        brokerBrokerage = calculateBrokerage(brokerRule, tradeValue, side, 'TRADING');
-        const brokerPerUnit = absQuantity > 0 ? round(brokerBrokerage / absQuantity) : 0;
-        brokerRate = side === 'BUY' ? round(marketRate + brokerPerUnit) : round(marketRate - brokerPerUnit);
-      }
-    }
-
-    const profit = side === 'BUY'
-      ? round(clientRate - brokerRate)
-      : round(brokerRate - clientRate);
-    const profitTotal = round(profit * absQuantity);
-
     return {
-      clientRate,
-      brokerRate,
-      clientBrokerage,
-      brokerBrokerage,
-      profitTotal,
+      clientRate: result.clientRate,
+      brokerRate: result.brokerRate,
+      clientBrokerage: result.clientBrokerage,
+      brokerBrokerage: result.brokerBrokerage,
+      profitTotal: result.profitTotal,
     };
   }
 }

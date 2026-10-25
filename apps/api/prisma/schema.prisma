@@ -127,9 +127,10 @@ enum AppliesTo {
   BROKER
 }
 
-enum BrokerageType {
-  AMOUNT
-  PERCENT
+enum Direction {
+  BOTH
+  BUY
+  SELL
 }
 
 enum BrokerageScope {
@@ -150,7 +151,6 @@ model Exchange {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  brokerages   Brokerage[]
   trades       Trade[]
   closingRates ClosingRate[]
   scripts      Script[]
@@ -253,36 +253,24 @@ model Trade {
 model Brokerage {
   id          String         @id @default(uuid())
   accountId   String         @map("account_id")
-  exchangeId  String         @map("exchange_id")
   appliesTo   AppliesTo      @map("applies_to")
-  type        BrokerageType
   scope       BrokerageScope @default(DEFAULT)
   scriptId    String?        @map("script_id")
+  direction   Direction      @default(BOTH) @map("direction")
 
-  // Amount-based fields
-  baseAmount  Float?         @map("base_amount")
-  flatFee     Float?         @map("flat_fee")
-
-  // Trading percentage fields
-  tradingBuyPct   Float?     @map("trading_buy_pct")
-  tradingSellPct  Float?     @map("trading_sell_pct")
-  tradingMinFee   Float?     @map("trading_min_fee")
-
-  // Delivery percentage fields
-  deliveryBuyPct  Float?     @map("delivery_buy_pct")
-  deliverySellPct Float?     @map("delivery_sell_pct")
-  deliveryMinFee  Float?     @map("delivery_min_fee")
+  // Quantity-based brokerage
+  quantity    Float          @map("quantity")
+  brokerage   Float          @map("brokerage")
 
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt      @map("updated_at")
 
-  account  Account  @relation(fields: [accountId],  references: [id])
-  exchange Exchange @relation(fields: [exchangeId], references: [id])
-  script   Script?  @relation(fields: [scriptId],   references: [id])
+  account  Account  @relation(fields: [accountId],  references: [id], onDelete: Cascade)
+  script   Script?  @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
 
-  @@unique([accountId, exchangeId, appliesTo, scope, scriptId], name: "uq_brokerage_rule")
+  @@unique([accountId, appliesTo, scope, scriptId, direction], name: "uq_brokerage_rule")
   @@index([accountId])
-  @@index([exchangeId])
+  @@index([scriptId])
   @@map("brokerages")
 }
 
