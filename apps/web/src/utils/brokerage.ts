@@ -29,6 +29,7 @@ export interface TradeRateInput {
   side: 'BUY' | 'SELL';
   clientRule?: ClientBrokerageRule | null;
   brokerBrokerage?: number | null; // Sum of 4 import fields (commission + exCharge + charge1 + charge2)
+  tradeType?: string | null; // e.g. CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
 }
 
 export interface TradeRateResult {
@@ -92,6 +93,30 @@ export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
   const lot = input.marketLot && input.marketLot > 0 ? input.marketLot : 1;
   const totalUnits = round(absQty * lot);
   const marketValue = round(input.rate * totalUnits);
+
+  // Zero-brokerage trade types: Carry Forward, Back Forward, Settlement
+  const isZeroBrokerage = ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(
+    (input.tradeType || '').toUpperCase()
+  );
+  if (isZeroBrokerage) {
+    return {
+      side,
+      quantity: absQty,
+      marketLot: lot,
+      totalUnits,
+      marketValue,
+      clientBrokerage: 0,
+      clientPerUnit: 0,
+      clientRate: marketValue,
+      clientMarketValue: marketValue,
+      brokerBrokerage: 0,
+      brokerPerUnit: 0,
+      brokerRate: marketValue,
+      brokerMarketValue: marketValue,
+      profitPerUnit: 0,
+      profitTotal: 0,
+    };
+  }
 
   // Client calculation: based purely on tradeQuantity (not market lot!)
   let clientBrokerage = 0;

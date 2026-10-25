@@ -5,7 +5,7 @@ import { calculateTradeRates, type TradeRateResult } from '@/utils/brokerage';
 import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { X, AlertCircle, Lock } from 'lucide-react';
+import { X, AlertCircle, Lock, Check } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
@@ -41,10 +41,12 @@ export function TradeFormModal({
   const quantityInputRef = useRef<HTMLInputElement>(null);
 
   const isLocked = Boolean(
-    initialTrade?.tradeType === 'CARRY_FORWARD' ||
-    initialTrade?.tradeType === 'BACK_FORWARD' ||
-    initialTrade?.tradeType === 'SETTLEMENT' ||
-    initialTrade?.settlementId != null
+    initialTrade?.settlementId != null ||
+    (initialTrade?.source === 'SYSTEM' && (
+      initialTrade?.tradeType === 'CARRY_FORWARD' ||
+      initialTrade?.tradeType === 'BACK_FORWARD' ||
+      initialTrade?.tradeType === 'SETTLEMENT'
+    ))
   );
 
   const [scriptId, setScriptId] = useState(initialTrade?.scriptId || initialTrade?.script?.id || '');
@@ -165,10 +167,11 @@ export function TradeFormModal({
           }
         : null,
       brokerBrokerage: brokerRule?.brokerage || 0,
+      tradeType,
     });
 
     setCalc(result);
-  }, [quantity, marketRate, clientRule, brokerRule, script]);
+  }, [quantity, marketRate, clientRule, brokerRule, script, tradeType]);
 
   const handleSave = async () => {
     if (isLocked) {
@@ -448,20 +451,29 @@ export function TradeFormModal({
                   <div className="text-sm text-[var(--color-fog)] pt-8">Enter market rate to see rates and profit.</div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Non-mandatory warning/note when brokerage rules are not set */}
-                    {(!clientRule || !brokerRule) && (
-                      <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    {/* Notice for zero-brokerage trade types vs missing rules */}
+                    {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType) ? (
+                      <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <div className="leading-relaxed">
-                          <span className="font-semibold text-amber-950">Note:</span> Brokerage for{' '}
-                          {!clientRule && !brokerRule
-                            ? 'this client and broker is'
-                            : !clientRule
-                            ? 'this client is'
-                            : 'this broker is'}{' '}
-                          not set. Remember to set brokerage to get perfect calculation and perfect reports.
+                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market value directly.
                         </div>
                       </div>
+                    ) : (
+                      (!clientRule || !brokerRule) && (
+                        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="leading-relaxed">
+                            <span className="font-semibold text-amber-950">Note:</span> Brokerage for{' '}
+                            {!clientRule && !brokerRule
+                              ? 'this client and broker is'
+                              : !clientRule
+                              ? 'this client is'
+                              : 'this broker is'}{' '}
+                            not set. Remember to set brokerage to get perfect calculation and perfect reports.
+                          </div>
+                        </div>
+                      )
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
@@ -475,7 +487,9 @@ export function TradeFormModal({
                           <div className="flex justify-between text-xs">
                             <span className="text-[var(--color-fog)]">Brokerage</span>
                             <span className="font-mono text-[var(--color-slate)]">
-                              {!clientRule
+                              {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
+                                ? '0.0000 (Waived)'
+                                : !clientRule
                                 ? 'Not set'
                                 : `${currSym}${calc.clientBrokerage.toFixed(4)}`}
                             </span>
@@ -493,7 +507,9 @@ export function TradeFormModal({
                           <div className="flex justify-between text-xs">
                             <span className="text-[var(--color-fog)]">Brokerage</span>
                             <span className="font-mono text-[var(--color-slate)]">
-                              {currSym}{calc.brokerBrokerage.toFixed(4)}
+                              {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
+                                ? '0.0000 (Waived)'
+                                : `${currSym}${calc.brokerBrokerage.toFixed(4)}`}
                             </span>
                           </div>
                         </div>

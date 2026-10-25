@@ -23,11 +23,13 @@ export function TradeDetailModal({
   const profit = trade.profitTotal ?? 0;
 
   const isLocked = Boolean(
+    trade.settlementId != null ||
     trade.isSettlementGenerated ||
-    trade.tradeType === 'SETTLEMENT' ||
-    trade.tradeType === 'CARRY_FORWARD' ||
-    trade.tradeType === 'BACK_FORWARD' ||
-    trade.settlementId
+    (trade.source === 'SYSTEM' && (
+      trade.tradeType === 'SETTLEMENT' ||
+      trade.tradeType === 'CARRY_FORWARD' ||
+      trade.tradeType === 'BACK_FORWARD'
+    ))
   );
   
   const currSym = trade.script?.currency?.symbol || (

@@ -33,14 +33,38 @@ export class TradesService {
 
     await this.validateTradeData({ ...data, exchangeId });
 
-    const calcs = await this.calculateBrokerageForTrade({
-      accountId: data.accountId,
-      brokerId: data.brokerId,
-      scriptId: data.scriptId,
-      quantity: Number(data.quantity),
-      marketRate: Number(data.rate),
-      transactionType: data.transactionType,
-    });
+    const tradeTypeUpper = (data.tradeType || 'REGULAR').toUpperCase();
+    const isZeroBrokerage = ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeTypeUpper);
+
+    let calcs: {
+      clientRate: number;
+      brokerRate: number;
+      clientBrokerage: number;
+      brokerBrokerage: number;
+      profitTotal: number;
+    };
+
+    if (isZeroBrokerage) {
+      const lot = script.lotSize || 1;
+      const marketVal = round(Number(data.quantity) * lot * Number(data.rate));
+      calcs = {
+        clientRate: marketVal,
+        brokerRate: marketVal,
+        clientBrokerage: 0,
+        brokerBrokerage: 0,
+        profitTotal: 0,
+      };
+    } else {
+      calcs = await this.calculateBrokerageForTrade({
+        accountId: data.accountId,
+        brokerId: data.brokerId,
+        scriptId: data.scriptId,
+        quantity: Number(data.quantity),
+        marketRate: Number(data.rate),
+        transactionType: data.transactionType,
+        tradeType: data.tradeType,
+      });
+    }
 
     return prisma.trade.create({
       data: {
@@ -175,8 +199,8 @@ export class TradesService {
     const existing = await this.findOne(id);
 
     if (
-      ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType) ||
-      existing.settlementId
+      existing.settlementId != null ||
+      (existing.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType))
     ) {
       throw new BadRequestException('Settlement-generated trades cannot be edited');
     }
@@ -191,14 +215,39 @@ export class TradesService {
     const updatedData = { ...existing, ...data, exchangeId: resolvedExchangeId };
     await this.validateTradeData(updatedData);
 
-    const calcs = await this.calculateBrokerageForTrade({
-      accountId: updatedData.accountId,
-      brokerId: updatedData.brokerId,
-      scriptId: updatedData.scriptId,
-      quantity: Number(updatedData.quantity),
-      marketRate: Number(updatedData.rate),
-      transactionType: updatedData.transactionType,
-    });
+    const effectiveTradeType = (data.tradeType || existing.tradeType || 'REGULAR').toUpperCase();
+    const isZeroBrokerage = ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(effectiveTradeType);
+
+    let calcs: {
+      clientRate: number;
+      brokerRate: number;
+      clientBrokerage: number;
+      brokerBrokerage: number;
+      profitTotal: number;
+    };
+
+    if (isZeroBrokerage) {
+      const script = await prisma.script.findUnique({ where: { id: updatedData.scriptId } });
+      const lot = script?.lotSize || 1;
+      const marketVal = round(Number(updatedData.quantity) * lot * Number(updatedData.rate));
+      calcs = {
+        clientRate: marketVal,
+        brokerRate: marketVal,
+        clientBrokerage: 0,
+        brokerBrokerage: 0,
+        profitTotal: 0,
+      };
+    } else {
+      calcs = await this.calculateBrokerageForTrade({
+        accountId: updatedData.accountId,
+        brokerId: updatedData.brokerId,
+        scriptId: updatedData.scriptId,
+        quantity: Number(updatedData.quantity),
+        marketRate: Number(updatedData.rate),
+        transactionType: updatedData.transactionType,
+        tradeType: effectiveTradeType,
+      });
+    }
 
     const updatePayload: Prisma.TradeUncheckedUpdateInput = {
       ...(data.tradeNumber && { tradeNumber: data.tradeNumber.trim() }),
@@ -241,8 +290,8 @@ export class TradesService {
   async remove(id: string) {
     const existing = await this.findOne(id);
     if (
-      ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType) ||
-      existing.settlementId
+      existing.settlementId != null ||
+      (existing.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType))
     ) {
       throw new BadRequestException('Settlement-generated trades cannot be deleted');
     }
@@ -332,8 +381,9 @@ export class TradesService {
     transactionType: string;
     marketLot?: number | null;
     brokerBrokerage?: number | null;
+    tradeType?: string | null;
   }) {
-    const { accountId, brokerId, scriptId, quantity, marketRate, transactionType, marketLot, brokerBrokerage } = params;
+    const { accountId, brokerId, scriptId, quantity, marketRate, transactionType, marketLot, brokerBrokerage, tradeType } = params;
 
     const side: 'BUY' | 'SELL' = transactionType.toUpperCase() === 'BUY' ? 'BUY' : 'SELL';
 
@@ -368,6 +418,7 @@ export class TradesService {
       side,
       clientRule,
       brokerBrokerage: brokerBrokerage || 0,
+      tradeType,
     });
 
     return {

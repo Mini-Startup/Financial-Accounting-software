@@ -341,10 +341,12 @@ export function TradesPageManager({
   const handleDelete = (id: string) => {
     const tradeToDelete = trades.find((t) => t.id === id);
     const isLocked = Boolean(
-      tradeToDelete?.tradeType === 'CARRY_FORWARD' ||
-      tradeToDelete?.tradeType === 'BACK_FORWARD' ||
-      tradeToDelete?.tradeType === 'SETTLEMENT' ||
-      tradeToDelete?.settlementId != null
+      tradeToDelete?.settlementId != null ||
+      (tradeToDelete?.source === 'SYSTEM' && (
+        tradeToDelete?.tradeType === 'CARRY_FORWARD' ||
+        tradeToDelete?.tradeType === 'BACK_FORWARD' ||
+        tradeToDelete?.tradeType === 'SETTLEMENT'
+      ))
     );
     if (isLocked) {
       toast.error('Settlement-generated trades are locked and cannot be deleted.');
@@ -382,7 +384,7 @@ export function TradesPageManager({
     const lockedCount = trades.filter(
       (t) =>
         selectedIds.has(t.id) &&
-        (['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType) || t.settlementId != null)
+        (t.settlementId != null || (t.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType)))
     ).length;
 
     if (lockedCount > 0) {
@@ -952,7 +954,7 @@ export function TradesPageManager({
                       className="text-right whitespace-nowrap"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType) || t.settlementId != null ? (
+                      {t.settlementId != null || (t.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType)) ? (
                         <div
                           className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs select-none border border-slate-200"
                           title="Settlement-generated trade is locked against edits and deletion"
