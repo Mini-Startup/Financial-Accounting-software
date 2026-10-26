@@ -18,8 +18,8 @@ export default async function BrokersPage(props: { searchParams: Promise<{ searc
     if (res.ok) accounts = await res.json();
     console.log("Brokers fetched successfully")
     console.log(accounts)
-  } catch {
-    console.error("Failed to fetch brokers from API");
+  } catch (err) {
+    console.error("Failed to fetch brokers from API", err);
   }
 
   return (
