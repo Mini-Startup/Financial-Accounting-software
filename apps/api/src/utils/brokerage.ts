@@ -84,8 +84,10 @@ export function calculateClientBrokerage(
 /**
  * Calculate all rates and total market values for a trade.
  * Market Value = rate * quantity * marketLot
- * Client Rate = Market Value ± Client Brokerage
- * Broker Rate = Market Value ± Broker Brokerage
+ * Client Rate = Price ± Client Brokerage Per Unit
+ * Broker Rate = Price ± Broker Brokerage Per Unit
+ * Client Market Value = Client Rate * quantity * marketLot
+ * Broker Market Value = Broker Rate * quantity * marketLot
  */
 export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
   const side = input.side;
@@ -107,58 +109,60 @@ export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
       marketValue,
       clientBrokerage: 0,
       clientPerUnit: 0,
-      clientRate: marketValue,
+      clientRate: input.rate,
       clientMarketValue: marketValue,
       brokerBrokerage: 0,
       brokerPerUnit: 0,
-      brokerRate: marketValue,
+      brokerRate: input.rate,
       brokerMarketValue: marketValue,
       profitPerUnit: 0,
       profitTotal: 0,
     };
   }
 
-  // Client calculation: based purely on tradeQuantity (not market lot!)
+  // Client calculation:
+  // Rule specifies: rule.brokerage per rule.quantity (lots).
+  // Each lot has `lot` units (marketLot).
+  // Therefore, per-share rate adjustment = (rule.brokerage / rule.quantity) / lot.
   let clientBrokerage = 0;
+  let clientPerUnit = 0; // per-share rate adjustment
   if (input.clientRule && input.clientRule.quantity > 0) {
     const dir = input.clientRule.direction || 'BOTH';
     if (dir === 'BOTH' || dir === side) {
-      clientBrokerage = calculateClientBrokerage(
-        absQty,
-        input.clientRule.quantity,
-        input.clientRule.brokerage,
-      );
+      const perLotBrokerage = input.clientRule.brokerage / input.clientRule.quantity;
+      clientPerUnit = round(perLotBrokerage / lot);
+      clientBrokerage = round(perLotBrokerage * absQty);
     }
   }
 
-  // Broker calculation: sum of file charges or rule
-  const brokerBrokerage = round(input.brokerBrokerage || 0);
+  // Broker calculation:
+  // Charges from file are already a per-unit price adjustment — directly added/subtracted without dividing by qty or lot.
+  const brokerPerUnit = round(input.brokerBrokerage || 0);
+  const brokerBrokerage = round(brokerPerUnit * totalUnits);
 
-  // Client Rate & Market Value: Market Value ± Client Brokerage
-  let clientRate = marketValue;
+  // Client Rate & Market Value: Price ± Client Brokerage Per Unit
+  let clientRate = input.rate;
   if (side === 'BUY') {
-    clientRate = round(marketValue + clientBrokerage);
+    clientRate = round(input.rate + clientPerUnit);
   } else {
-    clientRate = round(marketValue - clientBrokerage);
+    clientRate = round(input.rate - clientPerUnit);
   }
-  const clientMarketValue = clientRate;
+  const clientMarketValue = round(clientRate * totalUnits);
 
-  // Broker Rate & Market Value: Market Value ± Broker Brokerage
-  let brokerRate = marketValue;
+  // Broker Rate & Market Value: Price ± Broker Brokerage Per Unit
+  let brokerRate = input.rate;
   if (side === 'BUY') {
-    brokerRate = round(marketValue + brokerBrokerage);
+    brokerRate = round(input.rate + brokerPerUnit);
   } else {
-    brokerRate = round(marketValue - brokerBrokerage);
+    brokerRate = round(input.rate - brokerPerUnit);
   }
-  const brokerMarketValue = brokerRate;
+  const brokerMarketValue = round(brokerRate * totalUnits);
 
-  // Profit: middleman spread
-  const profitTotal = side === 'BUY'
-    ? round(clientMarketValue - brokerMarketValue)
-    : round(brokerMarketValue - clientMarketValue);
-  const profitPerUnit = totalUnits > 0 ? round(profitTotal / totalUnits) : 0;
-  const clientPerUnit = absQty > 0 ? round(clientBrokerage / absQty) : 0;
-  const brokerPerUnit = absQty > 0 ? round(brokerBrokerage / absQty) : 0;
+  // Profit: net profit per share
+  const profitPerUnit = side === 'BUY'
+    ? round(clientRate - brokerRate)
+    : round(brokerRate - clientRate);
+  const profitTotal = round(profitPerUnit * totalUnits);
 
   return {
     side,

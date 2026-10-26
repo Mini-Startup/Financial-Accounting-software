@@ -118,13 +118,8 @@ export function DubaiTableRow({
       ? parseFloat(String(row.mktValue))
       : calc.marketValue;
 
-  const clientRate = isBuy
-    ? round(displayMktValue + calc.clientBrokerage)
-    : round(displayMktValue - calc.clientBrokerage);
-
-  const brokerRate = isBuy
-    ? round(displayMktValue + calc.brokerBrokerage)
-    : round(displayMktValue - calc.brokerBrokerage);
+  const clientRate = calc.clientRate;
+  const brokerRate = calc.brokerRate;
 
   return (
     <tr
@@ -293,14 +288,14 @@ export function DubaiTableRow({
         {Number(row.qty).toLocaleString()}
       </td>
 
-      {/* 17. Price */}
-      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-        {Number(row.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+      {/* 17. Mkt Value */}
+      <td className="py-3 px-3 text-right font-mono font-semibold text-slate-700">
+        {Number(displayMktValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
       </td>
 
-      {/* 18. Mkt Value - Highlighted */}
+      {/* 18. Price - Highlighted */}
       <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-l border-r border-slate-200/80">
-        {Number(displayMktValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        {Number(row.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
       </td>
 
       {/* 19. Client Rate - Highlighted */}

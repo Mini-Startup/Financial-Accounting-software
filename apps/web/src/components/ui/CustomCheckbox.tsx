@@ -40,11 +40,12 @@ export function CustomCheckbox({
             onChange(e.target.checked);
           }
         }}
-        className="sr-only"
+        className="sr-only peer"
       />
       <div
         className={cn(
           'w-4 h-4 rounded border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-leaf)] peer-focus-visible:ring-offset-1',
           checked
             ? 'bg-[var(--color-leaf)] border-[var(--color-leaf)] text-white shadow-2xs'
             : 'bg-white border-[var(--color-border-medium)] hover:border-[var(--color-border-focus)]'

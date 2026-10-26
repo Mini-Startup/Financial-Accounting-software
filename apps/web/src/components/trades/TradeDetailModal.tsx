@@ -4,6 +4,7 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, TrendingUp, Cpu, Info, Pencil, Lock, ShieldCheck } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 export function TradeDetailModal({
   trade,
@@ -29,13 +30,9 @@ export function TradeDetailModal({
     ))
   );
   
-  const currSym = trade.script?.currency?.symbol || (
-    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'INR' ? '₹' :
-    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'USD' ? '$' :
-    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'AED' ? 'AED ' :
-    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'EUR' ? '€' :
-    (trade.script?.currency?.code || trade.currencyCode || '').toUpperCase() === 'GBP' ? '£' :
-    (trade.currencyCode ? `${trade.currencyCode} ` : '$')
+  const currSym = formatCurrencySymbol(
+    trade.script?.currency?.symbol,
+    trade.script?.currency?.code || trade.currencyCode
   );
 
   return (
@@ -220,8 +217,8 @@ export function TradeDetailModal({
             </div>
           </div>
 
-          {/* Spread Profit Container */}
-          <div
+          {/* Spread Profit Container - commented out as requested */}
+          {/* <div
             className={cn(
               'border rounded-xl p-4',
               profit > 0
@@ -243,7 +240,7 @@ export function TradeDetailModal({
             <p className="text-[11px] text-[var(--color-slate)] mt-1">
               Spread value calculated as quantity ({trade.quantity}) multiplied by client-broker rate difference.
             </p>
-          </div>
+          </div> */}
 
           {/* Section 3: Extended Specifications (Dubai / FnO Import Details) */}
           {(trade.securityName || trade.dealerCode || trade.currencyCode || trade.delMonth || trade.bloombergCode || trade.mktValue != null) && (
@@ -287,20 +284,20 @@ export function TradeDetailModal({
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 block">Mkt Value</span>
-                  <span className="font-mono text-xs font-semibold text-slate-800">{trade.mktValue != null ? `₹${trade.mktValue.toFixed(2)}` : '—'}</span>
+                  <span className="font-mono text-xs font-semibold text-slate-800">{trade.mktValue != null ? `${currSym}${trade.mktValue.toFixed(2)}` : '—'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 block">Commission</span>
-                  <span className="font-mono text-xs text-slate-800">{trade.clnCommission != null ? `₹${trade.clnCommission.toFixed(2)}` : '—'}</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.clnCommission != null ? `${currSym}${trade.clnCommission.toFixed(2)}` : '—'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 block">Ex Charges</span>
-                  <span className="font-mono text-xs text-slate-800">{trade.clnExCharges != null ? `₹${trade.clnExCharges.toFixed(2)}` : '—'}</span>
+                  <span className="font-mono text-xs text-slate-800">{trade.clnExCharges != null ? `${currSym}${trade.clnExCharges.toFixed(2)}` : '—'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 block">Charges 1 / 2 / VAT</span>
                   <span className="font-mono text-xs text-slate-800">
-                    {`₹${((trade.clnCharges1 || 0) + (trade.clnCharges2 || 0) + (trade.vat || 0)).toFixed(2)}`}
+                    {`${currSym}${((trade.clnCharges1 || 0) + (trade.clnCharges2 || 0) + (trade.vat || 0)).toFixed(2)}`}
                   </span>
                 </div>
               </div>

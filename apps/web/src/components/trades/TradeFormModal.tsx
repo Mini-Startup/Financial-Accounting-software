@@ -10,6 +10,7 @@ import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 function todayISO() {
   const d = new Date();
@@ -87,7 +88,7 @@ export function TradeFormModal({
   const client = useMemo(() => (clients || []).find((c) => c.id === clientId), [clients, clientId]);
   const broker = useMemo(() => (brokers || []).find((b) => b.id === brokerId), [brokers, brokerId]);
 
-  const currSym = script?.currency?.symbol || '₹';
+  const currSym = formatCurrencySymbol(script?.currency?.symbol, script?.currency?.code);
 
   // Fetch brokerage rules whenever client, broker, or script changes
   useEffect(() => {
@@ -237,6 +238,7 @@ export function TradeFormModal({
           transactionType: qtyNum >= 0 ? 'BUY' : 'SELL',
           quantity: Math.abs(qtyNum),
           rate: rateNum,
+          marketLot: script?.lotSize || 1,
           remarks: initialTrade?.remarks || 'Manual Entry',
           source: initialTrade?.source || 'MANUAL',
         }),
@@ -297,8 +299,9 @@ export function TradeFormModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-12 gap-5">
+        <form id="tradeForm" onSubmit={handleSave} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-12 gap-5">
             {/* Warning Banner if trade is locked */}
             {isLocked && (
               <div className="col-span-12 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
@@ -428,7 +431,7 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : clientRule
-                    ? `₹${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
+                    ? `${currSym}${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
                     : 'Not set'}
                 </div>
                 <div className="text-xs text-[var(--color-slate)] text-right">
@@ -436,7 +439,7 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : brokerRule
-                    ? `₹${brokerRule.brokerage} / ${brokerRule.quantity} qty`
+                    ? `${currSym}${brokerRule.brokerage} / ${brokerRule.quantity} qty`
                     : 'From file charges / Not set'}
                 </div>
               </div>
@@ -469,7 +472,7 @@ export function TradeFormModal({
                       <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
                         <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <div className="leading-relaxed">
-                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market value directly.
+                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market rate directly.
                         </div>
                       </div>
                     ) : (
@@ -529,7 +532,8 @@ export function TradeFormModal({
                       </div>
                     </div>
 
-                    <div className={cn("border rounded-xl p-4",
+                    {/* Profit box - commented out as requested */}
+                    {/* <div className={cn("border rounded-xl p-4",
                       calc.profitTotal > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
                       calc.profitTotal < 0 ? 'bg-red-50 border-red-200' :
                       'bg-[var(--color-snow)] border-[var(--color-border-light)]'
@@ -547,36 +551,36 @@ export function TradeFormModal({
                       <p className="text-[11px] text-[var(--color-slate)] mt-1">
                         Market value {currSym}{calc.marketValue.toFixed(4)} • per-unit {currSym}{calc.profitPerUnit.toFixed(4)}
                       </p>
-                    </div>
+                    </div> */}
                   </div>
                 )}
               </div>
             </div>
           </div>
+          </div>
 
-        </div>
-
-        {/* Fixed Footer */}
-        <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
-          <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
-            disabled={isSaving || isLocked || !isFormValid}
-          >
-            {isSaving ? (
-              <>
-                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                <span>Saving…</span>
-              </>
-            ) : initialTrade ? (
-              'Update Trade'
-            ) : (
-              'Add Trade'
-            )}
-          </button>
-        </div>
+          {/* Fixed Footer */}
+          <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
+            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
+            <button
+              type="submit"
+              form="tradeForm"
+              className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
+              disabled={isSaving || isLocked || !isFormValid}
+            >
+              {isSaving ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span>Saving…</span>
+                </>
+              ) : initialTrade ? (
+                'Update Trade'
+              ) : (
+                'Add Trade'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

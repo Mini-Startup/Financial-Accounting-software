@@ -13,6 +13,7 @@ import {
   round,
 } from '@/utils/brokerage';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 interface NormalPreviewTableProps {
   totalRows: number;
@@ -313,11 +314,11 @@ export function NormalPreviewTable({
                   <th className="py-3 px-3">Script</th>
                   <th className="py-3 px-3 text-center">Side</th>
                   <th className="py-3 px-3 text-right font-bold">Qty</th>
-                  <th className="py-3 px-3 text-right font-bold">Rate</th>
+                  <th className="py-3 px-3 text-right font-bold">Mkt Value</th>
 
-                  {/* 5 Highlighted Columns with slightly darker color, keeping Mkt Value, Client Rate & Broker Rate together */}
+                  {/* 5 Highlighted Columns: Rate, Client Rate, Broker Rate, Client Brk, Broker Brk */}
                   <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-l border-r border-slate-300">
-                    Mkt Value
+                    Rate
                   </th>
                   <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
                     Client Rate
@@ -367,6 +368,12 @@ export function NormalPreviewTable({
                       row.clnCharges2 ? parseFloat(String(row.clnCharges2)) : 0
                     );
 
+                    const resolvedScript = scripts.find((s) => s.id === row.resolvedScriptId);
+                    const currSym = formatCurrencySymbol(
+                      resolvedScript?.currency?.symbol,
+                      resolvedScript?.currency?.code || (row as any).currency || (row as any).currencyCode
+                    );
+
                     const clientRule = resolveClientRule(
                       brokerages,
                       row.resolvedAccountId,
@@ -394,13 +401,8 @@ export function NormalPreviewTable({
                         ? parseFloat(String((row as any).mktValue))
                         : calc.marketValue;
 
-                    const clientRate = isBuy
-                      ? round(displayMktValue + calc.clientBrokerage)
-                      : round(displayMktValue - calc.clientBrokerage);
-
-                    const brokerRate = isBuy
-                      ? round(displayMktValue + calc.brokerBrokerage)
-                      : round(displayMktValue - calc.brokerBrokerage);
+                    const clientRate = calc.clientRate;
+                    const brokerRate = calc.brokerRate;
 
                     return (
                       <tr
@@ -465,19 +467,19 @@ export function NormalPreviewTable({
                           {Number(row.quantity).toLocaleString()}
                         </td>
 
-                        {/* Rate */}
-                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                          ₹{Number(row.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {/* Mkt Value */}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">
+                          {currSym}{displayMktValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
 
-                        {/* Mkt Value - Highlighted */}
+                        {/* Rate / Price - Highlighted */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-l border-r border-slate-200/80">
-                          ₹{displayMktValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {currSym}{Number(row.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
 
                         {/* Client Rate - Highlighted */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
-                          ₹{clientRate.toLocaleString(undefined, {
+                          {currSym}{clientRate.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 4,
                           })}
@@ -485,7 +487,7 @@ export function NormalPreviewTable({
 
                         {/* Broker Rate - Highlighted */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
-                          ₹{brokerRate.toLocaleString(undefined, {
+                          {currSym}{brokerRate.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 4,
                           })}
@@ -493,12 +495,12 @@ export function NormalPreviewTable({
 
                         {/* Client Brokerage - Highlighted */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
-                          {calc.clientBrokerage > 0 ? `₹${calc.clientBrokerage.toFixed(2)}` : '₹0.00'}
+                          {calc.clientBrokerage > 0 ? `${currSym}${calc.clientBrokerage.toFixed(2)}` : `${currSym}0.00`}
                         </td>
 
                         {/* Broker Brokerage - Highlighted */}
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 bg-slate-100/90 group-hover:bg-slate-200/60 border-r border-slate-200/80">
-                          {calc.brokerBrokerage > 0 ? `₹${calc.brokerBrokerage.toFixed(2)}` : '₹0.00'}
+                          {calc.brokerBrokerage > 0 ? `${currSym}${calc.brokerBrokerage.toFixed(2)}` : `${currSym}0.00`}
                         </td>
 
                         {/* Client */}

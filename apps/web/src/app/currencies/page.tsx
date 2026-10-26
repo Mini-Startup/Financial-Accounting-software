@@ -13,7 +13,8 @@ async function safeFetch(url: string) {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return [];
     return await res.json();
-  } catch {
+  } catch (err) {
+    console.error(`Failed to fetch from ${url}:`, err);
     return [];
   }
 }

@@ -257,15 +257,24 @@ export function CustomSelect<T extends string | number = string>({
       e.preventDefault();
       if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
         handleSelect(filteredOptions[highlightedIndex].value);
-      } else if (filteredOptions.length === 1) {
+      } else if (filteredOptions.length > 0) {
         handleSelect(filteredOptions[0].value);
+      } else {
+        closeDropdown();
       }
+      triggerRef.current?.focus();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       closeDropdown();
       triggerRef.current?.focus();
     } else if (e.key === 'Tab') {
-      closeDropdown();
+      if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        handleSelect(filteredOptions[highlightedIndex].value);
+      } else if (searchQuery.trim() && filteredOptions.length > 0) {
+        handleSelect(filteredOptions[0].value);
+      } else {
+        closeDropdown();
+      }
     }
   };
 

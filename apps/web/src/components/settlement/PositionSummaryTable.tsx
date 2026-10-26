@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { formatCurrencySymbol } from '@/utils/currency';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import type { SettlementItem } from './types';
 
@@ -26,14 +27,16 @@ export function PositionSummaryTable({
   // Compute finalPnL for each row
   const calculatedRows = useMemo(() => {
     return summaryData.map((item) => {
+      const lot = item.marketLot && Number(item.marketLot) > 0 ? Number(item.marketLot) : 1;
       const finalPnL =
         item.netQty === 0
-          ? item.realizedPnL
+          ? (item.realizedPnL ?? 0)
           : item.closingRate !== null
-          ? item.netQty * (item.closingRate - item.netAvgRate)
+          ? item.netQty * (item.closingRate - item.netAvgRate) * lot
           : 0;
       return {
         ...item,
+        marketLot: lot,
         finalPnL,
       };
     });
@@ -93,7 +96,7 @@ export function PositionSummaryTable({
   };
 
   const getSym = (item: { currencySymbol?: string; currencyCode?: string }) =>
-    item.currencySymbol || (item.currencyCode === 'INR' ? '₹' : '$');
+    formatCurrencySymbol(item.currencySymbol, item.currencyCode);
 
   // Visible Total Row calculation
   const totals = useMemo(() => {
@@ -210,6 +213,9 @@ export function PositionSummaryTable({
                   Script / Security {renderSortIndicator('scriptShortName')}
                 </th>
                 <th className="py-3 px-3">Expiry</th>
+                <th onClick={() => handleSort('marketLot' as any)} className="text-right cursor-pointer py-3 px-3">
+                  Market Lot {renderSortIndicator('marketLot' as any)}
+                </th>
                 <th onClick={() => handleSort('buyQty')} className="text-right cursor-pointer py-3 px-3">
                   Buy Qty {renderSortIndicator('buyQty')}
                 </th>
@@ -231,19 +237,19 @@ export function PositionSummaryTable({
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={14} className="py-12 text-center text-slate-400 italic">
                     Loading position summary…
                   </td>
                 </tr>
               ) : !hasGenerated && sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={14} className="py-12 text-center text-slate-400 italic">
                     Select a cutoff date and click &quot;Generate Summary&quot; to review position calculations.
                   </td>
                 </tr>
               ) : sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={14} className="py-12 text-center text-slate-400 italic">
                     {positionFilter === 'OPEN'
                       ? 'No open positions found. Toggle filter to "All Positions" to view closed contracts.'
                       : 'No position records matching active filters.'}
@@ -296,6 +302,11 @@ export function PositionSummaryTable({
                       {/* Expiry */}
                       <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
                         {item.expiry || '—'}
+                      </td>
+
+                      {/* Market Lot */}
+                      <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-700">
+                        {item.marketLot || 1}
                       </td>
 
                       {/* Buy Qty & Avg */}
@@ -372,7 +383,7 @@ export function PositionSummaryTable({
             {sortedRows.length > 0 && (
               <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-mono text-xs font-bold text-slate-900 sticky bottom-0 z-10 shadow-inner">
                 <tr>
-                  <td colSpan={5} className="py-3 px-3 uppercase tracking-wider text-slate-700 font-sans">
+                  <td colSpan={6} className="py-3 px-3 uppercase tracking-wider text-slate-700 font-sans">
                     Total ({filteredRows.length} visible rows)
                   </td>
                   <td className="py-3 px-3 text-right text-emerald-700">

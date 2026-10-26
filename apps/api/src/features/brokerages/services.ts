@@ -59,7 +59,7 @@ export class BrokeragesService {
         include: {
           account: true,
           script: {
-            include: { exchange: true },
+            include: { exchange: true, currency: true },
           },
         },
       });
@@ -93,7 +93,7 @@ export class BrokeragesService {
       include: {
         account: true,
         script: {
-          include: { exchange: true },
+          include: { exchange: true, currency: true },
         },
       },
     });
@@ -108,7 +108,7 @@ export class BrokeragesService {
       include: {
         account: true,
         script: {
-          include: { exchange: true },
+          include: { exchange: true, currency: true },
         },
       },
     });
@@ -166,7 +166,7 @@ export class BrokeragesService {
         include: {
           account: true,
           script: {
-            include: { exchange: true },
+            include: { exchange: true, currency: true },
           },
         },
       });

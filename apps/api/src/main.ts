@@ -9,6 +9,7 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://finance-frontend-weld.vercel.app";
 
+
 // ─── Security & Performance Optimizations ────────────
 app.disable('x-powered-by');
 

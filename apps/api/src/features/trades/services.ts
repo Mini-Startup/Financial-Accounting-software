@@ -44,12 +44,12 @@ export class TradesService {
       profitTotal: number;
     };
 
+    const resolvedLot = (data as any).marketLot ? Number((data as any).marketLot) : (script.lotSize || 1);
+
     if (isZeroBrokerage) {
-      const lot = script.lotSize || 1;
-      const marketVal = round(Number(data.quantity) * lot * Number(data.rate));
       calcs = {
-        clientRate: marketVal,
-        brokerRate: marketVal,
+        clientRate: Number(data.rate),
+        brokerRate: Number(data.rate),
         clientBrokerage: 0,
         brokerBrokerage: 0,
         profitTotal: 0,
@@ -62,6 +62,7 @@ export class TradesService {
         quantity: Number(data.quantity),
         marketRate: Number(data.rate),
         transactionType: data.transactionType,
+        marketLot: resolvedLot,
         tradeType: data.tradeType,
       });
     }
@@ -81,6 +82,7 @@ export class TradesService {
         remarks: data.remarks?.trim() || null,
         source: data.source || 'MANUAL',
         expiry: data.expiry || null,
+        marketLot: resolvedLot,
         tradeType: data.tradeType || 'INTERNAL',
         clientRate: calcs.clientRate,
         brokerRate: calcs.brokerRate,
@@ -226,13 +228,12 @@ export class TradesService {
       profitTotal: number;
     };
 
+    const resolvedLot = (updatedData as any).marketLot ? Number((updatedData as any).marketLot) : (existing.marketLot || 1);
+
     if (isZeroBrokerage) {
-      const script = await prisma.script.findUnique({ where: { id: updatedData.scriptId } });
-      const lot = script?.lotSize || 1;
-      const marketVal = round(Number(updatedData.quantity) * lot * Number(updatedData.rate));
       calcs = {
-        clientRate: marketVal,
-        brokerRate: marketVal,
+        clientRate: Number(updatedData.rate),
+        brokerRate: Number(updatedData.rate),
         clientBrokerage: 0,
         brokerBrokerage: 0,
         profitTotal: 0,
@@ -245,6 +246,7 @@ export class TradesService {
         quantity: Number(updatedData.quantity),
         marketRate: Number(updatedData.rate),
         transactionType: updatedData.transactionType,
+        marketLot: resolvedLot,
         tradeType: effectiveTradeType,
       });
     }
@@ -263,6 +265,7 @@ export class TradesService {
       ...(data.remarks !== undefined && { remarks: data.remarks?.trim() || null }),
       ...(data.source && { source: data.source }),
       ...(data.expiry !== undefined && { expiry: data.expiry || null }),
+      ...((data as any).marketLot !== undefined && { marketLot: Number((data as any).marketLot) }),
       ...(data.tradeType && { tradeType: data.tradeType }),
       clientRate: calcs.clientRate,
       brokerRate: calcs.brokerRate,

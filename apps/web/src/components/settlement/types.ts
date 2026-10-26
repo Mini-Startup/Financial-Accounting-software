@@ -12,6 +12,7 @@ export interface SettlementItem {
   currencyCode?: string;
   currencySymbol?: string;
   expiry: string | null;
+  marketLot?: number;
   buyQty: number;
   buyVal: number;
   buyAvgRate: number;

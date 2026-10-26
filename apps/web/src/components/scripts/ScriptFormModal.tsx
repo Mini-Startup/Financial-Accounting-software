@@ -11,6 +11,7 @@ import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
 import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { cn } from '@/utils/cn';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 export function ScriptFormModal({
   initialData,
@@ -221,10 +222,11 @@ export function ScriptFormModal({
   };
 
   const handleOpenAddCurrency = () => {
+    const code = targetCurrencyCode ? targetCurrencyCode.toUpperCase() : 'USD';
     setCurrencyModalInitialData({
-      code: targetCurrencyCode ? targetCurrencyCode.toUpperCase() : 'USD',
-      name: targetCurrencyCode || 'US Dollar',
-      symbol: targetCurrencyCode === 'USD' ? '$' : targetCurrencyCode === 'INR' ? '₹' : '',
+      code,
+      name: targetCurrencyCode || (code === 'INR' ? 'Indian Rupee' : 'US Dollar'),
+      symbol: formatCurrencySymbol(null, code),
     });
     setShowCurrencyModal(true);
   };

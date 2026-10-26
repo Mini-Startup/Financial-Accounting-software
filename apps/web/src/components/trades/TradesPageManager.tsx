@@ -23,6 +23,7 @@ import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, Chevro
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 type DateFilterMode = 'ALL' | 'DATE' | 'MONTH' | 'RANGE';
 
@@ -60,12 +61,15 @@ const TRADE_COLUMNS = [
   { key: 'exchange.code', label: 'Exchange' },
   { key: 'expiry', label: 'Expiry Date' },
   { key: 'transactionType', label: 'Type (BUY/SELL)' },
-  { key: 'quantity', label: 'Quantity' },
-  { key: 'price', label: 'Rate' },
   { key: 'account.name', label: 'Client' },
   { key: 'broker.name', label: 'Broker' },
+  { key: 'price', label: 'Rate' },
+  { key: 'clientRate', label: 'Client Rate' },
+  { key: 'brokerRate', label: 'Broker Rate' },
+  { key: 'clientBrokerage', label: 'Client Brk' },
+  { key: 'brokerBrokerage', label: 'Broker Brk' },
+  // { key: 'profitTotal', label: 'Net Profit' },
   { key: 'terminal', label: 'Terminal' },
-  { key: 'profitTotal', label: 'Profit' },
   { key: 'tradeType', label: 'Trade Type' },
 ];
 
@@ -758,19 +762,6 @@ export function TradesPageManager({
                   </div>
                 </th>
                 <th
-                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
-                  onClick={() => handleSort('price')}
-                >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Rate</span>
-                    {sortKey === 'price' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
                   onClick={() => handleSort('account.name')}
                   className="cursor-pointer hover:bg-slate-100 select-none"
                 >
@@ -796,21 +787,47 @@ export function TradesPageManager({
                     )}
                   </div>
                 </th>
-                <th className="text-right">Client Rate</th>
-                <th className="text-right">Broker Rate</th>
+
+                {/* 6 Highlighted Rate & Brokerage & Profit Columns */}
                 <th
-                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
-                  onClick={() => handleSort('profitTotal')}
+                  className="text-right cursor-pointer select-none bg-slate-200/90 text-slate-800 border-l border-r border-slate-300 font-bold"
+                  onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center justify-end gap-1.5">
-                    <span>Profit</span>
-                    {sortKey === 'profitTotal' ? (
+                    <span>Rate</span>
+                    {sortKey === 'price' ? (
                       sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
                     ) : (
                       <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </div>
                 </th>
+                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Client Rate
+                </th>
+                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Broker Rate
+                </th>
+                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Client Brk
+                </th>
+                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  Broker Brk
+                </th>
+                {/* Net Profit Column - commented out as requested */}
+                {/* <th
+                  className="text-right cursor-pointer select-none bg-slate-200/90 text-slate-800 border-r border-slate-300 font-bold"
+                  onClick={() => handleSort('profitTotal')}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Net Profit</span>
+                    {sortKey === 'profitTotal' ? (
+                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                    ) : (
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </th> */}
                 <th>Trade Type</th>
                 <th style={{ width: '90px' }} className="text-right">Actions</th>
               </tr>
@@ -818,26 +835,28 @@ export function TradesPageManager({
             <tbody className="divide-y divide-slate-100 font-sans">
               {paginatedTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={16} className="py-12 text-center text-[var(--color-slate)] font-medium">
                     No trades match your search criteria.
                   </td>
                 </tr>
               ) : null}
               {paginatedTrades.map((t, index) => {
                 const profit = t.profitTotal ?? 0;
+                const isZeroBrk = ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType || '');
+                const netProfitPerShare = isZeroBrk
+                  ? 0
+                  : (t.clientRate != null && t.brokerRate != null)
+                  ? (t.transactionType === 'BUY' ? (t.clientRate - t.brokerRate) : (t.brokerRate - t.clientRate))
+                  : (t.profitTotal != null && t.quantity > 0 ? (t.profitTotal / t.quantity) : (t.profitTotal ?? 0));
                 const secName = t.securityName || t.script?.fullName || t.script?.shortName || '—';
                 const isSelected = selectedIds.has(t.id);
                 const isMatched = findReplaceMatch?.matchedRowIndices.includes(index);
                 const isActiveMatch = findReplaceMatch?.activeRowIndex === index;
                 
                 // Dynamic currency symbol resolution
-                const currSym = t.script?.currency?.symbol || (
-                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'INR' ? '₹' :
-                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'USD' ? '$' :
-                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'AED' ? 'AED ' :
-                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'EUR' ? '€' :
-                  (t.script?.currency?.code || t.currencyCode || '').toUpperCase() === 'GBP' ? '£' :
-                  (t.currencyCode ? `${t.currencyCode} ` : '$')
+                const currSym = formatCurrencySymbol(
+                  t.script?.currency?.symbol,
+                  t.script?.currency?.code || t.currencyCode
                 );
 
                 return (
@@ -901,29 +920,40 @@ export function TradesPageManager({
                       )}
                     </td>
                     <td className="font-mono font-semibold text-right whitespace-nowrap">{t.quantity}</td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap">{currSym}{t.rate.toFixed(2)}</td>
                     <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>
                       {renderWithDiff('account.code', t.account?.code || '—', isActiveMatch)}
                     </td>
                     <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>
                       {renderWithDiff('broker.code', t.broker?.code || '—', isActiveMatch)}
                     </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap">
+
+                    {/* 6 Highlighted Rate & Brokerage & Profit Columns */}
+                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-l border-r border-slate-200/80">
+                      {currSym}{t.rate.toFixed(2)}
+                    </td>
+                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-r border-slate-200/80">
                       {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
                     </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap">
+                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-r border-slate-200/80">
                       {t.brokerRate != null ? `${currSym}${t.brokerRate.toFixed(2)}` : '—'}
                     </td>
-                    <td
+                    <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-100/90 border-r border-slate-200/80">
+                      {t.clientBrokerage != null && t.clientBrokerage > 0 ? `${currSym}${t.clientBrokerage.toFixed(2)}` : `${currSym}0.00`}
+                    </td>
+                    <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-100/90 border-r border-slate-200/80">
+                      {t.brokerBrokerage != null && t.brokerBrokerage > 0 ? `${currSym}${t.brokerBrokerage.toFixed(2)}` : `${currSym}0.00`}
+                    </td>
+                    {/* Net Profit cell - commented out as requested */}
+                    {/* <td
                       className={cn(
-                        'font-mono font-bold text-right text-xs whitespace-nowrap',
-                        profit > 0 ? 'text-[var(--color-positive)]' :
-                        profit < 0 ? 'text-[var(--color-negative)]' :
+                        'font-mono font-bold text-right text-xs whitespace-nowrap bg-slate-100/90 border-r border-slate-200/80',
+                        netProfitPerShare > 0 ? 'text-[var(--color-positive)]' :
+                        netProfitPerShare < 0 ? 'text-[var(--color-negative)]' :
                         'text-[var(--color-charcoal)]'
                       )}
                     >
-                      {profit > 0 ? '+' : ''}{currSym}{profit.toFixed(2)}
-                    </td>
+                      {netProfitPerShare > 0 ? '+' : ''}{currSym}{netProfitPerShare.toFixed(2)}
+                    </td> */}
                     <td className="whitespace-nowrap">
                       <span
                         className={cn(
@@ -996,7 +1026,8 @@ export function TradesPageManager({
                   <div className="text-[10px] text-slate-500 font-normal">Buy: {visibleStats.buyQty.toLocaleString()} | Sell: {visibleStats.sellQty.toLocaleString()}</div>
                   <div>Net: {visibleStats.netQty > 0 ? `+${visibleStats.netQty.toLocaleString()}` : visibleStats.netQty.toLocaleString()}</div>
                 </td>
-                <td colSpan={5} className="py-2.5 px-3 text-right text-slate-500 font-normal">
+                {/* Visible Net P&L commented out as requested */}
+                {/* <td colSpan={5} className="py-2.5 px-3 text-right text-slate-500 font-normal">
                   Visible Net P&amp;L:
                 </td>
                 <td className="py-2.5 px-3 text-right font-mono font-bold">
@@ -1007,10 +1038,14 @@ export function TradesPageManager({
                       'text-slate-800'
                     )}
                   >
-                    {visibleStats.totalProfit > 0 ? '+' : ''}₹{visibleStats.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {visibleStats.totalProfit > 0 ? '+' : ''}
+                    {paginatedTrades.length > 0
+                      ? formatCurrencySymbol(paginatedTrades[0].script?.currency?.symbol, paginatedTrades[0].script?.currency?.code || paginatedTrades[0].currencyCode)
+                      : '$'}
+                    {visibleStats.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
-                </td>
-                <td colSpan={2} className="py-2.5 px-3"></td>
+                </td> */}
+                <td colSpan={9} className="py-2.5 px-3"></td>
               </tr>
             </tfoot>
           </table>
