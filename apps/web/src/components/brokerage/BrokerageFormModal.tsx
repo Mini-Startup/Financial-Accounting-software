@@ -482,13 +482,15 @@ export function BrokerageFormModal({
           </button>
         </div>
 
-        {/* Modal Body: overflow-hidden in ALL mode so popup NEVER has a scrollbar */}
-        <div
-          className={cn(
-            'card__body p-5 flex-1 flex flex-col min-h-0',
-            scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-4'
-          )}
-        >
+        {/* Form Wrap */}
+        <form id="brokerageForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          {/* Modal Body: overflow-hidden in ALL mode so popup NEVER has a scrollbar */}
+          <div
+            className={cn(
+              'card__body p-5 flex-1 flex flex-col min-h-0',
+              scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-4'
+            )}
+          >
           {/* Top Configuration Controls */}
           <div className="space-y-4 shrink-0 bg-[var(--color-snow)] p-4 rounded-xl border border-[var(--color-border-light)]">
             {/* Row 1: Applies To & Select Account */}
@@ -865,8 +867,8 @@ export function BrokerageFormModal({
               Cancel
             </button>
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
+              form="brokerageForm"
               disabled={isSubmitting || !accountId}
               className={cn(
                 'btn btn--primary text-xs py-2 px-5 flex items-center gap-1.5 shadow-xs cursor-pointer',
@@ -891,6 +893,7 @@ export function BrokerageFormModal({
             </button>
           </div>
         </div>
+        </form>
       </div>
     </div>
   );

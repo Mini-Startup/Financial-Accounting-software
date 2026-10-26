@@ -297,8 +297,9 @@ export function TradeFormModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-12 gap-5">
+        <form id="tradeForm" onSubmit={handleSave} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-12 gap-5">
             {/* Warning Banner if trade is locked */}
             {isLocked && (
               <div className="col-span-12 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
@@ -553,30 +554,30 @@ export function TradeFormModal({
               </div>
             </div>
           </div>
+          </div>
 
-        </div>
-
-        {/* Fixed Footer */}
-        <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
-          <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
-            disabled={isSaving || isLocked || !isFormValid}
-          >
-            {isSaving ? (
-              <>
-                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                <span>Saving…</span>
-              </>
-            ) : initialTrade ? (
-              'Update Trade'
-            ) : (
-              'Add Trade'
-            )}
-          </button>
-        </div>
+          {/* Fixed Footer */}
+          <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
+            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
+            <button
+              type="submit"
+              form="tradeForm"
+              className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
+              disabled={isSaving || isLocked || !isFormValid}
+            >
+              {isSaving ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span>Saving…</span>
+                </>
+              ) : initialTrade ? (
+                'Update Trade'
+              ) : (
+                'Add Trade'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

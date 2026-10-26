@@ -417,6 +417,17 @@ export function VoucherForm({
                             placeholder="0.00"
                             value={line.amount}
                             onChange={(e) => handleLineChange(line.id, 'amount', e.target.value)}
+                            onKeyDown={(e) => {
+                              // If on the last line and Tab (without shift) or Enter is pressed, auto-append balancing row if not already balanced
+                              if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
+                                if (index === lines.length - 1 && line.amount && parseFloat(line.amount) > 0) {
+                                  if (Math.abs(difference) >= 0.001) {
+                                    e.preventDefault();
+                                    handleAutoBalance();
+                                  }
+                                }
+                              }
+                            }}
                             className={cn(
                               "input text-xs py-1.5 font-mono w-full bg-white font-bold",
                               line.isDebit ? "text-red-700" : "text-emerald-700"
@@ -431,6 +442,7 @@ export function VoucherForm({
                       <div className="col-span-1 flex justify-end items-end pt-5">
                         <button
                           type="button"
+                          tabIndex={-1}
                           onClick={() => handleRemoveLine(line.id)}
                           disabled={lines.length <= 2 || saving}
                           className="p-1.5 text-slate-400 hover:text-red-600 disabled:opacity-20 transition-colors rounded hover:bg-red-50"

@@ -317,6 +317,18 @@ export function UniversalDatePicker({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               handleBlur();
+              if (isOpen) setIsOpen(false);
+            } else if (e.key === 'Tab') {
+              handleBlur();
+              if (isOpen) setIsOpen(false);
+            } else if (e.key === 'Escape') {
+              if (isOpen) {
+                e.preventDefault();
+                setIsOpen(false);
+              }
+            } else if (e.key === 'ArrowDown' && !isOpen) {
+              e.preventDefault();
+              openPicker();
             }
           }}
           placeholder={placeholder}
@@ -327,6 +339,7 @@ export function UniversalDatePicker({
         {(value || textValue) && !disabled && (
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => {
               onChange('');
               setTextValue('');
@@ -341,6 +354,7 @@ export function UniversalDatePicker({
 
         <button
           type="button"
+          tabIndex={-1}
           disabled={disabled}
           onClick={togglePicker}
           className="p-2 text-[var(--color-slate)] hover:text-[var(--color-forest)] transition-colors cursor-pointer select-none"
