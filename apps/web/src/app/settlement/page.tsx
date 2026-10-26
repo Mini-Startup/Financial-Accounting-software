@@ -9,6 +9,7 @@ import { SettlementActionBar } from '../../components/settlement/SettlementActio
 import { PositionSummaryTable } from '../../components/settlement/PositionSummaryTable';
 import { SettledTradesTable } from '../../components/settlement/SettledTradesTable';
 import { SettlementPreviewModal } from '../../components/settlement/SettlementPreviewModal';
+import { formatCurrencySymbol } from '@/utils/currency';
 import type {
   SettlementItem,
   SettlementRecord,
@@ -306,7 +307,7 @@ export default function SettlementPage() {
           : 0;
 
       netPnL += finalPnL;
-      const symbol = item.currencySymbol || (item.currencyCode === 'INR' ? '₹' : '$');
+      const symbol = formatCurrencySymbol(item.currencySymbol, item.currencyCode);
       pnlByCurr[symbol] = (pnlByCurr[symbol] || 0) + finalPnL;
     }
 

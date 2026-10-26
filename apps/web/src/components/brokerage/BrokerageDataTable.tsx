@@ -14,6 +14,7 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Trash2, Edit } from 'lucide-react';
+import { formatCurrencySymbol } from '@/utils/currency';
 import { BrokerageFormModal } from './BrokerageFormModal';
 
 const BROKERAGE_COLUMNS = [
@@ -324,6 +325,8 @@ export function BrokerageDataTable({
                   const accName = rule.account?.name || rule.account?.fldName || 'Unnamed';
                   const accCode = rule.account?.code || rule.account?.fldClient || '';
                   const isScriptSpecific = rule.scope === 'SCRIPT' && rule.script;
+                  const scriptObj = rule.script || scripts.find((s) => s.id === rule.scriptId);
+                  const currSym = formatCurrencySymbol(scriptObj?.currency?.symbol, scriptObj?.currency?.code);
                   const perUnit = rule.quantity > 0 ? (rule.brokerage / rule.quantity).toFixed(4) : '0';
 
                   return (
@@ -388,10 +391,10 @@ export function BrokerageDataTable({
                         {rule.quantity}
                       </td>
                       <td className="px-6 py-3.5 whitespace-nowrap text-xs text-right font-mono font-semibold text-slate-900">
-                        ₹{Number(rule.brokerage).toLocaleString()}
+                        {currSym}{Number(rule.brokerage).toLocaleString()}
                       </td>
                       <td className="px-6 py-3.5 whitespace-nowrap text-xs text-right font-mono text-blue-600 font-bold">
-                        ₹{perUnit}
+                        {currSym}{perUnit}
                       </td>
                       <td className="px-6 py-3.5 whitespace-nowrap text-right text-xs font-medium space-x-2">
                         <button

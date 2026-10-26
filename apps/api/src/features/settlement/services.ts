@@ -88,9 +88,23 @@ export class SettlementService {
       prisma.currency.findMany(),
     ]);
 
+    const resolveCurrencySymbol = (symbol?: string | null, code?: string | null): string => {
+      const cleanCode = (code || '').toUpperCase().trim();
+      const cleanSym = (symbol || '').trim();
+      if (cleanSym && cleanSym !== cleanCode && cleanSym !== 'USD' && cleanSym !== 'INR') {
+        return cleanSym;
+      }
+      if (cleanCode === 'USD' || cleanSym === 'USD') return '$';
+      if (cleanCode === 'INR' || cleanSym === 'INR') return '₹';
+      if (cleanCode === 'AED' || cleanSym === 'AED') return 'AED ';
+      if (cleanCode === 'EUR' || cleanSym === 'EUR') return '€';
+      if (cleanCode === 'GBP' || cleanSym === 'GBP') return '£';
+      return cleanSym || (cleanCode ? `${cleanCode} ` : '$');
+    };
+
     const currencySymbolMap = new Map<string, string>();
     for (const c of currencies) {
-      currencySymbolMap.set(c.code.toUpperCase(), c.symbol || c.code);
+      currencySymbolMap.set(c.code.toUpperCase(), resolveCurrencySymbol(c.symbol, c.code));
     }
 
     // Generate legs for both clients and brokers
@@ -111,6 +125,7 @@ export class SettlementService {
       type: 'BUY' | 'SELL';
       qty: number;
       rate: number;
+      marketLot: number;
     }> = [];
 
     for (const trade of trades) {
@@ -119,7 +134,9 @@ export class SettlementService {
       const brokerRate = trade.brokerRate ?? trade.rate;
 
       const currencyCode = (trade.currencyCode || trade.script.currency?.code || 'USD').toUpperCase();
-      const currencySymbol = currencySymbolMap.get(currencyCode) || trade.script.currency?.symbol || '$';
+      const currencySymbol =
+        currencySymbolMap.get(currencyCode) ||
+        resolveCurrencySymbol(trade.script.currency?.symbol, currencyCode);
 
       const derivedSecurityName = deriveSecurityName(
         trade.securityName,
@@ -129,6 +146,8 @@ export class SettlementService {
         trade.callPut,
         trade.strikePrice
       );
+
+      const lot = (trade.marketLot && trade.marketLot > 0) ? trade.marketLot : (trade.script?.lotSize || 1);
 
       // 1. Client leg
       legs.push({
@@ -148,6 +167,7 @@ export class SettlementService {
         type: trade.transactionType as 'BUY' | 'SELL',
         qty,
         rate: clientRate,
+        marketLot: lot,
       });
 
       // 2. Broker leg (if broker is present)
@@ -169,6 +189,7 @@ export class SettlementService {
           type: trade.transactionType === 'BUY' ? 'SELL' : 'BUY',
           qty,
           rate: brokerRate,
+          marketLot: lot,
         });
       }
     }
@@ -246,6 +267,7 @@ export class SettlementService {
       currencyCode: string;
       currencySymbol: string;
       expiry: string | null;
+      marketLot: number;
       buyQty: number;
       buyAvgRate: number;
       buyTotalAmount: number;
@@ -262,6 +284,7 @@ export class SettlementService {
 
     for (const legGroup of Array.from(groups.values())) {
       const firstLeg = legGroup[0];
+      const marketLot = firstLeg.marketLot || 1;
 
       let buyQty = 0;
       let buyVal = 0;
@@ -271,29 +294,32 @@ export class SettlementService {
       for (const leg of legGroup) {
         if (leg.type === 'BUY') {
           buyQty += leg.qty;
-          buyVal += leg.qty * leg.rate;
+          buyVal += leg.qty * leg.rate * (leg.marketLot || marketLot);
         } else {
           sellQty += leg.qty;
-          sellVal += leg.qty * leg.rate;
+          sellVal += leg.qty * leg.rate * (leg.marketLot || marketLot);
         }
       }
 
-      const buyAvgRate = buyQty > 0 ? buyVal / buyQty : 0;
-      const sellAvgRate = sellQty > 0 ? sellVal / sellQty : 0;
+      const totalBuyUnits = buyQty * marketLot;
+      const totalSellUnits = sellQty * marketLot;
+
+      const buyAvgRate = totalBuyUnits > 0 ? buyVal / totalBuyUnits : 0;
+      const sellAvgRate = totalSellUnits > 0 ? sellVal / totalSellUnits : 0;
 
       const netQty = buyQty - sellQty;
       const netVal = buyVal - sellVal;
 
       let realizedPnL = 0;
       if (buyQty >= sellQty) {
-        realizedPnL = (sellAvgRate - buyAvgRate) * sellQty;
+        realizedPnL = (sellAvgRate - buyAvgRate) * sellQty * marketLot;
       } else {
-        realizedPnL = (sellAvgRate - buyAvgRate) * buyQty;
+        realizedPnL = (sellAvgRate - buyAvgRate) * buyQty * marketLot;
       }
 
       let netAvgRate = 0;
       if (netQty !== 0) {
-        netAvgRate = Math.abs(netVal / netQty);
+        netAvgRate = Math.abs(netVal / (netQty * marketLot));
       }
 
       const secUpper = firstLeg.securityName.trim().toUpperCase();
@@ -302,7 +328,7 @@ export class SettlementService {
         closingRateMap.get(secUpper) ??
         null;
 
-      const unrealizedPnL = closingRate && netQty !== 0 ? netQty * (closingRate - netAvgRate) : 0;
+      const unrealizedPnL = closingRate && netQty !== 0 ? netQty * (closingRate - netAvgRate) * marketLot : 0;
       const grossPnL = realizedPnL + unrealizedPnL;
 
       summary.push({
@@ -319,6 +345,7 @@ export class SettlementService {
         currencyCode: firstLeg.currencyCode,
         currencySymbol: firstLeg.currencySymbol,
         expiry: firstLeg.expiry,
+        marketLot,
         buyQty,
         buyAvgRate: Number(buyAvgRate.toFixed(4)),
         buyTotalAmount: Number(buyVal.toFixed(2)),

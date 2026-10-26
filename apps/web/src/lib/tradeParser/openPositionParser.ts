@@ -1,4 +1,5 @@
 import { generateDubaiSecurityName } from '../../components/trades/tradeImportHelpers';
+import { formatCurrencySymbol } from '../../utils/currency';
 
 export interface OpenPositionParsedRow {
   clientCode: string;
@@ -125,7 +126,7 @@ export function processOpenPositionClosingRates(
     if (!scriptObj) errors.push(`Script with code '${row.commodityCode}' not found in database`);
 
     const currCode = scriptObj?.currency?.code || row.rawRow['CURRENCY'] || 'USD';
-    const currSym = scriptObj?.currency?.symbol || (currCode.toUpperCase() === 'INR' ? '₹' : '$');
+    const currSym = formatCurrencySymbol(scriptObj?.currency?.symbol, currCode);
 
     const item: ParsedClosingRateItem = {
       exchangeCode: row.exchange,

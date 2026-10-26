@@ -362,11 +362,11 @@ export function DubaiPreviewTable({
                 <th className="py-3 px-3">Bloomberg</th>
                 <th className="py-3 px-3 text-center">Side</th>
                 <th className="py-3 px-3 text-right font-bold">Qty</th>
-                <th className="py-3 px-3 text-right font-bold">Price</th>
+                <th className="py-3 px-3 text-right font-bold">Mkt Value</th>
 
-                {/* 5 Highlighted Columns with slightly darker color, keeping Mkt Value, Client Rate & Broker Rate together */}
+                {/* 5 Highlighted Columns: Price, Client Rate, Broker Rate, Client Brk, Broker Brk */}
                 <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-l border-r border-slate-300">
-                  Mkt Value
+                  Price
                 </th>
                 <th className="py-3 px-3 text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
                   Client Rate

@@ -10,6 +10,7 @@ import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 function todayISO() {
   const d = new Date();
@@ -87,7 +88,7 @@ export function TradeFormModal({
   const client = useMemo(() => (clients || []).find((c) => c.id === clientId), [clients, clientId]);
   const broker = useMemo(() => (brokers || []).find((b) => b.id === brokerId), [brokers, brokerId]);
 
-  const currSym = script?.currency?.symbol || '₹';
+  const currSym = formatCurrencySymbol(script?.currency?.symbol, script?.currency?.code);
 
   // Fetch brokerage rules whenever client, broker, or script changes
   useEffect(() => {
@@ -237,6 +238,7 @@ export function TradeFormModal({
           transactionType: qtyNum >= 0 ? 'BUY' : 'SELL',
           quantity: Math.abs(qtyNum),
           rate: rateNum,
+          marketLot: script?.lotSize || 1,
           remarks: initialTrade?.remarks || 'Manual Entry',
           source: initialTrade?.source || 'MANUAL',
         }),
@@ -429,7 +431,7 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : clientRule
-                    ? `₹${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
+                    ? `${currSym}${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
                     : 'Not set'}
                 </div>
                 <div className="text-xs text-[var(--color-slate)] text-right">
@@ -437,7 +439,7 @@ export function TradeFormModal({
                   {isLoadingRules
                     ? 'Loading…'
                     : brokerRule
-                    ? `₹${brokerRule.brokerage} / ${brokerRule.quantity} qty`
+                    ? `${currSym}${brokerRule.brokerage} / ${brokerRule.quantity} qty`
                     : 'From file charges / Not set'}
                 </div>
               </div>
@@ -470,7 +472,7 @@ export function TradeFormModal({
                       <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
                         <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                         <div className="leading-relaxed">
-                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market value directly.
+                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market rate directly.
                         </div>
                       </div>
                     ) : (
@@ -530,7 +532,8 @@ export function TradeFormModal({
                       </div>
                     </div>
 
-                    <div className={cn("border rounded-xl p-4",
+                    {/* Profit box - commented out as requested */}
+                    {/* <div className={cn("border rounded-xl p-4",
                       calc.profitTotal > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
                       calc.profitTotal < 0 ? 'bg-red-50 border-red-200' :
                       'bg-[var(--color-snow)] border-[var(--color-border-light)]'
@@ -548,7 +551,7 @@ export function TradeFormModal({
                       <p className="text-[11px] text-[var(--color-slate)] mt-1">
                         Market value {currSym}{calc.marketValue.toFixed(4)} • per-unit {currSym}{calc.profitPerUnit.toFixed(4)}
                       </p>
-                    </div>
+                    </div> */}
                   </div>
                 )}
               </div>

@@ -464,19 +464,8 @@ export class TradeImportService {
           brokerBrokerage: brokerCharges,
         });
 
-        const effectiveMktVal =
-          row.mktValue && Number(row.mktValue) > 0
-            ? Number(row.mktValue)
-            : calc.marketValue;
-
-        clientRate = side === 'BUY'
-          ? round(effectiveMktVal + calc.clientBrokerage)
-          : round(effectiveMktVal - calc.clientBrokerage);
-
-        brokerRate = side === 'BUY'
-          ? round(effectiveMktVal + calc.brokerBrokerage)
-          : round(effectiveMktVal - calc.brokerBrokerage);
-
+        clientRate = calc.clientRate;
+        brokerRate = calc.brokerRate;
         clientBrokerage = calc.clientBrokerage;
         brokerBrokerage = calc.brokerBrokerage;
         profitTotal = calc.profitTotal;

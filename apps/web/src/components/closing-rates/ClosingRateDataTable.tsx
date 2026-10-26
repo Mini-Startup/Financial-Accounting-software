@@ -17,6 +17,7 @@ import {
 } from '@/utils/tableFilter';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 const CLOSING_RATE_COLUMNS = [
   { key: 'rateDate', label: 'Date' },
@@ -90,26 +91,11 @@ export function ClosingRateDataTable({
   const formatDate = (dateString: string) => formatDateToDDMMYY(dateString);
 
   const getCurrencySymbol = (item: any) => {
-    if (item.script?.currency?.symbol) return item.script.currency.symbol;
-    if (item.script?.currency?.code) {
-      if (item.script.currency.code === 'INR') return '₹';
-      if (item.script.currency.code === 'USD') return '$';
-      if (item.script.currency.code === 'EUR') return '€';
-      if (item.script.currency.code === 'GBP') return '£';
-      if (item.script.currency.code === 'AED') return 'AED ';
-    }
-    if (item.currencyCode) {
-      if (item.currencyCode === 'INR') return '₹';
-      if (item.currencyCode === 'USD') return '$';
-      if (item.currencyCode === 'EUR') return '€';
-      if (item.currencyCode === 'GBP') return '£';
-      if (item.currencyCode === 'AED') return 'AED ';
-      return `${item.currencyCode} `;
-    }
-    const matchingScript = scripts.find((s) => s.id === item.scriptId);
-    if (matchingScript?.currency?.symbol) return matchingScript.currency.symbol;
-    if (matchingScript?.currency?.code === 'INR') return '₹';
-    return '$';
+    const matchingScript = item.script || scripts.find((s) => s.id === item.scriptId);
+    return formatCurrencySymbol(
+      matchingScript?.currency?.symbol || item.currencySymbol,
+      matchingScript?.currency?.code || item.currencyCode
+    );
   };
 
   // Search filter with column targeting + advanced conditions

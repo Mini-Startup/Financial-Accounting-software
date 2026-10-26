@@ -9,6 +9,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { AllScriptsBrokerageTable, type ScriptRuleRow } from './AllScriptsBrokerageTable';
 import { round } from '@/utils/brokerage';
+import { formatCurrencySymbol } from '@/utils/currency';
 import { cn } from '@/utils/cn';
 
 interface BrokerageFormModalProps {
@@ -87,6 +88,7 @@ export function BrokerageFormModal({
       shortName: s.shortName || s.symbol || s.name || 'Unnamed',
       fullName: s.fullName || s.name || '',
       exchangeCode: s.exchange?.code || s.exchangeCode || '—',
+      currencySymbol: formatCurrencySymbol(s.currency?.symbol, s.currency?.code),
       marketLot: s.lotSize && s.lotSize > 0 ? s.lotSize : 1, // READ ONLY
       mode: 'BOTH',
       bothQuantity: '1', // default 1, NOT market lot!
@@ -180,6 +182,8 @@ export function BrokerageFormModal({
     }
     return null;
   }, [sellQuantity, sellBrokerage]);
+
+  const currSym = formatCurrencySymbol(selectedScript?.currency?.symbol, selectedScript?.currency?.code);
 
   // Handle row updates in All Scripts table
   const handleRowChange = (updatedRow: ScriptRuleRow) => {
@@ -651,7 +655,7 @@ export function BrokerageFormModal({
                     </div>
 
                     <div className="form-field">
-                      <label className="form-label form-label--required">Brokerage (₹)</label>
+                      <label className="form-label form-label--required">Brokerage ({currSym})</label>
                       <input
                         type="number"
                         step="any"
@@ -669,11 +673,11 @@ export function BrokerageFormModal({
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs text-emerald-900">Per-Quantity Rate:</span>
                         <span className="text-xs text-emerald-800 font-mono">
-                          (₹{bothBrokerage} ÷ {bothQuantity} quantity)
+                          ({currSym}{bothBrokerage} ÷ {bothQuantity} quantity)
                         </span>
                       </div>
                       <div className="text-sm font-extrabold font-mono text-[var(--color-forest)]">
-                        ₹{bothPerUnit} / quantity
+                        {currSym}{bothPerUnit} / quantity
                       </div>
                     </div>
                   )}
@@ -716,7 +720,7 @@ export function BrokerageFormModal({
                         </div>
 
                         <div className="form-field">
-                          <label className="form-label text-[11px] text-emerald-900">Brokerage (₹)</label>
+                          <label className="form-label text-[11px] text-emerald-900">Brokerage ({currSym})</label>
                           <input
                             type="number"
                             step="any"
@@ -732,10 +736,10 @@ export function BrokerageFormModal({
                       {buyPerUnit && (
                         <div className="flex items-center justify-between text-xs font-mono pt-1.5 border-t border-emerald-200/60">
                           <span className="text-emerald-800 text-[11px]">
-                            (₹{buyBrokerage} ÷ {buyQuantity} qty)
+                            ({currSym}{buyBrokerage} ÷ {buyQuantity} qty)
                           </span>
                           <span className="font-extrabold text-emerald-900">
-                            ₹{buyPerUnit} / quantity
+                            {currSym}{buyPerUnit} / quantity
                           </span>
                         </div>
                       )}
@@ -777,7 +781,7 @@ export function BrokerageFormModal({
                         </div>
 
                         <div className="form-field">
-                          <label className="form-label text-[11px] text-rose-900">Brokerage (₹)</label>
+                          <label className="form-label text-[11px] text-rose-900">Brokerage ({currSym})</label>
                           <input
                             type="number"
                             step="any"
@@ -793,10 +797,10 @@ export function BrokerageFormModal({
                       {sellPerUnit && (
                         <div className="flex items-center justify-between text-xs font-mono pt-1.5 border-t border-rose-200/60">
                           <span className="text-rose-800 text-[11px]">
-                            (₹{sellBrokerage} ÷ {sellQuantity} qty)
+                            ({currSym}{sellBrokerage} ÷ {sellQuantity} qty)
                           </span>
                           <span className="font-extrabold text-rose-900">
-                            ₹{sellPerUnit} / quantity
+                            {currSym}{sellPerUnit} / quantity
                           </span>
                         </div>
                       )}

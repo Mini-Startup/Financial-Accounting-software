@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Plus, AlertCircle } from 'lucide-react';
 import { round } from '@/utils/brokerage';
+import { formatCurrencySymbol } from '@/utils/currency';
 import { CustomSelect } from '../ui/CustomSelect';
 
 export interface ScriptRuleRow {
@@ -10,6 +11,7 @@ export interface ScriptRuleRow {
   shortName: string;
   fullName: string;
   exchangeCode: string;
+  currencySymbol?: string;
   marketLot: number; // READ ONLY
   mode: 'BOTH' | 'SPLIT';
   bothQuantity: number | string;
@@ -121,6 +123,8 @@ export function AllScriptsBrokerageTable({
                     !isNaN(sellQ) && sellQ > 0 && !isNaN(sellB) && sellB >= 0
                       ? round(sellB / sellQ, 4).toFixed(4)
                       : null;
+
+                  const rowSym = formatCurrencySymbol(row.currencySymbol);
 
                   const handleDirectionChange = (val: string) => {
                     if (val === 'BOTH') {
@@ -242,7 +246,7 @@ export function AllScriptsBrokerageTable({
 
                             {bothPerUnit && (
                               <div className="text-[11px] font-mono font-bold text-[var(--color-forest)] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                ₹{bothPerUnit} / quantity
+                                {rowSym}{bothPerUnit} / quantity
                               </div>
                             )}
                           </div>
@@ -285,7 +289,7 @@ export function AllScriptsBrokerageTable({
                                 </div>
                                 {buyPerUnit && (
                                   <span className="font-mono text-[11px] font-bold text-emerald-800">
-                                    ₹{buyPerUnit} / qty
+                                    {rowSym}{buyPerUnit} / qty
                                   </span>
                                 )}
                                 <button
@@ -337,7 +341,7 @@ export function AllScriptsBrokerageTable({
                                 </div>
                                 {sellPerUnit && (
                                   <span className="font-mono text-[11px] font-bold text-rose-800">
-                                    ₹{sellPerUnit} / qty
+                                    {rowSym}{sellPerUnit} / qty
                                   </span>
                                 )}
                                 <button

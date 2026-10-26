@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { formatCurrencySymbol } from '@/utils/currency';
 
 export function CurrencyFormModal({
   initialData,
@@ -40,10 +41,16 @@ export function CurrencyFormModal({
         ? `${process.env.NEXT_PUBLIC_API_URL}/currencies/${initialData.id}`
         : `${process.env.NEXT_PUBLIC_API_URL}/currencies`;
 
+      const codeUpper = formData.code.trim().toUpperCase();
+      let cleanSymbol = formData.symbol.trim();
+      if (!cleanSymbol || cleanSymbol === codeUpper || cleanSymbol === 'USD' || cleanSymbol === 'INR') {
+        cleanSymbol = formatCurrencySymbol(null, codeUpper);
+      }
+
       const payload = {
-        code: formData.code.trim().toUpperCase(),
-        name: formData.name.trim(),
-        symbol: formData.symbol.trim(),
+        code: codeUpper,
+        name: formData.name.trim() || (codeUpper === 'INR' ? 'Indian Rupee' : codeUpper === 'USD' ? 'US Dollar' : codeUpper),
+        symbol: cleanSymbol,
         isActive: formData.isActive,
       };
 
@@ -88,9 +95,25 @@ export function CurrencyFormModal({
   };
 
   const handleChange = (e: any) => {
+    const field = e.target.name;
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setFormData((prev: any) => ({ ...prev, [e.target.name]: value }));
-  }
+
+    if (field === 'code') {
+      const upper = String(value).toUpperCase();
+      setFormData((prev: any) => {
+        const autoSym = formatCurrencySymbol(null, upper);
+        const shouldUpdateSym = !prev.symbol || prev.symbol === 'USD' || prev.symbol === 'INR' || prev.symbol === '$' || prev.symbol === '₹';
+        return {
+          ...prev,
+          code: value,
+          symbol: shouldUpdateSym ? autoSym : prev.symbol,
+        };
+      });
+      return;
+    }
+
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div
