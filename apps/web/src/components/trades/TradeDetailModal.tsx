@@ -3,6 +3,7 @@
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, TrendingUp, Cpu, Info, Pencil, Lock, ShieldCheck } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 export function TradeDetailModal({
   trade,
@@ -15,11 +16,7 @@ export function TradeDetailModal({
 }) {
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
 
-  const formattedDate = new Date(trade.tradeDate).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const formattedDate = formatDateToDDMMYY(trade.tradeDate);
   const profit = trade.profitTotal ?? 0;
 
   const isLocked = Boolean(

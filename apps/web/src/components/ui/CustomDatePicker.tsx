@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 export interface CustomDatePickerProps {
   value: string; // YYYY-MM-DD or DD/MM/YYYY or datetime string
@@ -116,12 +117,7 @@ export function CustomDatePicker({
   };
 
   const formatDisplay = (valStr: string): string => {
-    if (!valStr) return '';
-    const d = parseValueToDate(valStr);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    return formatDateToDDMMYY(valStr);
   };
 
   // Generate days grid for viewMonth & viewYear

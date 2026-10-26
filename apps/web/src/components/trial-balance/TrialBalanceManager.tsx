@@ -24,6 +24,7 @@ import { cn } from '@/utils/cn';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 export interface TrialBalanceAccountRow {
   id: string;
@@ -386,7 +387,7 @@ export function TrialBalanceManager({
           <h1 className="text-2xl font-bold font-serif text-black">FINANCIAL ACCOUNTING SOFTWARE</h1>
           <h2 className="text-lg font-bold text-gray-800 uppercase tracking-widest mt-1">Trial Balance Statement</h2>
           <p className="text-xs text-gray-600 mt-1">
-            As on Date: <strong>{toDate || new Date().toLocaleDateString('en-GB')}</strong> | Generated on: {new Date().toLocaleString()}
+            As on Date: <strong>{formatDateToDDMMYY(toDate || new Date())}</strong> | Generated on: {new Date().toLocaleString()}
           </p>
         </div>
       </div>
@@ -672,7 +673,7 @@ export function TrialBalanceManager({
               <UniversalDatePicker
                 value={toDate}
                 onChange={(d) => handleDateChange(d)}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD-MM-YY"
               />
             </div>
             {toDate && (

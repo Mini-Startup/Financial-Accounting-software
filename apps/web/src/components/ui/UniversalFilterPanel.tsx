@@ -173,7 +173,7 @@ export function UniversalFilterPanel({
                     <UniversalDatePicker
                       value={currentVal || ''}
                       onChange={(d) => handleUpdate(filter.key, d)}
-                      placeholder="YYYY-MM-DD"
+                      placeholder="DD-MM-YY"
                     />
                   </div>
                 </div>

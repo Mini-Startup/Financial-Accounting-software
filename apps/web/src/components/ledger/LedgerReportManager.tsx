@@ -10,6 +10,7 @@ import {
 import { cn } from '@/utils/cn';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface Account {
   id: string;
@@ -201,7 +202,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
     const rows = [
       ['Date', 'Particulars', 'Entry Type', 'Debit (Dr)', 'Credit (Cr)', 'Running Balance'],
       [
-        reportData.period.fromDate ? new Date(reportData.period.fromDate).toLocaleDateString('en-GB') : 'Initial',
+        reportData.period.fromDate ? formatDateToDDMMYY(reportData.period.fromDate) : 'Initial',
         'Opening Balance Brought Forward',
         'OPENING',
         '',
@@ -209,7 +210,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
         reportData.openingBalance.toFixed(2),
       ],
       ...filteredTransactions.map((tx) => [
-        new Date(tx.date).toLocaleDateString('en-GB'),
+        formatDateToDDMMYY(tx.date),
         `"${tx.particulars.replace(/"/g, '""')}"`,
         tx.entryType || tx.type,
         tx.amount < 0 ? Math.abs(tx.amount).toFixed(2) : '',
@@ -355,7 +356,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
               </div>
               <p className="text-[10px] text-slate-400 mt-1 font-medium">
                 {reportData.period.fromDate 
-                  ? `Brought forward before ${new Date(reportData.period.fromDate).toLocaleDateString('en-GB')}`
+                  ? `Brought forward before ${formatDateToDDMMYY(reportData.period.fromDate)}`
                   : 'Master base opening balance'}
               </p>
             </div>
@@ -391,7 +392,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
               </div>
               <p className="text-[10px] text-slate-400 mt-1 font-medium">
                 {reportData.period.toDate 
-                  ? `Balance as of ${new Date(reportData.period.toDate).toLocaleDateString('en-GB')}`
+                  ? `Balance as of ${formatDateToDDMMYY(reportData.period.toDate)}`
                   : 'Current running balance'}
               </p>
             </div>
@@ -411,7 +412,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                 <UniversalDatePicker
                   value={fromDate}
                   onChange={(d) => handleDateChange(d, toDate)}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="DD-MM-YY"
                 />
               </div>
 
@@ -421,7 +422,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                 <UniversalDatePicker
                   value={toDate}
                   onChange={(d) => handleDateChange(fromDate, d)}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="DD-MM-YY"
                 />
               </div>
 
@@ -530,7 +531,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                 </h3>
                 <span className="text-xs text-slate-500 font-medium">
                   {reportData.period.fromDate 
-                    ? `${new Date(reportData.period.fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to ${new Date(reportData.period.toDate || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                    ? `${formatDateToDDMMYY(reportData.period.fromDate)} to ${formatDateToDDMMYY(reportData.period.toDate || new Date())}`
                     : 'Complete Account History'}
                 </span>
               </div>
@@ -557,7 +558,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                   <tr className="bg-slate-50/60 italic text-slate-600 font-medium">
                     <td className="p-3 font-mono text-xs">
                       {reportData.period.fromDate 
-                        ? new Date(reportData.period.fromDate).toLocaleDateString('en-GB')
+                        ? formatDateToDDMMYY(reportData.period.fromDate)
                         : '—'}
                     </td>
                     <td className="p-3 font-semibold" colSpan={2}>
@@ -585,7 +586,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                       return (
                         <tr key={tx.id || idx} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-3 font-mono text-xs text-slate-700 font-medium">
-                            {new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {formatDateToDDMMYY(tx.date)}
                           </td>
                           <td className="p-3 font-medium text-slate-800 max-w-[380px]">
                             <div className="flex items-center gap-2">

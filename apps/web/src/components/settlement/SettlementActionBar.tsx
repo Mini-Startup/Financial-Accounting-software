@@ -3,6 +3,7 @@
 import { Calculator, Zap, Trash2, Layers, RefreshCw } from 'lucide-react';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import type { SettlementRecord } from './types';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface SettlementActionBarProps {
   selectedSettlementId: string;
@@ -39,15 +40,7 @@ export function SettlementActionBar({
 }: SettlementActionBarProps) {
   const currentSettlement = settlementsList.find((s) => s.id === selectedSettlementId);
 
-  const formatDateStr = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '';
-    }
-  };
+  const formatDateStr = (dateStr: string) => formatDateToDDMMYY(dateStr);
 
   return (
     <div className="space-y-4">
@@ -62,7 +55,7 @@ export function SettlementActionBar({
               <UniversalDatePicker
                 value={reportDate}
                 onChange={(d) => setReportDate(d)}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD-MM-YY"
               />
             </div>
 

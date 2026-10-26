@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Zap, Check, RefreshCw } from 'lucide-react';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import type { SettlementPreviewData } from './types';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface SettlementPreviewModalProps {
   data: SettlementPreviewData;
@@ -22,15 +23,7 @@ export function SettlementPreviewModal({
 
   if (typeof document === 'undefined') return null;
 
-  const formatDateStr = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '';
-    }
-  };
+  const formatDateStr = (dateStr: string) => formatDateToDDMMYY(dateStr);
 
   const cfTrades = data.preview.filter((t) => t.tradeType === 'CARRY_FORWARD');
   const bfTrades = data.preview.filter((t) => t.tradeType === 'BACK_FORWARD');

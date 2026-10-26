@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { formatDateForInput, normalizeYear } from '@/utils/dateUtils';
+import { formatDateForInput, formatDateToDDMMYY, formatTypingDate, normalizeYear, parseDateDetailed } from '@/utils/dateUtils';
 
 export interface UniversalDatePickerProps {
   value: string; // YYYY-MM-DD or flexible format
@@ -30,14 +30,14 @@ export function UniversalDatePicker({
   onChange,
   minDate,
   maxDate,
-  placeholder = 'YYYY-MM-DD or DD/MM/YYYY',
+  placeholder = 'DD-MM-YY',
   disabled = false,
   className,
   id,
   error,
 }: UniversalDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [textValue, setTextValue] = useState(value || '');
+  const [textValue, setTextValue] = useState(() => formatDateToDDMMYY(value));
   const [localError, setLocalError] = useState<string | null>(null);
   const [coords, setCoords] = useState<Coords | null>(null);
 
@@ -48,7 +48,7 @@ export function UniversalDatePicker({
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    setTextValue(value || '');
+    setTextValue(formatDateToDDMMYY(value));
     setLocalError(null);
   }
 
@@ -162,6 +162,65 @@ export function UniversalDatePicker({
     };
   }, [isOpen]);
 
+  // Handle input change: auto-format as digits are typed without forcing the user to type hyphens
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!raw.trim()) {
+      setTextValue('');
+      setLocalError(null);
+      onChange('');
+      return;
+    }
+
+    // Auto-format digits into DD-MM-YY (user doesn't need to type hyphens)
+    const formatted = formatTypingDate(raw);
+    setTextValue(formatted);
+
+    // If 6 or 8 digits typed, or complete DD-MM-YY format with separators
+    const digits = raw.replace(/\D/g, '');
+    const hasThreeParts = formatted.split(/[-/.]/).length === 3;
+
+    if (digits.length >= 6 || (hasThreeParts && digits.length >= 5)) {
+      const result = parseDateDetailed(formatted);
+      if (!result.isValid) {
+        setLocalError(result.error || 'Invalid date (DD-MM-YY)');
+        onChange('');
+      } else if (result.iso) {
+        if (minDate && result.iso < formatDateForInput(minDate)) {
+          setLocalError(`Date cannot be before ${formatDateToDDMMYY(minDate)}`);
+          onChange('');
+        } else if (maxDate && result.iso > formatDateForInput(maxDate)) {
+          setLocalError(`Date cannot be after ${formatDateToDDMMYY(maxDate)}`);
+          onChange('');
+        } else {
+          setLocalError(null);
+          onChange(result.iso);
+        }
+      }
+    } else {
+      // In the middle of typing digits (e.g. "21" or "21-05")
+      // Check if partial day or month typed so far is already clearly invalid
+      const parts = formatted.split(/[-/.]/);
+      if (parts[0] && parts[0].length === 2) {
+        const d = parseInt(parts[0], 10);
+        if (d < 1 || d > 31) {
+          setLocalError('Day must be between 01 and 31');
+          onChange('');
+          return;
+        }
+      }
+      if (parts[1] && parts[1].length === 2) {
+        const m = parseInt(parts[1], 10);
+        if (m < 1 || m > 12) {
+          setLocalError('Month must be between 01 and 12');
+          onChange('');
+          return;
+        }
+      }
+      setLocalError(null);
+    }
+  };
+
   // Handle typing blur & smart year expansion
   const handleBlur = () => {
     if (!textValue.trim()) {
@@ -170,34 +229,27 @@ export function UniversalDatePicker({
       return;
     }
 
-    const norm = formatDateForInput(textValue);
-    if (!norm) {
-      setLocalError('Invalid date format');
+    const result = parseDateDetailed(textValue);
+    if (!result.isValid || !result.iso) {
+      setLocalError(result.error || 'Invalid date (DD-MM-YY)');
+      onChange('');
       return;
     }
 
-    const [yStr, mStr, dStr] = norm.split('-');
-    const yNum = normalizeYear(yStr);
-
-    if (!yNum) {
-      setLocalError('Year must be between 2000 and 2099');
+    if (minDate && result.iso < formatDateForInput(minDate)) {
+      setLocalError(`Date cannot be before ${formatDateToDDMMYY(minDate)}`);
+      onChange('');
       return;
     }
-
-    const formatted = `${yNum}-${mStr}-${dStr}`;
-
-    if (minDate && formatted < formatDateForInput(minDate)) {
-      setLocalError(`Date cannot be before ${minDate}`);
-      return;
-    }
-    if (maxDate && formatted > formatDateForInput(maxDate)) {
-      setLocalError(`Date cannot be after ${maxDate}`);
+    if (maxDate && result.iso > formatDateForInput(maxDate)) {
+      setLocalError(`Date cannot be after ${formatDateToDDMMYY(maxDate)}`);
+      onChange('');
       return;
     }
 
     setLocalError(null);
-    setTextValue(formatted);
-    onChange(formatted);
+    setTextValue(formatDateToDDMMYY(result.iso));
+    onChange(result.iso);
   };
 
   // Calendar Days generator
@@ -247,8 +299,10 @@ export function UniversalDatePicker({
     <div ref={containerRef} className={cn('relative flex flex-col gap-1 w-full', className)}>
       <div
         className={cn(
-          'flex items-center bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] shadow-xs transition-all duration-150 focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20',
-          activeError && 'border-[var(--color-negative)] ring-red-100',
+          'flex items-center bg-white border rounded-[var(--radius-md)] shadow-xs transition-all duration-150',
+          activeError
+            ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-950'
+            : 'border-[var(--color-border-medium)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20',
           disabled && 'opacity-60 bg-slate-50 cursor-not-allowed'
         )}
       >
@@ -258,7 +312,7 @@ export function UniversalDatePicker({
           type="text"
           value={textValue}
           disabled={disabled}
-          onChange={(e) => setTextValue(e.target.value)}
+          onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -266,10 +320,11 @@ export function UniversalDatePicker({
             }
           }}
           placeholder={placeholder}
+          maxLength={10}
           className="w-full h-[36px] px-3 text-xs font-mono tabular-nums text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)] outline-none bg-transparent"
         />
 
-        {value && !disabled && (
+        {(value || textValue) && !disabled && (
           <button
             type="button"
             onClick={() => {
@@ -277,7 +332,7 @@ export function UniversalDatePicker({
               setTextValue('');
               setLocalError(null);
             }}
-            className="p-1 text-[var(--color-slate)] hover:text-[var(--color-negative)] rounded cursor-pointer"
+            className="p-1 text-[var(--color-slate)] hover:text-rose-600 rounded cursor-pointer"
             title="Clear date"
           >
             <X className="w-3.5 h-3.5" />
@@ -296,8 +351,8 @@ export function UniversalDatePicker({
       </div>
 
       {activeError && (
-        <span className="flex items-center gap-1 text-[11px] text-[var(--color-negative)] font-medium">
-          <AlertCircle className="w-3 h-3 shrink-0" />
+        <span className="flex items-center gap-1.5 text-[11px] text-rose-600 font-semibold mt-0.5">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
           <span>{activeError}</span>
         </span>
       )}
@@ -387,7 +442,7 @@ export function UniversalDatePicker({
                     type="button"
                     onClick={() => {
                       onChange(item.dateStr);
-                      setTextValue(item.dateStr);
+                      setTextValue(formatDateToDDMMYY(item.dateStr));
                       setLocalError(null);
                       setIsOpen(false);
                     }}

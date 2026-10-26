@@ -12,6 +12,7 @@ import {
   resolveClientRule,
   round,
 } from '@/utils/brokerage';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface NormalPreviewTableProps {
   totalRows: number;
@@ -424,7 +425,7 @@ export function NormalPreviewTable({
                         <td className="py-3 px-3 font-mono text-slate-600 font-semibold">{row.tradeNumber || '—'}</td>
 
                         {/* Date */}
-                        <td className="py-3 px-3 font-mono text-slate-700">{row.tradeDate || '—'}</td>
+                        <td className="py-3 px-3 font-mono text-slate-700">{formatDateToDDMMYY(row.tradeDate) || '—'}</td>
 
                         {/* Script */}
                         <td className="py-3 px-3">

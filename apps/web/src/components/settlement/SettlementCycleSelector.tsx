@@ -3,6 +3,7 @@
 import { Layers, RefreshCw } from 'lucide-react';
 import type { SettlementRecord } from './types';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface SettlementCycleSelectorProps {
   selectedSettlementId: string;
@@ -19,15 +20,7 @@ export function SettlementCycleSelector({
   onRefresh,
   isLoading,
 }: SettlementCycleSelectorProps) {
-  const formatDateStr = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '';
-    }
-  };
+  const formatDateStr = (dateStr: string) => formatDateToDDMMYY(dateStr);
 
   const cycleOptions = [
     { value: 'LIVE', label: '⚡ Live / Open Positions (Unsettled Trades)' },

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { calculateTradeRates, type TradeRateResult } from '@/utils/brokerage';
-import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
+import { validateExpiryAgainstTradeDate, formatDateForInput } from '@/utils/dateUtils';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { X, AlertCircle, Lock, Check } from 'lucide-react';
@@ -196,9 +196,22 @@ export function TradeFormModal({
       return;
     }
 
-    if (expiryDate && date && !validateExpiryAgainstTradeDate(date, expiryDate)) {
-      toast.error('Expiry date cannot be earlier than Trade date');
+    if (!date || !formatDateForInput(date)) {
+      toast.error('Please enter a valid Trade Date (DD-MM-YY)');
       return;
+    }
+
+    if (expiryDate) {
+      const expNorm = formatDateForInput(expiryDate);
+      if (!expNorm) {
+        toast.error('Please enter a valid Expiry Date (DD-MM-YY)');
+        return;
+      }
+      const dateErr = validateExpiryAgainstTradeDate(date, expiryDate);
+      if (dateErr) {
+        toast.error(dateErr);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -270,9 +283,9 @@ export function TradeFormModal({
           onClose();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm"
     >
-      <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[88vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         {/* Header */}
         <div className="card__header bg-[var(--color-snow)] shrink-0">
           <div>
@@ -337,7 +350,7 @@ export function TradeFormModal({
                   <UniversalDatePicker
                     value={date}
                     onChange={(newDate) => setDate(newDate)}
-                    placeholder="YYYY-MM-DD"
+                    placeholder="DD-MM-YY"
                   />
                 </div>
 
@@ -346,7 +359,7 @@ export function TradeFormModal({
                   <UniversalDatePicker
                     value={expiryDate}
                     onChange={(newDate) => setExpiryDate(newDate)}
-                    placeholder="YYYY-MM-DD"
+                    placeholder="DD-MM-YY"
                   />
                 </div>
               </div>

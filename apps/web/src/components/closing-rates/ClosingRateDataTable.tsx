@@ -16,6 +16,7 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 const CLOSING_RATE_COLUMNS = [
   { key: 'rateDate', label: 'Date' },
@@ -86,10 +87,7 @@ export function ClosingRateDataTable({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const formatDate = (dateString: string) => formatDateToDDMMYY(dateString);
 
   const getCurrencySymbol = (item: any) => {
     if (item.script?.currency?.symbol) return item.script.currency.symbol;

@@ -292,7 +292,7 @@ export function ClosingRateFormModal({
                 <UniversalDatePicker
                   value={expiry}
                   onChange={(val) => setExpiry(val)}
-                  placeholder="Select expiry date..."
+                  placeholder="DD-MM-YY"
                 />
               </div>
 

@@ -308,6 +308,27 @@ export class TradesService {
     if (!data.tradeDate || isNaN(Date.parse(data.tradeDate))) {
       throw new BadRequestException('A valid Trade Date is required');
     }
+
+    const rawTradeDate = String(data.tradeDate).trim();
+    const tradeParts = rawTradeDate.split(/[-/.]/).map(Number);
+    if (tradeParts.length >= 3) {
+      let y = tradeParts[0];
+      let m = tradeParts[1];
+      let d = tradeParts[2];
+      if (y < 100) { // DD-MM-YY
+        d = tradeParts[0];
+        m = tradeParts[1];
+        y = tradeParts[2] + (tradeParts[2] < 100 ? 2000 : 0);
+      }
+      if (m < 1 || m > 12 || d < 1 || d > 31) {
+        throw new BadRequestException('Invalid Trade Date: Month must be between 01-12 and Day must be between 01-31');
+      }
+      const testD = new Date(Date.UTC(y, m - 1, d));
+      if (testD.getUTCFullYear() !== y || testD.getUTCMonth() !== m - 1 || testD.getUTCDate() !== d) {
+        throw new BadRequestException(`Invalid Trade Date: Day ${d} is not valid for month ${m}`);
+      }
+    }
+
     const tradeDateObj = parseFlexibleDate(data.tradeDate);
     const tradeYear = tradeDateObj.getFullYear();
     if (tradeYear < 2000 || tradeYear > 2099) {
@@ -315,6 +336,26 @@ export class TradesService {
     }
 
     if (data.expiry) {
+      const rawExpiry = String(data.expiry).trim();
+      const expParts = rawExpiry.split(/[-/.]/).map(Number);
+      if (expParts.length >= 3) {
+        let y = expParts[0];
+        let m = expParts[1];
+        let d = expParts[2];
+        if (y < 100) { // DD-MM-YY
+          d = expParts[0];
+          m = expParts[1];
+          y = expParts[2] + (expParts[2] < 100 ? 2000 : 0);
+        }
+        if (m < 1 || m > 12 || d < 1 || d > 31) {
+          throw new BadRequestException('Invalid Expiry Date: Month must be between 01-12 and Day must be between 01-31');
+        }
+        const testExpD = new Date(Date.UTC(y, m - 1, d));
+        if (testExpD.getUTCFullYear() !== y || testExpD.getUTCMonth() !== m - 1 || testExpD.getUTCDate() !== d) {
+          throw new BadRequestException(`Invalid Expiry Date: Day ${d} is not valid for month ${m}`);
+        }
+      }
+
       const expiryDateObj = parseFlexibleDate(data.expiry);
       const expYear = expiryDateObj.getFullYear();
       if (expYear < 2000 || expYear > 2099) {

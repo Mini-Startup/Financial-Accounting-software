@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { cn } from '@/utils/cn';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { cn } from '@/utils/cn';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface SettledTradesTableProps {
   trades: any[];
@@ -139,7 +140,7 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                         {t.tradeNumber}
                       </td>
                       <td className="py-2.5 px-3 font-mono text-slate-600">
-                        {new Date(t.tradeDate).toLocaleDateString('en-GB')}
+                        {formatDateToDDMMYY(t.tradeDate)}
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span

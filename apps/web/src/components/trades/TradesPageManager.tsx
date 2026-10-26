@@ -22,6 +22,7 @@ import {
 import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 type DateFilterMode = 'ALL' | 'DATE' | 'MONTH' | 'RANGE';
 
@@ -870,7 +871,7 @@ export function TradesPageManager({
                       />
                     </td>
                     <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
-                      {renderWithDiff('tradeDate', new Date(t.tradeDate).toLocaleDateString('en-GB'), isActiveMatch)}
+                      {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
                     </td>
                     <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">
                       {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}

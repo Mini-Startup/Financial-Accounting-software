@@ -11,6 +11,7 @@ import {
   resolveClientRule,
   round,
 } from '@/utils/brokerage';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 export interface DubaiTableRowProps {
   row: DubaiParsedTrade;
@@ -72,8 +73,8 @@ export function DubaiTableRow({
   const isBuy = (row.buySellFlag || '').toUpperCase().startsWith('B') || row.buySellFlag === '1';
   const side: 'BUY' | 'SELL' = isBuy ? 'BUY' : 'SELL';
 
-  const cleanTradeDate = row.tradeDate ? row.tradeDate.split(' ')[0] : '—';
-  const cleanExpiryDate = row.expiryDate ? row.expiryDate.split(' ')[0] : '—';
+  const cleanTradeDate = row.tradeDate ? formatDateToDDMMYY(row.tradeDate) : '—';
+  const cleanExpiryDate = row.expiryDate ? formatDateToDDMMYY(row.expiryDate) : '—';
 
   // ── Calculation ──────────────────────────────────────────────────────────
   const qtyNum = Math.abs(parseFloat(String(row.qty || 0))) || 0;

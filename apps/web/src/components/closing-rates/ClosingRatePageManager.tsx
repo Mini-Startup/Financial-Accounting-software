@@ -761,7 +761,7 @@ export function ClosingRatePageManager({
             <UniversalDatePicker
               value={importDate}
               onChange={(d) => setImportDate(d)}
-              placeholder="YYYY-MM-DD"
+              placeholder="DD-MM-YY"
             />
             <p className="text-xs text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
           </div>

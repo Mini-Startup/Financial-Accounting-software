@@ -7,6 +7,7 @@ import { cn } from '@/utils/cn';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface Account {
   id: string;
@@ -313,7 +314,7 @@ export function VoucherForm({
                 <UniversalDatePicker
                   value={date}
                   onChange={(d) => setDate(d)}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="DD-MM-YY"
                   disabled={saving}
                 />
               </div>
@@ -535,7 +536,7 @@ export function VoucherForm({
                   return (
                     <tr key={v.id} className="hover:bg-slate-50/50">
                       <td className="text-xs font-semibold text-[var(--color-charcoal)]">
-                        {new Date(v.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {formatDateToDDMMYY(v.date)}
                       </td>
                       <td>
                         <span
