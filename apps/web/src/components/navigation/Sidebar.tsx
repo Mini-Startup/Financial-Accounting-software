@@ -26,6 +26,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { usePermissions } from "@/context/AuthPermissionsContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,10 +34,19 @@ interface ChildItem {
   name: string;
   path: string;
   upcoming?: boolean;
+  feature?: string;
+  permission?: { feature: string; action: string };
   icon: React.ComponentType<any>;
   /** true when this child is itself an expandable sub-group */
   subGroup?: boolean;
-  children?: Array<{ name: string; path: string; upcoming?: boolean; icon: React.ComponentType<any> }>;
+  children?: Array<{
+    name: string;
+    path: string;
+    upcoming?: boolean;
+    feature?: string;
+    permission?: { feature: string; action: string };
+    icon: React.ComponentType<any>;
+  }>;
 }
 
 interface NavSection {
@@ -60,13 +70,13 @@ const sections: NavSection[] = [
     label: "Master",
     icon: Sliders,
     children: [
-      { name: "Broker",    path: "/brokers",       icon: ShieldCheckIcon },
-      { name: "Clients",   path: "/clients",       icon: Users },
-      { name: "Scripts",   path: "/scripts",       icon: ScrollText },
-      { name: "Exchanges", path: "/exchanges",     icon: Globe },
-      { name: "Currencies", path: "/currencies",   icon: Coins },
-      { name: "Brokerage", path: "/brokerage",     icon: Percent },
-      { name: "Others",    path: "/account-master", icon: Layers },
+      { name: "Broker",    path: "/brokers",       icon: ShieldCheckIcon, feature: "BROKERS" },
+      { name: "Clients",   path: "/clients",       icon: Users,           feature: "CLIENTS" },
+      { name: "Scripts",   path: "/scripts",       icon: ScrollText,      feature: "SCRIPTS" },
+      { name: "Exchanges", path: "/exchanges",     icon: Globe,           feature: "EXCHANGES" },
+      { name: "Currencies", path: "/currencies",   icon: Coins,           feature: "CURRENCIES" },
+      { name: "Brokerage", path: "/brokerage",     icon: Percent,         feature: "BROKERAGE" },
+      { name: "Others",    path: "/account-master", icon: Layers,          feature: "ACCOUNT_MASTER" },
     ],
   },
   {
@@ -74,17 +84,16 @@ const sections: NavSection[] = [
     label: "Data",
     icon: FolderOpen,
     children: [
-      { name: "Trades",        path: "/trades",        icon: ArrowUpDown },
-      { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp },
+      { name: "Trades",        path: "/trades",        icon: ArrowUpDown,  feature: "TRADES" },
+      { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp,   feature: "CLOSING_RATES" },
       {
         name: "Import Files",
         path: "#",
         icon: FileSpreadsheet,
         subGroup: true,
         children: [
-          { name: "Trade Import",          path: "/trades?import=true",                 icon: FileSpreadsheet },
-          { name: "Open Position Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
-          // { name: "Margine File Imports",  path: _comingSoon("margine-file-imports"), upcoming: true },
+          { name: "Trade Import",         path: "/trades?import=true",        icon: FileSpreadsheet, permission: { feature: "TRADES", action: "IMPORT" } },
+          { name: "Open Position Import", path: "/closing-rates?import=true", icon: TrendingUp,     permission: { feature: "CLOSING_RATES", action: "IMPORT" } },
         ],
       },
     ],
@@ -94,12 +103,7 @@ const sections: NavSection[] = [
     label: "Reports",
     icon: Coins,
     children: [
-      { name: "Sattelment Reports",     path: "/settlement",                         icon: Scale },
-      // { name: "Brokerage Report",       path: _comingSoon("brokerage-report"), upcoming: true },
-      // { name: "Cleint wise / Script Wise", path: _comingSoon("client-wise-script-wise"), upcoming: true },
-      // { name: "Broker wise / Script Wise", path: _comingSoon("broker-wise-script-wise"), upcoming: true },
-      // { name: "Script Wise / Cleint",   path: _comingSoon("script-wise-client"), upcoming: true },
-      // { name: "Script Wise / Broker",   path: _comingSoon("script-wise-broker"), upcoming: true },
+      { name: "Sattelment Reports", path: "/settlement", icon: Scale, feature: "SETTLEMENT" },
     ],
   },
   {
@@ -107,18 +111,17 @@ const sections: NavSection[] = [
     label: "Financial",
     icon: Wallet,
     children: [
-      { name: "Ledger Report",             path: "/ledger",                               icon: BookText },
-      { name: "Voucher Entry",             path: "/vouchers",                             icon: Receipt },
-      { name: "Trial Balance",             path: "/trial-balance",                        icon: Scale },
-      // { name: "Collection Book",           path: _comingSoon("collection-book"), upcoming: true },
-      // { name: "Cash Book",                 path: _comingSoon("cash-book"), upcoming: true },
-      // { name: "Bank Book",                 path: _comingSoon("bank-book"), upcoming: true },
-      // { name: "JV / Contra Register",      path: _comingSoon("jv-contra-register"), upcoming: true },
-      // { name: "Payment / Receipt Register",path: _comingSoon("payment-receipt-register"), upcoming: true },
-      // { name: "Margine Report",            path: _comingSoon("margine-report"), upcoming: true },
-      // { name: "Expance Register",          path: _comingSoon("expance-register"), upcoming: true },
-      // { name: "Profit & Loss",             path: _comingSoon("profit-loss"), upcoming: true },
-      // { name: "Balancesheet",              path: _comingSoon("balancesheet"), upcoming: true },
+      { name: "Ledger Report", path: "/ledger",        icon: BookText, feature: "LEDGER" },
+      { name: "Voucher Entry", path: "/vouchers",      icon: Receipt,  feature: "VOUCHERS" },
+      { name: "Trial Balance", path: "/trial-balance", icon: Scale,    feature: "TRIAL_BALANCE" },
+    ],
+  },
+  {
+    id: "admin",
+    label: "Administration",
+    icon: ShieldCheckIcon,
+    children: [
+      { name: "Users & Roles", path: "/users", icon: Users, feature: "USER_MANAGEMENT" },
     ],
   },
 ];
@@ -147,6 +150,7 @@ function ShieldCheckIcon(props: React.ComponentProps<"svg">) {
 export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { hasFeature, hasPermission, roleName, userName } = usePermissions();
 
   // Collapsible logic state
   const [isLocked, setIsLocked] = React.useState(true);
@@ -159,8 +163,43 @@ export function Sidebar() {
     data: true,
     reports: true,
     financial: true,
+    admin: true,
     "import-files": true,
   });
+
+  const filteredSections = React.useMemo(() => {
+    return sections
+      .map((sec) => {
+        const filteredChildren = sec.children
+          .map((child) => {
+            if (child.subGroup && child.children) {
+              const validSub = child.children.filter((sub) => {
+                if (sub.permission) {
+                  return hasPermission(sub.permission.feature, sub.permission.action);
+                }
+                if (sub.feature) {
+                  return hasFeature(sub.feature);
+                }
+                return true;
+              });
+              if (validSub.length === 0) return null;
+              return { ...child, children: validSub };
+            }
+
+            if (child.permission) {
+              if (!hasPermission(child.permission.feature, child.permission.action)) return null;
+            } else if (child.feature) {
+              if (!hasFeature(child.feature)) return null;
+            }
+            return child;
+          })
+          .filter(Boolean) as ChildItem[];
+
+        if (filteredChildren.length === 0) return null;
+        return { ...sec, children: filteredChildren };
+      })
+      .filter(Boolean) as NavSection[];
+  }, [hasFeature, hasPermission]);
 
   React.useEffect(() => {
     const saved = localStorage.getItem("sidebar-locked");
@@ -329,7 +368,7 @@ export function Sidebar() {
           </Link>
 
           {/* Collapsible Sections */}
-          {sections.map((section) => {
+          {filteredSections.map((section) => {
             const sectionOpen = openSections[section.id];
             const sectionActive = isSectionActive(section);
 
@@ -475,11 +514,14 @@ export function Sidebar() {
           {isExpanded && (
             <div className="flex flex-col min-w-0 transition-all duration-200">
               <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
-                My Account
+                {userName || "My Account"}
               </span>
-              <span className="text-xs text-[var(--sidebar-text-muted)] truncate">
-                Settings & Profile
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-leaf)] shrink-0" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)] truncate">
+                  {roleName}
+                </span>
+              </div>
             </div>
           )}
         </div>

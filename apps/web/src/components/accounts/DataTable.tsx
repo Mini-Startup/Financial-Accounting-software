@@ -17,6 +17,7 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { cn } from '@/utils/cn';
+import { apiFetch } from '../../utils/apiClient';
 
 const TABLE_COLUMNS = [
   { key: 'code', label: 'Code / ID' },
@@ -30,10 +31,14 @@ export function DataTable({
   accounts: initialAccounts,
   groupName,
   entityLabel,
+  canEdit = true,
+  canDelete = true,
 }: {
   accounts: any[];
   groupName: string;
   entityLabel: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [accountsList, setAccountsList] = useState<any[]>(initialAccounts);
@@ -158,6 +163,12 @@ export function DataTable({
   };
 
   const handleDeleteSingle = (id: string) => {
+    if (!canDelete) {
+      toast.error('Permission Denied', {
+        description: 'You do not have permission to delete records.',
+      });
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       title: `Delete ${entityLabel}`,
@@ -165,13 +176,13 @@ export function DataTable({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
             toast.success(`${entityLabel} deleted successfully`);
             router.refresh();
-          } else {
+          } else if (res.status !== 403) {
             toast.error('Failed to delete account');
           }
         } catch {
@@ -182,6 +193,12 @@ export function DataTable({
   };
 
   const handleBulkDelete = () => {
+    if (!canDelete) {
+      toast.error('Permission Denied', {
+        description: 'You do not have permission to delete records.',
+      });
+      return;
+    }
     const count = selectedIds.size;
     if (count === 0) return;
     setConfirmDialog({
@@ -195,7 +212,7 @@ export function DataTable({
           const ids = Array.from(selectedIds);
           await Promise.all(
             ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+              apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
                 method: 'DELETE',
               })
             )
@@ -266,7 +283,7 @@ export function DataTable({
           isFindReplaceOpen={isFindReplaceOpen}
           onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
           selectedCount={selectedIds.size}
-          onBulkDelete={handleBulkDelete}
+          onBulkDelete={canDelete ? handleBulkDelete : undefined}
           onClearSelection={() => setSelectedIds(new Set())}
           isDeleting={isDeleting}
           currentPage={currentPage}
@@ -392,20 +409,24 @@ export function DataTable({
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setEditingAccount(acc)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors rounded-md hover:bg-slate-100"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSingle(acc.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-md hover:bg-red-50"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => setEditingAccount(acc)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors rounded-md hover:bg-slate-100"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteSingle(acc.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-md hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

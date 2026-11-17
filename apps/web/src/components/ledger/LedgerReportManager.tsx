@@ -28,6 +28,8 @@ interface LedgerTransaction {
   type: string;
   entryType: string;
   referenceId?: string;
+  settlementId?: string | null;
+  settlementName?: string | null;
   amount: number;
   credit: number;
   debit: number;
@@ -88,7 +90,9 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
       if (fDate) params.set('fromDate', fDate);
       if (tDate) params.set('toDate', tDate);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ledger-report?${params.toString()}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ledger-report?${params.toString()}`, {
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data = await res.json();
         setReportData(data);
@@ -593,13 +597,13 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                               <span className="truncate" title={tx.particulars}>
                                 {tx.particulars}
                               </span>
-                              {tx.referenceId && tx.entryType === 'SETTLEMENT' && (
+                              {(tx.settlementId || (tx.referenceId && tx.entryType === 'SETTLEMENT')) && (
                                 <a
-                                  href={`/settlement?settlementId=${tx.referenceId}&search=${encodeURIComponent(reportData.account.code)}`}
+                                  href={`/settlement?settlementId=${tx.settlementId || tx.referenceId}&search=${encodeURIComponent(reportData.account.code)}`}
                                   className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors shrink-0 print:hidden"
                                   title="View settlement trades for this account"
                                 >
-                                  <span>View Settlement</span>
+                                  <span>{tx.settlementName ? `Settlement: ${tx.settlementName}` : 'View Settlement'}</span>
                                   <ArrowUpRight className="w-3 h-3" />
                                 </a>
                               )}

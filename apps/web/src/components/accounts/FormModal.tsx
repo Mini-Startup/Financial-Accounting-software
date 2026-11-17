@@ -8,6 +8,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { toast } from 'sonner';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { apiFetch } from '../../utils/apiClient';
 
 export function FormModal({
   initialData,
@@ -65,7 +66,7 @@ export function FormModal({
     if (!initialAccounts || initialAccounts.length === 0) {
       const fetchAccounts = async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
           if (res.ok) {
             const data = await res.json();
             setExistingAccounts(data);
@@ -104,7 +105,7 @@ export function FormModal({
     if (groupName === 'Sundry Debtors') {
       const fetchDirectClients = async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?group=Sundry Debtors&directOnly=true`);
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?group=Sundry Debtors&directOnly=true`);
           if (res.ok) {
             const data = await res.json();
             // Filter out current client if editing
@@ -157,7 +158,7 @@ export function FormModal({
         groupName: groupName,
       };
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

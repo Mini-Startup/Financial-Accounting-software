@@ -20,6 +20,8 @@ interface SettlementActionBarProps {
   activeTab: 'SUMMARY' | 'TRADES';
   setActiveTab: (tab: 'SUMMARY' | 'TRADES') => void;
   settledTradesCount: number;
+  canExecuteSettlement?: boolean;
+  canDeleteSettlement?: boolean;
 }
 
 export function SettlementActionBar({
@@ -37,6 +39,8 @@ export function SettlementActionBar({
   activeTab,
   setActiveTab,
   settledTradesCount,
+  canExecuteSettlement = true,
+  canDeleteSettlement = true,
 }: SettlementActionBarProps) {
   const currentSettlement = settlementsList.find((s) => s.id === selectedSettlementId);
 
@@ -78,20 +82,22 @@ export function SettlementActionBar({
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={onOpenPreview}
-                disabled={isExecutingSettlement || !hasGenerated}
-                className="btn btn--primary h-[38px] px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Preview and execute automated CF, BF, and Settlement cycle"
-              >
-                {isExecutingSettlement ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Zap className="w-3.5 h-3.5" />
-                )}
-                <span>Generate CF / BF / Settlement</span>
-              </button>
+              {canExecuteSettlement && (
+                <button
+                  type="button"
+                  onClick={onOpenPreview}
+                  disabled={isExecutingSettlement || !hasGenerated}
+                  className="btn btn--primary h-[38px] px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Preview and execute automated CF, BF, and Settlement cycle"
+                >
+                  {isExecutingSettlement ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5" />
+                  )}
+                  <span>Generate CF / BF / Settlement</span>
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -119,7 +125,7 @@ export function SettlementActionBar({
               Read-only Finalized Record
             </span>
 
-            {isNewestSettlement(selectedSettlementId) && currentSettlement && (
+            {isNewestSettlement(selectedSettlementId) && currentSettlement && canDeleteSettlement && (
               <button
                 type="button"
                 onClick={() => onDeleteSettlement(currentSettlement)}

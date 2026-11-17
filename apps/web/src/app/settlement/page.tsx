@@ -10,6 +10,8 @@ import { PositionSummaryTable } from '../../components/settlement/PositionSummar
 import { SettledTradesTable } from '../../components/settlement/SettledTradesTable';
 import { SettlementPreviewModal } from '../../components/settlement/SettlementPreviewModal';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { usePermissions } from '@/context/AuthPermissionsContext';
+import { apiFetch } from '@/utils/apiClient';
 import type {
   SettlementItem,
   SettlementRecord,
@@ -18,6 +20,10 @@ import type {
 } from '../../components/settlement/types';
 
 export default function SettlementPage() {
+  const { hasPermission } = usePermissions();
+  const canDeleteSettlement = hasPermission('SETTLEMENT', 'DELETE');
+  const canExecuteSettlement = hasPermission('SETTLEMENT', 'EXECUTE');
+
   const [reportDate, setReportDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<SettlementItem[]>([]);
@@ -47,7 +53,7 @@ export default function SettlementPage() {
   const fetchSettlementsList = async () => {
     setIsLoadingSettlements(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements`);
+      const res = await apiFetch('/settlement/settlements');
       if (res.ok) {
         const data = await res.json();
         setSettlementsList(data);
@@ -79,12 +85,12 @@ export default function SettlementPage() {
   const fetchSettlementSummary = async (date: string, settlementId: string = 'LIVE') => {
     let url = '';
     if (settlementId === 'LIVE') {
-      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=LIVE&date=${date}`;
+      url = `/settlement?settlementId=LIVE&date=${date}`;
     } else {
-      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=${settlementId}`;
+      url = `/settlement?settlementId=${settlementId}`;
     }
 
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (res.ok) {
       const data = await res.json();
       setSummaryData(data);
@@ -92,7 +98,7 @@ export default function SettlementPage() {
       return data;
     } else {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to generate settlement summary');
+      throw new Error(errData.error || errData.message || 'Failed to generate settlement summary');
     }
   };
 
@@ -125,9 +131,7 @@ export default function SettlementPage() {
       return null;
     }
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements/${settlementId}`
-      );
+      const res = await apiFetch(`/settlement/settlements/${settlementId}`);
       if (res.ok) {
         const data = await res.json();
         setSettlementDetail(data);
@@ -182,7 +186,7 @@ export default function SettlementPage() {
 
     setIsExecutingSettlement(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/preview`, {
+      const res = await apiFetch('/settlement/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closingRateDate: reportDate }),
@@ -214,7 +218,7 @@ export default function SettlementPage() {
     if (!reportDate) return;
     setIsExecutingSettlement(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/execute`, {
+      const res = await apiFetch('/settlement/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closingRateDate: reportDate }),
@@ -250,8 +254,8 @@ export default function SettlementPage() {
     if (!deleteConfirm) return;
     setIsDeletingSettlement(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements/${deleteConfirm.settlementId}`,
+      const res = await apiFetch(
+        `/settlement/settlements/${deleteConfirm.settlementId}`,
         {
           method: 'DELETE',
         }
@@ -259,16 +263,16 @@ export default function SettlementPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to delete settlement');
+        throw new Error(err.message || err.error || 'Failed to delete settlement');
       }
 
       const data = await res.json();
       toast.success(
         `"${data.settlementName}" deleted. Removed ${
-          data.deletedGeneratedCount + data.deletedBfUnsettledCount
-        } generated trades, ${data.untaggedTradesCount} trades un-tagged, ${
+          data.deletedGeneratedCount
+        } generated trades, ${data.untaggedTradesCount} trades reopened, ${
           data.deletedLedgerCount
-        } ledger entries removed.`
+        } ledger entries wiped clean.`
       );
       setDeleteConfirm(null);
       setSelectedSettlementId('LIVE');
@@ -389,6 +393,8 @@ export default function SettlementPage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         settledTradesCount={settledTradesCount}
+        canDeleteSettlement={canDeleteSettlement}
+        canExecuteSettlement={canExecuteSettlement}
       />
 
       {/* Content depending on active tab */}

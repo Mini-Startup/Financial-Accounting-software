@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { settlementService } from './services';
+import { requirePermission } from '../../middleware/auth';
 
 const router = Router();
 
-router.get('/settlements', async (_req, res, next) => {
+router.get('/settlements', requirePermission('SETTLEMENT', 'VIEW'), async (_req, res, next) => {
   try {
     const result = await settlementService.listSettlements();
     res.json(result);
@@ -12,16 +13,17 @@ router.get('/settlements', async (_req, res, next) => {
   }
 });
 
-router.get('/settlements/:id', async (req, res, next) => {
+router.get('/settlements/:id', requirePermission('SETTLEMENT', 'VIEW'), async (req, res, next) => {
   try {
-    const result = await settlementService.getSettlement(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await settlementService.getSettlement(id);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/preview', async (req, res, next) => {
+router.post('/preview', requirePermission('SETTLEMENT', 'PREVIEW'), async (req, res, next) => {
   try {
     const { closingRateDate } = req.body || {};
     if (!closingRateDate) {
@@ -35,7 +37,7 @@ router.post('/preview', async (req, res, next) => {
   }
 });
 
-router.post('/execute', async (req, res, next) => {
+router.post('/execute', requirePermission('SETTLEMENT', 'EXECUTE'), async (req, res, next) => {
   try {
     const { closingRateDate } = req.body || {};
     if (!closingRateDate) {
@@ -49,7 +51,7 @@ router.post('/execute', async (req, res, next) => {
   }
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('SETTLEMENT', 'VIEW'), async (req, res, next) => {
   try {
     const dateParam = (req.query.date as string) || (req.query.toDate as string);
     const fromDate = (req.query.fromDate as string) || dateParam;
@@ -63,7 +65,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/adjust-trades', async (req, res, next) => {
+router.post('/adjust-trades', requirePermission('SETTLEMENT', 'EXECUTE'), async (req, res, next) => {
   try {
     const { reportDate, adjustments } = req.body || {};
     if (!reportDate) {
@@ -77,12 +79,13 @@ router.post('/adjust-trades', async (req, res, next) => {
   }
 });
 
-router.delete('/settlements/:id', async (req, res, next) => {
+router.delete('/settlements/:id', requirePermission('SETTLEMENT', 'DELETE'), async (req, res, next) => {
   try {
-    const result = await settlementService.deleteSettlement(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await settlementService.deleteSettlement(id);
     res.json(result);
   } catch (err: any) {
-    if (err.message && (err.message.includes('Only the most recent') || err.message.includes('not found'))) {
+    if (err.message && (err.message.includes('Only the most recent') || err.message.includes('not found') || err.message.includes('Cannot delete'))) {
       res.status(400).json({ error: err.message });
       return;
     }

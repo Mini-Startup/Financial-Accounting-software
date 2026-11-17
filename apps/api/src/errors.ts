@@ -23,6 +23,20 @@ export class NotFoundException extends HttpException {
   }
 }
 
+export class UnauthorizedException extends HttpException {
+  constructor(message = 'Unauthorized') {
+    super(401, message);
+    this.name = 'UnauthorizedException';
+  }
+}
+
+export class ForbiddenException extends HttpException {
+  constructor(message = 'Forbidden') {
+    super(403, message);
+    this.name = 'ForbiddenException';
+  }
+}
+
 export class ConflictException extends HttpException {
   constructor(message = 'Conflict') {
     super(409, message);

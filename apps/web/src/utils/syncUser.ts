@@ -17,11 +17,16 @@ export async function syncUser(): Promise<void> {
 
     if (email) {
       try {
-        const defaultRole = await prisma.role.upsert({
-          where: { name: 'User' },
-          update: {},
-          create: { name: 'User' },
+        let defaultRole = await prisma.role.findUnique({
+          where: { name: 'Employee' },
         });
+        if (!defaultRole) {
+          defaultRole = await prisma.role.upsert({
+            where: { name: 'Employee' },
+            update: {},
+            create: { name: 'Employee', description: 'Standard operational employee.' },
+          });
+        }
 
         await prisma.user.create({
           data: {
@@ -31,7 +36,7 @@ export async function syncUser(): Promise<void> {
             roleId: defaultRole.id,
           },
         });
-        console.log(`Clerk User ${user.id} dynamically synced into Prisma DB.`);
+        console.log(`Clerk User ${user.id} dynamically synced into Prisma DB with role: ${defaultRole.name}`);
       } catch (e) {
         console.error("Failed to sync Clerk User to DB:", e);
       }

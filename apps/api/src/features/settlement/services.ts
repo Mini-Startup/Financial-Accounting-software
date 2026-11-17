@@ -382,7 +382,7 @@ export class SettlementService {
   async deleteSettlement(settlementId: string) {
     // 1. Verify it is the newest settlement (LIFO: only the latest can be deleted)
     const allSettlements = await prisma.settlement.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ toDate: 'desc' }, { createdAt: 'desc' }],
       take: 1,
     });
 
@@ -405,31 +405,43 @@ export class SettlementService {
       throw new Error('Settlement not found.');
     }
 
+    // 2. Forward Dependency Check: Ensure no BF trades created by this settlement have been settled in a subsequent cycle
+    const forwardSettledCount = await prisma.trade.count({
+      where: {
+        originSettlementId: settlementId,
+        tradeType: 'BACK_FORWARD',
+        settlementId: { not: null },
+      },
+    });
+
+    if (forwardSettledCount > 0) {
+      throw new Error(
+        `Cannot delete "${settlement.name}" because its carry-forward positions have already been settled in a subsequent settlement. Please delete that settlement first.`
+      );
+    }
+
     return await prisma.$transaction(
       async (tx) => {
-        // 2. Delete unsettled BF trades that were created by this settlement
-        //    These have settlementId = null, tradeType = BACK_FORWARD, and remarks containing the settlement name
-        const deletedBfUnsettled = await tx.trade.deleteMany({
-          where: {
-            settlementId: null,
-            tradeType: 'BACK_FORWARD',
-            remarks: {
-              contains: settlement.name,
-            },
-          },
-        });
-
-        // 3. Delete all generated trades (CF, BF, SETTLEMENT) that belong to this settlement
+        // 3. Delete all generated trades created by this settlement
+        //    Using originSettlementId (exact) plus legacy fallbacks
         const deletedGenerated = await tx.trade.deleteMany({
           where: {
-            settlementId: settlementId,
-            tradeType: {
-              in: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'],
-            },
+            OR: [
+              { originSettlementId: settlementId },
+              {
+                settlementId: settlementId,
+                tradeType: { in: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'] },
+              },
+              {
+                settlementId: null,
+                tradeType: 'BACK_FORWARD',
+                remarks: { contains: settlement.name },
+              },
+            ],
           },
         });
 
-        // 4. Un-tag original trades: set settlementId = null for remaining trades tagged with this settlement
+        // 4. Un-tag original trades: revert settlementId = null for remaining trades tagged with this settlement
         const untagged = await tx.trade.updateMany({
           where: {
             settlementId: settlementId,
@@ -439,11 +451,17 @@ export class SettlementService {
           },
         });
 
-        // 5. Delete ledger entries that reference this settlement
+        // 5. Delete all ledger entries that reference this settlement (via settlementId, referenceId, or legacy description)
         const deletedLedger = await tx.ledger.deleteMany({
           where: {
-            referenceId: settlementId,
-            entryType: 'SETTLEMENT',
+            OR: [
+              { settlementId: settlementId },
+              { referenceId: settlementId },
+              {
+                entryType: 'SETTLEMENT',
+                description: { contains: settlement.name },
+              },
+            ],
           },
         });
 
@@ -453,7 +471,6 @@ export class SettlementService {
         });
 
         return {
-          deletedBfUnsettledCount: deletedBfUnsettled.count,
           deletedGeneratedCount: deletedGenerated.count,
           untaggedTradesCount: untagged.count,
           deletedLedgerCount: deletedLedger.count,

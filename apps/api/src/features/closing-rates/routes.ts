@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { closingRatesService } from './services';
+import { requirePermission } from '../../middleware/auth';
 
 const router = Router();
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('CLOSING_RATES', 'CREATE'), async (req, res, next) => {
   try {
     const result = await closingRatesService.create(req.body);
     res.status(201).json(result);
   } catch (err) { next(err); }
 });
 
-router.post('/bulk-import', async (req, res, next) => {
+router.post('/bulk-import', requirePermission('CLOSING_RATES', 'IMPORT'), async (req, res, next) => {
   try {
     const { rates } = req.body || {};
     if (!Array.isArray(rates) || rates.length === 0) {
@@ -22,7 +23,7 @@ router.post('/bulk-import', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/check-duplicates', async (req, res, next) => {
+router.post('/check-duplicates', requirePermission('CLOSING_RATES', 'IMPORT'), async (req, res, next) => {
   try {
     const { rates } = req.body || {};
     if (!Array.isArray(rates) || rates.length === 0) {
@@ -34,7 +35,7 @@ router.post('/check-duplicates', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('CLOSING_RATES', 'VIEW'), async (req, res, next) => {
   try {
     const { search, date, fromDate, toDate, scriptId, exchangeId } = req.query as {
       search?: string;
@@ -49,30 +50,34 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requirePermission('CLOSING_RATES', 'VIEW'), async (req, res, next) => {
   try {
-    const result = await closingRatesService.findOne(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await closingRatesService.findOne(id);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requirePermission('CLOSING_RATES', 'EDIT'), async (req, res, next) => {
   try {
-    const result = await closingRatesService.update(req.params.id, req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await closingRatesService.update(id, req.body);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('CLOSING_RATES', 'EDIT'), async (req, res, next) => {
   try {
-    const result = await closingRatesService.update(req.params.id, req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await closingRatesService.update(id, req.body);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('CLOSING_RATES', 'DELETE'), async (req, res, next) => {
   try {
-    const result = await closingRatesService.remove(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await closingRatesService.remove(id);
     res.json(result);
   } catch (err) { next(err); }
 });

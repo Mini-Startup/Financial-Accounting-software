@@ -6,6 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 import { syncUser } from "../utils/syncUser";
 import { Sidebar } from "../components/navigation/Sidebar";
 import { TradeImportProvider } from "../components/trades/TradeImportContext";
+import { AuthPermissionsProvider } from "../context/AuthPermissionsContext";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -58,18 +59,20 @@ export default async function RootLayout({
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-screen bg-[var(--bg-page)]">
-                <Suspense fallback={<div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />}>
-                  <Sidebar />
-                </Suspense>
-                <div className="flex-1 flex flex-col min-h-screen min-w-0">
-                  <main className="flex-1 p-3 md:p-4 lg:p-5 overflow-y-auto">
-                    <div className="max-w-[1700px] w-full mx-auto">
-                      {children}
-                    </div>
-                  </main>
+              <AuthPermissionsProvider>
+                <div className="flex min-h-screen bg-[var(--bg-page)]">
+                  <Suspense fallback={<div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />}>
+                    <Sidebar />
+                  </Suspense>
+                  <div className="flex-1 flex flex-col min-h-screen min-w-0">
+                    <main className="flex-1 p-3 md:p-4 lg:p-5 overflow-y-auto">
+                      <div className="max-w-[1700px] w-full mx-auto">
+                        {children}
+                      </div>
+                    </main>
+                  </div>
                 </div>
-              </div>
+              </AuthPermissionsProvider>
             )}
           </TradeImportProvider>
           <Toaster position="top-right" richColors closeButton />

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { DataTable } from './DataTable';
 import { FormModal } from './FormModal';
 import { SearchBar } from './SearchBar';
+import { usePermissions } from '../../context/AuthPermissionsContext';
 
 export function EntityPageManager({
   title,
@@ -16,6 +17,17 @@ export function EntityPageManager({
   accounts: any[];
 }) {
   const [isAdding, setIsAdding] = useState(false);
+  const { hasPermission } = usePermissions();
+
+  const feature = entityLabel.toLowerCase().includes('broker')
+    ? 'BROKERS'
+    : entityLabel.toLowerCase().includes('client')
+    ? 'CLIENTS'
+    : 'ACCOUNT_MASTER';
+
+  const canCreate = hasPermission(feature, 'CREATE') || hasPermission('ACCOUNT_MASTER', 'CREATE');
+  const canEdit = hasPermission(feature, 'EDIT') || hasPermission('ACCOUNT_MASTER', 'EDIT');
+  const canDelete = hasPermission(feature, 'DELETE') || hasPermission('ACCOUNT_MASTER', 'DELETE');
 
   return (
     <div className="w-full space-y-6">
@@ -27,16 +39,24 @@ export function EntityPageManager({
         
         <div className="flex items-center gap-3">
           <SearchBar />
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary"
-          >
-            + Add {entityLabel}
-          </button>
+          {canCreate && (
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="btn btn--primary"
+            >
+              + Add {entityLabel}
+            </button>
+          )}
         </div>
       </div>
 
-      <DataTable accounts={accounts} groupName={groupName} entityLabel={entityLabel} />
+      <DataTable
+        accounts={accounts}
+        groupName={groupName}
+        entityLabel={entityLabel}
+        canEdit={canEdit}
+        canDelete={canDelete}
+      />
 
       {isAdding && (
         <FormModal 

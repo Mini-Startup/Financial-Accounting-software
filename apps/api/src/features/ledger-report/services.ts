@@ -41,6 +41,14 @@ export class LedgerReportService {
         : Promise.resolve({ _sum: { amount: 0 } }),
       prisma.ledger.findMany({
         where: whereClause,
+        include: {
+          settlement: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
         orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
       }),
     ]);
@@ -74,6 +82,8 @@ export class LedgerReportService {
         entryType: entry.entryType,
         type: entry.entryType,
         referenceId: entry.referenceId,
+        settlementId: entry.settlementId,
+        settlementName: entry.settlement?.name || null,
         amount,
         credit,
         debit,

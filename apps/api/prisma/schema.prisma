@@ -26,12 +26,45 @@ model User {
 }
 
 model Role {
-  id   String @id @default(uuid())
-  name String @unique
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system")
 
-  users User[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt      @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
 
   @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  feature     String           @map("feature")
+  action      String           @map("action")
+  name        String           @map("name")
+  description String?          @map("description")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  roles       RolePermission[]
+
+  @@unique([feature, action], name: "uq_feature_action")
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId], name: "uq_role_permission")
+  @@map("role_permissions")
 }
 
 // ─────────────────────────────────────────────
@@ -220,31 +253,34 @@ model Trade {
   vat             Float?   @map("vat")
 
   // Trade classification
-  tradeType       String   @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
-  settlementId    String?  @map("settlement_id")
+  tradeType          String      @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
+  settlementId       String?     @map("settlement_id")
+  originSettlementId String?     @map("origin_settlement_id")
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt      @map("updated_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt      @map("updated_at")
 
   // Calculations
-  brokerId        String?  @map("broker_id")
-  clientRate      Float?   @map("client_rate")
-  brokerRate      Float?   @map("broker_rate")
-  clientBrokerage Float?   @map("client_brokerage")
-  brokerBrokerage Float?   @map("broker_brokerage")
-  profitTotal     Float?   @map("profit_total")
+  brokerId           String?     @map("broker_id")
+  clientRate         Float?      @map("client_rate")
+  brokerRate         Float?      @map("broker_rate")
+  clientBrokerage    Float?      @map("client_brokerage")
+  brokerBrokerage    Float?      @map("broker_brokerage")
+  profitTotal        Float?      @map("profit_total")
 
-  account    Account     @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
-  broker     Account?    @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
-  script     Script      @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
-  exchange   Exchange    @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
-  settlement Settlement? @relation(fields: [settlementId], references: [id])
+  account          Account     @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
+  broker           Account?    @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
+  script           Script      @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
+  exchange         Exchange    @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  settlement       Settlement? @relation("SettlementTrades", fields: [settlementId], references: [id])
+  originSettlement Settlement? @relation("SettlementOriginTrades", fields: [originSettlementId], references: [id])
 
   @@index([accountId])
   @@index([brokerId])
   @@index([scriptId])
   @@index([exchangeId])
   @@index([settlementId])
+  @@index([originSettlementId])
   @@index([tradeDate])
   @@index([settlementId, tradeDate])
   @@index([tradeType])
@@ -325,7 +361,9 @@ model Settlement {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
-  trades Trade[]
+  trades        Trade[]  @relation("SettlementTrades")
+  originTrades  Trade[]  @relation("SettlementOriginTrades")
+  ledgerEntries Ledger[]
 
   @@map("settlements")
 }
@@ -335,19 +373,24 @@ model Settlement {
 // ─────────────────────────────────────────────
 
 model Ledger {
-  id          String   @id @default(uuid())
-  accountId   String   @map("account_id")
-  date        DateTime @map("date")
-  amount      Float    @map("amount")
-  entryType   String   @map("entry_type")       // SETTLEMENT, VOUCHER
-  description String?  @map("description")
-  referenceId String?  @map("reference_id")     // settlementId or voucherId
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  id           String      @id @default(uuid())
+  accountId    String      @map("account_id")
+  settlementId String?     @map("settlement_id")
+  date         DateTime    @map("date")
+  amount       Float       @map("amount")
+  entryType    String      @map("entry_type")       // SETTLEMENT, VOUCHER
+  description  String?     @map("description")
+  referenceId  String?     @map("reference_id")     // settlementId or voucherId
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt      @map("updated_at")
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  settlement   Settlement? @relation(fields: [settlementId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
+  @@index([settlementId])
+  @@index([entryType])
+  @@index([referenceId])
   @@index([date])
   @@index([accountId, date])
   @@map("ledger_entries")

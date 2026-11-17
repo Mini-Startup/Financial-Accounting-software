@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { tradeImportService } from './services';
+import { requirePermission } from '../../middleware/auth';
 import fs from 'fs';
 import path from 'path';
 
 const router = Router();
 
-router.post('/trade-import/preview', async (req, res, next) => {
+router.post('/trade-import/preview', requirePermission('TRADES', 'IMPORT'), async (req, res, next) => {
   try {
     if (!req.body || !req.body.rows) {
       res.status(400).json({ statusCode: 400, message: 'Rows are required in body' });
@@ -16,7 +17,7 @@ router.post('/trade-import/preview', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/trade-import/confirm', async (req, res, next) => {
+router.post('/trade-import/confirm', requirePermission('TRADES', 'IMPORT'), async (req, res, next) => {
   try {
     if (!req.body || !req.body.rows) {
       res.status(400).json({ statusCode: 400, message: 'Rows are required in body' });
