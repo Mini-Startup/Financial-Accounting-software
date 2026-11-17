@@ -9,6 +9,7 @@ import { TradeImportProvider } from "../components/trades/TradeImportContext";
 import { AuthPermissionsProvider } from "../context/AuthPermissionsContext";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { Agentation } from "agentation";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -40,7 +41,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <body className="font-body text-[var(--color-charcoal)] bg-[var(--bg-page)] min-h-screen">
+      <body className="font-body text-charcoal bg-(--bg-page) min-h-screen">
         <ClerkProvider>
           <TradeImportProvider>
             {!userId ? (
@@ -77,6 +78,7 @@ export default async function RootLayout({
           </TradeImportProvider>
           <Toaster position="top-right" richColors closeButton />
         </ClerkProvider>
+         <Agentation />
       </body>
     </html>
   );
