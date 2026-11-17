@@ -118,18 +118,18 @@ export function CurrencyFormModal({
   return (
     <div
       onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-100000 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
     >
-      <div ref={modalRef} className="card w-[500px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div ref={modalRef} className="card w-125 max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)]">
+        <div className="card__header bg-snow">
           <div className="flex items-center gap-2">
             <h2 className="card__title">
               {initialData ? 'Edit Currency' : 'Create New Currency'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -155,7 +155,7 @@ export function CurrencyFormModal({
               </div>
             </div>
             
-            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
+            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-border-light">
                <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
                <button type="submit" form="currencyForm" disabled={isSubmitting} className="btn btn--primary">
                  {isSubmitting ? 'Saving...' : 'Save Currency'}

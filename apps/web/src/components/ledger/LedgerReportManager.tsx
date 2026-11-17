@@ -245,13 +245,13 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
     const abs = Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if (amount < 0) {
       return (
-        <span className="font-mono font-semibold text-[var(--color-negative)]">
+        <span className="font-mono font-semibold text-negative">
           ₹{abs} <span className="text-[10px] font-bold">Dr</span>
         </span>
       );
     } else if (amount > 0) {
       return (
-        <span className="font-mono font-semibold text-[var(--color-forest)]">
+        <span className="font-mono font-semibold text-(--color-forest)">
           ₹{abs} <span className="text-[10px] font-bold">Cr</span>
         </span>
       );
@@ -263,11 +263,11 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
   return (
     <div className="space-y-6 print:p-0 print:space-y-4">
       {/* Top Header & Account Dropdown */}
-      <div className="card border border-[var(--color-border-light)] bg-white p-5 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0">
+      <div className="card border border-border-light bg-white p-5 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold font-display flex items-center gap-2 text-slate-900">
-              <BookOpen className="w-6 h-6 text-[var(--color-primary)] shrink-0" />
+              <BookOpen className="w-6 h-6 text-(--color-primary) shrink-0" />
               Ledger Statement
             </h1>
             <p className="text-xs text-slate-500 mt-0.5 print:hidden">
@@ -289,7 +289,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                 className="btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3"
                 title="Print passbook statement"
               >
-                <Printer className="w-3.5 h-3.5 text-[var(--color-primary)]" /> Print
+                <Printer className="w-3.5 h-3.5 text-(--color-primary)" /> Print
               </button>
             </div>
           )}
@@ -312,7 +312,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
       {/* Loading Overlay State */}
       {loading && !reportData && (
         <div className="card p-16 text-center border border-slate-200 bg-white rounded-xl shadow-xs space-y-3">
-          <RefreshCw className="w-8 h-8 text-[var(--color-primary)] animate-spin mx-auto" />
+          <RefreshCw className="w-8 h-8 text-(--color-primary) animate-spin mx-auto" />
           <h3 className="text-sm font-bold text-slate-700">Loading Ledger Statement...</h3>
           <p className="text-xs text-slate-400">Computing opening balances, settlements, and double-entry postings.</p>
         </div>
@@ -321,7 +321,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
       {/* Empty State when no account is selected */}
       {!selectedAccountId && !loading && (
         <div className="card p-14 text-center border border-dashed border-slate-300 rounded-2xl bg-slate-50/60 space-y-3">
-          <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mx-auto shadow-xs text-[var(--color-primary)]">
+          <div className="w-14 h-14 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mx-auto shadow-xs text-(--color-primary)">
             <BookOpen className="w-7 h-7" />
           </div>
           <h3 className="text-base font-bold text-slate-800">Select an Account to View Statement</h3>
@@ -371,17 +371,17 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
               <div className="mt-1 space-y-1">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 font-semibold flex items-center gap-1">
-                    <ArrowDownRight className="w-3.5 h-3.5 text-[var(--color-negative)]" /> Total Debits (Dr)
+                    <ArrowDownRight className="w-3.5 h-3.5 text-negative" /> Total Debits (Dr)
                   </span>
-                  <span className="font-mono font-bold text-[var(--color-negative)]">
+                  <span className="font-mono font-bold text-negative">
                     ₹{totals.debits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 font-semibold flex items-center gap-1">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--color-forest)]" /> Total Credits (Cr)
+                    <ArrowUpRight className="w-3.5 h-3.5 text-(--color-forest)" /> Total Credits (Cr)
                   </span>
-                  <span className="font-mono font-bold text-[var(--color-forest)]">
+                  <span className="font-mono font-bold text-(--color-forest)">
                     ₹{totals.credits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -592,7 +592,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                           <td className="p-3 font-mono text-xs text-slate-700 font-medium">
                             {formatDateToDDMMYY(tx.date)}
                           </td>
-                          <td className="p-3 font-medium text-slate-800 max-w-[380px]">
+                          <td className="p-3 font-medium text-slate-800 max-w-95">
                             <div className="flex items-center gap-2">
                               <span className="truncate" title={tx.particulars}>
                                 {tx.particulars}
@@ -633,10 +633,10 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                               {tx.entryType || tx.type}
                             </span>
                           </td>
-                          <td className="p-3 text-right font-mono text-xs font-bold text-[var(--color-negative)]">
+                          <td className="p-3 text-right font-mono text-xs font-bold text-negative">
                             {isDr ? `₹${Math.abs(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                           </td>
-                          <td className="p-3 text-right font-mono text-xs font-bold text-[var(--color-forest)]">
+                          <td className="p-3 text-right font-mono text-xs font-bold text-(--color-forest)">
                             {isCr ? `₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                           </td>
                           <td className="p-3 text-right font-mono text-xs font-bold">
@@ -652,10 +652,10 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                     <td className="p-3 text-right text-xs font-bold text-slate-900" colSpan={3}>
                       Totals & Net Activity:
                     </td>
-                    <td className="p-3 text-right font-mono text-xs font-bold text-[var(--color-negative)]">
+                    <td className="p-3 text-right font-mono text-xs font-bold text-negative">
                       ₹{totals.debits.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right font-mono text-xs font-bold text-[var(--color-forest)]">
+                    <td className="p-3 text-right font-mono text-xs font-bold text-(--color-forest)">
                       ₹{totals.credits.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-3 text-right font-mono text-xs font-bold">

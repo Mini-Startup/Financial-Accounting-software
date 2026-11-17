@@ -50,7 +50,7 @@ export function SettlementActionBar({
     <div className="space-y-4">
       {selectedSettlementId === 'LIVE' ? (
         /* Live Settlements Action Form Card */
-        <div className="card bg-white p-5 rounded-2xl shadow-xs border border-[var(--color-border-light)]">
+        <div className="card bg-white p-5 rounded-2xl shadow-xs border border-border-light">
           <form onSubmit={onGenerate} className="flex flex-col md:flex-row items-end gap-5">
             <div className="form-field flex-1 max-w-xs">
               <label className="form-label form-label--required text-xs font-semibold text-slate-700">
@@ -67,7 +67,7 @@ export function SettlementActionBar({
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn--secondary h-[38px] px-4 flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
+                className="btn btn--secondary h-9.5 px-4 flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -87,7 +87,7 @@ export function SettlementActionBar({
                   type="button"
                   onClick={onOpenPreview}
                   disabled={isExecutingSettlement || !hasGenerated}
-                  className="btn btn--primary h-[38px] px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn--primary h-9.5 px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Preview and execute automated CF, BF, and Settlement cycle"
                 >
                   {isExecutingSettlement ? (
@@ -142,13 +142,13 @@ export function SettlementActionBar({
 
       {/* Tabs Switcher for Historical Settlement */}
       {selectedSettlementId !== 'LIVE' && (
-        <div className="flex items-center gap-2 border-b border-[var(--color-border-light)] pb-2">
+        <div className="flex items-center gap-2 border-b border-border-light pb-2">
           <button
             type="button"
             onClick={() => setActiveTab('SUMMARY')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'SUMMARY'
-                ? 'bg-[var(--color-charcoal)] text-white shadow-xs'
+                ? 'bg-charcoal text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -161,7 +161,7 @@ export function SettlementActionBar({
             onClick={() => setActiveTab('TRADES')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'TRADES'
-                ? 'bg-[var(--color-charcoal)] text-white shadow-xs'
+                ? 'bg-charcoal text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >

@@ -154,10 +154,10 @@ export function AccountMasterFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-      <div ref={modalRef} className="card w-[750px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
-        <div className="card__header bg-[var(--color-snow)]">
+      <div ref={modalRef} className="card w-187.5 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+        <div className="card__header bg-snow">
           <h2 className="card__title">{initialData ? 'Edit Account Master' : 'Create New Account Master'}</h2>
-          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,7 +183,7 @@ export function AccountMasterFormModal({
 
           {/* Basic Account Master Section */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic Information</h3>
+            <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-field">
                 <label className="form-label form-label--required">Code</label>
@@ -225,7 +225,7 @@ export function AccountMasterFormModal({
 
           {/* Contact Details */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact Details</h3>
+            <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Contact Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-field col-span-2">
                 <label className="form-label">Address</label>
@@ -256,7 +256,7 @@ export function AccountMasterFormModal({
 
           {/* Contact Person Details */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact Person</h3>
+            <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Contact Person</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-field col-span-2">
                 <label className="form-label">Name</label>
@@ -277,8 +277,8 @@ export function AccountMasterFormModal({
 
           {/* Conditional Bank Accounts Section */}
           {selectedGroupName === 'Bank Accounts' && (
-            <div className="space-y-4 border-t border-[var(--color-border-light)] pt-4">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase text-[var(--color-leaf)]">Bank Account Details</h3>
+            <div className="space-y-4 border-t border-border-light pt-4">
+              <h3 className="text-xs font-semibold tracking-wider uppercase text-leaf">Bank Account Details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-field">
                   <label className="form-label form-label--required">Bank Name</label>
@@ -313,12 +313,12 @@ export function AccountMasterFormModal({
             </div>
           )}
 
-          <div className="mt-5 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
+          <div className="mt-5 pt-4 flex justify-end gap-3 border-t border-border-light">
             <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary">Cancel</button>
             <button
               type="submit"
               disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
-              className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:border-slate-400"
+              className="btn btn--primary flex items-center gap-2 min-w-27.5 justify-center disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:border-slate-400"
             >
               {isSubmitting ? (
                 <>

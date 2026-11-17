@@ -222,17 +222,17 @@ export function PermissionMatrixModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-5xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-[var(--color-border-light)]">
+      <div className="bg-white w-full max-w-5xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-border-light">
         {/* Modal Header */}
-        <div className="px-6 py-4.5 border-b border-[var(--color-border-light)] bg-slate-50/70 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4.5 border-b border-border-light bg-slate-50/70 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-forest)]/10 text-[var(--color-forest)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-(--color-forest)/10 text-(--color-forest) flex items-center justify-center shrink-0">
               <Shield className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-h3 font-display text-[var(--color-charcoal)]">
-                  Permissions Matrix: <span className="text-[var(--color-forest)] font-bold">{role.name}</span>
+                <h2 className="text-h3 font-display text-charcoal">
+                  Permissions Matrix: <span className="text-(--color-forest) font-bold">{role.name}</span>
                 </h2>
                 {role.isSystem && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 tracking-wider uppercase">
@@ -240,7 +240,7 @@ export function PermissionMatrixModal({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[var(--color-slate)] mt-0.5">
+              <p className="text-xs text-slate mt-0.5">
                 Configure granular feature accessibility and function permissions for this role.
               </p>
             </div>
@@ -264,7 +264,7 @@ export function PermissionMatrixModal({
               onChange={(e) => setRoleDescription(e.target.value)}
               placeholder="Brief description of this role's purpose..."
               disabled={isOwnerRole}
-              className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-hidden focus:border-[var(--color-forest)] disabled:opacity-60"
+              className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-hidden focus:border-(--color-forest) disabled:opacity-60"
             />
           </div>
 
@@ -305,7 +305,7 @@ export function PermissionMatrixModal({
 
           {loadingCatalog ? (
             <div className="flex items-center justify-center py-12 gap-2 text-slate-500 text-xs">
-              <RefreshCw className="w-4 h-4 animate-spin text-[var(--color-forest)]" />
+              <RefreshCw className="w-4 h-4 animate-spin text-(--color-forest)" />
               <span>Loading system permission catalog…</span>
             </div>
           ) : (
@@ -393,7 +393,7 @@ export function PermissionMatrixModal({
                                     checked={checked}
                                     disabled={isOwnerRole}
                                     onChange={() => togglePermission(item.id)}
-                                    className="rounded border-slate-300 text-[var(--color-forest)] focus:ring-[var(--color-leaf)] w-3.5 h-3.5 shrink-0"
+                                    className="rounded border-slate-300 text-(--color-forest) focus:ring-(--color-leaf) w-3.5 h-3.5 shrink-0"
                                   />
                                   <span className="truncate">{item.name.replace(/^View |^Create |^Edit |^Delete /, '')}</span>
                                 </label>
@@ -411,11 +411,11 @@ export function PermissionMatrixModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-[var(--color-border-light)] bg-slate-50 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-t border-border-light bg-slate-50 flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="btn btn--secondary h-[38px] px-4 text-xs font-semibold cursor-pointer"
+            className="btn btn--secondary h-9.5 px-4 text-xs font-semibold cursor-pointer"
           >
             Cancel
           </button>
@@ -424,7 +424,7 @@ export function PermissionMatrixModal({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="btn btn--primary h-[38px] px-5 flex items-center gap-2 text-xs font-bold cursor-pointer disabled:opacity-50"
+              className="btn btn--primary h-9.5 px-5 flex items-center gap-2 text-xs font-bold cursor-pointer disabled:opacity-50"
             >
               {saving ? (
                 <>

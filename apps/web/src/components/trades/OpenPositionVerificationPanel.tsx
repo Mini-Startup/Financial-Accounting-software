@@ -157,7 +157,7 @@ export function OpenPositionVerificationPanel({
       </div>
 
       {/* Verification Table */}
-      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-xs max-h-[420px] overflow-y-auto">
+      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-xs max-h-105 overflow-y-auto">
         <table className="w-full text-left text-xs whitespace-nowrap">
           <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
             <tr>

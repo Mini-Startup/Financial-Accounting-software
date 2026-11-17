@@ -24,7 +24,7 @@ export function CustomCheckbox({
     <label
       htmlFor={id}
       className={cn(
-        'inline-flex items-center gap-2 select-none cursor-pointer text-xs font-medium text-[var(--color-charcoal)]',
+        'inline-flex items-center gap-2 select-none cursor-pointer text-xs font-medium text-charcoal',
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         className
       )}
@@ -45,15 +45,15 @@ export function CustomCheckbox({
       <div
         className={cn(
           'w-4 h-4 rounded border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-leaf)] peer-focus-visible:ring-offset-1',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-(--color-leaf) peer-focus-visible:ring-offset-1',
           checked
-            ? 'bg-[var(--color-leaf)] border-[var(--color-leaf)] text-white shadow-2xs'
-            : 'bg-white border-[var(--color-border-medium)] hover:border-[var(--color-border-focus)]'
+            ? 'bg-(--color-leaf) border-(--color-leaf) text-white shadow-2xs'
+            : 'bg-white border-border-medium hover:border-(--color-border-focus)'
         )}
       >
-        {checked && <Check className="w-3 h-3 stroke-[3]" />}
+        {checked && <Check className="w-3 h-3 stroke-3" />}
       </div>
-      {label && <span className="text-[var(--color-charcoal)]">{label}</span>}
+      {label && <span className="text-charcoal">{label}</span>}
     </label>
   );
 }

@@ -47,19 +47,19 @@ export function AllScriptsBrokerageTable({
     <div className="flex flex-col h-full min-h-0 space-y-2">
       {/* Script Count Header */}
       <div className="flex items-center justify-between text-xs px-1 shrink-0">
-        <span className="text-[var(--color-slate)]">
+        <span className="text-slate">
           All <strong>{rows.length}</strong> scripts loaded from database
         </span>
-        <span className="font-semibold text-[var(--color-forest)] bg-[var(--color-mist)]/60 px-2.5 py-0.5 rounded-full">
+        <span className="font-semibold text-(--color-forest) bg-mist/60 px-2.5 py-0.5 rounded-full">
           {configuredCount} scripts configured
         </span>
       </div>
 
       {/* Table Container */}
-      <div className="border border-[var(--color-border-light)] rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col bg-white shadow-2xs">
+      <div className="border border-border-light rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col bg-white shadow-2xs">
         <div className="overflow-y-auto flex-1 pb-12">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-            <thead className="bg-[var(--color-snow)] text-[var(--color-slate)] border-b border-[var(--color-border-light)] text-[11px] font-bold uppercase tracking-wider select-none sticky top-0 z-20 shadow-2xs">
+            <thead className="bg-snow text-slate border-b border-border-light text-[11px] font-bold uppercase tracking-wider select-none sticky top-0 z-20 shadow-2xs">
               <tr>
                 <th className="py-2.5 px-3 text-center" style={{ width: '45px' }}>
                   #
@@ -87,7 +87,7 @@ export function AllScriptsBrokerageTable({
             <tbody className="divide-y divide-slate-100">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[var(--color-slate)] italic">
+                  <td colSpan={7} className="py-12 text-center text-slate italic">
                     <div className="flex flex-col items-center gap-1.5">
                       <AlertCircle className="w-5 h-5 text-slate-400" />
                       <span>No scripts found in system.</span>
@@ -156,13 +156,13 @@ export function AllScriptsBrokerageTable({
                       </td>
 
                       {/* 2. Script Code */}
-                      <td className="py-2.5 px-3 font-mono font-bold text-[var(--color-charcoal)]">
+                      <td className="py-2.5 px-3 font-mono font-bold text-charcoal">
                         {row.shortName}
                       </td>
 
                       {/* 3. Full Name (Read-only) */}
                       <td
-                        className="py-2.5 px-3 text-[var(--color-slate)] max-w-[160px] truncate"
+                        className="py-2.5 px-3 text-slate max-w-40 truncate"
                         title={row.fullName}
                       >
                         {row.fullName || '—'}
@@ -213,7 +213,7 @@ export function AllScriptsBrokerageTable({
                           /* BOTH Mode */
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] text-[var(--color-slate)] font-medium">Rule Qty:</span>
+                              <span className="text-[11px] text-slate font-medium">Rule Qty:</span>
                               <input
                                 type="number"
                                 step="any"
@@ -228,7 +228,7 @@ export function AllScriptsBrokerageTable({
                             </div>
 
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] text-[var(--color-slate)] font-medium">Brokerage:</span>
+                              <span className="text-[11px] text-slate font-medium">Brokerage:</span>
                               <input
                                 type="number"
                                 step="any"
@@ -245,7 +245,7 @@ export function AllScriptsBrokerageTable({
                             </div>
 
                             {bothPerUnit && (
-                              <div className="text-[11px] font-mono font-bold text-[var(--color-forest)] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                              <div className="text-[11px] font-mono font-bold text-(--color-forest) bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                                 {rowSym}{bothPerUnit} / quantity
                               </div>
                             )}

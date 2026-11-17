@@ -13,24 +13,24 @@ export function ImportResultPanel({ importResult, fileName, onReset, onBack }: I
   return (
     <div className="max-w-md mx-auto py-10">
       <div className="card text-center p-8 space-y-6">
-        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-[var(--color-positive)] mx-auto">
+        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-(--color-positive) mx-auto">
           <CheckCircle2 className="w-10 h-10" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-[var(--color-charcoal)]">Import Completed Successfully</h2>
-          <p className="text-sm text-[var(--color-slate)] mt-2">
+          <h2 className="text-xl font-bold text-charcoal">Import Completed Successfully</h2>
+          <p className="text-sm text-slate mt-2">
             Processed trade file: <span className="font-semibold">{fileName}</span>
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 border-y border-[var(--color-border-light)] py-4">
+        <div className="grid grid-cols-2 gap-4 border-y border-border-light py-4">
           <div>
-            <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Imported</div>
-            <div className="text-2xl font-bold text-[var(--color-positive)]">{importResult.importedCount}</div>
+            <div className="text-xs text-slate uppercase font-semibold">Imported</div>
+            <div className="text-2xl font-bold text-(--color-positive)">{importResult.importedCount}</div>
           </div>
           <div>
-            <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Skipped (Errors)</div>
-            <div className="text-2xl font-bold text-[var(--color-negative)]">{importResult.failedCount}</div>
+            <div className="text-xs text-slate uppercase font-semibold">Skipped (Errors)</div>
+            <div className="text-2xl font-bold text-negative">{importResult.failedCount}</div>
           </div>
         </div>
 

@@ -35,7 +35,7 @@ export function SettlementPreviewModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="card w-full max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 bg-white rounded-2xl">
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)] p-5 border-b border-[var(--color-border-light)] flex items-center justify-between shrink-0">
+        <div className="card__header bg-snow p-5 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
               <Zap className="w-5 h-5 text-emerald-700" />
@@ -210,7 +210,7 @@ export function SettlementPreviewModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[var(--color-snow)] border-t border-[var(--color-border-light)] flex justify-end gap-3 shrink-0">
+        <div className="p-4 bg-snow border-t border-border-light flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

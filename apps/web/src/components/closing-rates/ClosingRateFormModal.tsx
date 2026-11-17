@@ -184,26 +184,26 @@ export function ClosingRateFormModal({
       >
         <div
           ref={modalRef}
-          className="card w-[560px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-[var(--color-border-light)] rounded-[var(--radius-xl)] bg-white animate-in zoom-in-95 duration-150"
+          className="card w-140 max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-border-light rounded-xl bg-white animate-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-[var(--color-border-light)]">
+          <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-border-light">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-[var(--color-mist)] text-[var(--color-forest)] rounded-[var(--radius-md)]">
+              <div className="p-2 bg-mist text-(--color-forest) rounded-md">
                 <TrendingUp className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[var(--color-charcoal)] font-display">
+                <h2 className="text-sm font-bold text-charcoal font-display">
                   {initialData ? 'Edit Closing Rate' : 'Add Closing Rate'}
                 </h2>
-                <p className="text-[11px] text-[var(--color-slate)]">
+                <p className="text-[11px] text-slate">
                   Enter daily settlement closing rates for scripts & options
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+              className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -215,8 +215,8 @@ export function ClosingRateFormModal({
               {/* Row 1: Date & Script */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-[var(--color-charcoal)]">
-                    Rate Date <span className="text-[var(--color-negative)]">*</span>
+                  <label className="text-xs font-semibold text-charcoal">
+                    Rate Date <span className="text-negative">*</span>
                   </label>
                   <UniversalDatePicker
                     value={rateDate}
@@ -225,8 +225,8 @@ export function ClosingRateFormModal({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-[var(--color-charcoal)]">
-                    Script <span className="text-[var(--color-negative)]">*</span>
+                  <label className="text-xs font-semibold text-charcoal">
+                    Script <span className="text-negative">*</span>
                   </label>
                   <UniversalDropdown
                     value={scriptId}
@@ -245,9 +245,9 @@ export function ClosingRateFormModal({
 
               {/* Derived Exchange Display */}
               {resolvedExchange && (
-                <div className="px-3 py-2 bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-[var(--radius-md)] flex items-center justify-between text-xs">
-                  <span className="text-[var(--color-slate)]">Assigned Exchange:</span>
-                  <span className="font-bold text-[var(--color-forest)] font-mono">
+                <div className="px-3 py-2 bg-snow border border-border-light rounded-md flex items-center justify-between text-xs">
+                  <span className="text-slate">Assigned Exchange:</span>
+                  <span className="font-bold text-(--color-forest) font-mono">
                     {resolvedExchange.code} - {resolvedExchange.name || ''}
                   </span>
                 </div>
@@ -255,17 +255,17 @@ export function ClosingRateFormModal({
 
               {/* Instrument Type Selector (Future / Option) */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-[var(--color-charcoal)]">
+                <label className="text-xs font-semibold text-charcoal">
                   Instrument Type
                 </label>
-                <div className="grid grid-cols-2 gap-2 bg-[var(--color-snow)] p-1 rounded-[var(--radius-md)] border border-[var(--color-border-light)]">
+                <div className="grid grid-cols-2 gap-2 bg-snow p-1 rounded-md border border-border-light">
                   <button
                     type="button"
                     onClick={() => setInstrumentType('FUTURE')}
-                    className={`py-1.5 text-xs font-semibold rounded-[var(--radius-sm)] transition-all cursor-pointer ${
+                    className={`py-1.5 text-xs font-semibold rounded-sm transition-all cursor-pointer ${
                       instrumentType === 'FUTURE'
-                        ? 'bg-white text-[var(--color-forest)] shadow-xs'
-                        : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)]'
+                        ? 'bg-white text-(--color-forest) shadow-xs'
+                        : 'text-slate hover:text-charcoal'
                     }`}
                   >
                     Future
@@ -273,10 +273,10 @@ export function ClosingRateFormModal({
                   <button
                     type="button"
                     onClick={() => setInstrumentType('OPTION')}
-                    className={`py-1.5 text-xs font-semibold rounded-[var(--radius-sm)] transition-all cursor-pointer ${
+                    className={`py-1.5 text-xs font-semibold rounded-sm transition-all cursor-pointer ${
                       instrumentType === 'OPTION'
-                        ? 'bg-white text-[var(--color-forest)] shadow-xs'
-                        : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)]'
+                        ? 'bg-white text-(--color-forest) shadow-xs'
+                        : 'text-slate hover:text-charcoal'
                     }`}
                   >
                     Option
@@ -286,7 +286,7 @@ export function ClosingRateFormModal({
 
               {/* Expiry Date */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--color-charcoal)]">
+                <label className="text-xs font-semibold text-charcoal">
                   Expiry Date
                 </label>
                 <UniversalDatePicker
@@ -298,19 +298,19 @@ export function ClosingRateFormModal({
 
               {/* Option-specific fields: Strike Price & Call/Put */}
               {instrumentType === 'OPTION' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-[var(--radius-lg)] animate-in fade-in duration-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-lg animate-in fade-in duration-100">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-[var(--color-charcoal)]">
+                    <label className="text-xs font-semibold text-charcoal">
                       Option Type
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => setCallPut('CALL')}
-                        className={`py-1.5 text-xs font-bold rounded-[var(--radius-sm)] border transition-all cursor-pointer ${
+                        className={`py-1.5 text-xs font-bold rounded-sm border transition-all cursor-pointer ${
                           callPut === 'CALL'
-                            ? 'bg-[var(--color-forest)] text-white border-[var(--color-forest)]'
-                            : 'bg-white text-[var(--color-charcoal)] border-[var(--color-border-medium)]'
+                            ? 'bg-(--color-forest) text-white border-(--color-forest)'
+                            : 'bg-white text-charcoal border-border-medium'
                         }`}
                       >
                         CALL (CE)
@@ -318,10 +318,10 @@ export function ClosingRateFormModal({
                       <button
                         type="button"
                         onClick={() => setCallPut('PUT')}
-                        className={`py-1.5 text-xs font-bold rounded-[var(--radius-sm)] border transition-all cursor-pointer ${
+                        className={`py-1.5 text-xs font-bold rounded-sm border transition-all cursor-pointer ${
                           callPut === 'PUT'
-                            ? 'bg-[var(--color-negative)] text-white border-[var(--color-negative)]'
-                            : 'bg-white text-[var(--color-charcoal)] border-[var(--color-border-medium)]'
+                            ? 'bg-negative text-white border-negative'
+                            : 'bg-white text-charcoal border-border-medium'
                         }`}
                       >
                         PUT (PE)
@@ -330,7 +330,7 @@ export function ClosingRateFormModal({
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-[var(--color-charcoal)]">
+                    <label className="text-xs font-semibold text-charcoal">
                       Strike Price
                     </label>
                     <input
@@ -348,7 +348,7 @@ export function ClosingRateFormModal({
 
               {/* Generated Security Name */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--color-charcoal)]">
+                <label className="text-xs font-semibold text-charcoal">
                   Security Name
                 </label>
                 <input
@@ -356,14 +356,14 @@ export function ClosingRateFormModal({
                   value={manualSecurityName}
                   onChange={(e) => setManualSecurityName(e.target.value)}
                   placeholder="Generated automatically from script & expiry"
-                  className="input font-mono font-medium text-xs py-2 bg-[var(--color-snow)]"
+                  className="input font-mono font-medium text-xs py-2 bg-snow"
                 />
               </div>
 
               {/* Closing Rate */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--color-charcoal)]">
-                  Closing Rate <span className="text-[var(--color-negative)]">*</span>
+                <label className="text-xs font-semibold text-charcoal">
+                  Closing Rate <span className="text-negative">*</span>
                 </label>
                 <input
                   ref={rateInputRef}
@@ -379,7 +379,7 @@ export function ClosingRateFormModal({
               </div>
 
               {/* Actions Footer */}
-              <div className="mt-6 pt-4 flex items-center justify-end gap-2.5 border-t border-[var(--color-border-light)]">
+              <div className="mt-6 pt-4 flex items-center justify-end gap-2.5 border-t border-border-light">
                 <button
                   type="button"
                   onClick={onClose}

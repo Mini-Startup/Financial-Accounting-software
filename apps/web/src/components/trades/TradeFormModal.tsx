@@ -287,14 +287,14 @@ export function TradeFormModal({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm"
     >
-      <div ref={modalRef} className="card w-[980px] max-w-[95vw] max-h-[88vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div ref={modalRef} className="card w-245 max-w-[95vw] max-h-[88vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)] shrink-0">
+        <div className="card__header bg-snow shrink-0">
           <div>
             <h2 className="card__title">{initialTrade ? 'Edit Trade' : 'Add Trade'}</h2>
-            <p className="text-sm text-[var(--color-slate)] mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
+            <p className="text-sm text-slate mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
           </div>
-          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -426,16 +426,16 @@ export function TradeFormModal({
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-xs text-[var(--color-slate)]">
-                  <span className="font-semibold text-[var(--color-charcoal)]">Client rule:</span>{' '}
+                <div className="text-xs text-slate">
+                  <span className="font-semibold text-charcoal">Client rule:</span>{' '}
                   {isLoadingRules
                     ? 'Loading…'
                     : clientRule
                     ? `${currSym}${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
                     : 'Not set'}
                 </div>
-                <div className="text-xs text-[var(--color-slate)] text-right">
-                  <span className="font-semibold text-[var(--color-charcoal)]">Broker rule:</span>{' '}
+                <div className="text-xs text-slate text-right">
+                  <span className="font-semibold text-charcoal">Broker rule:</span>{' '}
                   {isLoadingRules
                     ? 'Loading…'
                     : brokerRule
@@ -447,9 +447,9 @@ export function TradeFormModal({
 
             {/* Right: Results */}
             <div className="col-span-5">
-              <div className="bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-2xl p-5 space-y-4 h-full">
+              <div className="bg-snow border border-border-light rounded-2xl p-5 space-y-4 h-full">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Live result</h3>
+                  <h3 className="text-sm font-semibold text-charcoal">Live result</h3>
                   {calc?.side ? (
                     <span className={cn("badge badge--dot", calc.side === 'BUY' ? 'badge--success' : 'badge--error')}>
                       {calc.side}
@@ -458,13 +458,13 @@ export function TradeFormModal({
                 </div>
 
                 {!canCalculate ? (
-                  <div className="text-sm text-[var(--color-fog)] pt-8">
+                  <div className="text-sm text-fog pt-8">
                     Select script, client, broker and enter quantity to calculate.
                   </div>
                 ) : isLoadingRules ? (
-                  <div className="text-sm text-[var(--color-fog)] pt-8">Loading brokerage rules…</div>
+                  <div className="text-sm text-fog pt-8">Loading brokerage rules…</div>
                 ) : !calc ? (
-                  <div className="text-sm text-[var(--color-fog)] pt-8">Enter market rate to see rates and profit.</div>
+                  <div className="text-sm text-fog pt-8">Enter market rate to see rates and profit.</div>
                 ) : (
                   <div className="space-y-4">
                     {/* Notice for zero-brokerage trade types vs missing rules */}
@@ -493,16 +493,16 @@ export function TradeFormModal({
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-[var(--bg-card)] border border-[var(--color-border-light)] rounded-xl p-4">
-                        <p className="text-[11px] text-[var(--color-slate)] font-semibold uppercase tracking-wide">Client</p>
+                      <div className="bg-(--bg-card) border border-border-light rounded-xl p-4">
+                        <p className="text-[11px] text-slate font-semibold uppercase tracking-wide">Client</p>
                         <div className="mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="text-[var(--color-slate)]">Rate</span>
-                            <span className="font-mono font-semibold text-[var(--color-charcoal)]">{currSym}{calc.clientRate.toFixed(4)}</span>
+                            <span className="text-slate">Rate</span>
+                            <span className="font-mono font-semibold text-charcoal">{currSym}{calc.clientRate.toFixed(4)}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-[var(--color-fog)]">Brokerage</span>
-                            <span className="font-mono text-[var(--color-slate)]">
+                            <span className="text-fog">Brokerage</span>
+                            <span className="font-mono text-slate">
                               {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
                                 ? '0.0000 (Waived)'
                                 : !clientRule
@@ -513,16 +513,16 @@ export function TradeFormModal({
                         </div>
                       </div>
 
-                      <div className="bg-[var(--bg-card)] border border-[var(--color-border-light)] rounded-xl p-4">
-                        <p className="text-[11px] text-[var(--color-slate)] font-semibold uppercase tracking-wide">Broker</p>
+                      <div className="bg-(--bg-card) border border-border-light rounded-xl p-4">
+                        <p className="text-[11px] text-slate font-semibold uppercase tracking-wide">Broker</p>
                         <div className="mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="text-[var(--color-slate)]">Rate</span>
-                            <span className="font-mono font-semibold text-[var(--color-charcoal)]">{currSym}{calc.brokerRate.toFixed(4)}</span>
+                            <span className="text-slate">Rate</span>
+                            <span className="font-mono font-semibold text-charcoal">{currSym}{calc.brokerRate.toFixed(4)}</span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-[var(--color-fog)]">Brokerage</span>
-                            <span className="font-mono text-[var(--color-slate)]">
+                            <span className="text-fog">Brokerage</span>
+                            <span className="font-mono text-slate">
                               {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
                                 ? '0.0000 (Waived)'
                                 : `${currSym}${calc.brokerBrokerage.toFixed(4)}`}
@@ -534,21 +534,21 @@ export function TradeFormModal({
 
                     {/* Profit box - commented out as requested */}
                     {/* <div className={cn("border rounded-xl p-4",
-                      calc.profitTotal > 0 ? 'bg-[var(--color-mist)] border-[var(--color-leaf)]' :
+                      calc.profitTotal > 0 ? 'bg-mist border-(--color-leaf)' :
                       calc.profitTotal < 0 ? 'bg-red-50 border-red-200' :
-                      'bg-[var(--color-snow)] border-[var(--color-border-light)]'
+                      'bg-snow border-border-light'
                     )}>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-[var(--color-charcoal)]">Profit</span>
+                        <span className="text-sm font-semibold text-charcoal">Profit</span>
                         <span className={cn("font-mono text-lg font-bold",
-                          calc.profitTotal > 0 ? 'text-[var(--color-positive)]' :
-                          calc.profitTotal < 0 ? 'text-[var(--color-negative)]' :
-                          'text-[var(--color-charcoal)]'
+                          calc.profitTotal > 0 ? 'text-(--color-positive)' :
+                          calc.profitTotal < 0 ? 'text-negative' :
+                          'text-charcoal'
                         )}>
                           {calc.profitTotal > 0 ? '+' : ''}{currSym}{calc.profitTotal.toFixed(4)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[var(--color-slate)] mt-1">
+                      <p className="text-[11px] text-slate mt-1">
                         Market value {currSym}{calc.marketValue.toFixed(4)} • per-unit {currSym}{calc.profitPerUnit.toFixed(4)}
                       </p>
                     </div> */}
@@ -560,12 +560,12 @@ export function TradeFormModal({
           </div>
 
           {/* Fixed Footer */}
-          <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex justify-end gap-3 shrink-0">
+          <div className="p-4 border-t border-border-light bg-snow flex justify-end gap-3 shrink-0">
             <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
             <button
               type="submit"
               form="tradeForm"
-              className="btn btn--primary flex items-center gap-2 min-w-[110px] justify-center"
+              className="btn btn--primary flex items-center gap-2 min-w-27.5 justify-center"
               disabled={isSaving || isLocked || !isFormValid}
             >
               {isSaving ? (

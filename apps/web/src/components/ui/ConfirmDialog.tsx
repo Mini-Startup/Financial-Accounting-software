@@ -82,22 +82,22 @@ export function ConfirmDialog({
         if (e.target === e.currentTarget && !isLoading) onCancel();
       }}
     >
-      <div className={`bg-[var(--bg-card)] border ${config.accentBorder} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden`}>
+      <div className={`bg-(--bg-card) border ${config.accentBorder} rounded-2xl w-full max-w-md shadow-2xl overflow-hidden`}>
         {/* Header */}
         <div className="p-6 pb-4 flex items-start gap-4">
           <div className={`p-2.5 rounded-xl ${config.iconBg} shrink-0`}>
             <IconComponent className={`w-5 h-5 ${config.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-[var(--color-charcoal)]">{title}</h3>
-            <div className="text-sm text-[var(--color-slate)] mt-1.5 leading-relaxed">
+            <h3 className="text-base font-bold text-charcoal">{title}</h3>
+            <div className="text-sm text-slate mt-1.5 leading-relaxed">
               {message}
             </div>
           </div>
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] rounded-lg hover:bg-[var(--color-mist)] transition-colors disabled:opacity-50"
+            className="p-1.5 text-slate hover:text-charcoal rounded-lg hover:bg-mist transition-colors disabled:opacity-50"
           >
             <X className="w-4 h-4" />
           </button>

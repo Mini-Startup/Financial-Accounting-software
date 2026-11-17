@@ -222,16 +222,16 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
             <tbody className="divide-y divide-slate-100">
               {paginatedCurrencies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={5} className="py-8 text-center text-slate font-medium">
                     No currencies match search criteria.
                   </td>
                 </tr>
               ) : null}
               {paginatedCurrencies.map((cur) => (
                 <tr key={cur.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="font-mono font-bold text-[var(--color-charcoal)] py-2.5 px-4">{cur.code}</td>
-                  <td className="text-[var(--color-slate)] py-2.5 px-4">{cur.name || '-'}</td>
-                  <td className="text-[var(--color-charcoal)] font-semibold text-base py-2.5 px-4">{cur.symbol || '-'}</td>
+                  <td className="font-mono font-bold text-charcoal py-2.5 px-4">{cur.code}</td>
+                  <td className="text-slate py-2.5 px-4">{cur.name || '-'}</td>
+                  <td className="text-charcoal font-semibold text-base py-2.5 px-4">{cur.symbol || '-'}</td>
                   <td className="py-2.5 px-4">
                     {cur.isActive ? (
                       <span className="badge badge--dot badge--success">Active</span>
@@ -242,13 +242,13 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
                   <td className="text-right py-2.5 px-4">
                     <button 
                       onClick={() => setEditingCurrency(cur)}
-                      className="text-[var(--color-forest)] hover:text-[var(--color-emerald)] mr-4 font-semibold transition text-xs cursor-pointer"
+                      className="text-(--color-forest) hover:text-emerald mr-4 font-semibold transition text-xs cursor-pointer"
                     >
                       Edit
                     </button>
                     <button 
                       onClick={() => setDeleteTargetId(cur.id)}
-                      className="text-[var(--color-negative)] hover:opacity-80 font-semibold transition text-xs cursor-pointer"
+                      className="text-negative hover:opacity-80 font-semibold transition text-xs cursor-pointer"
                     >
                       Delete
                     </button>

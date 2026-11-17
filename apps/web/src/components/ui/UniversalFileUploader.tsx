@@ -106,10 +106,10 @@ export function UniversalFileUploader({
         onDrop={handleDrop}
         onClick={() => !isProcessing && fileInputRef.current?.click()}
         className={cn(
-          'relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-[var(--radius-xl)] bg-[var(--color-snow)] transition-all duration-200 cursor-pointer select-none text-center',
+          'relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl bg-snow transition-all duration-200 cursor-pointer select-none text-center',
           isDragging
-            ? 'border-[var(--color-leaf)] bg-[var(--color-mist)]/40 scale-[1.01]'
-            : 'border-[var(--color-border-medium)] hover:border-[var(--color-leaf)] hover:bg-white',
+            ? 'border-(--color-leaf) bg-mist/40 scale-[1.01]'
+            : 'border-border-medium hover:border-(--color-leaf) hover:bg-white',
           isProcessing && 'pointer-events-none opacity-80'
         )}
       >
@@ -124,14 +124,14 @@ export function UniversalFileUploader({
           className="hidden"
         />
 
-        <div className="w-12 h-12 rounded-full bg-[var(--color-mist)] flex items-center justify-center text-[var(--color-forest)] mb-3 shadow-xs">
-          <UploadCloud className="w-6 h-6 stroke-[2]" />
+        <div className="w-12 h-12 rounded-full bg-mist flex items-center justify-center text-(--color-forest) mb-3 shadow-xs">
+          <UploadCloud className="w-6 h-6 stroke-2" />
         </div>
 
-        <h4 className="text-sm font-semibold text-[var(--color-charcoal)] font-display">
+        <h4 className="text-sm font-semibold text-charcoal font-display">
           {title}
         </h4>
-        <p className="text-xs text-[var(--color-slate)] mt-1 max-w-sm">
+        <p className="text-xs text-slate mt-1 max-w-sm">
           {description}
         </p>
 
@@ -145,16 +145,16 @@ export function UniversalFileUploader({
 
       {/* Selected File Details */}
       {fileName && (
-        <div className="flex items-center justify-between p-3 bg-white border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-xs animate-in fade-in duration-150">
+        <div className="flex items-center justify-between p-3 bg-white border border-border-light rounded-md shadow-xs animate-in fade-in duration-150">
           <div className="flex items-center gap-2.5 overflow-hidden mr-2">
-            <div className="p-2 bg-emerald-50 text-[var(--color-forest)] rounded">
+            <div className="p-2 bg-emerald-50 text-(--color-forest) rounded">
               <FileSpreadsheet className="w-4 h-4" />
             </div>
             <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-[var(--color-charcoal)] truncate">
+              <span className="text-xs font-semibold text-charcoal truncate">
                 {fileName}
               </span>
-              <span className="text-[10px] text-[var(--color-slate)]">Ready for processing</span>
+              <span className="text-[10px] text-slate">Ready for processing</span>
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export function UniversalFileUploader({
             <button
               type="button"
               onClick={onClear}
-              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-full"
+              className="p-1.5 text-slate hover:text-negative transition-colors rounded-full"
             >
               <X className="w-4 h-4" />
             </button>
@@ -172,16 +172,16 @@ export function UniversalFileUploader({
 
       {/* Progress Bar */}
       {isProcessing && progress !== undefined && (
-        <div className="flex flex-col gap-1 p-3 bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-xs animate-in fade-in">
+        <div className="flex flex-col gap-1 p-3 bg-snow border border-border-light rounded-md shadow-xs animate-in fade-in">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-[var(--color-forest)] truncate mr-2">
+            <span className="font-semibold text-(--color-forest) truncate mr-2">
               {progressPhase || 'Processing records...'}
             </span>
-            <span className="font-mono text-[var(--color-charcoal)] font-bold">{progress}%</span>
+            <span className="font-mono text-charcoal font-bold">{progress}%</span>
           </div>
           <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[var(--color-leaf)] transition-all duration-200 rounded-full"
+              className="h-full bg-(--color-leaf) transition-all duration-200 rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -190,7 +190,7 @@ export function UniversalFileUploader({
 
       {/* Error Message */}
       {errorMsg && (
-        <div className="p-2 text-xs text-[var(--color-negative)] bg-red-50 border border-red-200 rounded-[var(--radius-md)]">
+        <div className="p-2 text-xs text-negative bg-red-50 border border-red-200 rounded-md">
           {errorMsg}
         </div>
       )}

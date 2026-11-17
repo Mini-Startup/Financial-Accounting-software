@@ -288,13 +288,13 @@ export function CustomSelect<T extends string | number = string>({
   // Variant styling
   const variantStyles = {
     default:
-      'bg-white border border-[var(--color-border-medium)] text-[var(--color-charcoal)] hover:border-[var(--color-border-focus)] shadow-2xs',
+      'bg-white border border-border-medium text-charcoal hover:border-(--color-border-focus) shadow-2xs',
     subtle:
-      'bg-[var(--color-snow)] border border-[var(--color-border-light)] text-[var(--color-charcoal)] hover:bg-[var(--color-mist)]/50',
+      'bg-snow border border-border-light text-charcoal hover:bg-mist/50',
     badge:
       'bg-slate-100 border border-slate-200 text-slate-800 hover:bg-slate-200 font-semibold',
     'table-cell':
-      'bg-transparent border border-transparent hover:border-slate-300 hover:bg-white text-[var(--color-charcoal)]',
+      'bg-transparent border border-transparent hover:border-slate-300 hover:bg-white text-charcoal',
   }[variant];
 
   // Helper for direction styling
@@ -343,10 +343,10 @@ export function CustomSelect<T extends string | number = string>({
         aria-expanded={isOpen}
         aria-label={ariaLabel || (typeof placeholder === 'string' ? placeholder : undefined)}
         className={cn(
-          'inline-flex items-center justify-between rounded-[var(--radius-md)] transition-all duration-150 select-none outline-none cursor-pointer',
+          'inline-flex items-center justify-between rounded-md transition-all duration-150 select-none outline-none cursor-pointer',
           sizeStyles,
           variantStyles,
-          isOpen && 'border-[var(--color-border-focus)] ring-2 ring-[var(--color-leaf)]/20 shadow-xs',
+          isOpen && 'border-(--color-border-focus) ring-2 ring-(--color-leaf)/20 shadow-xs',
           disabled && 'opacity-50 cursor-not-allowed pointer-events-none bg-slate-100',
           triggerClassName
         )}
@@ -356,9 +356,9 @@ export function CustomSelect<T extends string | number = string>({
         </span>
         <ChevronDown
           className={cn(
-            'shrink-0 text-[var(--color-slate)] transition-transform duration-200 pointer-events-none',
+            'shrink-0 text-slate transition-transform duration-200 pointer-events-none',
             size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5',
-            isOpen && 'rotate-180 text-[var(--color-forest)]'
+            isOpen && 'rotate-180 text-(--color-forest)'
           )}
         />
       </button>
@@ -384,12 +384,12 @@ export function CustomSelect<T extends string | number = string>({
               width: `${coords.width}px`,
               zIndex: 999999,
             }}
-            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] overflow-hidden flex flex-col duration-150 animate-in fade-in zoom-in-95"
+            className="bg-white border border-border-light rounded-md shadow-(--shadow-lg) overflow-hidden flex flex-col duration-150 animate-in fade-in zoom-in-95"
           >
             {/* Optional search header */}
             {isSearchable && (
-              <div className="p-1.5 border-b border-[var(--color-border-light)] bg-[var(--color-snow)] flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5 text-[var(--color-slate)] shrink-0 ml-1" />
+              <div className="p-1.5 border-b border-border-light bg-snow flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-slate shrink-0 ml-1" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -399,7 +399,7 @@ export function CustomSelect<T extends string | number = string>({
                     setHighlightedIndex(0);
                   }}
                   placeholder="Filter..."
-                  className="w-full bg-transparent text-xs text-[var(--color-charcoal)] outline-none placeholder:text-[var(--color-fog)] py-0.5"
+                  className="w-full bg-transparent text-xs text-charcoal outline-none placeholder:text-fog py-0.5"
                 />
               </div>
             )}
@@ -411,7 +411,7 @@ export function CustomSelect<T extends string | number = string>({
               className="overflow-y-auto max-h-56 py-1 divide-y divide-slate-50 outline-none"
             >
               {filteredOptions.length === 0 ? (
-                <div className="py-2.5 px-3 text-center text-xs text-[var(--color-slate)] italic">
+                <div className="py-2.5 px-3 text-center text-xs text-slate italic">
                   No matching options
                 </div>
               ) : (
@@ -435,11 +435,11 @@ export function CustomSelect<T extends string | number = string>({
                       className={cn(
                         'px-2.5 py-1.5 text-xs flex items-center justify-between cursor-pointer select-none transition-colors duration-100',
                         isSelected &&
-                          'bg-[var(--color-mist)] text-[var(--color-forest)] font-semibold',
+                          'bg-mist text-(--color-forest) font-semibold',
                         !isSelected &&
                           isHighlighted &&
-                          'bg-[var(--color-snow)] text-[var(--color-charcoal)]',
-                        !isSelected && !isHighlighted && 'text-[var(--color-charcoal)]'
+                          'bg-snow text-charcoal',
+                        !isSelected && !isHighlighted && 'text-charcoal'
                       )}
                     >
                       <div className="flex items-center gap-1.5 truncate mr-2">
@@ -458,14 +458,14 @@ export function CustomSelect<T extends string | number = string>({
                             {opt.label}
                           </span>
                           {opt.sublabel && (
-                            <span className="text-[10px] text-[var(--color-slate)] truncate">
+                            <span className="text-[10px] text-slate truncate">
                               {opt.sublabel}
                             </span>
                           )}
                         </div>
                       </div>
                       {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-[var(--color-leaf)] shrink-0 font-bold" />
+                        <Check className="w-3.5 h-3.5 text-(--color-leaf) shrink-0 font-bold" />
                       )}
                     </div>
                   );
@@ -475,14 +475,14 @@ export function CustomSelect<T extends string | number = string>({
 
             {/* Optional Add New action */}
             {onAddClick && (
-              <div className="border-t border-[var(--color-border-light)] p-1 bg-[var(--color-snow)] shrink-0">
+              <div className="border-t border-border-light p-1 bg-snow shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     closeDropdown();
                     onAddClick();
                   }}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-semibold text-[var(--color-forest)] hover:bg-[var(--color-mist)] rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-semibold text-(--color-forest) hover:bg-mist rounded-sm transition-colors cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
                   <span>{addLabel}</span>

@@ -35,7 +35,7 @@ export function SearchBar() {
         onChange={handleSearch} 
         className="input w-full sm:w-64"
       />
-      {isPending && <span className="absolute right-3 top-3 w-4 h-4 rounded-full border-2 border-[var(--color-mist)] border-t-[var(--color-emerald)] animate-spin"></span>}
+      {isPending && <span className="absolute right-3 top-3 w-4 h-4 rounded-full border-2 border-mist border-t-emerald animate-spin"></span>}
     </div>
   );
 }

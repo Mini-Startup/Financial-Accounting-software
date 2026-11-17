@@ -12,7 +12,7 @@ export function CurrencyPageManager({ initialCurrencies }: { initialCurrencies: 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-display">Currencies</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage all currencies and their codes for multi-currency support.</p>
+          <p className="text-sm text-slate mt-1">Manage all currencies and their codes for multi-currency support.</p>
         </div>
         
         <div className="flex items-center gap-3">

@@ -166,11 +166,11 @@ export function UniversalDataTable<T>({
   };
 
   return (
-    <div className={cn('flex flex-col bg-white border border-[var(--color-border-light)] rounded-[var(--radius-lg)] shadow-xs overflow-hidden', className)}>
+    <div className={cn('flex flex-col bg-white border border-border-light rounded-lg shadow-xs overflow-hidden', className)}>
       <div className="overflow-x-auto relative">
         <table className="w-full text-left border-collapse text-xs">
           {/* Header */}
-          <thead className={cn('bg-[var(--color-snow)] text-[var(--color-slate)] border-b border-[var(--color-border-light)] select-none', stickyHeader && 'sticky top-0 z-10 backdrop-blur-xs')}>
+          <thead className={cn('bg-snow text-slate border-b border-border-light select-none', stickyHeader && 'sticky top-0 z-10 backdrop-blur-xs')}>
             <tr>
               {selectable && (
                 <th className="w-10 px-3 py-3 text-center">
@@ -191,7 +191,7 @@ export function UniversalDataTable<T>({
                     className={cn(
                       'px-3.5 py-3 font-semibold uppercase tracking-wider text-[11px]',
                       col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
-                      canSort && 'cursor-pointer hover:text-[var(--color-charcoal)] transition-colors',
+                      canSort && 'cursor-pointer hover:text-charcoal transition-colors',
                       col.headerClassName
                     )}
                   >
@@ -204,12 +204,12 @@ export function UniversalDataTable<T>({
                     >
                       <span>{col.header}</span>
                       {canSort && (
-                        <span className="shrink-0 text-[var(--color-fog)]">
+                        <span className="shrink-0 text-fog">
                           {isSorted ? (
                             sortDir === 'asc' ? (
-                              <ChevronUp className="w-3.5 h-3.5 text-[var(--color-forest)] font-bold" />
+                              <ChevronUp className="w-3.5 h-3.5 text-(--color-forest) font-bold" />
                             ) : (
-                              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-forest)] font-bold" />
+                              <ChevronDown className="w-3.5 h-3.5 text-(--color-forest) font-bold" />
                             )
                           ) : (
                             <ChevronsUpDown className="w-3 h-3 opacity-60" />
@@ -224,15 +224,15 @@ export function UniversalDataTable<T>({
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-[var(--color-border-light)]">
+          <tbody className="divide-y divide-border-light">
             {paginatedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + (selectable ? 1 : 0)}
-                  className="py-12 text-center text-[var(--color-slate)]"
+                  className="py-12 text-center text-slate"
                 >
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <Inbox className="w-8 h-8 text-[var(--color-fog)] stroke-[1.5]" />
+                    <Inbox className="w-8 h-8 text-fog stroke-[1.5]" />
                     <p className="text-xs font-medium">{emptyMessage}</p>
                   </div>
                 </td>
@@ -249,7 +249,7 @@ export function UniversalDataTable<T>({
                     onDoubleClick={() => onRowDoubleClick?.(row)}
                     className={cn(
                       'transition-colors duration-100',
-                      isSelected ? 'bg-[var(--color-mist)]/50' : 'hover:bg-[var(--color-snow)]',
+                      isSelected ? 'bg-mist/50' : 'hover:bg-snow',
                       (onRowClick || onRowDoubleClick) && 'cursor-pointer'
                     )}
                   >
@@ -269,7 +269,7 @@ export function UniversalDataTable<T>({
                         <td
                           key={col.key}
                           className={cn(
-                            'px-3.5 py-2.5 text-[var(--color-charcoal)]',
+                            'px-3.5 py-2.5 text-charcoal',
                             col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
                             (col.isNumeric || typeof val === 'number') && 'font-mono tabular-nums',
                             col.className
@@ -287,7 +287,7 @@ export function UniversalDataTable<T>({
 
           {/* Total / Summary Row */}
           {showTotalRow && hasSummableColumn && paginatedData.length > 0 && (
-            <tfoot className="bg-[var(--color-snow)] font-semibold border-t-2 border-[var(--color-border-medium)] text-xs text-[var(--color-charcoal)] sticky bottom-0">
+            <tfoot className="bg-snow font-semibold border-t-2 border-border-medium text-xs text-charcoal sticky bottom-0">
               <tr>
                 {selectable && <td className="px-3 py-2.5"></td>}
                 {columns.map((col, idx) => {
@@ -306,7 +306,7 @@ export function UniversalDataTable<T>({
                       <td
                         key={col.key}
                         className={cn(
-                          'px-3.5 py-2.5 font-mono tabular-nums text-[var(--color-forest)] font-bold',
+                          'px-3.5 py-2.5 font-mono tabular-nums text-(--color-forest) font-bold',
                           col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                         )}
                       >
@@ -318,7 +318,7 @@ export function UniversalDataTable<T>({
                   // Display the total label in the first non-numeric column
                   if (idx === 0) {
                     return (
-                      <td key={col.key} className="px-3.5 py-2.5 font-bold uppercase tracking-wider text-[11px] text-[var(--color-forest)]">
+                      <td key={col.key} className="px-3.5 py-2.5 font-bold uppercase tracking-wider text-[11px] text-(--color-forest)">
                         {totalLabel}
                       </td>
                     );
@@ -334,7 +334,7 @@ export function UniversalDataTable<T>({
 
       {/* Pagination Footer */}
       {showPagination && sortedData.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-[var(--color-border-light)] bg-white text-xs text-[var(--color-slate)] select-none">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-border-light bg-white text-xs text-slate select-none">
           <div className="flex items-center gap-2">
             <span>Show</span>
             <CustomSelect<number>
@@ -348,17 +348,17 @@ export function UniversalDataTable<T>({
               menuWidth={80}
             />
             <span>rows per page</span>
-            <span className="text-[var(--color-fog)]">|</span>
+            <span className="text-fog">|</span>
             <span>
               Showing{' '}
-              <strong className="text-[var(--color-charcoal)]">
+              <strong className="text-charcoal">
                 {Math.min((currentPage - 1) * currentPageSize + 1, sortedData.length)}
               </strong>{' '}
               to{' '}
-              <strong className="text-[var(--color-charcoal)]">
+              <strong className="text-charcoal">
                 {Math.min(currentPage * currentPageSize, sortedData.length)}
               </strong>{' '}
-              of <strong className="text-[var(--color-charcoal)]">{sortedData.length}</strong> records
+              of <strong className="text-charcoal">{sortedData.length}</strong> records
             </span>
           </div>
 
@@ -367,7 +367,7 @@ export function UniversalDataTable<T>({
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              className="p-1 border border-[var(--color-border-medium)] rounded hover:bg-[var(--color-snow)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1 border border-border-medium rounded hover:bg-snow disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -378,7 +378,7 @@ export function UniversalDataTable<T>({
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              className="p-1 border border-[var(--color-border-medium)] rounded hover:bg-[var(--color-snow)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1 border border-border-medium rounded hover:bg-snow disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

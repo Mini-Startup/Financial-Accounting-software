@@ -224,26 +224,26 @@ export function FormModal({
   return (
     <div
       onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-100000 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
     >
-      <div ref={modalRef} className="card w-[900px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div ref={modalRef} className="card w-225 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
         
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)]">
+        <div className="card__header bg-snow">
           <h2 className="card__title">
             {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
           </h2>
-          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="card__body p-6 overflow-y-auto">
           {initialData && (
-            <div className="mb-6 pb-4 border-b border-[var(--color-border-light)] flex items-center justify-between">
+            <div className="mb-6 pb-4 border-b border-border-light flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--color-slate)] uppercase tracking-wider font-semibold">Selected Record</p>
-                <p className="text-h3 text-[var(--color-forest)]">{formData.code} - {formData.name}</p>
+                <p className="text-sm text-slate uppercase tracking-wider font-semibold">Selected Record</p>
+                <p className="text-h3 text-(--color-forest)">{formData.code} - {formData.name}</p>
               </div>
             </div>
           )}
@@ -266,7 +266,7 @@ export function FormModal({
               </div>
             )}
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Basic</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="form-label">Code *</label>
@@ -287,13 +287,13 @@ export function FormModal({
                     className="input font-mono" 
                     placeholder="0.00"
                   />
-                  <span className="text-[11px] text-[var(--color-slate)] mt-0.5 block">Positive for Credit, Negative for Debit</span>
+                  <span className="text-[11px] text-slate mt-0.5 block">Positive for Credit, Negative for Debit</span>
                 </div>
                 
                 {groupName === 'Sundry Debtors' && (
                   <>
                     <div className="form-group flex items-center h-full pt-6">
-                      <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
+                      <label className="flex items-center gap-2 text-sm text-slate cursor-pointer hover:text-charcoal transition-colors">
                         <CustomCheckbox
                           checked={Boolean(formData.isDirectClient)}
                           onChange={(checked) => setFormData((prev) => ({ ...prev, isDirectClient: checked }))}
@@ -309,7 +309,7 @@ export function FormModal({
                           disabled
                           value={formData.code}
                           placeholder="Same as Client Code"
-                          className="input opacity-60 bg-[var(--color-snow)]"
+                          className="input opacity-60 bg-snow"
                         />
                       ) : (
                         <UniversalDropdown
@@ -329,7 +329,7 @@ export function FormModal({
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact details</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Contact details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group col-span-2">
                   <label className="form-label">Address</label>
@@ -353,9 +353,9 @@ export function FormModal({
                     value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
                     onChange={handleChange}
                     disabled={formData.isWhatsappSameAsMobile}
-                    className={cn("input", formData.isWhatsappSameAsMobile && 'opacity-60 bg-[var(--color-snow)]')}
+                    className={cn("input", formData.isWhatsappSameAsMobile && 'opacity-60 bg-snow')}
                   />
-                  <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] mt-2 cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
+                  <label className="flex items-center gap-2 text-sm text-slate mt-2 cursor-pointer hover:text-charcoal transition-colors">
                     <CustomCheckbox
                       checked={Boolean(formData.isWhatsappSameAsMobile)}
                       onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
@@ -372,7 +372,7 @@ export function FormModal({
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact person</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Contact person</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group col-span-2">
                   <label className="form-label">Contact person name</label>
@@ -390,7 +390,7 @@ export function FormModal({
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Banking details</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Banking details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="form-label">Bank name</label>
@@ -420,7 +420,7 @@ export function FormModal({
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Referred by</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">Referred by</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group col-span-2">
                   <label className="form-label">Reference Name</label>
@@ -437,14 +437,14 @@ export function FormModal({
               </div>
             </div>
             
-            <div className="mt-8 pt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
+            <div className="mt-8 pt-6 flex justify-end gap-3 border-t border-border-light">
                <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary">Cancel</button>
                <button
                  type="submit"
                  form="accountForm"
                  disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
                  className={cn(
-                   "btn btn--primary flex items-center gap-2 min-w-[110px] justify-center",
+                   "btn btn--primary flex items-center gap-2 min-w-27.5 justify-center",
                    (isDuplicate || !formData.code?.trim() || !formData.name?.trim()) && "opacity-60 cursor-not-allowed bg-slate-400 border-slate-400 hover:bg-slate-400"
                  )}
                >

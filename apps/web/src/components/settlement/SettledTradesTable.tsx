@@ -115,7 +115,7 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                 <th className="py-3 px-3">Type</th>
                 <th className="py-3 px-3">Party</th>
                 <th className="py-3 px-3">Broker</th>
-                <th className="py-3 px-3 min-w-[200px]">Security Name</th>
+                <th className="py-3 px-3 min-w-50">Security Name</th>
                 <th className="py-3 px-3 text-center">Side</th>
                 <th className="py-3 px-3 text-right">Quantity</th>
                 <th className="py-3 px-3 text-right">Rate</th>
@@ -163,7 +163,7 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                       </td>
                       <td className="py-2.5 px-3">
                         <div className="font-mono font-bold text-slate-900">{t.account?.code}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[150px]" title={t.account?.name}>
+                        <div className="text-[11px] text-slate-500 truncate max-w-37.5" title={t.account?.name}>
                           {t.account?.name}
                         </div>
                       </td>

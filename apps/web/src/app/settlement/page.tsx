@@ -344,10 +344,10 @@ export default function SettlementPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
         <div>
-          <h1 className="text-h2 font-display text-[var(--color-charcoal)]">Settlement</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <h1 className="text-h2 font-display text-charcoal">Settlement</h1>
+          <p className="text-sm text-slate mt-1">
             Review position exposure, calculate mark-to-market settlements, and generate daily CF/BF accounting cycles.
           </p>
         </div>

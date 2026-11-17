@@ -241,11 +241,11 @@ export function UniversalDropdown({
     >
       <div
         className={cn(
-          'w-full min-h-[38px] px-2.5 py-1 bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] text-xs text-[var(--color-charcoal)]',
+          'w-full min-h-9.5 px-2.5 py-1 bg-white border border-border-medium rounded-md text-xs text-charcoal',
           'flex items-center justify-between gap-1.5 transition-all duration-150 select-none shadow-xs',
           searchable ? 'cursor-text' : 'cursor-pointer',
-          isOpen && 'border-[var(--color-border-focus)] ring-2 ring-[var(--color-leaf)]/20',
-          !disabled && 'hover:border-[var(--color-slate)]',
+          isOpen && 'border-(--color-border-focus) ring-2 ring-(--color-leaf)/20',
+          !disabled && 'hover:border-slate',
           triggerClassName
         )}
         onClick={() => {
@@ -284,16 +284,16 @@ export function UniversalDropdown({
               }
             }}
             onKeyDown={handleKeyDown}
-            className="w-full h-full bg-transparent text-xs text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)] outline-none cursor-text truncate"
+            className="w-full h-full bg-transparent text-xs text-charcoal placeholder:text-fog outline-none cursor-text truncate"
           />
         ) : (
-          <span className="w-full text-xs text-[var(--color-charcoal)] truncate select-none">
+          <span className="w-full text-xs text-charcoal truncate select-none">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         )}
 
         {/* Right side controls: Clear (X) & Chevron Toggle */}
-        <div className="flex items-center gap-1 shrink-0 text-[var(--color-slate)]">
+        <div className="flex items-center gap-1 shrink-0 text-slate">
           {clearable && selectedOption && !disabled && (
             <button
               type="button"
@@ -305,7 +305,7 @@ export function UniversalDropdown({
                 setSearchQuery('');
                 closeDropdown();
               }}
-              className="p-1 hover:text-[var(--color-negative)] transition-colors rounded cursor-pointer"
+              className="p-1 hover:text-negative transition-colors rounded cursor-pointer"
               title="Clear selection"
             >
               <X className="w-3.5 h-3.5" />
@@ -319,13 +319,13 @@ export function UniversalDropdown({
               e.stopPropagation();
               handleToggle();
             }}
-            className="p-1 hover:text-[var(--color-charcoal)] transition-colors rounded cursor-pointer"
+            className="p-1 hover:text-charcoal transition-colors rounded cursor-pointer"
             title={isOpen ? 'Close' : 'Open'}
           >
             <ChevronDown
               className={cn(
                 'w-4 h-4 transition-transform duration-200',
-                isOpen && 'rotate-180 text-[var(--color-forest)]'
+                isOpen && 'rotate-180 text-(--color-forest)'
               )}
             />
           </button>
@@ -357,12 +357,12 @@ export function UniversalDropdown({
               width: `${coords.width}px`,
               zIndex: 999999,
             }}
-            className="bg-white border border-[var(--color-border-light)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] overflow-hidden flex flex-col max-h-60 duration-100"
+            className="bg-white border border-border-light rounded-md shadow-(--shadow-lg) overflow-hidden flex flex-col max-h-60 duration-100"
           >
             {/* Options List */}
             <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
               {filteredOptions.length === 0 ? (
-                <div className="p-3 text-center text-xs text-[var(--color-slate)] italic">
+                <div className="p-3 text-center text-xs text-slate italic">
                   No matching options found
                 </div>
               ) : (
@@ -377,21 +377,21 @@ export function UniversalDropdown({
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={cn(
                         'px-3 py-2 text-xs flex items-center justify-between cursor-pointer select-none transition-colors',
-                        isSelected && 'bg-[var(--color-mist)] text-[var(--color-forest)] font-semibold',
-                        !isSelected && isHighlighted && 'bg-[var(--color-snow)] text-[var(--color-charcoal)]',
-                        !isSelected && !isHighlighted && 'text-[var(--color-charcoal)]'
+                        isSelected && 'bg-mist text-(--color-forest) font-semibold',
+                        !isSelected && isHighlighted && 'bg-snow text-charcoal',
+                        !isSelected && !isHighlighted && 'text-charcoal'
                       )}
                     >
                       <div className="flex flex-col truncate mr-2">
                         <span className="truncate">{opt.label}</span>
                         {opt.sublabel && (
-                          <span className="text-[10px] text-[var(--color-slate)] truncate">
+                          <span className="text-[10px] text-slate truncate">
                             {opt.sublabel}
                           </span>
                         )}
                       </div>
                       {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-[var(--color-leaf)] shrink-0 font-bold" />
+                        <Check className="w-3.5 h-3.5 text-(--color-leaf) shrink-0 font-bold" />
                       )}
                     </div>
                   );
@@ -401,14 +401,14 @@ export function UniversalDropdown({
 
             {/* Add New Button Footer */}
             {onAddClick && (
-              <div className="border-t border-[var(--color-border-light)] p-1.5 bg-[var(--color-snow)] shrink-0">
+              <div className="border-t border-border-light p-1.5 bg-snow shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     closeDropdown();
                     onAddClick();
                   }}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold text-[var(--color-forest)] hover:bg-[var(--color-mist)] rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold text-(--color-forest) hover:bg-mist rounded-sm transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{addLabel}</span>

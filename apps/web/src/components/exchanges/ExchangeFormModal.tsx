@@ -95,14 +95,14 @@ export function ExchangeFormModal({
   return (
     <div
       onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-100000 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
     >
       <div
         ref={modalRef}
-        className="card w-[480px] max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150"
+        className="card w-120 max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-emerald-100/70 text-emerald-800 rounded-md">
               <Building2 className="w-4 h-4" />
@@ -116,7 +116,7 @@ export function ExchangeFormModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+            className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -163,7 +163,7 @@ export function ExchangeFormModal({
               </div>
             </div>
 
-            <div className="mt-6 pt-4 flex justify-end gap-2.5 border-t border-[var(--color-border-light)]">
+            <div className="mt-6 pt-4 flex justify-end gap-2.5 border-t border-border-light">
               <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary text-xs py-2 px-3">
                 Cancel
               </button>

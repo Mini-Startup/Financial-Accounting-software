@@ -209,7 +209,7 @@ export function PositionSummaryTable({
                 <th onClick={() => handleSort('exchangeCode')} className="cursor-pointer py-3 px-3">
                   Exchange {renderSortIndicator('exchangeCode')}
                 </th>
-                <th onClick={() => handleSort('scriptShortName')} className="cursor-pointer py-3 px-3 min-w-[200px]">
+                <th onClick={() => handleSort('scriptShortName')} className="cursor-pointer py-3 px-3 min-w-50">
                   Script / Security {renderSortIndicator('scriptShortName')}
                 </th>
                 <th className="py-3 px-3">Expiry</th>
@@ -229,7 +229,7 @@ export function PositionSummaryTable({
                 </th>
                 <th className="text-right py-3 px-3">Net Avg</th>
                 <th className="text-right py-3 px-3">Closing Rate</th>
-                <th onClick={() => handleSort('finalPnL')} className="text-right cursor-pointer py-3 px-3 font-bold min-w-[120px]">
+                <th onClick={() => handleSort('finalPnL')} className="text-right cursor-pointer py-3 px-3 font-bold min-w-30">
                   Final P&amp;L {renderSortIndicator('finalPnL')}
                 </th>
               </tr>
@@ -269,7 +269,7 @@ export function PositionSummaryTable({
                       {/* Party */}
                       <td className="py-2.5 px-3">
                         <div className="font-mono font-bold text-slate-900">{item.accountCode}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[180px]" title={item.accountName}>
+                        <div className="text-[11px] text-slate-500 truncate max-w-45" title={item.accountName}>
                           {item.accountName}
                         </div>
                       </td>
@@ -294,7 +294,7 @@ export function PositionSummaryTable({
                       {/* Script / Security */}
                       <td className="py-2.5 px-3">
                         <div className="font-bold text-slate-900">{item.scriptShortName}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[220px]" title={item.securityName || item.scriptFullName}>
+                        <div className="text-[11px] text-slate-500 truncate max-w-55" title={item.securityName || item.scriptFullName}>
                           {item.securityName || item.scriptFullName}
                         </div>
                       </td>
@@ -360,9 +360,9 @@ export function PositionSummaryTable({
                         className={cn(
                           'py-2.5 px-3 text-right font-mono font-bold',
                           pnl > 0
-                            ? 'text-[var(--color-positive)]'
+                            ? 'text-(--color-positive)'
                             : pnl < 0
-                            ? 'text-[var(--color-negative)]'
+                            ? 'text-negative'
                             : 'text-slate-500'
                         )}
                       >
@@ -412,9 +412,9 @@ export function PositionSummaryTable({
                     className={cn(
                       'py-3 px-3 text-right font-bold',
                       totals.totalPnL > 0
-                        ? 'text-[var(--color-positive)]'
+                        ? 'text-(--color-positive)'
                         : totals.totalPnL < 0
-                        ? 'text-[var(--color-negative)]'
+                        ? 'text-negative'
                         : 'text-slate-900'
                     )}
                   >

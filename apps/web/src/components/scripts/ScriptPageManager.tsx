@@ -18,7 +18,7 @@ export function ScriptPageManager({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-display">Scripts</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage scripts and code mappings across different exchanges.</p>
+          <p className="text-sm text-slate mt-1">Manage scripts and code mappings across different exchanges.</p>
         </div>
         
         <div className="flex items-center gap-3">

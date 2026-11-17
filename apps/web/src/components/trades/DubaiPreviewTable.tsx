@@ -218,39 +218,39 @@ export function DubaiPreviewTable({
     <div className="space-y-6">
       {/* Stats Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card bg-[var(--color-snow)]">
+        <div className="card bg-snow">
           <div className="card__body p-4 flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Parsed Dubai Rows</div>
-              <div className="text-lg font-bold text-[var(--color-charcoal)]">{activeDubaiRows.length} active</div>
+              <div className="text-xs text-slate uppercase font-semibold">Parsed Dubai Rows</div>
+              <div className="text-lg font-bold text-charcoal">{activeDubaiRows.length} active</div>
             </div>
           </div>
         </div>
 
-        <div className="card bg-[var(--color-snow)]">
+        <div className="card bg-snow">
           <div className="card__body p-4 flex items-center gap-3">
             <div className="p-2 bg-green-50 rounded-lg text-green-600">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Valid Trades</div>
-              <div className="text-lg font-bold text-[var(--color-positive)]">
+              <div className="text-xs text-slate uppercase font-semibold">Valid Trades</div>
+              <div className="text-lg font-bold text-(--color-positive)">
                 {activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid).length} ready
               </div>
             </div>
           </div>
         </div>
 
-        <div className="card bg-[var(--color-snow)]">
+        <div className="card bg-snow">
           <div className="card__body p-4 flex items-center gap-3">
             <div className="p-2 bg-red-50 rounded-lg text-red-600">
               <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Excluded X Trades</div>
+              <div className="text-xs text-slate uppercase font-semibold">Excluded X Trades</div>
               <div className="text-lg font-bold text-rose-600">{excludedDubaiRows.length} excluded</div>
             </div>
           </div>
@@ -258,7 +258,7 @@ export function DubaiPreviewTable({
       </div>
 
       {/* Tip Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[var(--color-slate)] bg-emerald-50/60 border border-emerald-200 rounded-lg px-4 py-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate bg-emerald-50/60 border border-emerald-200 rounded-lg px-4 py-3 gap-2">
         <span className="flex items-center gap-2">
           <span className="font-bold text-emerald-800">💡 Quick Tip:</span> Click any row to inspect & edit all fields in the side drawer. Click unmapped client/script badges to add them immediately.
         </span>
@@ -352,7 +352,7 @@ export function DubaiPreviewTable({
                 <th className="py-3 px-3">Dealer Code</th>
                 <th className="py-3 px-3">Exchange</th>
                 <th className="py-3 px-3">Curr</th>
-                <th className="py-3 px-3 min-w-[220px]">Security Name</th>
+                <th className="py-3 px-3 min-w-55">Security Name</th>
                 <th className="py-3 px-3">Del Month</th>
                 <th className="py-3 px-3">Expiry Date</th>
                 <th className="py-3 px-3 text-right">Market Lot</th>

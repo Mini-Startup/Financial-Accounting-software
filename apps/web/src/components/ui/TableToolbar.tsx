@@ -154,7 +154,7 @@ export function TableToolbar({
     <>
       <div
         className={cn(
-          'flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white border border-[var(--color-border-light)] rounded-t-xl shadow-xs',
+          'flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white border border-border-light rounded-t-xl shadow-xs',
           className
         )}
       >
@@ -189,10 +189,10 @@ export function TableToolbar({
           ) : (
             <>
               {onSearchChange && (
-                <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all min-w-[260px] max-w-md flex-1">
+                <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all min-w-65 max-w-md flex-1">
                   {/* Column targeting dropdown in front of search */}
                   {columns && columns.length > 0 && onSearchColumnChange && (
-                    <div className="w-[125px] shrink-0 border-r border-[var(--color-border-light)]">
+                    <div className="w-31.25 shrink-0 border-r border-border-light">
                       <UniversalDropdown
                         value={searchColumn}
                         onChange={onSearchColumnChange}
@@ -201,7 +201,7 @@ export function TableToolbar({
                           { value: 'ALL', label: 'All Columns' },
                           ...columns.map((c) => ({ value: c.key, label: c.label })),
                         ]}
-                        triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-[var(--color-charcoal)]"
+                        triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
                       />
                     </div>
                   )}
@@ -214,7 +214,7 @@ export function TableToolbar({
                       value={searchQuery}
                       onChange={(e) => onSearchChange(e.target.value)}
                       placeholder={searchPlaceholder}
-                      className="w-full h-8.5 px-2.5 text-xs bg-transparent text-[var(--color-charcoal)] placeholder:text-slate-400 outline-none"
+                      className="w-full h-8.5 px-2.5 text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
                     />
                     {searchQuery && (
                       <button
@@ -234,16 +234,16 @@ export function TableToolbar({
                       type="button"
                       onClick={() => setIsAdvancedOpen(true)}
                       className={cn(
-                        'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-[var(--color-border-light)] rounded-r-lg transition-colors cursor-pointer select-none',
+                        'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-border-light rounded-r-lg transition-colors cursor-pointer select-none',
                         activeAdvancedCount > 0
-                          ? 'bg-[var(--color-mist)] text-[var(--color-forest)]'
+                          ? 'bg-mist text-(--color-forest)'
                           : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                       )}
                       title="Advanced Filter (AND / OR conditions)"
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5" />
                       {activeAdvancedCount > 0 && (
-                        <span className="w-4 h-4 bg-[var(--color-forest)] text-white text-[9px] rounded-full flex items-center justify-center font-mono">
+                        <span className="w-4 h-4 bg-(--color-forest) text-white text-[9px] rounded-full flex items-center justify-center font-mono">
                           {activeAdvancedCount}
                         </span>
                       )}
@@ -260,12 +260,12 @@ export function TableToolbar({
                   className={cn(
                     'h-8.5 px-2.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer',
                     isFindReplaceOpen
-                      ? 'bg-[var(--color-mist)] text-[var(--color-forest)] border-[var(--color-leaf)] shadow-2xs'
+                      ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                   )}
                   title="Find & Replace in Table (Ctrl+H)"
                 >
-                  <Replace className="w-3.5 h-3.5 text-[var(--color-leaf)]" />
+                  <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
                   <span className="hidden sm:inline">Find & Replace</span>
                 </button>
               )}
@@ -337,18 +337,18 @@ export function TableToolbar({
         columns.length > 0 &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-[var(--color-border-light)] rounded-2xl shadow-2xl max-w-xl w-full p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-3">
+          <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="bg-white border border-border-light rounded-2xl shadow-2xl max-w-xl w-full p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-border-light pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-[var(--color-mist)] text-[var(--color-forest)] rounded-lg">
+                  <div className="p-2 bg-mist text-(--color-forest) rounded-lg">
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-[var(--color-charcoal)] font-display">
+                    <h3 className="text-sm font-bold text-charcoal font-display">
                       Advanced Multi-Column Filter
                     </h3>
-                    <p className="text-[11px] text-[var(--color-slate)]">
+                    <p className="text-[11px] text-slate">
                       Combine AND / OR rules across multiple table columns
                     </p>
                   </div>
@@ -365,14 +365,14 @@ export function TableToolbar({
               {/* Conditions Rows */}
               <div className="flex flex-col gap-2.5 max-h-72 overflow-y-auto pr-1">
                 {conditions.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-slate-500 bg-[var(--color-snow)] rounded-xl border border-dashed border-[var(--color-border-medium)]">
+                  <div className="py-6 text-center text-xs text-slate-500 bg-snow rounded-xl border border-dashed border-border-medium">
                     No advanced conditions configured. Click below to add your first rule.
                   </div>
                 ) : (
                   conditions.map((cond, idx) => (
                     <div
                       key={cond.id}
-                      className="flex flex-wrap items-center gap-2 p-2 bg-[var(--color-snow)] border border-[var(--color-border-light)] rounded-lg text-xs"
+                      className="flex flex-wrap items-center gap-2 p-2 bg-snow border border-border-light rounded-lg text-xs"
                     >
                       {idx > 0 && (
                         <CustomSelect<'AND' | 'OR'>
@@ -423,7 +423,7 @@ export function TableToolbar({
                         value={cond.value}
                         onChange={(e) => handleUpdateCondition(cond.id, { value: e.target.value })}
                         placeholder="Filter value..."
-                        className="h-8 flex-1 min-w-[120px] px-2.5 bg-white border border-[var(--color-border-medium)] rounded text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
+                        className="h-8 flex-1 min-w-30 px-2.5 bg-white border border-border-medium rounded text-charcoal outline-none focus:border-(--color-border-focus)"
                       />
 
                       {/* Remove button */}
@@ -441,11 +441,11 @@ export function TableToolbar({
               </div>
 
               {/* Action Footer */}
-              <div className="flex items-center justify-between border-t border-[var(--color-border-light)] pt-3">
+              <div className="flex items-center justify-between border-t border-border-light pt-3">
                 <button
                   type="button"
                   onClick={handleAddCondition}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--color-forest)] bg-[var(--color-snow)] hover:bg-[var(--color-mist)] border border-[var(--color-border-light)] rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-(--color-forest) bg-snow hover:bg-mist border border-border-light rounded-lg transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Condition</span>
@@ -465,7 +465,7 @@ export function TableToolbar({
                   <button
                     type="button"
                     onClick={handleApplyAdvanced}
-                    className="px-4 py-1.5 text-xs font-semibold bg-[var(--color-forest)] hover:bg-[var(--color-emerald)] text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-1.5 text-xs font-semibold bg-(--color-forest) hover:bg-emerald text-white rounded-lg shadow-xs transition-colors cursor-pointer"
                   >
                     Apply Rules
                   </button>

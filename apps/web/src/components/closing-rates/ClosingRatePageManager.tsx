@@ -681,7 +681,7 @@ export function ClosingRatePageManager({
     return (
       <div className="space-y-6">
         {/* Import Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={handleImportBack}
@@ -692,7 +692,7 @@ export function ClosingRatePageManager({
             </button>
             <div>
               <h1 className="text-h2 font-display">Open Position Import (Closing Rates)</h1>
-              <p className="text-sm text-[var(--color-slate)] mt-1">
+              <p className="text-sm text-slate mt-1">
                 Upload your daily Open Position CSV file to extract closing rates and verify position settlement.
               </p>
             </div>
@@ -753,7 +753,7 @@ export function ClosingRatePageManager({
         </div>
 
         {/* Configuration Card */}
-        <div className="card p-6 bg-white border border-[var(--color-border-light)] shadow-sm space-y-6">
+        <div className="card p-6 bg-white border border-border-light shadow-sm space-y-6">
           {/* Top Section: Date Selection */}
           <div className="max-w-md space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -768,7 +768,7 @@ export function ClosingRatePageManager({
           </div>
 
           {/* Bottom Section: File Upload Component */}
-          <div className="pt-5 border-t border-[var(--color-border-light)] space-y-2">
+          <div className="pt-5 border-t border-border-light space-y-2">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
               Open Position CSV File <span className="text-rose-500">*</span>
             </label>
@@ -785,7 +785,7 @@ export function ClosingRatePageManager({
 
           {/* Validation Status Bar */}
           {parsedItems.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t border-slate-100 bg-slate-50/50 p-4 rounded-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 p-4 rounded-xl">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Validation Status:</span>
                 {verification.status === 'VALIDATED' ? (
@@ -849,7 +849,7 @@ export function ClosingRatePageManager({
               className="w-full p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+                <FileSpreadsheet className="w-4 h-4 text-(--color-primary)" />
                 <span>Closing Rates Extracted from File ({fileName}) — {parsedItems.length} unique security closing rates</span>
               </div>
               <div className="flex items-center gap-2 text-slate-500">
@@ -865,8 +865,8 @@ export function ClosingRatePageManager({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-3 flex-wrap flex-1">
                     {/* Column-targeted Search */}
-                    <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all max-w-md w-full">
-                      <div className="w-[140px] shrink-0 border-r border-[var(--color-border-light)]">
+                    <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all max-w-md w-full">
+                      <div className="w-35 shrink-0 border-r border-border-light">
                         <UniversalDropdown
                           value={previewSearchColumn}
                           onChange={(val) => setPreviewSearchColumn(val)}
@@ -879,7 +879,7 @@ export function ClosingRatePageManager({
                             { value: 'securityName', label: 'Security Name' },
                             { value: 'delMonth', label: 'Del Month' },
                           ]}
-                          triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-[var(--color-charcoal)]"
+                          triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
                         />
                       </div>
                       <div className="relative flex-1 flex items-center">
@@ -1089,10 +1089,10 @@ export function ClosingRatePageManager({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
         <div>
           <h1 className="text-h2 font-display">Closing Rates</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <p className="text-sm text-slate mt-1">
             Manage daily closing rates used for calculating portfolios, profit/loss, and account balances.
           </p>
         </div>
@@ -1113,7 +1113,7 @@ export function ClosingRatePageManager({
             }}
             className="btn btn--secondary flex items-center gap-2"
           >
-            <UploadCloud className="w-4 h-4 text-[var(--color-primary)]" /> Open Position Import
+            <UploadCloud className="w-4 h-4 text-(--color-primary)" /> Open Position Import
           </button>
         </div>
       </div>
@@ -1163,8 +1163,8 @@ export function ClosingRatePageManager({
         typeof document !== 'undefined' &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="bg-[var(--bg-card)] border border-[var(--color-border-medium)] rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-              <div className="p-6 border-b border-[var(--color-border-light)] flex items-center justify-between">
+            <div className="bg-(--bg-card) border border-border-medium rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-border-light flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
                     <ShieldAlert className="w-5 h-5" />
@@ -1265,7 +1265,7 @@ export function ClosingRatePageManager({
                 )}
               </div>
 
-              <div className="p-4 bg-slate-50 border-t border-[var(--color-border-light)] flex items-center justify-end gap-3">
+              <div className="p-4 bg-slate-50 border-t border-border-light flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setDuplicateCheckModal(null)}

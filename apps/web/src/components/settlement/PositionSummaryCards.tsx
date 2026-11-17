@@ -41,7 +41,7 @@ export function PositionSummaryCards({
           <span
             className={cn(
               'text-xl font-bold font-mono',
-              isPositive ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'
+              isPositive ? 'text-(--color-positive)' : 'text-negative'
             )}
           >
             {pnlDisplayStr}

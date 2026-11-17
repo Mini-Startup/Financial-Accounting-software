@@ -207,15 +207,15 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
             <tbody className="divide-y divide-slate-100">
               {paginatedExchanges.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={4} className="py-8 text-center text-slate font-medium">
                     No exchanges match search criteria.
                   </td>
                 </tr>
               ) : null}
               {paginatedExchanges.map((exc) => (
                 <tr key={exc.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="font-mono font-bold text-[var(--color-charcoal)] py-2.5 px-4">{exc.code}</td>
-                  <td className="text-[var(--color-slate)] py-2.5 px-4">{exc.name || '-'}</td>
+                  <td className="font-mono font-bold text-charcoal py-2.5 px-4">{exc.code}</td>
+                  <td className="text-slate py-2.5 px-4">{exc.name || '-'}</td>
                   <td className="py-2.5 px-4">
                     {exc.isActive ? (
                       <span className="badge badge--dot badge--success">Active</span>
@@ -226,13 +226,13 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
                   <td className="text-right py-2.5 px-4">
                     <button 
                       onClick={() => setEditingExchange(exc)}
-                      className="text-[var(--color-forest)] hover:text-[var(--color-emerald)] mr-4 font-semibold transition text-xs cursor-pointer"
+                      className="text-(--color-forest) hover:text-emerald mr-4 font-semibold transition text-xs cursor-pointer"
                     >
                       Edit
                     </button>
                     <button 
                       onClick={() => setDeleteTargetId(exc.id)}
-                      className="text-[var(--color-negative)] hover:opacity-80 font-semibold transition text-xs cursor-pointer"
+                      className="text-negative hover:opacity-80 font-semibold transition text-xs cursor-pointer"
                     >
                       Delete
                     </button>

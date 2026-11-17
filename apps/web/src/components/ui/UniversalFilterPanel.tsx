@@ -71,16 +71,16 @@ export function UniversalFilterPanel({
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-md)] border transition-all cursor-pointer select-none',
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all cursor-pointer select-none',
               isExpanded || activeCount > 0
-                ? 'bg-[var(--color-mist)] text-[var(--color-forest)] border-[var(--color-leaf)]/30'
-                : 'bg-white text-[var(--color-slate)] border-[var(--color-border-medium)] hover:border-[var(--color-slate)]'
+                ? 'bg-mist text-(--color-forest) border-(--color-leaf)/30'
+                : 'bg-white text-slate border-border-medium hover:border-slate'
             )}
           >
-            <Filter className="w-3.5 h-3.5 text-[var(--color-leaf)]" />
+            <Filter className="w-3.5 h-3.5 text-(--color-leaf)" />
             <span>Filters</span>
             {activeCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-[var(--color-forest)] text-white text-[10px] rounded-full font-mono">
+              <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-full font-mono">
                 {activeCount}
               </span>
             )}
@@ -106,14 +106,14 @@ export function UniversalFilterPanel({
             return (
               <div
                 key={key}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] text-[var(--color-forest)] font-medium animate-in fade-in duration-100"
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] text-(--color-forest) font-medium animate-in fade-in duration-100"
               >
-                <span className="text-[var(--color-slate)]">{conf?.label || key}:</span>
+                <span className="text-slate">{conf?.label || key}:</span>
                 <span className="font-semibold">{displayVal}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveChip(key)}
-                  className="p-0.5 text-emerald-700 hover:text-[var(--color-negative)] transition-colors rounded-full"
+                  className="p-0.5 text-emerald-700 hover:text-negative transition-colors rounded-full"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -126,7 +126,7 @@ export function UniversalFilterPanel({
           <button
             type="button"
             onClick={handleClearAll}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors cursor-pointer select-none"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate hover:text-negative transition-colors cursor-pointer select-none"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Reset filters</span>
@@ -136,14 +136,14 @@ export function UniversalFilterPanel({
 
       {/* Expanded Filter Drawer */}
       {isExpanded && (
-        <div className="p-3.5 bg-white border border-[var(--color-border-light)] rounded-[var(--radius-lg)] shadow-xs animate-in fade-in duration-150 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="p-3.5 bg-white border border-border-light rounded-lg shadow-xs animate-in fade-in duration-150 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {filters.map((filter) => {
             const currentVal = values[filter.key];
 
             if (filter.type === 'select') {
               return (
                 <div key={filter.key} className="flex flex-col gap-1 text-xs">
-                  <label className="font-semibold text-[var(--color-charcoal)] text-[11px]">
+                  <label className="font-semibold text-charcoal text-[11px]">
                     {filter.label}
                   </label>
                   <CustomSelect<string>
@@ -166,7 +166,7 @@ export function UniversalFilterPanel({
             if (filter.type === 'date') {
               return (
                 <div key={filter.key} className="flex flex-col gap-1 text-xs">
-                  <label className="font-semibold text-[var(--color-charcoal)] text-[11px]">
+                  <label className="font-semibold text-charcoal text-[11px]">
                     {filter.label}
                   </label>
                   <div className="relative flex items-center">
@@ -184,7 +184,7 @@ export function UniversalFilterPanel({
               const rangeVal = currentVal || { from: '', to: '' };
               return (
                 <div key={filter.key} className="flex flex-col gap-1 text-xs sm:col-span-2">
-                  <label className="font-semibold text-[var(--color-charcoal)] text-[11px]">
+                  <label className="font-semibold text-charcoal text-[11px]">
                     {filter.label}
                   </label>
                   <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ export function UniversalFilterPanel({
                       }
                       placeholder="From Date"
                     />
-                    <span className="text-[var(--color-slate)] text-xs">to</span>
+                    <span className="text-slate text-xs">to</span>
                     <UniversalDatePicker
                       value={rangeVal.to || ''}
                       onChange={(d) =>

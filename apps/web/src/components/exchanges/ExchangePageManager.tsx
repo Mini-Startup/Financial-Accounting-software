@@ -12,7 +12,7 @@ export function ExchangePageManager({ initialExchanges }: { initialExchanges: an
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-display">Exchanges</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage all exchanges configured across the accounting framework.</p>
+          <p className="text-sm text-slate mt-1">Manage all exchanges configured across the accounting framework.</p>
         </div>
         
         <div className="flex items-center gap-3">

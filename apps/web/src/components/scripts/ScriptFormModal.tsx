@@ -313,10 +313,10 @@ export function ScriptFormModal({
       >
         <div
           ref={modalRef}
-          className="card w-[620px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none animate-in zoom-in-95 duration-150"
+          className="card w-155 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none animate-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <div>
               <h2 className="card__title text-base font-bold text-slate-800">
                 {initialData && initialData.id ? 'Edit Script Master' : 'Create New Script Master'}
@@ -327,7 +327,7 @@ export function ScriptFormModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+              className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -395,7 +395,7 @@ export function ScriptFormModal({
 
             {/* Basic Info */}
             <div className="space-y-4">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">
+              <h3 className="text-xs font-semibold tracking-wider text-slate uppercase">
                 Script Information
               </h3>
 
@@ -516,7 +516,7 @@ export function ScriptFormModal({
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
+            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-border-light">
               <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary text-xs py-2 px-3">
                 Cancel
               </button>

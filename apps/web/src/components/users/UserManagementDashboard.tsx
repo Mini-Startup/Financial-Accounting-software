@@ -272,17 +272,17 @@ export function UserManagementDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-h2 font-display text-[var(--color-charcoal)]">
+            <h1 className="text-h2 font-display text-charcoal">
               Users & Access Control
             </h1>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
               RBAC
             </span>
           </div>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <p className="text-sm text-slate mt-1">
             Assign team member roles, manage administrative rights, and customize granular feature-function access.
           </p>
         </div>
@@ -293,7 +293,7 @@ export function UserManagementDashboard() {
             onClick={() => setActiveTab('USERS')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'USERS'
-                ? 'bg-white text-[var(--color-forest)] shadow-xs'
+                ? 'bg-white text-(--color-forest) shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -304,7 +304,7 @@ export function UserManagementDashboard() {
             onClick={() => setActiveTab('ROLES')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'ROLES'
-                ? 'bg-white text-[var(--color-forest)] shadow-xs'
+                ? 'bg-white text-(--color-forest) shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -326,13 +326,13 @@ export function UserManagementDashboard() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search user by name, email, or role..."
-                className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:border-[var(--color-forest)] transition-all"
+                className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:border-(--color-forest) transition-all"
               />
             </div>
             <button
               onClick={fetchData}
               disabled={loading}
-              className="btn btn--secondary h-[38px] px-3.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0 self-end sm:self-auto"
+              className="btn btn--secondary h-9.5 px-3.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0 self-end sm:self-auto"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
@@ -340,7 +340,7 @@ export function UserManagementDashboard() {
           </div>
 
           {/* Users Table */}
-          <div className="card bg-white rounded-2xl shadow-xs border border-[var(--color-border-light)] overflow-hidden">
+          <div className="card bg-white rounded-2xl shadow-xs border border-border-light overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -356,7 +356,7 @@ export function UserManagementDashboard() {
                   {loading ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-slate-400">
-                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[var(--color-forest)]" />
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-(--color-forest)" />
                         <span>Loading team members…</span>
                       </td>
                     </tr>
@@ -377,7 +377,7 @@ export function UserManagementDashboard() {
                         <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-3.5 font-medium text-slate-800">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-[var(--color-forest)]/10 text-[var(--color-forest)] font-bold flex items-center justify-center text-xs shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-(--color-forest)/10 text-(--color-forest) font-bold flex items-center justify-center text-xs shrink-0">
                                 {(u.name || u.email || 'U')[0].toUpperCase()}
                               </div>
                               <span className="font-semibold text-slate-900">
@@ -407,7 +407,7 @@ export function UserManagementDashboard() {
                               <select
                                 value={u.roleId || ''}
                                 onChange={(e) => handleRoleSelection(u, e.target.value)}
-                                className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 focus:outline-hidden focus:border-[var(--color-forest)] cursor-pointer"
+                                className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 focus:outline-hidden focus:border-(--color-forest) cursor-pointer"
                               >
                                 {assignableRoles.map((r) => (
                                   <option key={r.id} value={r.id}>
@@ -446,7 +446,7 @@ export function UserManagementDashboard() {
               <button
                 type="button"
                 onClick={() => setCreateRoleModal({ isOpen: true, name: '', description: '', saving: false })}
-                className="btn btn--primary h-[38px] px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                className="btn btn--primary h-9.5 px-4 flex items-center gap-1.5 text-xs font-bold cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Custom Role</span>
@@ -464,7 +464,7 @@ export function UserManagementDashboard() {
               return (
                 <div
                   key={r.id}
-                  className="card bg-white p-5 rounded-2xl border border-[var(--color-border-light)] shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+                  className="card bg-white p-5 rounded-2xl border border-border-light shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -485,7 +485,7 @@ export function UserManagementDashboard() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600 min-h-[36px] line-clamp-2">
+                    <p className="text-xs text-slate-600 min-h-9 line-clamp-2">
                       {r.description || 'No description provided.'}
                     </p>
 
@@ -500,7 +500,7 @@ export function UserManagementDashboard() {
                     <button
                       type="button"
                       onClick={() => setSelectedRoleForMatrix(r)}
-                      className="btn btn--secondary h-[34px] px-3 flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
+                      className="btn btn--secondary h-8.5 px-3 flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
                     >
                       <Sliders className="w-3.5 h-3.5" />
                       <span>Configure Permissions</span>
@@ -589,7 +589,7 @@ export function UserManagementDashboard() {
                   placeholder="e.g. Risk Manager, Senior Accountant"
                   value={createRoleModal.name}
                   onChange={(e) => setCreateRoleModal((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:outline-hidden focus:border-[var(--color-forest)]"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:outline-hidden focus:border-(--color-forest)"
                 />
               </div>
 
@@ -600,7 +600,7 @@ export function UserManagementDashboard() {
                   placeholder="Summary of this role's responsibilities..."
                   value={createRoleModal.description}
                   onChange={(e) => setCreateRoleModal((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:outline-hidden focus:border-[var(--color-forest)] resize-none"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:outline-hidden focus:border-(--color-forest) resize-none"
                 />
               </div>
 
@@ -608,14 +608,14 @@ export function UserManagementDashboard() {
                 <button
                   type="button"
                   onClick={() => setCreateRoleModal({ isOpen: false, name: '', description: '', saving: false })}
-                  className="btn btn--secondary h-[36px] px-4 text-xs font-semibold cursor-pointer"
+                  className="btn btn--secondary h-9 px-4 text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createRoleModal.saving}
-                  className="btn btn--primary h-[36px] px-4 text-xs font-bold cursor-pointer"
+                  className="btn btn--primary h-9 px-4 text-xs font-bold cursor-pointer"
                 >
                   {createRoleModal.saving ? 'Creating…' : 'Create & Configure'}
                 </button>

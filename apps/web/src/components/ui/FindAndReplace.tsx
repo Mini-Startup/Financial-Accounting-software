@@ -195,21 +195,21 @@ export function FindAndReplace<T>({
     <div
       style={{ zIndex: 99999 }}
       className={cn(
-        'fixed top-20 right-6 w-[440px] max-w-[94vw] bg-white/95 backdrop-blur-md border border-[var(--color-border-medium)] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.18)] p-4 flex flex-col gap-3.5 text-xs animate-in fade-in slide-in-from-top-4 duration-200',
+        'fixed top-20 right-6 w-110 max-w-[94vw] bg-white/95 backdrop-blur-md border border-border-medium rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.18)] p-4 flex flex-col gap-3.5 text-xs animate-in fade-in slide-in-from-top-4 duration-200',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5">
+      <div className="flex items-center justify-between border-b border-border-light pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-[var(--color-mist)] text-[var(--color-forest)] rounded-lg">
+          <div className="p-1.5 bg-mist text-(--color-forest) rounded-lg">
             <Replace className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-[var(--color-charcoal)] text-xs font-display">
+            <h4 className="font-bold text-charcoal text-xs font-display">
               {isReplaceActive ? 'Find & Replace' : 'Find in Table'}
             </h4>
-            <span className="text-[10px] text-[var(--color-slate)]">
+            <span className="text-[10px] text-slate">
               {isReplaceActive
                 ? 'Real-time in-table replacement'
                 : 'Highlighting matching rows & cells'}
@@ -239,7 +239,7 @@ export function FindAndReplace<T>({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="p-1 text-slate hover:text-charcoal hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               title="Close (Esc)"
             >
               <X className="w-4 h-4" />
@@ -250,7 +250,7 @@ export function FindAndReplace<T>({
 
       {/* Target Column Selector */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-[var(--color-slate)]">Target Column</label>
+        <label className="text-[11px] font-semibold text-slate">Target Column</label>
         <UniversalDropdown
           value={targetColumn}
           onChange={(val) => {
@@ -259,17 +259,17 @@ export function FindAndReplace<T>({
           }}
           searchable={false}
           options={columns.map((c) => ({ value: c.key, label: c.label }))}
-          triggerClassName="h-8.5 min-h-[34px] bg-slate-50 border border-[var(--color-border-medium)] rounded-lg text-xs font-medium"
+          triggerClassName="h-8.5 min-h-8.5 bg-slate-50 border border-border-medium rounded-lg text-xs font-medium"
         />
       </div>
 
       {/* Find Input with Navigation & Search Option Toggles */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
-          <label className="text-[11px] font-semibold text-[var(--color-slate)]">Find Text</label>
+          <label className="text-[11px] font-semibold text-slate">Find Text</label>
           {matchCount > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-[var(--color-slate)] mr-1">Navigate:</span>
+              <span className="text-[10px] text-slate mr-1">Navigate:</span>
               <button
                 type="button"
                 onClick={handlePrevMatch}
@@ -290,7 +290,7 @@ export function FindAndReplace<T>({
           )}
         </div>
 
-        <div className="relative flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20 shadow-2xs">
+        <div className="relative flex items-center bg-white border border-border-medium rounded-lg focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/20 shadow-2xs">
           <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
           <input
             ref={findInputRef}
@@ -320,7 +320,7 @@ export function FindAndReplace<T>({
               }
             }}
             placeholder="Type text to find in table..."
-            className="w-full h-8.5 pl-2 pr-1 text-xs bg-transparent outline-none text-[var(--color-charcoal)]"
+            className="w-full h-8.5 pl-2 pr-1 text-xs bg-transparent outline-none text-charcoal"
           />
 
           {/* Search Options: Case Sensitivity & Exact Whole Word */}
@@ -334,7 +334,7 @@ export function FindAndReplace<T>({
               className={cn(
                 'w-6 h-6 rounded-full transition-all cursor-pointer text-xs flex items-center justify-center',
                 matchCase
-                  ? 'bg-[var(--color-mist)] text-[var(--color-forest)] ring-1.5 ring-[var(--color-leaf)] font-bold shadow-2xs'
+                  ? 'bg-mist text-(--color-forest) ring-1.5 ring-(--color-leaf) font-bold shadow-2xs'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
               )}
               title={matchCase ? 'Match Case (Active)' : 'Match Case (Inactive)'}
@@ -351,7 +351,7 @@ export function FindAndReplace<T>({
               className={cn(
                 'w-6 h-6 rounded-full transition-all cursor-pointer text-xs flex items-center justify-center',
                 matchWholeWord
-                  ? 'bg-[var(--color-mist)] text-[var(--color-forest)] ring-1.5 ring-[var(--color-leaf)] font-bold shadow-2xs'
+                  ? 'bg-mist text-(--color-forest) ring-1.5 ring-(--color-leaf) font-bold shadow-2xs'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
               )}
               title={matchWholeWord ? 'Match Whole Word (Active)' : 'Match Whole Word (Inactive)'}
@@ -378,7 +378,7 @@ export function FindAndReplace<T>({
 
       {/* Replace Input */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-[var(--color-slate)]">
+        <label className="text-[11px] font-semibold text-slate">
           Replace With <span className="font-normal text-slate-400">(leave blank for Find only)</span>
         </label>
         <input
@@ -406,7 +406,7 @@ export function FindAndReplace<T>({
             }
           }}
           placeholder="Type replacement text to enable replace..."
-          className="h-8.5 px-2.5 bg-white border border-[var(--color-border-medium)] rounded-lg text-xs text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20 shadow-2xs"
+          className="h-8.5 px-2.5 bg-white border border-border-medium rounded-lg text-xs text-charcoal outline-none focus:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/20 shadow-2xs"
         />
       </div>
 
@@ -439,18 +439,18 @@ export function FindAndReplace<T>({
 
           {isReplaceActive ? (
             <div className="flex items-center gap-2 text-xs font-mono bg-white p-2 rounded-lg border border-amber-200">
-              <span className="line-through text-red-600 truncate max-w-[140px]" title={activeOldValue}>
+              <span className="line-through text-red-600 truncate max-w-35" title={activeOldValue}>
                 {activeOldValue || '—'}
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-emerald-700 font-bold truncate max-w-[140px]" title={activePreviewValue}>
+              <span className="text-emerald-700 font-bold truncate max-w-35" title={activePreviewValue}>
                 {activePreviewValue || '—'}
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-xs font-mono bg-white p-2 rounded-lg border border-amber-200">
               <span className="text-slate-500 font-sans text-[11px] font-medium">Found:</span>
-              <span className="text-amber-950 font-bold bg-amber-100 px-1.5 py-0.5 rounded truncate max-w-[280px]" title={activeOldValue}>
+              <span className="text-amber-950 font-bold bg-amber-100 px-1.5 py-0.5 rounded truncate max-w-70" title={activeOldValue}>
                 {activeOldValue || '—'}
               </span>
             </div>
@@ -459,13 +459,13 @@ export function FindAndReplace<T>({
       )}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--color-border-light)]">
+      <div className="flex items-center justify-end gap-2 pt-1 border-t border-border-light">
         <button
           type="button"
           disabled={matchCount === 0 || !isReplaceActive}
           onClick={handleReplaceOne}
           title={!isReplaceActive ? 'Enter replacement text to enable replace' : undefined}
-          className="px-3 py-1.5 font-semibold text-[var(--color-forest)] bg-[var(--color-snow)] hover:bg-[var(--color-mist)] border border-[var(--color-border-light)] rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs"
+          className="px-3 py-1.5 font-semibold text-(--color-forest) bg-snow hover:bg-mist border border-border-light rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs"
         >
           {isReplaceActive && matchCount > 0 && activeRowIndex !== null
             ? `Replace (Row #${activeRowIndex + 1})`
@@ -477,7 +477,7 @@ export function FindAndReplace<T>({
           disabled={matchCount === 0 || !isReplaceActive}
           onClick={handleReplaceAll}
           title={!isReplaceActive ? 'Enter replacement text to enable replace all' : undefined}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-white bg-[var(--color-forest)] hover:bg-[var(--color-emerald)] rounded-lg shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-white bg-(--color-forest) hover:bg-emerald rounded-lg shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs"
         >
           <CheckCheck className="w-3.5 h-3.5" />
           <span>Replace All ({matchCount})</span>

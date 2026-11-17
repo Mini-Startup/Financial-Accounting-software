@@ -260,7 +260,7 @@ export function DataTable({
   return (
     <div className="space-y-4">
       {/* Seamless Table Container with Zero Gap between Toolbar and Grid */}
-      <div className="border border-[var(--color-border-light)] rounded-xl shadow-xs overflow-hidden bg-white">
+      <div className="border border-border-light rounded-xl shadow-xs overflow-hidden bg-white">
         <TableToolbar
           searchQuery={searchQuery}
           onSearchChange={(q) => {
@@ -291,7 +291,7 @@ export function DataTable({
           totalItems={totalItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-          className="border-0 rounded-none border-b border-[var(--color-border-light)]"
+          className="border-0 rounded-none border-b border-border-light"
         />
 
         <div className="overflow-x-auto">
@@ -395,11 +395,11 @@ export function DataTable({
                       {opBal === 0 ? (
                         <span className="text-slate-400">₹0.00</span>
                       ) : opBal < 0 ? (
-                        <span className="text-[var(--color-negative)]">
+                        <span className="text-negative">
                           -₹{Math.abs(opBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                         </span>
                       ) : (
-                        <span className="text-[var(--color-forest)]">
+                        <span className="text-(--color-forest)">
                           +₹{opBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                         </span>
                       )}
@@ -443,11 +443,11 @@ export function DataTable({
                   {totalOpeningBalance === 0 ? (
                     <span className="text-slate-500">₹0.00</span>
                   ) : totalOpeningBalance < 0 ? (
-                    <span className="text-[var(--color-negative)]">
+                    <span className="text-negative">
                       -₹{Math.abs(totalOpeningBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                     </span>
                   ) : (
-                    <span className="text-[var(--color-forest)]">
+                    <span className="text-(--color-forest)">
                       +₹{totalOpeningBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                     </span>
                   )}

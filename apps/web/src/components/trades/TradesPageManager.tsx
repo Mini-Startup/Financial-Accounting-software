@@ -485,10 +485,10 @@ export function TradesPageManager({
       {isDeleting && <LoadingOverlay message="Deleting selected trades..." />}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
         <div>
           <h1 className="text-h2 font-display">Trades</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <p className="text-sm text-slate mt-1">
             Review manual, imported, and settlement trades cross-referenced with account masters.
           </p>
         </div>
@@ -509,13 +509,13 @@ export function TradesPageManager({
             }}
             className="btn btn--secondary flex items-center gap-2"
           >
-            <UploadCloud className="w-4 h-4 text-[var(--color-primary)]" /> Import File
+            <UploadCloud className="w-4 h-4 text-(--color-primary)" /> Import File
           </button>
         </div>
       </div>
 
       {/* Table Container Card (Seamless zero gap between Toolbar and Table) */}
-      <div className="border border-[var(--color-border-light)] rounded-xl shadow-xs overflow-hidden bg-white">
+      <div className="border border-border-light rounded-xl shadow-xs overflow-hidden bg-white">
         <TableToolbar
           searchQuery={searchQuery}
           onSearchChange={(q) => {
@@ -547,7 +547,7 @@ export function TradesPageManager({
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[25, 50, 100, 200]}
-          className="border-0 rounded-none border-b border-[var(--color-border-light)]"
+          className="border-0 rounded-none border-b border-border-light"
           filterSlot={
             <div className="flex gap-2 items-center flex-wrap">
               <div className="w-36">
@@ -619,7 +619,7 @@ export function TradesPageManager({
                       setSelectedMonth(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="h-8.5 w-full px-2.5 text-xs rounded-lg border border-[var(--color-border-medium)] bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[var(--color-leaf)] shadow-2xs cursor-pointer"
+                    className="h-8.5 w-full px-2.5 text-xs rounded-lg border border-border-medium bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-(--color-leaf) shadow-2xs cursor-pointer"
                     title="Select month"
                   />
                 </div>
@@ -835,7 +835,7 @@ export function TradesPageManager({
             <tbody className="divide-y divide-slate-100 font-sans">
               {paginatedTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={16} className="py-12 text-center text-slate font-medium">
                     No trades match your search criteria.
                   </td>
                 </tr>
@@ -889,14 +889,14 @@ export function TradesPageManager({
                         onChange={() => handleToggleRow(t.id)}
                       />
                     </td>
-                    <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
+                    <td className="text-slate font-mono text-xs whitespace-nowrap">
                       {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
                     </td>
-                    <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">
+                    <td className="font-bold text-charcoal whitespace-nowrap">
                       {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}
                     </td>
-                    <td className="max-w-[260px] truncate whitespace-nowrap" title={secName}>
-                      <span className="font-semibold text-[var(--color-charcoal)] text-xs truncate block">
+                    <td className="max-w-65 truncate whitespace-nowrap" title={secName}>
+                      <span className="font-semibold text-charcoal text-xs truncate block">
                         {renderWithDiff('securityName', secName, isActiveMatch)}
                       </span>
                     </td>
@@ -947,9 +947,9 @@ export function TradesPageManager({
                     {/* <td
                       className={cn(
                         'font-mono font-bold text-right text-xs whitespace-nowrap bg-slate-100/90 border-r border-slate-200/80',
-                        netProfitPerShare > 0 ? 'text-[var(--color-positive)]' :
-                        netProfitPerShare < 0 ? 'text-[var(--color-negative)]' :
-                        'text-[var(--color-charcoal)]'
+                        netProfitPerShare > 0 ? 'text-(--color-positive)' :
+                        netProfitPerShare < 0 ? 'text-negative' :
+                        'text-charcoal'
                       )}
                     >
                       {netProfitPerShare > 0 ? '+' : ''}{currSym}{netProfitPerShare.toFixed(2)}
@@ -1004,7 +1004,7 @@ export function TradesPageManager({
                           </button>
                           <button
                             onClick={() => handleDelete(t.id)}
-                            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50 cursor-pointer"
+                            className="p-1.5 text-slate hover:text-negative transition-colors rounded-md hover:bg-red-50 cursor-pointer"
                             title="Delete Trade"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1033,8 +1033,8 @@ export function TradesPageManager({
                 <td className="py-2.5 px-3 text-right font-mono font-bold">
                   <span
                     className={cn(
-                      visibleStats.totalProfit > 0 ? 'text-[var(--color-positive)]' :
-                      visibleStats.totalProfit < 0 ? 'text-[var(--color-negative)]' :
+                      visibleStats.totalProfit > 0 ? 'text-(--color-positive)' :
+                      visibleStats.totalProfit < 0 ? 'text-negative' :
                       'text-slate-800'
                     )}
                   >

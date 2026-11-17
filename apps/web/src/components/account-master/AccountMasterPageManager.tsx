@@ -216,10 +216,10 @@ export function AccountMasterPageManager({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
         <div>
           <h1 className="text-h2 font-display">Account Master</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage standard and banking account masters.</p>
+          <p className="text-sm text-slate mt-1">Manage standard and banking account masters.</p>
         </div>
         <button onClick={() => setIsAdding(true)} className="btn btn--primary">
           + Add Account Master
@@ -375,18 +375,18 @@ export function AccountMasterPageManager({
                       {opBal === 0 ? (
                         <span className="text-slate-400">₹0.00</span>
                       ) : opBal < 0 ? (
-                        <span className="text-[var(--color-negative)]">
+                        <span className="text-negative">
                           -₹{Math.abs(opBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                         </span>
                       ) : (
-                        <span className="text-[var(--color-forest)]">
+                        <span className="text-(--color-forest)">
                           +₹{opBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                         </span>
                       )}
                     </td>
                     <td className="text-slate-500 text-xs">
                       {acc.mobileNumber && <div>Mob: {acc.mobileNumber}</div>}
-                      {acc.email && <div className="truncate max-w-[150px]">{acc.email}</div>}
+                      {acc.email && <div className="truncate max-w-37.5">{acc.email}</div>}
                       {!acc.mobileNumber && !acc.email && '—'}
                     </td>
                     <td className="text-slate-500 text-xs">
@@ -435,11 +435,11 @@ export function AccountMasterPageManager({
                   {totalOpeningBalance === 0 ? (
                     <span className="text-slate-500">₹0.00</span>
                   ) : totalOpeningBalance < 0 ? (
-                    <span className="text-[var(--color-negative)]">
+                    <span className="text-negative">
                       -₹{Math.abs(totalOpeningBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                     </span>
                   ) : (
-                    <span className="text-[var(--color-forest)]">
+                    <span className="text-(--color-forest)">
                       +₹{totalOpeningBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                     </span>
                   )}

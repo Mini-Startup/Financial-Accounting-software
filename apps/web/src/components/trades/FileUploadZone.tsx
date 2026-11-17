@@ -91,23 +91,23 @@ export function FileUploadZone({ onFileSelected, isProcessing }: FileUploadZoneP
 
       {isProcessing ? (
         <div className="trade-processing flex flex-col items-center gap-3 py-8">
-          <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin" />
+          <Loader2 className="w-12 h-12 text-(--color-primary) animate-spin" />
           <span className="trade-upload-title text-base font-semibold">Processing file…</span>
-          <span className="trade-upload-subtitle text-sm text-[var(--color-slate)]">Parsing and validating trade rows</span>
+          <span className="trade-upload-subtitle text-sm text-slate">Parsing and validating trade rows</span>
         </div>
       ) : (
         <div className="flex flex-col items-center py-8 text-center">
-          <div className="trade-upload-icon bg-[var(--color-mist)] p-4 rounded-full text-[var(--color-primary)] mb-4">
+          <div className="trade-upload-icon bg-mist p-4 rounded-full text-(--color-primary) mb-4">
             <UploadCloud className="w-8 h-8" />
           </div>
-          <span className="trade-upload-title text-base font-semibold text-[var(--color-charcoal)]">
+          <span className="trade-upload-title text-base font-semibold text-charcoal">
             {isDragging ? 'Drop your file here' : 'Upload Trade File'}
           </span>
-          <span className="trade-upload-subtitle text-sm text-[var(--color-slate)] mt-1 max-w-sm">
-            Drag & drop a CSV, text, or Excel file, or <span className="text-[var(--color-primary)] font-medium underline">browse your files</span>
+          <span className="trade-upload-subtitle text-sm text-slate mt-1 max-w-sm">
+            Drag & drop a CSV, text, or Excel file, or <span className="text-(--color-primary) font-medium underline">browse your files</span>
           </span>
 
-          <div className="trade-upload-filetag flex items-center gap-1.5 mt-4 bg-[var(--color-snow)] px-3 py-1 rounded-md border border-[var(--color-border-light)] text-xs text-[var(--color-slate)] font-medium">
+          <div className="trade-upload-filetag flex items-center gap-1.5 mt-4 bg-snow px-3 py-1 rounded-md border border-border-light text-xs text-slate font-medium">
             <FileSpreadsheet className="w-3.5 h-3.5" />
             Excel, .csv or .txt file format
           </div>

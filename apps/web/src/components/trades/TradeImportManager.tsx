@@ -743,10 +743,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   return (
     <div className="p-4 md:p-6 max-w-full mx-auto space-y-6">
       {/* Top Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
         <div>
           <h1 className="text-h2 font-display">Trade Import</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <p className="text-sm text-slate mt-1">
             {step === 'UPLOAD' && 'Upload files exported from your broker (CSV or Excel format).'}
             {step === 'PREVIEW' && `Preview and validate trades from ${fileName} before importing.`}
             {step === 'RESULT' && 'Import complete. Review execution results below.'}
@@ -809,7 +809,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* Top Configuration Panel */}
-      <div className="card shadow-md border border-[var(--color-border-light)] p-6">
+      <div className="card shadow-md border border-border-light p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
           <div className="form-field">
             <label className="form-label form-label--required flex items-center justify-between">
@@ -880,7 +880,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                 htmlFor="file-upload-input"
                 className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2.5"
               >
-                <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
+                <FileSpreadsheet className="w-4 h-4 text-(--color-primary)" />
                 <span>Browse CSV / Excel</span>
               </label>
             </div>
@@ -888,9 +888,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         </div>
 
         {fileName && (
-          <div className="text-xs text-[var(--color-slate)] font-semibold mt-4 bg-[var(--color-snow)] px-3 py-1.5 rounded-lg border border-[var(--color-border-light)] w-fit flex items-center gap-1.5">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-            Selected File: <span className="text-[var(--color-charcoal)] font-mono">{fileName}</span>
+          <div className="text-xs text-slate font-semibold mt-4 bg-snow px-3 py-1.5 rounded-lg border border-border-light w-fit flex items-center gap-1.5">
+            <FileSpreadsheet className="w-3.5 h-3.5 text-(--color-primary)" />
+            Selected File: <span className="text-charcoal font-mono">{fileName}</span>
           </div>
         )}
       </div>
@@ -1104,8 +1104,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
       {importProgress &&
         createPortal(
-          <div className="fixed inset-0 z-[200000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-            <div className="card w-[480px] max-w-[92vw] p-6 bg-white shadow-2xl border border-slate-200 rounded-xl space-y-6 text-center">
+          <div className="fixed inset-0 z-200000 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <div className="card w-120 max-w-[92vw] p-6 bg-white shadow-2xl border border-slate-200 rounded-xl space-y-6 text-center">
               <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 animate-pulse">
                 <RefreshCw className="w-6 h-6 animate-spin" />
               </div>

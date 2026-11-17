@@ -74,7 +74,7 @@ export function TradeRowDrawer({
   const displaySecName = generatedSecName || row.securityName || '';
 
   return (
-    <div className="fixed inset-0 z-[999] overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-999 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
       <div
         className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -237,7 +237,7 @@ export function TradeRowDrawer({
                   type="text"
                   value={displaySecName}
                   onChange={(e) => handleChange('securityName', e.target.value)}
-                  className="input text-xs font-medium font-bold text-slate-800"
+                  className="input text-xs font-bold text-slate-800"
                 />
               </div>
             )}

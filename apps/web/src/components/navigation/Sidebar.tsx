@@ -289,7 +289,7 @@ export function Sidebar() {
 
   if (!mounted) {
     return (
-      <div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />
+      <div className="w-64 h-screen bg-(--sidebar-bg) border-r border-(--sidebar-divider) shrink-0" />
     );
   }
 
@@ -308,18 +308,18 @@ export function Sidebar() {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] select-none transition-all duration-300 ease-in-out",
+          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-(--sidebar-bg) border-r border-(--sidebar-divider) select-none transition-all duration-300 ease-in-out",
           isExpanded ? "w-64 shadow-2xl" : "w-16"
         )}
       >
         {/* Top Header / Logo Area */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--sidebar-divider)] shrink-0 overflow-hidden">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-(--sidebar-divider) shrink-0 overflow-hidden">
           <div className="flex items-center gap-3 shrink-0">
-            <span className="w-8 h-8 rounded-lg bg-[var(--color-leaf)] flex items-center justify-center text-[var(--color-forest)] font-extrabold text-lg shadow-sm shrink-0">
+            <span className="w-8 h-8 rounded-lg bg-(--color-leaf) flex items-center justify-center text-(--color-forest) font-extrabold text-lg shadow-sm shrink-0">
               B
             </span>
             {isExpanded && (
-              <span className="text-[var(--color-white)] font-display font-black text-lg tracking-tight transition-all duration-200">
+              <span className="text-white font-display font-black text-lg tracking-tight transition-all duration-200">
                 BizzMate FAS
               </span>
             )}
@@ -329,13 +329,13 @@ export function Sidebar() {
           {isExpanded && (
             <button
               onClick={toggleLock}
-              className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--color-emerald)]/30 transition-all shrink-0"
+              className="p-1.5 rounded-lg text-(--sidebar-text-muted) hover:text-white hover:bg-emerald/30 transition-all shrink-0"
               title={isLocked ? "Collapse sidebar" : "Pin/Lock sidebar"}
             >
               {isLocked ? (
-                <ChevronLeft className="w-4 h-4 stroke-[2]" />
+                <ChevronLeft className="w-4 h-4 stroke-2" />
               ) : (
-                <ChevronRight className="w-4 h-4 stroke-[2]" />
+                <ChevronRight className="w-4 h-4 stroke-2" />
               )}
             </button>
           )}
@@ -350,16 +350,16 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 group mb-1 shrink-0",
               pathname === "/"
-                ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]"
+                ? "bg-(--sidebar-active-bg) text-(--sidebar-active-txt) shadow-sm font-semibold"
+                : "text-(--sidebar-text) hover:bg-emerald/20 hover:text-(--sidebar-active-txt)"
             )}
           >
             <LayoutDashboard
               className={cn(
-                "w-[18px] h-[18px] shrink-0 stroke-[1.75] transition-colors",
+                "w-4.5 h-4.5 shrink-0 stroke-[1.75] transition-colors",
                 pathname === "/"
-                  ? "text-[var(--sidebar-active-txt)]"
-                  : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+                  ? "text-(--sidebar-active-txt)"
+                  : "text-(--sidebar-text-muted) group-hover:text-(--sidebar-active-txt)"
               )}
             />
             {isExpanded && (
@@ -382,13 +382,13 @@ export function Sidebar() {
                     "w-full flex items-center justify-between rounded-lg transition-all duration-150 shrink-0",
                     isExpanded ? "px-3 py-2 text-[10px] font-bold tracking-widest uppercase" : "px-3 py-2 text-center",
                     sectionActive
-                      ? "text-[var(--color-leaf)] bg-[var(--color-leaf)]/5"
-                      : "text-[var(--sidebar-text-muted)] hover:text-[var(--color-leaf)] hover:bg-[var(--color-leaf)]/5"
+                      ? "text-(--color-leaf) bg-(--color-leaf)/5"
+                      : "text-(--sidebar-text-muted) hover:text-(--color-leaf) hover:bg-(--color-leaf)/5"
                   )}
                   disabled={!isExpanded}
                 >
                   <div className={cn("flex items-center gap-2", !isExpanded && "mx-auto")}>
-                    <section.icon className="w-4 h-4 shrink-0 stroke-[2]" />
+                    <section.icon className="w-4 h-4 shrink-0 stroke-2" />
                     {isExpanded && <span>{section.label}</span>}
                   </div>
                   {isExpanded && (
@@ -403,7 +403,7 @@ export function Sidebar() {
 
                 {/* Section Children list */}
                 {isExpanded && sectionOpen && (
-                  <div className="flex flex-col gap-1 mt-1 ml-3.5 pl-3.5 border-l border-[var(--sidebar-divider)]/40">
+                  <div className="flex flex-col gap-1 mt-1 ml-3.5 pl-3.5 border-l border-(--sidebar-divider)/40">
                     {section.children.map((child) => {
                       
                       // ── Sub-group element (Import Files) ────────────────
@@ -419,8 +419,8 @@ export function Sidebar() {
                               className={cn(
                                 "w-full flex items-center justify-between px-2.5 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 group shrink-0",
                                 subGroupActive
-                                  ? "text-[var(--sidebar-active-txt)] bg-[var(--sidebar-active-bg)]"
-                                  : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
+                                  ? "text-(--sidebar-active-txt) bg-(--sidebar-active-bg)"
+                                  : "text-(--sidebar-text) hover:bg-emerald/15 hover:text-(--sidebar-active-txt)"
                               )}
                             >
                               <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export function Sidebar() {
                             </button>
 
                             {subOpen && (
-                              <div className="flex flex-col gap-1 mt-0.5 ml-3 pl-3 border-l border-[var(--sidebar-divider)]/30">
+                              <div className="flex flex-col gap-1 mt-0.5 ml-3 pl-3 border-l border-(--sidebar-divider)/30">
                                 {child.children.map((sub) => {
                                   const subActive = isActive(sub.path);
                                   return (
@@ -446,8 +446,8 @@ export function Sidebar() {
                                       className={cn(
                                         "flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 shrink-0",
                                         subActive
-                                          ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                                          : "text-[var(--sidebar-text-muted)] hover:bg-[var(--color-emerald)]/10 hover:text-[var(--sidebar-active-txt)]"
+                                          ? "bg-(--sidebar-active-bg) text-(--sidebar-active-txt) shadow-sm font-semibold"
+                                          : "text-(--sidebar-text-muted) hover:bg-emerald/10 hover:text-(--sidebar-active-txt)"
                                       )}
                                     >
                                       <div className="flex items-center gap-2">
@@ -455,7 +455,7 @@ export function Sidebar() {
                                         <span>{sub.name}</span>
                                       </div>
                                       {sub.upcoming && (
-                                        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                                        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-(--color-leaf)/10 text-(--color-leaf) tracking-wider uppercase border border-(--color-leaf)/20">
                                           Soon
                                         </span>
                                       )}
@@ -477,8 +477,8 @@ export function Sidebar() {
                           className={cn(
                             "flex items-center justify-between gap-2 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 shrink-0",
                             active
-                              ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                              : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
+                              ? "bg-(--sidebar-active-bg) text-(--sidebar-active-txt) shadow-sm font-semibold"
+                              : "text-(--sidebar-text) hover:bg-emerald/15 hover:text-(--sidebar-active-txt)"
                           )}
                         >
                           <div className="flex items-center gap-2.5">
@@ -486,7 +486,7 @@ export function Sidebar() {
                             <span>{child.name}</span>
                           </div>
                           {child.upcoming && (
-                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-(--color-leaf)/10 text-(--color-leaf) tracking-wider uppercase border border-(--color-leaf)/20">
                               Soon
                             </span>
                           )}
@@ -501,24 +501,24 @@ export function Sidebar() {
         </div>
 
         {/* Footer Area with User Profile info */}
-        <div className="p-3 border-t border-[var(--sidebar-divider)] mt-auto flex items-center gap-3 bg-[var(--sidebar-bg)] shrink-0 overflow-hidden">
+        <div className="p-3 border-t border-(--sidebar-divider) mt-auto flex items-center gap-3 bg-(--sidebar-bg) shrink-0 overflow-hidden">
           <div className="shrink-0">
             <UserButton
               appearance={{
                 elements: {
-                  avatarBox: "w-9 h-9 border border-[var(--sidebar-divider)] shadow-sm",
+                  avatarBox: "w-9 h-9 border border-(--sidebar-divider) shadow-sm",
                 },
               }}
             />
           </div>
           {isExpanded && (
             <div className="flex flex-col min-w-0 transition-all duration-200">
-              <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
+              <span className="text-sm font-semibold text-(--sidebar-active-txt) truncate">
                 {userName || "My Account"}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-leaf)] shrink-0" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)] truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-(--color-leaf) shrink-0" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-(--sidebar-text-muted) truncate">
                   {roleName}
                 </span>
               </div>
