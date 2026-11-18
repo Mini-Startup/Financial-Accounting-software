@@ -477,29 +477,46 @@ One modal style for the entire app. Built on an accessible dialog primitive (foc
 - **Quantity & Rate Inputs:**
   - Numeric characters and a single decimal point only. Thousands commas accepted on paste.
 
-### 3.14 Toast Notifications & System Feedback
+### 3.14 Executive Toast Notifications & System Feedback (Reference Image 2)
 
-Toasts provide transient confirmation of asynchronous background operations and validation failures.
+Toasts provide elegant, executive confirmation of operations, file transfers, and validation failures.
 
-#### 1. Visual Specification
-- **Position:** Top-right (`top-4 right-4`), stacking vertically with 8px spacing.
-- **Dimensions:** Width 360px–420px, padding `12px 16px`, radius `radius-xl` (12px).
-- **Elevation:** `shadow-lg` (`0 10px 25px -5px rgba(15,23,42,0.12), 0 8px 10px -6px rgba(15,23,42,0.06)`), border `1px solid`.
-- **Variants:**
-  - **Success:** Background `#ECFDF5`, border `#A7F3D0`, text `#047857`, 16px `CheckCircle2` icon (`#10B981`).
-  - **Error / Danger:** Background `#FEF2F2`, border `#FECACA`, text `#B91C1C`, 16px `AlertCircle` icon (`#EF4444`).
-  - **Warning:** Background `#FFFBEB`, border `#FDE68A`, text `#B45309`, 16px `AlertTriangle` icon (`#F59E0B`).
-  - **Info:** Background `#EFF4FF`, border `#BCD0FA`, text `#1F42A3`, 16px `Info` icon (`#3B6BDF`).
-- **Internal Layout:**
-  - Left: 18px status icon with subtle translucent circular backing.
-  - Middle: Flex column with Title (`text-sm font-bold`) and Description (`text-xs text-secondary-600 mt-0.5`).
-  - Right: 14px `X` close icon button with ghost hover effect.
+#### 1. Visual Specification (Image 2 Reference Standard)
+- **Position:** Top-right (`top-5 right-5`), stacking vertically with 10px spacing.
+- **Dimensions:** Width 380px–440px, padding `16px 20px`, radius `rounded-2xl` (20px).
+- **Elevation:** High-end multi-layer soft shadow `shadow-[0_20px_45px_-8px_rgba(15,23,42,0.12),0_4px_12px_rgba(15,23,42,0.04)]`, border `1px solid rgba(226, 232, 240, 0.9)`, solid white card background.
+- **Ambient Top-Left Aura:** Soft, blurred radial color aura radiating from the top-left corner matching the state color:
+  - **Success:** Emerald aura (`rgba(16, 185, 129, 0.18)`).
+  - **Error:** Rose aura (`rgba(244, 63, 94, 0.18)`).
+  - **Info / Upload:** Blue aura (`rgba(38, 82, 200, 0.18)`).
+  - **Warning:** Amber aura (`rgba(245, 158, 11, 0.18)`).
+- **Elevated Circular Disc Icon:**
+  - 44px elevated white circular disc with subtle elevation shadow (`shadow-md border border-slate-100`).
+  - Inside: 24px inner colored badge with crisp, centered vector icon:
+    - **Success:** `#10B981` emerald badge with centered checkmark.
+    - **Error:** `#F43F5E` rose badge with centered alert icon.
+    - **Upload / Info:** `#2652C8` primary blue badge with cloud/arrow icon.
+    - **Warning:** `#F59E0B` amber badge with centered triangle.
+- **Typography & Content Layout:**
+  - Title: `text-sm font-bold text-slate-900 tracking-tight leading-snug`.
+  - Description: `text-xs text-slate-500 font-normal leading-relaxed mt-0.5`.
+  - Multi-error list: Clean, structured bulleted list inside a soft tinted container (`bg-rose-50/70 border-rose-100/90 rounded-xl p-3`).
+- **Internal Top-Right Close Button:**
+  - Tucked neatly inside the top-right corner (`top: 12px; right: 12px;`), NOT hanging outside the card.
+- **Progress Bar (Image 2):**
+  - Smooth 6px full-width bar (`h-1.5 bg-slate-100 rounded-full overflow-hidden`), filled with dynamic state color (`bg-blue-600` or `bg-emerald-500`).
+  - Monospace status label below: e.g. `50% uploaded...`, `100% uploaded!`.
+- **Action / Cancel Footer:**
+  - Subtle text links: `Cancel` (grey hover) and `Upload More` / `Dismiss` / `Review` (bold primary blue).
 
-#### 2. Toast Engineering Rules
-- **Specific Error Messages Only:** Toasts must state the EXACT invalid field and why it failed (e.g. `toast.error("Invalid Mobile Number", { description: "Phone number cannot contain alphabets and must have 10-15 digits." })`).
-- **BAN VAGUE TOASTS:** Never emit generic messages like *"Please resolve highlighted validation errors before saving"* or *"Form has errors"*. Every toast must tell the user what broke and what to do.
-- **Toasts Never Replace On-Form Errors:** In forms and modals, the red border, red ring, and inline error message directly under the field are MANDATORY. The toast is only an auxiliary notification.
-- **Durations:** Success = 3.5s; Error = 6s (or persistent until dismissed); Warning = 5s.
+#### 2. Form Error & Toast Rules
+- **No In-Form Error Banners:** Forms and modals do NOT render large, cluttering error banners at the top of the modal. Forms stay clean, single-screen, and zero-scroll.
+- **On-Form Highlighting:** Fields with invalid inputs turn red spontaneously (`border-red-500 ring-2 ring-red-400 bg-red-50/20`) with clean inline feedback directly below the field.
+- **Notification Handles Error Summary:** When submission is attempted with invalid inputs, the executive error notification opens with the full, specific list of errors:
+  - Title: `Please correct the highlighted errors before saving:`
+  - Clean bulleted list: `Account Code: Code is required.`, `Mobile Number: Phone number cannot contain alphabets.`, etc.
+  - The first invalid input is automatically scrolled into view and focused.
+- **No Phantom Group Errors:** Pre-assigned group fields (`groupName`) must always be recognized so `groupId: Account group is required` is never erroneously emitted.
 
 ---
 

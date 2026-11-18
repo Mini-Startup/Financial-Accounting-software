@@ -238,11 +238,39 @@ export function Sidebar() {
     setMounted(true);
   }, []);
 
-  const toggleLock = () => {
-    const nextVal = !isLocked;
-    setIsLocked(nextVal);
-    localStorage.setItem("sidebar-locked", String(nextVal));
-  };
+  const toggleLock = React.useCallback(() => {
+    setIsLocked((prev) => {
+      const nextVal = !prev;
+      localStorage.setItem("sidebar-locked", String(nextVal));
+      return nextVal;
+    });
+  }, []);
+
+  // Listen for global shortcut '[' and universal search custom trigger
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        toggleLock();
+      }
+    };
+
+    const handleCustomToggle = () => {
+      toggleLock();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('bizzmate-toggle-sidebar', handleCustomToggle);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('bizzmate-toggle-sidebar', handleCustomToggle);
+    };
+  }, [toggleLock]);
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -318,7 +346,7 @@ export function Sidebar() {
 
   if (!mounted) {
     return (
-      <div className="w-64 h-screen bg-[#0A1B4D] border-r border-blue-900/60 shrink-0" />
+      <div className="w-64 h-screen bg-transparent shrink-0 rounded-none m-0" />
     );
   }
 
@@ -327,28 +355,32 @@ export function Sidebar() {
       {/* Space holder: sits in layout grid/flex, matches width of current locked/collapsed state */}
       <div
         className={cn(
-          "h-screen shrink-0 hidden md:block transition-all duration-300 ease-in-out",
+          "h-screen shrink-0 hidden md:block transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-none m-0",
           isLocked ? "w-64" : "w-16"
         )}
       />
 
-      {/* Floating Panel Sidebar (Primary 400 to 600 Gradient with Lighter Active State) */}
+      {/* Panel Sidebar (Flush to edge, 0 margin, NOT rounded, Transparent on Primary Gradient) */}
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-gradient-to-b from-[#0A1B4D] via-[#102E7A] to-[#1D4ED8] text-blue-100 border-r border-blue-900/60 select-none transition-all duration-300 ease-in-out",
-          isExpanded ? "w-64 shadow-2xl" : "w-16"
+          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col text-blue-100 select-none overflow-hidden rounded-none m-0 border-0",
+          "transition-[width,background-color,backdrop-filter,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          isExpanded ? "w-64" : "w-16",
+          isHovered && !isLocked
+            ? "bg-[#061438]/85 backdrop-blur-2xl shadow-[16px_0_48px_rgba(2,8,24,0.55)]"
+            : "bg-transparent shadow-none"
         )}
       >
         {/* Top Header / Logo Area (56px) */}
-        <div className="h-14 flex items-center justify-between px-3.5 border-b border-white/10 shrink-0 overflow-hidden bg-transparent">
+        <div className="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 overflow-hidden bg-transparent rounded-none">
           <div className="flex items-center gap-2.5 shrink-0">
             <span className="w-7 h-7 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
               B
             </span>
             {isExpanded && (
-              <span className="text-white font-bold text-base tracking-tight transition-all duration-200">
+              <span className="text-white font-bold text-base tracking-tight whitespace-nowrap animate-in fade-in duration-200">
                 BizzMate FAS
               </span>
             )}
@@ -452,8 +484,8 @@ export function Sidebar() {
                               onClick={() => toggleSection(subKey)}
                               className={cn(
                                 "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-120 group shrink-0 cursor-pointer",
-                                subGroupActive
-                                  ? "text-white bg-white/20 border border-white/25 shadow-xs"
+                                subGroupActive || subOpen
+                                  ? "text-white bg-[#0D2460]/80 border border-blue-400/25 shadow-xs"
                                   : "text-blue-100/80 hover:bg-white/10 hover:text-white"
                               )}
                             >
@@ -540,7 +572,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer Area with User Profile info */}
-        <div className="p-3 border-t border-white/10 mt-auto flex items-center gap-3 bg-black/25 shrink-0 overflow-hidden">
+        <div className="p-3.5 border-t border-white/10 mt-auto flex items-center gap-3 bg-transparent rounded-none m-0 shrink-0 overflow-hidden">
           <div className="shrink-0">
             <UserButton
               appearance={{

@@ -169,39 +169,11 @@ export function TableToolbar({
           className
         )}
       >
-        {/* Left side: Search & Filters or Bulk Selection Bar */}
+        {/* Left side: Search & Filters (Stable: Zero Layout Shift on Selection) */}
         <div className="flex items-center gap-2.5 flex-1 flex-wrap">
-          {selectedCount > 0 ? (
-            <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg animate-in fade-in duration-150">
-              <span className="text-xs font-bold text-emerald-800">
-                {selectedCount} selected
-              </span>
-              {onClearSelection && (
-                <button
-                  type="button"
-                  onClick={onClearSelection}
-                  className="text-xs text-emerald-700 hover:text-emerald-900 underline font-medium cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-              {onBulkDelete && (
-                <button
-                  type="button"
-                  onClick={onBulkDelete}
-                  disabled={isDeleting}
-                  className="btn btn--secondary text-xs py-1 px-2.5 flex items-center gap-1.5 text-red-700 hover:text-red-800 bg-red-50 hover:bg-red-100 border-red-200 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>{isDeleting ? 'Deleting...' : `Delete Selected (${selectedCount})`}</span>
-                </button>
-              )}
-            </div>
-          ) : (
+          {compactSearch ? (
             <>
-              {compactSearch ? (
-                <>
-                  {onSearchChange && (
+              {onSearchChange && (
                     <div className="flex items-center">
                       {isSearchExpanded ? (
                         <div className="flex items-center bg-white border border-blue-500 ring-2 ring-blue-100 rounded-xl px-2 h-8.5 shadow-2xs transition-all w-60">
@@ -359,9 +331,41 @@ export function TableToolbar({
                   {filterSlot}
                 </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+
+        {/* Floating Bulk Action Bar (Brand Gradient, Smooth Cubic-Bezier Animation, Zero UI Jumping) */}
+        {selectedCount > 0 && typeof document !== 'undefined' && createPortal(
+          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-gradient-to-r from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] text-white rounded-2xl shadow-[0_20px_50px_rgba(10,26,74,0.45)] px-5 py-2.5 flex items-center gap-4 border border-white/25 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-6 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="text-xs font-bold text-white tracking-wide">
+                {selectedCount} selected
+              </span>
+            </div>
+            <div className="h-4 w-px bg-white/20" />
+            {onClearSelection && (
+              <button
+                type="button"
+                onClick={onClearSelection}
+                className="text-xs text-blue-100 hover:text-white font-semibold hover:bg-white/10 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+            {onBulkDelete && (
+              <button
+                type="button"
+                onClick={onBulkDelete}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md hover:shadow-rose-600/30 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 active:scale-95"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? 'Deleting...' : `Delete Selected (${selectedCount})`}</span>
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
 
         {/* Right side: Actions & Top Pagination Toolbar */}
         <div className="flex items-center gap-3 self-end lg:self-auto flex-wrap">

@@ -9,6 +9,7 @@ import { TopBar } from "../components/navigation/TopBar";
 import { UniversalSearch } from "../components/navigation/UniversalSearch";
 import { TradeImportProvider } from "../components/trades/TradeImportContext";
 import { AuthPermissionsProvider } from "../context/AuthPermissionsContext";
+import { TopBarProvider } from "../context/TopBarContext";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Agentation } from "agentation";
@@ -43,7 +44,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <body className="font-body text-slate-900 bg-[#F1F5F9] min-h-screen">
+      <body className="font-body text-slate-900 bg-gradient-to-b from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] min-h-screen h-screen overflow-hidden antialiased">
         <ClerkProvider>
           <TradeImportProvider>
             {!userId ? (
@@ -62,34 +63,42 @@ export default async function RootLayout({
                 </div>
               </div>
             ) : !syncResult.isWhitelisted ? (
-              <div className="min-h-screen flex items-center justify-center bg-[#F1F5F9] p-4">
-                <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200/80 shadow-xl p-8 text-center space-y-6">
-                  <div className="w-16 h-16 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] p-4">
+                {/* Security / Whitelist Restriction Card: Matching Image 3 Reference */}
+                <div className="max-w-md w-full bg-white rounded-3xl border border-white/40 shadow-2xl p-8 text-center relative overflow-hidden animate-in zoom-in-95 duration-200">
+                  {/* Top Ambient Purple/Indigo Aura (Matching Image 3) */}
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-44 rounded-full blur-2xl pointer-events-none bg-gradient-to-b from-purple-300/60 via-indigo-100/30 to-transparent" />
+
+                  {/* Centered Circular Elevated Icon Badge */}
+                  <div className="w-14 h-14 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-4 relative z-1">
+                    <div className="w-10 h-10 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-700">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
                   </div>
-                  <div>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 mb-3">
+
+                  {/* Content */}
+                  <div className="relative z-1 space-y-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 tracking-wide uppercase">
                       Access Restricted
                     </span>
                     <h2 className="text-xl font-bold text-slate-900 tracking-tight">Organization Whitelist Required</h2>
-                    <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                      Your email <span className="font-semibold text-slate-800 underline">{syncResult.email || 'associated with your account'}</span> is not authorized to access BizzMate Financial Platform.
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">
-                      Your identity was verified through Clerk, but an administrator has not yet granted your email permissions.
+                    <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                      Your account <span className="font-semibold text-slate-800 underline">{syncResult.email || 'associated with your session'}</span> is verified, but has not yet been granted platform whitelist access by an administrator.
                     </p>
                   </div>
-                  <div className="pt-2 flex flex-col gap-3">
+
+                  {/* Action Buttons: Solid Deep Button (Matching Image 3) */}
+                  <div className="pt-6 flex flex-col gap-3 relative z-1">
                     <SignOutButton redirectUrl="/">
-                      <button className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow transition duration-150 cursor-pointer">
+                      <button className="w-full py-3 px-4 bg-indigo-950 hover:bg-indigo-900 text-white text-sm font-semibold rounded-xl shadow-md transition duration-150 cursor-pointer">
                         Sign Out / Switch Account
                       </button>
                     </SignOutButton>
                     <a
                       href="mailto:admin@bizzmate.com?subject=BizzMate%20Access%20Request"
-                      className="inline-block text-xs font-medium text-slate-600 hover:text-slate-900 underline transition py-1"
+                      className="inline-block text-xs font-medium text-slate-500 hover:text-slate-800 underline transition py-1"
                     >
                       Contact Organization Administrator
                     </a>
@@ -98,24 +107,37 @@ export default async function RootLayout({
               </div>
             ) : (
               <AuthPermissionsProvider>
-                <div className="flex min-h-screen bg-[#F1F5F9]">
-                  <Suspense fallback={<div className="w-64 h-screen bg-[#0A1B4D] border-r border-blue-900/60 shrink-0" />}>
-                    <Sidebar />
-                  </Suspense>
-                  <div className="flex-1 flex flex-col min-h-screen min-w-0">
-                    <TopBar />
-                    <main className="flex-1 p-3 md:p-4 lg:p-5 overflow-y-auto">
-                      <div className="max-w-425 w-full mx-auto">
-                        {children}
-                      </div>
-                    </main>
+                <TopBarProvider>
+                  {/* Floating Island Layout Shell: Background is Brand Gradient, Sidebar is 0-margin flush, Right Section is Floating Island */}
+                  <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-b from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] pl-0 p-3 sm:p-3.5">
+                    {/* Left Sidebar: Flush to edge (0 margin, rounded-none), Transparent over Brand Gradient */}
+                    <Suspense fallback={<div className="w-64 h-screen bg-transparent shrink-0" />}>
+                      <Sidebar />
+                    </Suspense>
+
+                    {/* Right Section: Floating Island with rounded-2xl, 10px margin from edge and gap from sidebar */}
+                    <div className="flex-1 flex flex-col h-full min-w-0 bg-white rounded-2xl shadow-2xl border border-white/20 overflow-hidden relative ml-2">
+                      <TopBar />
+                      <main className="flex-1 p-3.5 md:p-5 lg:p-6 overflow-y-auto bg-slate-50/50">
+                        <div className="max-w-425 w-full mx-auto">
+                          {children}
+                        </div>
+                      </main>
+                    </div>
                   </div>
-                </div>
-                <UniversalSearch />
+                  <UniversalSearch />
+                </TopBarProvider>
               </AuthPermissionsProvider>
             )}
           </TradeImportProvider>
-          <Toaster position="top-right" richColors closeButton />
+          {/* Executive Notification Toaster */}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4500,
+            }}
+            richColors={false}
+          />
         </ClerkProvider>
          <Agentation />
       </body>

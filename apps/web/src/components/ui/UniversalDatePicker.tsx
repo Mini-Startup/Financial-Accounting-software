@@ -16,6 +16,7 @@ export interface UniversalDatePickerProps {
   className?: string;
   id?: string;
   error?: string;
+  compact?: boolean;
 }
 
 interface Coords {
@@ -35,6 +36,7 @@ export function UniversalDatePicker({
   className,
   id,
   error,
+  compact = false,
 }: UniversalDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [textValue, setTextValue] = useState(() => formatDateToDDMMYY(value));
@@ -333,7 +335,10 @@ export function UniversalDatePicker({
           }}
           placeholder={placeholder}
           maxLength={10}
-          className="w-full h-9 px-3 text-xs font-mono tabular-nums text-charcoal placeholder:text-fog outline-none bg-transparent"
+          className={cn(
+            'w-full font-mono tabular-nums text-charcoal placeholder:text-fog outline-none bg-transparent',
+            compact ? 'h-8 px-2 text-xs' : 'h-9 px-3 text-xs'
+          )}
         />
 
         {(value || textValue) && !disabled && (
@@ -345,7 +350,10 @@ export function UniversalDatePicker({
               setTextValue('');
               setLocalError(null);
             }}
-            className="p-1 text-slate hover:text-rose-600 rounded cursor-pointer"
+            className={cn(
+              'text-slate hover:text-rose-600 rounded cursor-pointer',
+              compact ? 'p-0.5' : 'p-1'
+            )}
             title="Clear date"
           >
             <X className="w-3.5 h-3.5" />
@@ -357,7 +365,10 @@ export function UniversalDatePicker({
           tabIndex={-1}
           disabled={disabled}
           onClick={togglePicker}
-          className="p-2 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer select-none"
+          className={cn(
+            'text-slate-500 hover:text-blue-600 transition-colors cursor-pointer select-none',
+            compact ? 'p-1.5' : 'p-2'
+          )}
           title={isOpen ? 'Close Calendar' : 'Open Calendar'}
         >
           <CalendarIcon className="w-4 h-4" />
@@ -410,12 +421,13 @@ export function UniversalDatePicker({
                     setViewMonth(viewMonth - 1);
                   }
                 }}
-                className="p-1 text-slate hover:text-charcoal hover:bg-snow rounded-sm cursor-pointer"
+                className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                title="Previous month"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <span className="text-xs font-bold text-charcoal font-display">
+              <span className="text-xs font-bold text-slate-900 tracking-tight">
                 {monthNames[viewMonth]} {viewYear}
               </span>
 
@@ -429,14 +441,15 @@ export function UniversalDatePicker({
                     setViewMonth(viewMonth + 1);
                   }
                 }}
-                className="p-1 text-slate hover:text-charcoal hover:bg-snow rounded-sm cursor-pointer"
+                className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                title="Next month"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Weekdays */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate uppercase tracking-wider mb-1">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
               <span>Su</span>
               <span>Mo</span>
               <span>Tu</span>
@@ -450,6 +463,10 @@ export function UniversalDatePicker({
             <div className="grid grid-cols-7 gap-1 text-xs">
               {daysGrid.map((item, idx) => {
                 const isSelected = item.dateStr === selectedIso;
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const isToday = item.dateStr === todayStr;
+
                 return (
                   <button
                     key={idx}
@@ -463,7 +480,8 @@ export function UniversalDatePicker({
                     className={cn(
                       'py-1.5 rounded-lg text-center font-mono text-[11px] transition-colors cursor-pointer',
                       !item.isCurrentMonth && 'text-slate-400',
-                      item.isCurrentMonth && !isSelected && 'text-slate-800 hover:bg-blue-50',
+                      item.isCurrentMonth && !isSelected && !isToday && 'text-slate-800 hover:bg-blue-50',
+                      item.isCurrentMonth && !isSelected && isToday && 'text-[#2652C8] font-bold ring-1 ring-blue-300 bg-blue-50/50 hover:bg-blue-100/50',
                       isSelected && 'bg-[#2652C8] text-white font-bold shadow-xs'
                     )}
                   >
@@ -471,6 +489,36 @@ export function UniversalDatePicker({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Calendar Footer: Clear & Today */}
+            <div className="flex items-center justify-between pt-2.5 mt-2.5 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('');
+                  setTextValue('');
+                  setLocalError(null);
+                  setIsOpen(false);
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer px-1 py-0.5 rounded"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const now = new Date();
+                  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                  onChange(todayIso);
+                  setTextValue(formatDateToDDMMYY(todayIso));
+                  setLocalError(null);
+                  setIsOpen(false);
+                }}
+                className="text-xs font-bold text-[#2652C8] hover:text-blue-800 transition-colors cursor-pointer px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-100"
+              >
+                Today
+              </button>
             </div>
           </div>,
           document.body

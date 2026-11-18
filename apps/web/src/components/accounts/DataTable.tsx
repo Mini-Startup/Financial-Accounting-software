@@ -6,7 +6,7 @@ import { FormModal } from './FormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
 import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
@@ -140,13 +140,13 @@ export function DataTable({
     setAccountsList((prev) =>
       prev.map((acc) => (acc.id === targetRow.id ? { ...acc, [columnKey]: newValue } : acc))
     );
-    toast.success(`Replaced value in ${columnKey}`);
+    notify.success(`Replaced value in ${columnKey}`);
   };
 
   const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
     const { updatedRecords, count } = replaceValueInRecords(accountsList, columnKey, findVal, replaceVal, true);
     setAccountsList(updatedRecords);
-    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+    notify.success(`Replaced ${count} occurrences in ${columnKey}`);
   };
 
 
@@ -181,7 +181,7 @@ export function DataTable({
 
   const handleDeleteSingle = (id: string) => {
     if (!canDelete) {
-      toast.error('Permission Denied', {
+      notify.error('Permission Denied', {
         description: 'You do not have permission to delete records.',
       });
       return;
@@ -198,13 +198,13 @@ export function DataTable({
           });
           if (res.ok) {
             removeEntity(id);
-            toast.success(`${entityLabel} deleted successfully`);
+            notify.success(`${entityLabel} deleted successfully`);
           } else {
             const err = await res.json().catch(() => ({}));
-            toast.error(err.message || 'Failed to delete account');
+            notify.error(err.message || 'Failed to delete account');
           }
         } catch (e: any) {
-          toast.error(e.message || 'Failed to delete record');
+          notify.error(e.message || 'Failed to delete record');
         }
       },
     });
@@ -212,7 +212,7 @@ export function DataTable({
 
   const handleBulkDelete = () => {
     if (!canDelete) {
-      toast.error('Permission Denied', {
+      notify.error('Permission Denied', {
         description: 'You do not have permission to delete records.',
       });
       return;
@@ -239,11 +239,11 @@ export function DataTable({
             }
           }
           if (successCount > 0) {
-            toast.success(`${successCount} records deleted successfully`);
+            notify.success(`${successCount} records deleted successfully`);
           }
           setSelectedIds(new Set());
         } catch {
-          toast.error('Failed to delete some records');
+          notify.error('Failed to delete some records');
         } finally {
           setIsDeleting(false);
         }
@@ -324,7 +324,7 @@ export function DataTable({
 
         <div className="overflow-x-auto">
           <table className="data-table w-full">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs">
               <tr>
                 <th style={{ width: '40px' }} className="text-center">
                   <CustomCheckbox

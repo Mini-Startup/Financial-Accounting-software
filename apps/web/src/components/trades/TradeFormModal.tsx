@@ -10,6 +10,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { X, AlertCircle, Lock, Check, Sparkles, Calendar, Pencil, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { formatCurrencySymbol } from '@/utils/currency';
@@ -306,8 +307,7 @@ export function TradeFormModal({
     });
 
     if (!isFormValid) {
-      const errorKeys = Object.keys(errors);
-      const firstKey = errorKeys[0] || 'trade';
+      const errorEntries = Object.entries(errors);
       const tradeFieldLabels: Record<string, string> = {
         scriptId: 'Script',
         tradeDate: 'Trade Date',
@@ -317,11 +317,18 @@ export function TradeFormModal({
         marketRate: 'Market Rate',
         expiryDate: 'Expiry Date',
       };
-      const fieldTitle = tradeFieldLabels[firstKey] || firstKey;
-      toast.error(`Invalid ${fieldTitle}`, {
-        description: errors[firstKey] || 'Please complete all required fields.',
+      const errorList = errorEntries.map(([key, msg]) => {
+        const fieldTitle = tradeFieldLabels[key] || key;
+        return `${fieldTitle}: ${msg}`;
       });
 
+      notify.error('Please correct the highlighted errors before saving:', {
+        description: errorList.length === 1 ? errorList[0] : undefined,
+        errors: errorList.length > 1 ? errorList : undefined,
+        duration: 7000,
+      });
+
+      const firstKey = errorEntries[0]?.[0] || 'trade';
       setTimeout(() => {
         const el = document.querySelector(`[name="${firstKey}"]`) || document.querySelector(`#${firstKey}`);
         if (el) (el as HTMLElement).focus();
@@ -335,7 +342,7 @@ export function TradeFormModal({
     if (expiryDate && date) {
       const dateErr = validateExpiryAgainstTradeDate(date, expiryDate);
       if (dateErr) {
-        toast.error(dateErr);
+        notify.error('Invalid Date Configuration', { description: dateErr });
         return;
       }
     }
@@ -379,17 +386,19 @@ export function TradeFormModal({
       onSave(savedData);
 
       if (!isEdit) {
-        toast.success(`Trade ${savedData.tradeNumber || ''} added successfully! Ready for next entry.`);
+        notify.success(`Trade ${savedData.tradeNumber || ''} added successfully!`, {
+          description: 'Ready for next trade entry.',
+        });
         setQuantity('');
         setMarketRate('');
         setTimeout(() => quantityInputRef.current?.focus(), 50);
       } else {
-        toast.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
+        notify.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
         setIsEditing(false);
         onClose();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save trade');
+      notify.error(err.message || 'Failed to save trade');
     } finally {
       setIsSaving(false);
     }
@@ -410,12 +419,12 @@ export function TradeFormModal({
           const err = await res.json();
           throw new Error(err.message || 'Failed to delete trade');
         }
-        toast.success(`Trade ${initialTrade.tradeNumber || ''} deleted`);
+        notify.success(`Trade ${initialTrade.tradeNumber || ''} deleted`);
       }
       setIsConfirmDeleteOpen(false);
       onClose();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete trade');
+      notify.error(err.message || 'Failed to delete trade');
     } finally {
       setIsDeleting(false);
     }
@@ -487,15 +496,6 @@ export function TradeFormModal({
                 <div>
                   <span className="font-bold">Locked Settlement Record:</span> This trade was processed by a settlement cycle and is locked against modifications or deletion.
                 </div>
-              </div>
-            )}
-
-            {/* Validation Error Summary Banner (DESIGN.md §3.13) */}
-            {isEditing && Object.keys(touched).length > 0 && Object.keys(errors).length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-800">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <span className="font-semibold">Please fix highlighted errors:</span>
-                <span className="text-red-700">{Object.values(errors).join(' • ')}</span>
               </div>
             )}
 

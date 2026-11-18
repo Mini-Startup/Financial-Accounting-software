@@ -6,7 +6,7 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, Building2, Phone, CreditCard, Users2, AlertCircle } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { apiFetch } from '../../utils/apiClient';
@@ -123,8 +123,11 @@ export function FormModal({
 
   // Real-time validation errors
   const validationErrors = useMemo(() => {
-    return validateAccountForm(formData);
-  }, [formData]);
+    return validateAccountForm({
+      ...formData,
+      groupName: groupName || (formData as any).groupName || (initialData as any)?.groupId || 'Sundry Debtors',
+    });
+  }, [formData, groupName, initialData]);
 
   // Spontaneous error detection helper
   const getFieldError = (field: string) => {
@@ -202,17 +205,26 @@ export function FormModal({
       referenceMobile: true,
     });
 
-    const activeErrors = validateAccountForm(formData);
-    const errorKeys = Object.keys(activeErrors);
+    const activeErrors = validateAccountForm({
+      ...formData,
+      groupName: groupName || (formData as any).groupName || (initialData as any)?.groupId || 'Sundry Debtors',
+    });
+    const errorEntries = Object.entries(activeErrors);
 
-    if (errorKeys.length > 0) {
-      const firstKey = errorKeys[0];
-      const fieldName = fieldLabels[firstKey] || firstKey;
-      toast.error(`Invalid ${fieldName}`, {
-        description: activeErrors[firstKey],
+    if (errorEntries.length > 0) {
+      const errorList = errorEntries.map(([key, msg]) => {
+        const fieldName = fieldLabels[key] || key;
+        return `${fieldName}: ${msg}`;
+      });
+
+      notify.error('Please correct the highlighted errors before saving:', {
+        description: errorList.length === 1 ? errorList[0] : undefined,
+        errors: errorList.length > 1 ? errorList : undefined,
+        duration: 7000,
       });
 
       // Auto-focus the first invalid field
+      const firstKey = errorEntries[0][0];
       setTimeout(() => {
         const el = document.querySelector(`[name="${firstKey}"]`) as HTMLElement;
         if (el) {
@@ -224,7 +236,9 @@ export function FormModal({
     }
 
     if (isDuplicate) {
-      toast.error('Cannot save: an account with this code or name already exists.');
+      notify.error('Duplicate Account Record', {
+        description: 'Cannot save: an account with this code or name already exists.',
+      });
       return;
     }
 
@@ -270,7 +284,7 @@ export function FormModal({
 
       if (res.ok) {
         const saved = await res.json();
-        toast.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
+        notify.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
         if (onSuccess) {
           onSuccess(saved);
         } else {
@@ -305,10 +319,10 @@ export function FormModal({
         }
       } else {
         const err = await res.json();
-        toast.error(err.message || 'Failed to save account');
+        notify.error(err.message || 'Failed to save account');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error occurred while saving account');
+      notify.error(err.message || 'Error occurred while saving account');
     } finally {
       setIsSubmitting(false);
     }
@@ -346,22 +360,6 @@ export function FormModal({
 
         {/* Modal Body: 4-Quadrant Single-View Grid (Zero-Scroll) */}
         <form id="accountForm" onSubmit={handleSubmit} className="flex-1 overflow-y-auto lg:overflow-hidden p-4 space-y-3 flex flex-col justify-between">
-          {/* Validation Error Summary Alert */}
-          {hasSubmitted && Object.keys(validationErrors).length > 0 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-800 animate-in fade-in shrink-0">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">Please correct the highlighted errors before saving:</span>
-                <ul className="list-disc list-inside mt-1 space-y-0.5 text-red-700">
-                  {Object.entries(validationErrors).map(([key, msg]) => (
-                    <li key={key}>
-                      <span className="font-semibold">{fieldLabels[key] || key}:</span> {msg}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
 
           {/* Duplicate Warning */}
           {isDuplicate && (

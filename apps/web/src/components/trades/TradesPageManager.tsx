@@ -10,6 +10,8 @@ import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { useTopBar } from '@/context/TopBarContext';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
 import {
   sortRecords,
@@ -19,7 +21,7 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { cn } from '@/utils/cn';
 import { formatDateToDDMMYY, formatDateForInput } from '@/utils/dateUtils';
 import { formatCurrencySymbol } from '@/utils/currency';
@@ -99,11 +101,31 @@ export function TradesPageManager({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isImportParam = searchParams.get('import') === 'true';
+  const isAddParam = searchParams.get('action') === 'add';
 
   const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [viewingTrade, setViewingTrade] = useState<any | null>(null);
+
+  // Synchronize when searchParams change or custom event is received
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+    if (isImportParam) {
+      setViewMode('import');
+    }
+  }, [isAddParam, isImportParam]);
+
+  useEffect(() => {
+    const handleOpenAdd = () => {
+      setViewMode('list');
+      setIsAdding(true);
+    };
+    window.addEventListener('bizzmate-open-add-trade', handleOpenAdd);
+    return () => window.removeEventListener('bizzmate-open-add-trade', handleOpenAdd);
+  }, []);
 
   const {
     items: trades,
@@ -170,6 +192,42 @@ export function TradesPageManager({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push clean simple title & page action buttons to unified TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Trades',
+      actions: (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Trade</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set('import', 'true');
+              window.history.pushState({}, '', url.toString());
+              setViewMode('import');
+            }}
+            className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+            <span>Import File</span>
+          </button>
+        </div>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
 
   // Sync state with query parameters (e.g. sidebar links)
   useEffect(() => {
@@ -433,13 +491,13 @@ export function TradesPageManager({
     setTrades((prev) =>
       prev.map((t) => (t.id === target.id ? { ...t, [columnKey]: newValue } : t))
     );
-    toast.success(`Updated ${columnKey}`);
+    notify.success(`Updated ${columnKey}`);
   };
 
   const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
     const { updatedRecords, count } = replaceValueInRecords(trades, columnKey, findVal, replaceVal, true);
     setTrades(updatedRecords);
-    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+    notify.success(`Replaced ${count} occurrences in ${columnKey}`);
   };
 
   // Selection handlers
@@ -482,7 +540,9 @@ export function TradesPageManager({
       ))
     );
     if (isLocked) {
-      toast.error('Settlement-generated trades are locked and cannot be deleted.');
+      notify.error('Locked Trade', {
+        description: 'Settlement-generated trades are locked and cannot be deleted.',
+      });
       return;
     }
 
@@ -494,17 +554,17 @@ export function TradesPageManager({
       onConfirm: async () => {
         // Sub-16ms spontaneous optimistic removal
         removeEntity(id);
-        toast.success('Trade deleted successfully');
+        notify.success('Trade deleted successfully');
         try {
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
             method: 'DELETE',
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            toast.error(err.message || 'Server failed to delete trade');
+            notify.error(err.message || 'Server failed to delete trade');
           }
         } catch {
-          toast.error('Failed to sync deletion with server');
+          notify.error('Failed to sync deletion with server');
         }
       },
     });
@@ -522,7 +582,9 @@ export function TradesPageManager({
     ).length;
 
     if (lockedCount > 0) {
-      toast.error(`Cannot delete selection: ${lockedCount} settlement trade(s) are locked.`);
+      notify.error('Locked Trades Selected', {
+        description: `Cannot delete selection: ${lockedCount} settlement trade(s) are locked.`,
+      });
       return;
     }
 
@@ -536,7 +598,7 @@ export function TradesPageManager({
         const ids = Array.from(selectedIds);
         setTrades((prev) => prev.filter((t) => !selectedIds.has(t.id)));
         setSelectedIds(new Set());
-        toast.success(`${count} trades deleted successfully`);
+        notify.success(`${count} trades deleted successfully`);
         try {
           await Promise.all(
             ids.map((id) =>
@@ -546,7 +608,7 @@ export function TradesPageManager({
             )
           );
         } catch {
-          toast.error('Failed to delete some trades on server');
+          notify.error('Failed to delete some trades on server');
         } finally {
           setIsDeleting(false);
         }
@@ -608,38 +670,8 @@ export function TradesPageManager({
     <div className="space-y-4 relative">
       {isDeleting && <LoadingOverlay message="Deleting selected trades..." />}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
-        <div>
-          <h1 className="text-h2 font-display">Trades</h1>
-          <p className="text-sm text-slate mt-1">
-            Review manual, imported, and settlement trades cross-referenced with account masters.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Trade
-          </button>
-          <button
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set('import', 'true');
-              window.history.pushState({}, '', url.toString());
-              setViewMode('import');
-            }}
-            className="btn btn--secondary flex items-center gap-2"
-          >
-            <UploadCloud className="w-4 h-4 text-[#2652C8]" /> Import File
-          </button>
-        </div>
-      </div>
-
-      {/* Table Container Card (Seamless zero gap between Toolbar and Table) */}
-      <div className="border border-border-light rounded-xl shadow-xs bg-white relative">
+      {/* Table Container Card (Clean unified card: Toolbar -> Secondary Filters -> Data Table) */}
+      <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
         <TableToolbar
           searchQuery={searchQuery}
           onSearchChange={(q) => {
@@ -678,161 +710,189 @@ export function TradesPageManager({
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
-          className="border-0 rounded-none border-b border-border-light"
+          className="border-0 rounded-none border-b border-slate-200/80 px-4 py-3"
           filterSlot={
-            <div className="flex gap-2 items-center flex-wrap">
-              {/* Settlement Selector (Default: Open Positions) */}
-              <div className="w-44">
+            <div className="flex gap-2.5 items-center">
+              {/* 1-Click Side Segmented Control: All / BUY / SELL */}
+              <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 select-none">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter('');
+                    setCurrentPage(1);
+                  }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                    !typeFilter
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter('BUY');
+                    setCurrentPage(1);
+                  }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                    typeFilter === 'BUY'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'text-emerald-700 hover:bg-emerald-50'
+                  )}
+                >
+                  BUY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter('SELL');
+                    setCurrentPage(1);
+                  }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                    typeFilter === 'SELL'
+                      ? 'bg-rose-600 text-white shadow-2xs'
+                      : 'text-rose-700 hover:bg-rose-50'
+                  )}
+                >
+                  SELL
+                </button>
+              </div>
+
+              {/* Settlement Dropdown: Supports Open Positions, All Settlements, and specific cycles like Settlement 1 */}
+              <div className="w-44 shrink-0">
                 <UniversalDropdown
                   options={settlementOptions}
                   value={settlementFilter}
                   onChange={(val) => {
-                    setSettlementFilter(val);
+                    setSettlementFilter(val || 'OPEN');
                     setCurrentPage(1);
                   }}
                   placeholder="Settlement"
-                />
-              </div>
-
-              {/* Exchange Selector */}
-              <div className="w-36">
-                <UniversalDropdown
-                  options={exchangeOptions}
-                  value={exchangeFilter}
-                  onChange={(val) => {
-                    setExchangeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Exchanges"
                   searchable={true}
                 />
               </div>
-
-              {/* Expiry Selector */}
-              <div className="w-38">
-                <UniversalDropdown
-                  options={expiryFilterOptions}
-                  value={expiryFilter}
-                  onChange={(val) => {
-                    setExpiryFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Expiries"
-                  searchable={true}
-                />
-              </div>
-
-              {/* Client Selector (Searchable) */}
-              <div className="w-40">
-                <UniversalDropdown
-                  options={clientOptions}
-                  value={clientFilter}
-                  onChange={(val) => {
-                    setClientFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Clients"
-                  searchable={true}
-                />
-              </div>
-
-              {/* Broker Selector (Searchable) */}
-              <div className="w-40">
-                <UniversalDropdown
-                  options={brokerOptions}
-                  value={brokerFilter}
-                  onChange={(val) => {
-                    setBrokerFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Brokers"
-                  searchable={true}
-                />
-              </div>
-
-              {/* Script Selector (Searchable) */}
-              <div className="w-40">
-                <UniversalDropdown
-                  options={scriptOptions}
-                  value={scriptFilter}
-                  onChange={(val) => {
-                    setScriptFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Scripts"
-                  searchable={true}
-                />
-              </div>
-
-              {/* Side (All, BUY, SELL) */}
-              <div className="w-24">
-                <UniversalDropdown
-                  options={typeOptions}
-                  value={typeFilter}
-                  onChange={(val) => {
-                    setTypeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All"
-                />
-              </div>
-
-              {/* Date Range: From & To */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1">
-                <span className="text-[11px] font-semibold text-slate-500">From:</span>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="h-7 text-xs bg-transparent border-0 text-slate-800 focus:outline-none cursor-pointer"
-                />
-                <span className="text-[11px] font-semibold text-slate-400">To:</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => {
-                    setToDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="h-7 text-xs bg-transparent border-0 text-slate-800 focus:outline-none cursor-pointer"
-                />
-              </div>
-
-              {/* Reset all filters */}
-              {(settlementFilter !== 'OPEN' || clientFilter || brokerFilter || scriptFilter || exchangeFilter || typeFilter || tradeTypeFilter || expiryFilter || fromDate || toDate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSettlementFilter('OPEN');
-                    setClientFilter('');
-                    setBrokerFilter('');
-                    setScriptFilter('');
-                    setExchangeFilter('');
-                    setTypeFilter('');
-                    setTradeTypeFilter('');
-                    setExpiryFilter('');
-                    setFromDate('');
-                    setToDate('');
-                    setSearchQuery('');
-                    setCurrentPage(1);
-                  }}
-                  className="h-8.5 px-2.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 cursor-pointer transition"
-                  title="Reset all filters to default"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Reset</span>
-                </button>
-              )}
             </div>
           }
         />
 
+        {/* Secondary Granular Filter Shelf: Clean Single Shelf (Exchange, Expiry, Script, Client, Broker, Date Range, Reset) */}
+        <div className="px-4 py-2.5 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2 flex-wrap">
+          <div className="w-32">
+            <UniversalDropdown
+              options={exchangeOptions}
+              value={exchangeFilter}
+              onChange={(val) => {
+                setExchangeFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Exchanges"
+              searchable={true}
+            />
+          </div>
+          <div className="w-32">
+            <UniversalDropdown
+              options={expiryFilterOptions}
+              value={expiryFilter}
+              onChange={(val) => {
+                setExpiryFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Expiries"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={scriptOptions}
+              value={scriptFilter}
+              onChange={(val) => {
+                setScriptFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Scripts"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={clientOptions}
+              value={clientFilter}
+              onChange={(val) => {
+                setClientFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Clients"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={brokerOptions}
+              value={brokerFilter}
+              onChange={(val) => {
+                setBrokerFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Brokers"
+              searchable={true}
+            />
+          </div>
+          <div className="w-32">
+            <UniversalDatePicker
+              value={fromDate}
+              onChange={(val) => {
+                setFromDate(val);
+                setCurrentPage(1);
+              }}
+              placeholder="From Date"
+              compact={true}
+            />
+          </div>
+          <div className="w-32">
+            <UniversalDatePicker
+              value={toDate}
+              onChange={(val) => {
+                setToDate(val);
+                setCurrentPage(1);
+              }}
+              placeholder="To Date"
+              compact={true}
+            />
+          </div>
+
+          {(settlementFilter !== 'OPEN' || clientFilter || brokerFilter || scriptFilter || exchangeFilter || typeFilter || tradeTypeFilter || expiryFilter || fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSettlementFilter('OPEN');
+                setClientFilter('');
+                setBrokerFilter('');
+                setScriptFilter('');
+                setExchangeFilter('');
+                setTypeFilter('');
+                setTradeTypeFilter('');
+                setExpiryFilter('');
+                setFromDate('');
+                setToDate('');
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              className="h-8.5 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
+              title="Reset all filters to default"
+            >
+              <X className="w-3.5 h-3.5 text-slate-400" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+
         <div className="overflow-x-auto rounded-b-xl">
           <table className="data-table data-table-dense w-full text-xs">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs">
               <tr className="whitespace-nowrap">
                 <th style={{ width: '36px' }} className="text-center">
                   <CustomCheckbox
@@ -962,7 +1022,7 @@ export function TradesPageManager({
                 )}
                 {visibleColumns.includes('price') && (
                   <th
-                    className="text-right cursor-pointer select-none bg-slate-200/90 text-slate-800 border-l border-r border-slate-300 font-bold"
+                    className="text-right cursor-pointer hover:bg-slate-100 select-none font-bold"
                     onClick={() => handleSort('price')}
                   >
                     <div className="flex items-center justify-end gap-1.5">
@@ -976,22 +1036,22 @@ export function TradesPageManager({
                   </th>
                 )}
                 {visibleColumns.includes('clientRate') && (
-                  <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  <th className="text-right font-semibold text-slate-600">
                     Client Rate
                   </th>
                 )}
                 {visibleColumns.includes('brokerRate') && (
-                  <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  <th className="text-right font-semibold text-slate-600">
                     Broker Rate
                   </th>
                 )}
                 {visibleColumns.includes('clientBrokerage') && (
-                  <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  <th className="text-right font-semibold text-slate-600">
                     Client Brk
                   </th>
                 )}
                 {visibleColumns.includes('brokerBrokerage') && (
-                  <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
+                  <th className="text-right font-semibold text-slate-600">
                     Broker Brk
                   </th>
                 )}
@@ -1036,7 +1096,6 @@ export function TradesPageManager({
                       isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
                       !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50'
                     )}
-                    title="Click row to view / edit / delete trade"
                   >
                     <td
                       className="text-center whitespace-nowrap"
@@ -1052,7 +1111,7 @@ export function TradesPageManager({
                     </td>
                     {visibleColumns.includes('tradeDate') && (
                       <td className="text-slate text-xs whitespace-nowrap">
-                        <div className="font-mono font-semibold text-slate-900">
+                        <div className="font-mono font-medium text-slate-800">
                           {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">
@@ -1061,20 +1120,20 @@ export function TradesPageManager({
                       </td>
                     )}
                     {visibleColumns.includes('exchange.code') && (
-                      <td className="font-bold text-charcoal whitespace-nowrap">
+                      <td className="font-medium text-slate-600 text-xs whitespace-nowrap">
                         {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}
                       </td>
                     )}
 
                     {visibleColumns.includes('securityName') && (
-                      <td className="max-w-65 truncate whitespace-nowrap" title={secName}>
-                        <div className="font-semibold text-charcoal text-xs truncate">
+                      <td className="max-w-65 truncate whitespace-nowrap">
+                        <div className="font-medium text-slate-800 text-xs truncate">
                           {renderWithDiff('securityName', secName, isActiveMatch)}
                         </div>
                         <div className="text-[11px] text-slate-500 font-normal flex items-center gap-1.5 mt-0.5">
                           <span>{t.script?.shortName || '—'}</span>
                           {t.exchange?.code && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-mono">
+                            <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">
                               {t.exchange.code}
                             </span>
                           )}
@@ -1083,7 +1142,7 @@ export function TradesPageManager({
                     )}
 
                     {visibleColumns.includes('expiry') && (
-                      <td className="font-mono text-xs text-slate-800 whitespace-nowrap font-medium">
+                      <td className="font-mono text-xs text-slate-600 whitespace-nowrap font-normal">
                         {renderWithDiff('expiry', formatDateToDDMMYY(t.expiry) || '—', isActiveMatch)}
                       </td>
                     )}
@@ -1115,14 +1174,14 @@ export function TradesPageManager({
                     )}
 
                     {visibleColumns.includes('quantity') && (
-                      <td className="font-mono font-semibold text-right whitespace-nowrap text-slate-900">
+                      <td className="font-mono font-medium text-right whitespace-nowrap text-slate-800">
                         {Math.abs(t.quantity).toLocaleString()}
                       </td>
                     )}
 
                     {visibleColumns.includes('client') && (
-                      <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>
-                        <div className="font-semibold text-slate-900">
+                      <td className="font-mono text-xs whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
                           {renderWithDiff('account.code', t.account?.code || t.account?.name || '—', isActiveMatch)}
                         </div>
                         <div className="text-[10px] text-slate-500">
@@ -1139,8 +1198,8 @@ export function TradesPageManager({
                     )}
 
                     {visibleColumns.includes('broker') && (
-                      <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>
-                        <div className="font-semibold text-slate-900">
+                      <td className="font-mono text-xs whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
                           {renderWithDiff('broker.code', t.broker?.code || t.broker?.name || '—', isActiveMatch)}
                         </div>
                         <div className="text-[10px] text-slate-500">
@@ -1156,29 +1215,29 @@ export function TradesPageManager({
                       </td>
                     )}
 
-                    {/* Highlighted Rate & Brokerage Columns */}
+                    {/* Market Rate & Brokerage Columns (Uniform modern styling) */}
                     {visibleColumns.includes('price') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-50/80 border-l border-r border-slate-200/60">
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-semibold text-slate-900">
                         {currSym}{t.rate.toFixed(2)}
                       </td>
                     )}
                     {visibleColumns.includes('clientRate') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-50/80 border-r border-slate-200/60">
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-700">
                         {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
                       </td>
                     )}
                     {visibleColumns.includes('brokerRate') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-50/80 border-r border-slate-200/60">
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-700">
                         {t.brokerRate != null ? `${currSym}${t.brokerRate.toFixed(2)}` : '—'}
                       </td>
                     )}
                     {visibleColumns.includes('clientBrokerage') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-50/80 border-r border-slate-200/60">
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-500">
                         {t.clientBrokerage != null && t.clientBrokerage > 0 ? `${currSym}${t.clientBrokerage.toFixed(2)}` : `${currSym}0.00`}
                       </td>
                     )}
                     {visibleColumns.includes('brokerBrokerage') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-50/80 border-r border-slate-200/60">
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-500">
                         {t.brokerBrokerage != null && t.brokerBrokerage > 0 ? `${currSym}${t.brokerBrokerage.toFixed(2)}` : `${currSym}0.00`}
                       </td>
                     )}
@@ -1278,16 +1337,16 @@ export function TradesPageManager({
           onDelete={async (id) => {
             removeEntity(id);
             setViewingTrade(null);
-            toast.success('Trade deleted successfully');
+            notify.success('Trade deleted successfully');
             try {
               const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
                 method: 'DELETE',
               });
               if (!res.ok) {
-                toast.error('Failed to sync deletion with server');
+                notify.error('Failed to sync deletion with server');
               }
             } catch {
-              toast.error('Failed to sync deletion with server');
+              notify.error('Failed to sync deletion with server');
             }
           }}
         />
