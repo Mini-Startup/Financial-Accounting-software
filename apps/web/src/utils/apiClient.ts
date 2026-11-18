@@ -1,4 +1,4 @@
-import { toast } from 'sonner';
+import { notify } from './toastNotify';
 
 export interface ApiFetchOptions extends RequestInit {
   userId?: string | null;
@@ -34,12 +34,14 @@ export async function apiFetch(endpoint: string, options: ApiFetchOptions = {}):
       errorData.message ||
       errorData.error ||
       'Access Denied: You do not have permission to perform this action.';
-    toast.error(message, {
+    notify.error(message, {
       duration: 5000,
       description: 'Please contact the application Owner if you believe this is an error.',
     });
   } else if (res.status === 401) {
-    toast.error('Session Expired: Please refresh or sign in again.');
+    notify.error('Session Expired', {
+      description: 'Please refresh the page or sign in again.',
+    });
   }
 
   return res;

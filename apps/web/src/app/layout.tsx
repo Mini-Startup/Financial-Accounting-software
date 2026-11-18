@@ -135,7 +135,11 @@ export default async function RootLayout({
             position="top-right"
             toastOptions={{
               duration: 4500,
+              unstyled: true,
             }}
+            style={{
+              '--width': '520px',
+            } as React.CSSProperties}
             richColors={false}
           />
         </ClerkProvider>

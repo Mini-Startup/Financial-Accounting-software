@@ -10,6 +10,7 @@ import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { UniversalDateRangePicker } from '../ui/UniversalDateRangePicker';
 import { UniversalTooltip } from '../ui/UniversalTooltip';
 import { useTopBar } from '@/context/TopBarContext';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
@@ -201,27 +202,31 @@ export function TradesPageManager({
       title: 'Trades',
       actions: (
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Add Trade</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set('import', 'true');
-              window.history.pushState({}, '', url.toString());
-              setViewMode('import');
-            }}
-            className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-            <span>Import File</span>
-          </button>
+          <UniversalTooltip content="Add a new trade entry (Alt+N)">
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Trade</span>
+            </button>
+          </UniversalTooltip>
+          <UniversalTooltip content="Bulk import trades from Excel or CSV file">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('import', 'true');
+                window.history.pushState({}, '', url.toString());
+                setViewMode('import');
+              }}
+              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+              <span>Import File</span>
+            </button>
+          </UniversalTooltip>
         </div>
       ),
     });
@@ -715,51 +720,57 @@ export function TradesPageManager({
             <div className="flex gap-2.5 items-center">
               {/* 1-Click Side Segmented Control: All / BUY / SELL */}
               <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 select-none">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTypeFilter('');
-                    setCurrentPage(1);
-                  }}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                    !typeFilter
-                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                  )}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTypeFilter('BUY');
-                    setCurrentPage(1);
-                  }}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                    typeFilter === 'BUY'
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'text-emerald-700 hover:bg-emerald-50'
-                  )}
-                >
-                  BUY
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTypeFilter('SELL');
-                    setCurrentPage(1);
-                  }}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                    typeFilter === 'SELL'
-                      ? 'bg-rose-600 text-white shadow-2xs'
-                      : 'text-rose-700 hover:bg-rose-50'
-                  )}
-                >
-                  SELL
-                </button>
+                <UniversalTooltip content="Show all BUY and SELL trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('');
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                      !typeFilter
+                        ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                    )}
+                  >
+                    All
+                  </button>
+                </UniversalTooltip>
+                <UniversalTooltip content="Filter only BUY trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('BUY');
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      typeFilter === 'BUY'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-emerald-700 hover:bg-emerald-50'
+                    )}
+                  >
+                    BUY
+                  </button>
+                </UniversalTooltip>
+                <UniversalTooltip content="Filter only SELL trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('SELL');
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      typeFilter === 'SELL'
+                        ? 'bg-rose-600 text-white shadow-2xs'
+                        : 'text-rose-700 hover:bg-rose-50'
+                    )}
+                  >
+                    SELL
+                  </button>
+                </UniversalTooltip>
               </div>
 
               {/* Settlement Dropdown: Supports Open Positions, All Settlements, and specific cycles like Settlement 1 */}
@@ -841,52 +852,44 @@ export function TradesPageManager({
               searchable={true}
             />
           </div>
-          <div className="w-32">
-            <UniversalDatePicker
-              value={fromDate}
-              onChange={(val) => {
-                setFromDate(val);
+          <div className="w-60">
+            <UniversalDateRangePicker
+              startDate={fromDate}
+              endDate={toDate}
+              onChange={({ startDate, endDate }) => {
+                setFromDate(startDate);
+                setToDate(endDate);
                 setCurrentPage(1);
               }}
-              placeholder="From Date"
-              compact={true}
-            />
-          </div>
-          <div className="w-32">
-            <UniversalDatePicker
-              value={toDate}
-              onChange={(val) => {
-                setToDate(val);
-                setCurrentPage(1);
-              }}
-              placeholder="To Date"
+              placeholder="Filter Date Range"
               compact={true}
             />
           </div>
 
           {(settlementFilter !== 'OPEN' || clientFilter || brokerFilter || scriptFilter || exchangeFilter || typeFilter || tradeTypeFilter || expiryFilter || fromDate || toDate) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSettlementFilter('OPEN');
-                setClientFilter('');
-                setBrokerFilter('');
-                setScriptFilter('');
-                setExchangeFilter('');
-                setTypeFilter('');
-                setTradeTypeFilter('');
-                setExpiryFilter('');
-                setFromDate('');
-                setToDate('');
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="h-8.5 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
-              title="Reset all filters to default"
-            >
-              <X className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset</span>
-            </button>
+            <UniversalTooltip content="Reset all active filters to default">
+              <button
+                type="button"
+                onClick={() => {
+                  setSettlementFilter('OPEN');
+                  setClientFilter('');
+                  setBrokerFilter('');
+                  setScriptFilter('');
+                  setExchangeFilter('');
+                  setTypeFilter('');
+                  setTradeTypeFilter('');
+                  setExpiryFilter('');
+                  setFromDate('');
+                  setToDate('');
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="h-8.5 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
+              >
+                <X className="w-3.5 h-3.5 text-slate-400" />
+                <span>Reset</span>
+              </button>
+            </UniversalTooltip>
           )}
         </div>
 

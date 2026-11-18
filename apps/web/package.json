@@ -12,6 +12,8 @@
   "dependencies": {
     "@clerk/nextjs": "^7.1.0",
     "@heroicons/react": "^2.2.0",
+    "@heroui/react": "^3.2.7",
+    "@heroui/styles": "^3.2.7",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -29,6 +31,7 @@
     "sonner": "^2.0.7",
     "svix": "^1.90.0",
     "tailwind-merge": "^3.6.0",
+    "tailwind-variants": "^4.0.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

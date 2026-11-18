@@ -18,6 +18,7 @@ import type { AdvancedCondition } from '@/utils/tableFilter';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { ColumnSettingsPopover, ColumnDefinition } from '@/components/ui/ColumnSettingsPopover';
+import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
 
 export interface ColumnOption {
   key: string;
@@ -226,20 +227,21 @@ export function TableToolbar({
                   )}
 
                   {showFindReplaceButton && onToggleFindReplace && (
-                    <button
-                      type="button"
-                      onClick={onToggleFindReplace}
-                      className={cn(
-                        'h-8.5 px-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer',
-                        isFindReplaceOpen
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
-                      )}
-                      title="Find & Replace in Table"
-                    >
-                      <Replace className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="hidden sm:inline">Find & Replace</span>
-                    </button>
+                    <UniversalTooltip content="Find & Replace in Table (Ctrl+H)">
+                      <button
+                        type="button"
+                        onClick={onToggleFindReplace}
+                        className={cn(
+                          'h-8.5 px-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer',
+                          isFindReplaceOpen
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                        )}
+                      >
+                        <Replace className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="hidden sm:inline">Find & Replace</span>
+                      </button>
+                    </UniversalTooltip>
                   )}
 
                   {filterSlot}
@@ -414,24 +416,26 @@ export function TableToolbar({
 
             {/* Navigation arrows < > */}
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={handlePrevPage}
-                disabled={currentPage <= 1}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-600 cursor-pointer disabled:cursor-not-allowed"
-                title="Previous Page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextPage}
-                disabled={currentPage >= totalPages}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-600 cursor-pointer disabled:cursor-not-allowed"
-                title="Next Page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <UniversalTooltip content="Previous Page">
+                <button
+                  type="button"
+                  onClick={handlePrevPage}
+                  disabled={currentPage <= 1}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-600 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </UniversalTooltip>
+              <UniversalTooltip content="Next Page">
+                <button
+                  type="button"
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-600 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </UniversalTooltip>
             </div>
           </div>
         </div>

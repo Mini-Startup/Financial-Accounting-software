@@ -487,7 +487,16 @@ export function TradeFormModal({
         </div>
 
         {/* Content Body */}
-        <form id="tradeForm" onSubmit={handleSave} className="flex-1 flex flex-col min-h-0">
+        <form
+          id="tradeForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (isEditing) {
+              handleSave(e);
+            }
+          }}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
             {/* Locked Notification */}
             {isLocked && (
@@ -906,56 +915,74 @@ export function TradeFormModal({
             </div>
 
             {/* Right: Cancel / Save or Close / Edit */}
-            <div className="flex items-center gap-2.5">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="btn btn--secondary text-xs px-4 py-2"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    form="tradeForm"
-                    disabled={isSaving || isLocked || !isFormValid}
-                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center"
-                  >
-                    {isSaving ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        <span>Saving…</span>
-                      </>
-                    ) : initialTrade ? (
-                      'Save Changes'
-                    ) : (
-                      'Add Trade'
-                    )}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="btn btn--secondary text-xs px-4 py-2"
-                  >
-                    Close
-                  </button>
-                  {!isLocked && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(true)}
-                      className="btn btn--primary flex items-center gap-1.5 text-xs px-4 py-2"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Edit Trade</span>
-                    </button>
+            {isEditing ? (
+              <div key="edit-actions-group" className="flex items-center gap-2.5">
+                <button
+                  key="btn-cancel-edit"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCancelEdit();
+                  }}
+                  className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  key="btn-save-trade"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSave(e);
+                  }}
+                  disabled={isSaving || isLocked || !isFormValid}
+                  className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span>Saving…</span>
+                    </>
+                  ) : initialTrade ? (
+                    'Save Changes'
+                  ) : (
+                    'Add Trade'
                   )}
-                </>
-              )}
-            </div>
+                </button>
+              </div>
+            ) : (
+              <div key="view-actions-group" className="flex items-center gap-2.5">
+                <button
+                  key="btn-close-modal"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
+                >
+                  Close
+                </button>
+                {!isLocked && (
+                  <button
+                    key="btn-start-edit"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsEditing(true);
+                    }}
+                    className="btn btn--primary flex items-center gap-1.5 text-xs px-4 py-2 cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Edit Trade</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </form>
       </div>

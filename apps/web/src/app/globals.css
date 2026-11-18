@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 
 @theme {
   --font-display: var(--font-dm-sans), sans-serif;
@@ -607,169 +608,36 @@ select option {
   background-color: #FFFFFF !important;
 }
 
-/* Sonner Toast Card Styling — Matching Reference Image 2 */
-[data-sonner-toaster] [data-sonner-toast] {
-  border-radius: 16px !important;
-  padding: 14px 18px !important;
-  font-family: var(--font-body) !important;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18), 0 0 1px 1px rgba(15, 23, 42, 0.05) !important;
-  border: 1px solid #E2E8F0 !important;
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
+/* Sonner Toaster Container & Reset for HeroUI Executive Alerts */
+[data-sonner-toaster] {
+  --width: 520px !important;
+  max-width: calc(100vw - 32px) !important;
+  z-index: 99999 !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {
-  border-radius: 20px !important;
-  padding: 16px 20px !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
-  box-shadow: 0 20px 45px -8px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.04) !important;
-  background: #FFFFFF !important;
-  position: relative !important;
-  overflow: hidden !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 14px !important;
-}
-
-/* Ambient Top-Left Aura (Matching Image 2 Reference) */
-[data-sonner-toaster] [data-sonner-toast]::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 140px;
-  height: 95px;
-  pointer-events: none;
-  border-top-left-radius: 20px;
-  z-index: 1;
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="success"]::after {
-  background: radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.04) 60%, transparent 100%);
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="error"]::after {
-  background: radial-gradient(circle at 0% 0%, rgba(244, 63, 94, 0.18) 0%, rgba(244, 63, 94, 0.04) 60%, transparent 100%);
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="info"]::after {
-  background: radial-gradient(circle at 0% 0%, rgba(38, 82, 200, 0.18) 0%, rgba(38, 82, 200, 0.04) 60%, transparent 100%);
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="warning"]::after {
-  background: radial-gradient(circle at 0% 0%, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.04) 60%, transparent 100%);
-}
-
-/* Elevated Circular Disc with Inner Colored Circle (Matching Image 2) */
-[data-sonner-toaster] [data-sonner-toast] [data-icon] {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 9999px !important;
-  background: #FFFFFF !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06) !important;
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  position: relative !important;
-  z-index: 2 !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast] [data-icon] svg {
-  width: 14px !important;
-  height: 14px !important;
-  stroke-width: 2.5 !important;
-  position: relative !important;
-  z-index: 3 !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast] [data-icon]::before {
-  content: '';
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border-radius: 9999px;
-  z-index: 2;
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon]::before {
-  background-color: #10B981;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] {
-  color: #FFFFFF !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-icon]::before {
-  background-color: #F43F5E;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-icon] {
-  color: #FFFFFF !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="warning"] [data-icon]::before {
-  background-color: #F59E0B;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="warning"] [data-icon] {
-  color: #FFFFFF !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon]::before {
-  background-color: #2652C8;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon] {
-  color: #FFFFFF !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast] [data-content] {
-  position: relative !important;
-  z-index: 2 !important;
-  padding-top: 2px !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast] [data-title] {
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  color: #0F172A !important;
-  letter-spacing: -0.015em !important;
-  line-height: 1.35 !important;
-}
-
-[data-sonner-toaster] [data-sonner-toast] [data-description] {
-  font-size: 12px !important;
-  color: #64748B !important;
-  line-height: 1.5 !important;
-  margin-top: 3px !important;
-  font-weight: 400 !important;
-}
-
-/* Close button neatly inside top-right padding (Matching Image 2) */
-[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
-  top: 12px !important;
-  right: 12px !important;
-  left: auto !important;
-  transform: none !important;
   background: transparent !important;
   border: none !important;
-  color: #94A3B8 !important;
-  border-radius: 8px !important;
-  padding: 4px !important;
-  width: 24px !important;
-  height: 24px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.15s ease !important;
-  cursor: pointer !important;
-  z-index: 10 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
 }
 
-[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
-  background: #F1F5F9 !important;
-  color: #1E293B !important;
+[data-sonner-toaster] [data-sonner-toast]::after {
+  display: none !important;
+}
+
+/* HeroUI Tooltip Arrow Color Alignment with Dark Brand Tooltip */
+.tooltip [data-slot="overlay-arrow"],
+.tooltip [data-slot="overlay-arrow"] path,
+[data-slot="tooltip-arrow"] svg,
+[data-slot="tooltip-arrow"] path {
+  fill: #0A1B4D !important;
+  stroke: transparent !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
