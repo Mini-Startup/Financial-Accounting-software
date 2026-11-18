@@ -599,7 +599,7 @@ export function TradesPageManager({
     return (
       <span className="inline-flex items-center gap-1 font-mono text-xs">
         <span className="line-through text-red-600 bg-red-50 px-1 py-0.5 rounded opacity-75">{rawText || '—'}</span>
-        <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold shadow-2xs">→ {preview}</span>
+        <span className="text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded font-bold shadow-2xs">→ {preview}</span>
       </span>
     );
   };
@@ -633,7 +633,7 @@ export function TradesPageManager({
             }}
             className="btn btn--secondary flex items-center gap-2"
           >
-            <UploadCloud className="w-4 h-4 text-(--color-primary)" /> Import File
+            <UploadCloud className="w-4 h-4 text-[#2652C8]" /> Import File
           </button>
         </div>
       </div>
@@ -1031,7 +1031,7 @@ export function TradesPageManager({
                     onClick={() => setViewingTrade(t)}
                     className={cn(
                       'transition-colors cursor-pointer select-none whitespace-nowrap',
-                      isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60',
+                      isSelected && 'bg-blue-50/60 hover:bg-blue-50/80',
                       !isSelected && isMatched && !isActiveMatch && 'bg-amber-50/60 hover:bg-amber-100/60',
                       isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
                       !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50'
@@ -1190,7 +1190,7 @@ export function TradesPageManager({
                             'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap',
                             t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                             t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
-                            t.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                            t.tradeType === 'SETTLEMENT' && 'bg-blue-50 text-blue-800 border-blue-200',
                             t.tradeType === 'INTERNAL' && 'bg-blue-50 text-blue-700 border-blue-200',
                             (!t.tradeType || t.tradeType === 'REGULAR') &&
                               (t.source === 'MANUAL'

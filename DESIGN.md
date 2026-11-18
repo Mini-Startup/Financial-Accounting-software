@@ -105,7 +105,7 @@ Danger button / destructive confirm: bg `#DC2626`, hover `#B91C1C`, pressed `#99
 
 | Token | Value | Usage |
 |---|---|---|
-| bg-app | secondary-50 `#F8FAFC` | Page background |
+| bg-app | secondary-100 `#F1F5F9` | Page canvas background (contrast workstation surface) |
 | bg-surface | `#FFFFFF` | Cards, tables, modals, dropdowns |
 | bg-subtle | secondary-100 | Hover, disabled, zebra (if enabled) |
 | bg-overlay | `rgba(15, 23, 42, 0.45)` | Modal backdrop (no blur) |
@@ -174,17 +174,33 @@ Standard layout rules:
 - Modal body padding: **20px 24px**; header/footer padding: **16px 24px**.
 - Card padding: **16px** (compact) or **20px** (default).
 
-### 1.4 Radius
+### 1.4 Unified Primary Roundness Token System (`--app-radius`)
 
-Less round than before: crisp and professional. No pill-shaped inputs or buttons.
+To ensure modern, harmonious aesthetics with zero sharp 90-degree corners and simple whole-app roundness scalability, the application uses a unified roundness architecture anchored to a single master token:
 
-| Token | Value | Usage |
+```css
+:root {
+  --app-radius: 12px;                          /* Master primary roundness knob */
+  --radius-xs: 6px;
+  --radius-sm: calc(var(--app-radius) - 4px);  /* 8px: tags, small badges, checkboxes */
+  --radius-md: 10px;
+  --radius-control: var(--app-radius);         /* 12px: inputs, buttons, dropdown triggers */
+  --radius-card: calc(var(--app-radius) + 4px);/* 16px: cards, tables, popovers */
+  --radius-modal: calc(var(--app-radius) + 8px);/* 20px: modals, dialogs */
+  --radius-full: 9999px;                       /* pills, avatars */
+}
+```
+
+| Token | Calculated Value | Usage |
 |---|---|---|
-| radius-sm | 4px | Badges, checkboxes, kbd hints, tooltips |
-| **radius-md** | **6px** | **Buttons, inputs, selects, dropdown items** |
-| radius-lg | 8px | Cards, tables container, dropdown panels, toasts |
-| radius-xl | 12px | Modals, large panels |
-| radius-full | 9999px | Avatars, status dots only |
+| radius-sm | `8px` | Badges, checkboxes, tooltips, keyboard hints |
+| **radius-control / radius-md** | **`10px - 12px`** | **Buttons, inputs, dropdown triggers, search bars** |
+| radius-card / radius-xl | `16px` | Cards, table containers, popovers, banners |
+| radius-modal / radius-2xl | `20px` | Modals, confirm dialogs, slide-overs |
+| radius-full | `9999px` | Avatars, status dots, round pills |
+
+> [!TIP]
+> Changing `--app-radius` adjusts the visual curvature across the entire application simultaneously with mathematical harmony. Sharp, boxy 90-degree edges are strictly eliminated.
 
 ### 1.5 Borders, Elevation & Focus
 
@@ -237,20 +253,20 @@ The app is primarily a desktop app (1280px+); layouts must still not break at 10
 └───────────┴──────────────────────────────────────────────┘
 ```
 
-### 2.2 Sidebar
+### 2.2 Sidebar (Primary 400 to 600 Gradient with Lighter Active State)
 
-- Background: **white** (`#FFFFFF`) with a right border `1px solid border-default`. Light sidebar, not dark or colored.
-- Header (56px): logo mark (28px, radius-md, primary-600 bg, white letter) + app name `text-md` 600. Collapse button at the right (icon-only).
-- Section label (e.g., MASTER, DATA): `text-2xs`, 600, UPPERCASE, letter-spacing `0.06em`, secondary-500, padding `16px 12px 6px`.
-- Nav item: height **36px**, padding `0 12px`, radius-md, icon 18px + label `text-base` 500, gap 10px, color secondary-700.
-  - Hover: bg secondary-100.
-  - **Active:** bg primary-50, text primary-700, icon primary-600, plus a 3px primary-600 bar on the left edge (inside radius).
-  - Focus: standard focus ring (inset by -2px so it is not clipped).
-- Sub-items: indented 28px, same height, no icon, connected by a 1px secondary-200 vertical guide line.
-- Groups are collapsible with a chevron (16px) at the right; chevron rotates 90° when open.
-- Footer: user block with avatar (32px circle), name `text-sm` 600, role `text-xs` secondary-500; a single menu button.
-- Collapsed state (64px): icons only, label shown in a tooltip on hover **and** on keyboard focus.
-- Notification/status badges: never overlap the avatar or the text; place them as a small dot (8px) top-right of the icon.
+- Background: **Primary 400 to 600 Gradient** (`linear-gradient(180deg, #0A1B4D 0%, #102E7A 45%, #1D4ED8 100%)`) with border `border-r border-blue-900/60`. Rich executive finance gradient matching dashboard header comps.
+- Header (56px): logo mark (28px, rounded-lg, `bg-white/20 border border-white/30`, white letter) + app name `text-base` 700 text-white. Pin/collapse button at the right (`text-blue-200 hover:text-white`).
+- Section label (e.g., MASTER, DATA, REPORTS): `text-[11px]`, 700, UPPERCASE, letter-spacing `0.06em`, `text-blue-200/70`, padding `16px 12px 6px`. Clean text header, no folder icons.
+- Nav item: height **36px**, padding `0 12px`, `rounded-xl`, icon 18px + label `text-sm` 500, gap 10px, `text-blue-100/80`.
+  - Hover: `bg-white/10 text-white`.
+  - **Active State (Lighter Contrast):** Solid white pill `bg-white text-[#0A1B4D] font-bold shadow-md rounded-xl` with dark navy icon `text-[#0A1B4D]`. Provides luminous contrast on the rich blue gradient canvas.
+  - Sub-groups (e.g. "Import Files"): `subGroupActive ? bg-white/20 border border-white/25 text-white font-semibold shadow-xs rounded-xl : text-blue-100/80 hover:bg-white/10`.
+  - Sub-item active: `bg-white text-[#0A1B4D] font-bold shadow-sm rounded-lg`.
+  - Clean layout: zero ugly curved brackets, zero misaligned vertical tree lines.
+- Groups are collapsible with a chevron (14px) at the right; chevron rotates 180° when open.
+- Footer: user block with avatar (32px circle), name `text-sm` 600 text-white, role `text-xs` text-blue-200; subtle translucent container `bg-black/25 border-t border-white/10`.
+- Collapsed state (64px): icons only, label shown on hover expand.
 
 ### 2.3 Page Header
 
@@ -419,16 +435,71 @@ One modal style for the entire app. Built on an accessible dialog primitive (foc
 - Read-only computed values (rate, profit) show in the summary panel, not in disabled inputs.
 - Dependent fields (e.g., client rule depends on client) update instantly; show a subtle "Updating…" state, never block typing.
 
-### 3.12 Tabs, Pagination, Tooltips, Toasts, Menus
+### 3.12 Tabs, Pagination, Tooltips, Menus
 
 - **Tabs:** underline style; height 40px; text `text-base` 500 secondary-600; active = primary-700 text + 2px primary-600 bottom border; arrow keys move between tabs.
 - **Tooltip:** bg secondary-900, white `text-xs`, radius-sm, padding `4px 8px`, 8px offset, delay 400ms on hover, immediate on keyboard focus, dismiss with Esc; never contains required information.
-- **Toast:** see §3.14.
 - **Dropdown menu (actions):** same visual as Select panel; items with icon + label + right-aligned shortcut hint; separators `1px secondary-200`; destructive item in `#B91C1C`.
 - **Checkbox / radio:** 16px, radius-sm (radio full), border secondary-400, checked = primary-600 bg with white tick, focus ring standard, label click toggles, 8px gap to label; indeterminate state supported for "select all".
 - **Switch:** 36×20px, off secondary-300, on primary-600, white knob; Space toggles.
 - **Progress / import status:** 6px bar, secondary-200 track, primary-600 fill; completed = `#10B981` (semantic success), failed = `#EF4444` (semantic danger).
 - **File drop zone** (used in modals): dashed `1.5px` secondary-300 border, radius-lg, bg secondary-50, padding 32px; hover/drag-over: border primary-500 + bg primary-50; contains icon, title, helper, and a "Browse files" secondary button; fully operable via Enter/Space on the focusable zone.
+
+### 3.13 Form Validation & Error UX — Visible Error States & Input Sanitization
+
+**The Core Rule:** Users must NEVER be left wondering what went wrong or which field is broken. A floating toast message saying "Please resolve highlighted validation errors" is useless if the form does not clearly and visibly highlight the errors.
+
+#### 1. Visual Specification of Invalid Input States
+- **Border:** `1.5px solid #DC2626` (semantic danger red).
+- **Focus Ring / Halo:** `box-shadow: 0 0 0 3px #FEE2E2` (soft red tint).
+- **Background:** subtle danger tint `#FEF2F2` (for immediate high-contrast visibility).
+- **Inline Error Message:** Always placed directly below the invalid input:
+  - Font: `text-[11px]` (or `text-xs`), weight 500, color `#DC2626`.
+  - Icon: 14px `AlertCircle` in `#DC2626`, aligned with the text (`flex items-center gap-1.5 mt-1`).
+  - Content: Explains exactly what is wrong and how to fix it (e.g. *"Phone number cannot contain alphabets and must have 10–15 digits"*).
+- **Top Error Summary Banner:** When a form submission is attempted with invalid fields, an alert banner appears at the very top of the modal/card body:
+  - Background: `#FEF2F2`, border: `1px solid #FECACA`, radius: `radius-xl` (12px).
+  - Content: Header saying *"Please correct the highlighted errors before saving:"* followed by a bulleted list of every field and its specific error.
+  - **Auto-Scroll & Auto-Focus:** The form immediately scrolls the first invalid field into view and places focus inside it (`el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' });`).
+
+#### 2. Spontaneous Real-Time Sanitization & Phone Validation
+- **Phone / Mobile / WhatsApp / Office Phone Inputs:**
+  - **Strict Keystroke Filtering & Validation:** Alphabetic characters (`[a-zA-Z]`) are strictly forbidden in phone numbers.
+  - **Spontaneous Red Border Feedback:** As soon as an invalid character, letter, or invalid format is present, the field border **spontaneously turns red** (`border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200`) and the inline error helper appears immediately under the field. The user does NOT need to blur or click away to see that their entry is invalid.
+  - **Format Requirements:** Digits `0–9`, optional single leading `+`, spaces, hyphens `-`, and parentheses `()`. Total digits must be between 10 and 15 digits (standard international and Indian mobile/landline numbers).
+  - **Paste Sanitization:** Pasted text containing letters is flagged immediately with spontaneous red border and actionable feedback.
+- **Email Inputs (`type="email"`):**
+  - Validated against standard email pattern (`name@domain.com`). Invalid format immediately produces red border and helper text.
+- **Bank Account Number & MICR Inputs:**
+  - Digits only. Letters cannot be typed. MICR strictly requires 9 digits.
+- **IFSC Code Inputs:**
+  - Auto-uppercased as typed. Standard 11-character format: 4 letters + 0 + 6 alphanumeric characters.
+- **Quantity & Rate Inputs:**
+  - Numeric characters and a single decimal point only. Thousands commas accepted on paste.
+
+### 3.14 Toast Notifications & System Feedback
+
+Toasts provide transient confirmation of asynchronous background operations and validation failures.
+
+#### 1. Visual Specification
+- **Position:** Top-right (`top-4 right-4`), stacking vertically with 8px spacing.
+- **Dimensions:** Width 360px–420px, padding `12px 16px`, radius `radius-xl` (12px).
+- **Elevation:** `shadow-lg` (`0 10px 25px -5px rgba(15,23,42,0.12), 0 8px 10px -6px rgba(15,23,42,0.06)`), border `1px solid`.
+- **Variants:**
+  - **Success:** Background `#ECFDF5`, border `#A7F3D0`, text `#047857`, 16px `CheckCircle2` icon (`#10B981`).
+  - **Error / Danger:** Background `#FEF2F2`, border `#FECACA`, text `#B91C1C`, 16px `AlertCircle` icon (`#EF4444`).
+  - **Warning:** Background `#FFFBEB`, border `#FDE68A`, text `#B45309`, 16px `AlertTriangle` icon (`#F59E0B`).
+  - **Info:** Background `#EFF4FF`, border `#BCD0FA`, text `#1F42A3`, 16px `Info` icon (`#3B6BDF`).
+- **Internal Layout:**
+  - Left: 18px status icon with subtle translucent circular backing.
+  - Middle: Flex column with Title (`text-sm font-bold`) and Description (`text-xs text-secondary-600 mt-0.5`).
+  - Right: 14px `X` close icon button with ghost hover effect.
+
+#### 2. Toast Engineering Rules
+- **Specific Error Messages Only:** Toasts must state the EXACT invalid field and why it failed (e.g. `toast.error("Invalid Mobile Number", { description: "Phone number cannot contain alphabets and must have 10-15 digits." })`).
+- **BAN VAGUE TOASTS:** Never emit generic messages like *"Please resolve highlighted validation errors before saving"* or *"Form has errors"*. Every toast must tell the user what broke and what to do.
+- **Toasts Never Replace On-Form Errors:** In forms and modals, the red border, red ring, and inline error message directly under the field are MANDATORY. The toast is only an auxiliary notification.
+- **Durations:** Success = 3.5s; Error = 6s (or persistent until dismissed); Warning = 5s.
 
 ---
 
@@ -456,21 +527,32 @@ Users operate the app without a mouse. Every component must satisfy the rules be
 7. All actions in menus, row buttons and toolbars are reachable by keyboard — nothing may be hover-only.
 8. Shortcuts must not fire while typing in an input/textarea/contenteditable (except those using `Ctrl`/`Alt`/`Esc`) and must not override browser/OS shortcuts. Shortcuts are listed in a help dialog (`?` or `Ctrl+/`) and shown as hints (§5.7).
 
-### 5.2 Global Shortcuts
+### 5.2 Global Shortcuts & Universal Command Palette (Ctrl+K)
 
 | Shortcut | Action |
 |---|---|
+| `Ctrl+K` | **Universal Search / Command Palette** (search any page, feature, client, broker, script, or action) |
 | `/` | Focus the page search field |
 | `Alt+N` | New record on the current page (Add Trade, Add Client, …) |
 | `Alt+I` | Import on the current page |
 | `Alt+F` | Focus the first filter control |
 | `Alt+C` | Open column chooser |
 | `Alt+R` | Reset / clear all filters |
-| `Ctrl+K` | Open command palette / quick navigation (jump to any page) |
 | `Alt+1 … Alt+9` | Jump to sidebar sections in order |
 | `[` | Collapse / expand sidebar |
 | `?` or `Ctrl+/` | Open keyboard shortcut help |
 | `Esc` | Close top-most overlay / clear search when focused |
+
+#### Universal Search (`Ctrl+K`) Specification:
+- **Instant Global Navigation:** Pressing `Ctrl+K` (or `Cmd+K` on Mac) opens the central Command Palette overlay from any page in the app.
+- **Search Capabilities:**
+  - **Pages & Routes:** Jump instantly to Trades, Expiry Dates, Clients, Brokers, Scripts, Exchanges, Reports (Net Position, Settlement Audit, Settlement Summary), Currencies, Brokerage, etc.
+  - **Entities & Masters:** Search clients by code/name, brokers, and scripts.
+  - **Quick Actions:** Trigger "Add Trade", "Import Trade File", "Export Table", "Toggle Sidebar", etc.
+- **Keyboard Navigation:**
+  - `ArrowDown` / `ArrowUp` to cycle through grouped search results.
+  - `Enter` to navigate or execute the selected action.
+  - `Esc` to immediately dismiss the palette and return focus to the previous element.
 
 ### 5.3 Select / Combobox / Dropdown
 

@@ -44,11 +44,11 @@ export function CustomCheckbox({
       />
       <div
         className={cn(
-          'w-4 h-4 rounded border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-(--color-leaf) peer-focus-visible:ring-offset-1',
+          'w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-1',
           checked
-            ? 'bg-(--color-leaf) border-(--color-leaf) text-white shadow-2xs'
-            : 'bg-white border-border-medium hover:border-(--color-border-focus)'
+            ? 'bg-[#2652C8] border-[#2652C8] text-white shadow-xs'
+            : 'bg-white border-slate-300 hover:border-blue-500'
         )}
       >
         {checked && <Check className="w-3 h-3 stroke-3" />}

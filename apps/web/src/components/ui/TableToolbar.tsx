@@ -204,7 +204,7 @@ export function TableToolbar({
                   {onSearchChange && (
                     <div className="flex items-center">
                       {isSearchExpanded ? (
-                        <div className="flex items-center bg-white border border-(--color-border-focus) ring-2 ring-(--color-leaf)/15 rounded-xl px-2 h-8.5 shadow-2xs transition-all w-60">
+                        <div className="flex items-center bg-white border border-blue-500 ring-2 ring-blue-100 rounded-xl px-2 h-8.5 shadow-2xs transition-all w-60">
                           <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1.5" />
                           <input
                             type="text"
@@ -212,7 +212,7 @@ export function TableToolbar({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder={searchPlaceholder}
-                            className="w-full text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
+                            className="w-full text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
                           />
                           {searchQuery && (
                             <button
@@ -242,7 +242,7 @@ export function TableToolbar({
                           className={cn(
                             'h-8.5 w-8.5 flex items-center justify-center rounded-xl border transition-all cursor-pointer',
                             searchQuery
-                              ? 'bg-mist text-(--color-forest) border-(--color-leaf)'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                           )}
                           title="Search trades..."
@@ -260,12 +260,12 @@ export function TableToolbar({
                       className={cn(
                         'h-8.5 px-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer',
                         isFindReplaceOpen
-                          ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                       )}
                       title="Find & Replace in Table"
                     >
-                      <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
+                      <Replace className="w-3.5 h-3.5 text-blue-600" />
                       <span className="hidden sm:inline">Find & Replace</span>
                     </button>
                   )}
@@ -275,10 +275,10 @@ export function TableToolbar({
               ) : (
                 <>
                   {onSearchChange && (
-                    <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all min-w-65 max-w-md flex-1">
+                    <div className="flex items-center bg-white border border-slate-300 rounded-lg shadow-2xs hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all min-w-65 max-w-md flex-1">
                       {/* Column targeting dropdown in front of search */}
                       {columns && columns.length > 0 && onSearchColumnChange && (
-                        <div className="w-31.25 shrink-0 border-r border-border-light">
+                        <div className="w-31.25 shrink-0 border-r border-slate-200">
                           <UniversalDropdown
                             value={searchColumn}
                             onChange={onSearchColumnChange}
@@ -287,7 +287,7 @@ export function TableToolbar({
                               { value: 'ALL', label: 'All Columns' },
                               ...columns.map((c) => ({ value: c.key, label: c.label })),
                             ]}
-                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
+                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-slate-800"
                           />
                         </div>
                       )}
@@ -300,7 +300,7 @@ export function TableToolbar({
                           value={searchQuery}
                           onChange={(e) => onSearchChange(e.target.value)}
                           placeholder={searchPlaceholder}
-                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
+                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
                         />
                         {searchQuery && (
                           <button
@@ -320,16 +320,16 @@ export function TableToolbar({
                           type="button"
                           onClick={() => setIsAdvancedOpen(true)}
                           className={cn(
-                            'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-border-light rounded-r-lg transition-colors cursor-pointer select-none',
+                            'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-slate-200 rounded-r-lg transition-colors cursor-pointer select-none',
                             activeAdvancedCount > 0
-                              ? 'bg-mist text-(--color-forest)'
+                              ? 'bg-blue-50 text-blue-700'
                               : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                           )}
                           title="Advanced Filter (AND / OR conditions)"
                         >
                           <SlidersHorizontal className="w-3.5 h-3.5" />
                           {activeAdvancedCount > 0 && (
-                            <span className="w-4 h-4 bg-(--color-forest) text-white text-[9px] rounded-full flex items-center justify-center font-mono">
+                            <span className="w-4 h-4 bg-blue-600 text-white text-[9px] rounded-full flex items-center justify-center font-mono">
                               {activeAdvancedCount}
                             </span>
                           )}
@@ -346,12 +346,12 @@ export function TableToolbar({
                       className={cn(
                         'h-8.5 px-2.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer',
                         isFindReplaceOpen
-                          ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                       )}
                       title="Find & Replace in Table (Ctrl+H)"
                     >
-                      <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
+                      <Replace className="w-3.5 h-3.5 text-blue-600" />
                       <span className="hidden sm:inline">Find & Replace</span>
                     </button>
                   )}
@@ -443,14 +443,14 @@ export function TableToolbar({
             <div className="bg-white border border-border-light rounded-2xl shadow-2xl max-w-xl w-full p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between border-b border-border-light pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-mist text-(--color-forest) rounded-lg">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-charcoal font-display">
+                    <h3 className="text-sm font-bold text-slate-900 font-display">
                       Advanced Multi-Column Filter
                     </h3>
-                    <p className="text-[11px] text-slate">
+                    <p className="text-[11px] text-slate-500">
                       Combine AND / OR rules across multiple table columns
                     </p>
                   </div>
@@ -547,7 +547,7 @@ export function TableToolbar({
                 <button
                   type="button"
                   onClick={handleAddCondition}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-(--color-forest) bg-snow hover:bg-mist border border-border-light rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Condition</span>
@@ -567,7 +567,7 @@ export function TableToolbar({
                   <button
                     type="button"
                     onClick={handleApplyAdvanced}
-                    className="px-4 py-1.5 text-xs font-semibold bg-(--color-forest) hover:bg-emerald text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-1.5 text-xs font-semibold bg-[#2652C8] hover:bg-blue-700 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
                   >
                     Apply Rules
                   </button>

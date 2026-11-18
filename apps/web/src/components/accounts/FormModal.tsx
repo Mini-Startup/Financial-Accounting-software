@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, Building2, Phone, CreditCard, Users2 } from 'lucide-react';
+import { X, Building2, Phone, CreditCard, Users2, AlertCircle } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { toast } from 'sonner';
@@ -62,9 +62,25 @@ export function FormModal({
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [directClients, setDirectClients] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAccounts, setExistingAccounts] = useState<any[]>(initialAccounts);
+
+  const fieldLabels: Record<string, string> = {
+    code: 'Account Code',
+    name: 'Account Name',
+    mobileNumber: 'Mobile Number',
+    officeNumber: 'Office Phone',
+    whatsappNumber: 'WhatsApp Number',
+    email: 'Email Address',
+    ifscCode: 'IFSC Code',
+    contactPersonName: 'Contact Person Name',
+    contactPersonMobile: 'Contact Person Mobile',
+    contactPersonEmail: 'Contact Person Email',
+    referenceName: 'Referred By Name',
+    referenceMobile: 'Referral Phone',
+  };
 
   useEffect(() => {
     if (!initialAccounts || initialAccounts.length === 0) {
@@ -110,6 +126,19 @@ export function FormModal({
     return validateAccountForm(formData);
   }, [formData]);
 
+  // Spontaneous error detection helper
+  const getFieldError = (field: string) => {
+    const err = validationErrors[field];
+    if (!err) return null;
+    const val = formData[field as keyof typeof formData];
+    const hasValue = typeof val === 'string' ? val.trim().length > 0 : Boolean(val);
+    // Show error if user attempted to submit, or blurred, or if the field currently has a non-empty value (spontaneous feedback as user types!)
+    if (hasSubmitted || touched[field] || hasValue) {
+      return err;
+    }
+    return null;
+  };
+
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
@@ -133,13 +162,21 @@ export function FormModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
+    let finalValue: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+    // For phone inputs, if user enters alphabets or characters, trigger spontaneous validation immediately
+    const isPhoneField = ['mobileNumber', 'officeNumber', 'whatsappNumber', 'contactPersonMobile', 'referenceMobile'].includes(name);
+    if (isPhoneField) {
+      setTouched((prev) => ({ ...prev, [name]: true }));
+    }
+
     setFormData((prev) => {
       const updated = {
         ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+        [name]: finalValue,
       };
       if (name === 'mobileNumber' && prev.isWhatsappSameAsMobile) {
-        updated.whatsappNumber = value;
+        updated.whatsappNumber = finalValue;
       }
       return updated;
     });
@@ -149,20 +186,40 @@ export function FormModal({
     e.preventDefault();
     if (isSubmitting) return;
 
+    setHasSubmitted(true);
+
     // Mark all fields touched
     setTouched({
       code: true,
       name: true,
       mobileNumber: true,
+      officeNumber: true,
+      whatsappNumber: true,
       email: true,
       ifscCode: true,
       contactPersonMobile: true,
       contactPersonEmail: true,
+      referenceMobile: true,
     });
 
     const activeErrors = validateAccountForm(formData);
-    if (Object.keys(activeErrors).length > 0) {
-      toast.error('Please resolve highlighted validation errors before saving.');
+    const errorKeys = Object.keys(activeErrors);
+
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0];
+      const fieldName = fieldLabels[firstKey] || firstKey;
+      toast.error(`Invalid ${fieldName}`, {
+        description: activeErrors[firstKey],
+      });
+
+      // Auto-focus the first invalid field
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${firstKey}"]`) as HTMLElement;
+        if (el) {
+          el.focus();
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
       return;
     }
 
@@ -269,7 +326,7 @@ export function FormModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50 border-b border-slate-200/70 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-forest/10 text-forest flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
@@ -289,6 +346,23 @@ export function FormModal({
 
         {/* Modal Body: 4-Quadrant Single-View Grid (Zero-Scroll) */}
         <form id="accountForm" onSubmit={handleSubmit} className="flex-1 overflow-y-auto lg:overflow-hidden p-4 space-y-3 flex flex-col justify-between">
+          {/* Validation Error Summary Alert */}
+          {hasSubmitted && Object.keys(validationErrors).length > 0 && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-800 animate-in fade-in shrink-0">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Please correct the highlighted errors before saving:</span>
+                <ul className="list-disc list-inside mt-1 space-y-0.5 text-red-700">
+                  {Object.entries(validationErrors).map(([key, msg]) => (
+                    <li key={key}>
+                      <span className="font-semibold">{fieldLabels[key] || key}:</span> {msg}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Duplicate Warning */}
           {isDuplicate && (
             <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center gap-2 text-xs text-amber-900 shrink-0">
@@ -301,7 +375,7 @@ export function FormModal({
             {/* QUADRANT 1: Basic Identifiers & Balance */}
             <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Building2 className="w-3.5 h-3.5 text-forest" />
+                <Building2 className="w-3.5 h-3.5 text-blue-600" />
                 <span>1. Account Identifiers</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -314,15 +388,18 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('code')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs font-mono rounded-lg border bg-white focus:outline-none focus:ring-2 transition',
-                      touched.code && validationErrors.code
-                        ? 'border-red-500 focus:ring-red-500/20'
-                        : 'border-slate-300 focus:border-forest focus:ring-forest/15'
+                      'w-full h-8 px-2.5 text-xs font-mono rounded-xl border bg-white focus:outline-none transition',
+                      getFieldError('code')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
                     placeholder="e.g. CL001"
                   />
-                  {touched.code && validationErrors.code && (
-                    <span className="text-[10px] text-red-600 block mt-0.5">{validationErrors.code}</span>
+                  {getFieldError('code') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('code')}</span>
+                    </span>
                   )}
                 </div>
 
@@ -334,15 +411,18 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('name')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-lg border bg-white focus:outline-none focus:ring-2 transition',
-                      touched.name && validationErrors.name
-                        ? 'border-red-500 focus:ring-red-500/20'
-                        : 'border-slate-300 focus:border-forest focus:ring-forest/15'
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      getFieldError('name')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
                     placeholder="Account Name"
                   />
-                  {touched.name && validationErrors.name && (
-                    <span className="text-[10px] text-red-600 block mt-0.5">{validationErrors.name}</span>
+                  {getFieldError('name') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('name')}</span>
+                    </span>
                   )}
                 </div>
 
@@ -354,7 +434,7 @@ export function FormModal({
                     name="openingBalance"
                     value={formData.openingBalance}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs font-mono rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-forest/15 focus:border-forest"
+                    className="w-full h-8 px-2.5 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                     placeholder="0.00"
                   />
                   <span className="text-[9px] text-slate-400 block mt-0.5">+ for Credit, - for Debit</span>
@@ -383,7 +463,7 @@ export function FormModal({
                       }))}
                       onChange={(val) => setFormData((prev) => ({ ...prev, dealerCode: val }))}
                       placeholder="-- Select Direct Client --"
-                      triggerClassName="h-8 text-xs py-1"
+                      triggerClassName="h-8 text-xs py-1 rounded-xl"
                     />
                   </div>
                 )}
@@ -393,7 +473,7 @@ export function FormModal({
             {/* QUADRANT 2: Contact Information */}
             <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Phone className="w-3.5 h-3.5 text-forest" />
+                <Phone className="w-3.5 h-3.5 text-blue-600" />
                 <span>2. Contact Details</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -405,15 +485,18 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('mobileNumber')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-lg border bg-white focus:outline-none focus:ring-2 transition',
-                      touched.mobileNumber && validationErrors.mobileNumber
-                        ? 'border-red-500 focus:ring-red-500/20'
-                        : 'border-slate-300 focus:border-forest focus:ring-forest/15'
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      getFieldError('mobileNumber')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
-                    placeholder="+971 50 123 4567"
+                    placeholder="+91 98765 43210"
                   />
-                  {touched.mobileNumber && validationErrors.mobileNumber && (
-                    <span className="text-[10px] text-red-600 block mt-0.5">{validationErrors.mobileNumber}</span>
+                  {getFieldError('mobileNumber') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('mobileNumber')}</span>
+                    </span>
                   )}
                 </div>
 
@@ -426,15 +509,18 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('email')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-lg border bg-white focus:outline-none focus:ring-2 transition',
-                      touched.email && validationErrors.email
-                        ? 'border-red-500 focus:ring-red-500/20'
-                        : 'border-slate-300 focus:border-forest focus:ring-forest/15'
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      getFieldError('email')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
                     placeholder="accounts@client.com"
                   />
-                  {touched.email && validationErrors.email && (
-                    <span className="text-[10px] text-red-600 block mt-0.5">{validationErrors.email}</span>
+                  {getFieldError('email') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('email')}</span>
+                    </span>
                   )}
                 </div>
 
@@ -444,10 +530,22 @@ export function FormModal({
                     name="whatsappNumber"
                     value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
                     onChange={handleChange}
+                    onBlur={() => handleBlur('whatsappNumber')}
                     disabled={formData.isWhatsappSameAsMobile}
-                    className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-300 bg-white disabled:opacity-60 disabled:bg-slate-100"
+                    className={cn(
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white disabled:opacity-60 disabled:bg-slate-100 transition',
+                      getFieldError('whatsappNumber')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                    )}
                     placeholder="WhatsApp No."
                   />
+                  {getFieldError('whatsappNumber') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('whatsappNumber')}</span>
+                    </span>
+                  )}
                   <label className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1 cursor-pointer">
                     <CustomCheckbox
                       checked={Boolean(formData.isWhatsappSameAsMobile)}
@@ -463,9 +561,21 @@ export function FormModal({
                     name="officeNumber"
                     value={formData.officeNumber}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    onBlur={() => handleBlur('officeNumber')}
+                    className={cn(
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      getFieldError('officeNumber')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                    )}
                     placeholder="Office landline"
                   />
+                  {getFieldError('officeNumber') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('officeNumber')}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -473,7 +583,7 @@ export function FormModal({
             {/* QUADRANT 3: Banking Details */}
             <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <CreditCard className="w-3.5 h-3.5 text-forest" />
+                <CreditCard className="w-3.5 h-3.5 text-blue-600" />
                 <span>3. Banking & Settlement</span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs">
@@ -483,7 +593,7 @@ export function FormModal({
                     name="bankName"
                     value={formData.bankName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="Bank"
                   />
                 </div>
@@ -493,7 +603,7 @@ export function FormModal({
                     name="bankAccountNumber"
                     value={formData.bankAccountNumber}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs font-mono rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="A/C No."
                   />
                 </div>
@@ -505,15 +615,15 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('ifscCode')}
                     className={cn(
-                      'w-full h-8 px-2 text-xs font-mono uppercase rounded-lg border bg-white transition',
-                      touched.ifscCode && validationErrors.ifscCode
-                        ? 'border-red-500 focus:ring-red-500/20'
-                        : 'border-slate-300 focus:border-forest'
+                      'w-full h-8 px-2 text-xs font-mono uppercase rounded-xl border bg-white transition',
+                      getFieldError('ifscCode')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
                     placeholder="HDFC0001234"
                   />
-                  {touched.ifscCode && validationErrors.ifscCode && (
-                    <span className="text-[9px] text-red-600 block mt-0.5">{validationErrors.ifscCode}</span>
+                  {getFieldError('ifscCode') && (
+                    <span className="text-[9px] text-red-600 font-medium block mt-0.5">{getFieldError('ifscCode')}</span>
                   )}
                 </div>
                 <div>
@@ -522,7 +632,7 @@ export function FormModal({
                     name="bankBranch"
                     value={formData.bankBranch}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="Branch"
                   />
                 </div>
@@ -532,7 +642,7 @@ export function FormModal({
                     name="upiId"
                     value={formData.upiId}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="id@upi"
                   />
                 </div>
@@ -542,7 +652,7 @@ export function FormModal({
                     name="micrCode"
                     value={formData.micrCode}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs font-mono rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="MICR"
                   />
                 </div>
@@ -552,7 +662,7 @@ export function FormModal({
             {/* QUADRANT 4: References & Contact Persons */}
             <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
               <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Users2 className="w-3.5 h-3.5 text-forest" />
+                <Users2 className="w-3.5 h-3.5 text-blue-600" />
                 <span>4. References & Representatives</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -562,7 +672,7 @@ export function FormModal({
                     name="contactPersonName"
                     value={formData.contactPersonName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="Representative"
                   />
                 </div>
@@ -574,13 +684,19 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('contactPersonMobile')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-lg border bg-white',
-                      touched.contactPersonMobile && validationErrors.contactPersonMobile
-                        ? 'border-red-500'
-                        : 'border-slate-300'
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      getFieldError('contactPersonMobile')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
                     )}
                     placeholder="Phone"
                   />
+                  {getFieldError('contactPersonMobile') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('contactPersonMobile')}</span>
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Referred By Name</label>
@@ -588,7 +704,7 @@ export function FormModal({
                     name="referenceName"
                     value={formData.referenceName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    className="w-full h-8 px-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     placeholder="Referral Contact"
                   />
                 </div>
@@ -598,9 +714,21 @@ export function FormModal({
                     name="referenceMobile"
                     value={formData.referenceMobile}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    onBlur={() => handleBlur('referenceMobile')}
+                    className={cn(
+                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      getFieldError('referenceMobile')
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                    )}
                     placeholder="Referral Phone"
                   />
+                  {getFieldError('referenceMobile') && (
+                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                      <span>{getFieldError('referenceMobile')}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -609,7 +737,7 @@ export function FormModal({
           {/* Footer Controls */}
           <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between shrink-0">
             <span className="text-[11px] text-slate-400">
-              * Required fields: Code, Name. Modals adapt spontaneously without full-page reloads.
+              * Required fields: Code, Name. Immediate spontaneous feedback on invalid inputs.
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -628,7 +756,7 @@ export function FormModal({
                   'px-5 py-2 text-xs font-semibold rounded-xl text-white shadow-xs transition flex items-center gap-2 cursor-pointer',
                   isSubmitting || isDuplicate
                     ? 'bg-slate-400 cursor-not-allowed opacity-60'
-                    : 'bg-forest hover:bg-forest/90'
+                    : 'bg-[#2652C8] hover:bg-[#1F42A3]'
                 )}
               >
                 {isSubmitting ? (

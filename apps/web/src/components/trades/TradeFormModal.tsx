@@ -232,6 +232,30 @@ export function TradeFormModal({
     setCalc(res);
   }, [quantity, marketRate, script, tradeType, clientRule, brokerRule, initialTrade]);
 
+  // Instant display numbers fallback: Never leaves right column blank or stuck on "calculating"
+  const displayMetrics = useMemo(() => {
+    if (calc) return calc;
+    if (!initialTrade) return null;
+
+    const lot = script?.lotSize || initialTrade?.marketLot || 1;
+    const parsedQty = parseFloat(quantity);
+    const qty = !isNaN(parsedQty) ? Math.abs(parsedQty) : Math.abs(initialTrade?.quantity || 0);
+    const totalUnits = qty * lot;
+    const side = !isNaN(parsedQty) ? (parsedQty >= 0 ? 'BUY' : 'SELL') : (initialTrade?.transactionType || 'BUY');
+    const cRate = initialTrade?.clientRate != null ? Number(initialTrade.clientRate) : (initialTrade?.rate != null ? Number(initialTrade.rate) + (initialTrade.clientBrokerage || 0) : 0);
+    const bRate = initialTrade?.brokerRate != null ? Number(initialTrade.brokerRate) : (initialTrade?.rate != null ? Number(initialTrade.rate) + (initialTrade.brokerBrokerage || 0) : 0);
+
+    return {
+      clientRate: cRate,
+      clientBrokerage: initialTrade?.clientBrokerage || 0,
+      brokerRate: bRate,
+      brokerBrokerage: initialTrade?.brokerBrokerage || 0,
+      side,
+      marketLot: lot,
+      totalUnits,
+    };
+  }, [calc, initialTrade, script, quantity]);
+
   // Validation
   const errors = useMemo(() => {
     const qtyNum = parseFloat(quantity);
@@ -282,8 +306,26 @@ export function TradeFormModal({
     });
 
     if (!isFormValid) {
-      const firstError = Object.values(errors)[0] || 'Please complete all required fields';
-      toast.error(firstError);
+      const errorKeys = Object.keys(errors);
+      const firstKey = errorKeys[0] || 'trade';
+      const tradeFieldLabels: Record<string, string> = {
+        scriptId: 'Script',
+        tradeDate: 'Trade Date',
+        clientId: 'Client Account',
+        brokerId: 'Broker Account',
+        quantity: 'Quantity',
+        marketRate: 'Market Rate',
+        expiryDate: 'Expiry Date',
+      };
+      const fieldTitle = tradeFieldLabels[firstKey] || firstKey;
+      toast.error(`Invalid ${fieldTitle}`, {
+        description: errors[firstKey] || 'Please complete all required fields.',
+      });
+
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${firstKey}"]`) || document.querySelector(`#${firstKey}`);
+        if (el) (el as HTMLElement).focus();
+      }, 50);
       return;
     }
 
@@ -393,60 +435,46 @@ export function TradeFormModal({
     >
       <div
         ref={modalRef}
-        className="card w-245 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-border-light bg-white rounded-2xl"
+        className="w-245 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 bg-white rounded-2xl"
       >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border-light bg-snow flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-mist border border-(--color-leaf)/30 flex items-center justify-center text-(--color-forest)">
-              <Sparkles className="w-5 h-5 text-(--color-forest)" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-(--color-forest) bg-mist border border-(--color-leaf)/40 rounded-full px-2.5 py-0.5">
-                  #{initialTrade?.tradeNumber || 'New Entry'}
+        {/* Sleek Financial Modal Header */}
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 rounded-md px-2.5 py-0.5 shadow-2xs">
+                #{initialTrade?.tradeNumber || 'New Entry'}
+              </span>
+              <span
+                className={cn(
+                  'px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase',
+                  isBuy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                )}
+              >
+                {isBuy ? 'BUY' : 'SELL'}
+              </span>
+              {isLocked ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-md px-2 py-0.5">
+                  <Lock className="w-3 h-3 text-amber-600" /> Locked Record
                 </span>
-                {isLocked ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5">
-                    <Lock className="w-3 h-3 text-amber-600" /> Locked Record
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-full px-2 py-0.5">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active Trade
-                  </span>
-                )}
-                {!isEditing && !isLocked && (
-                  <span className="text-[11px] text-slate-500 font-medium ml-1">
-                    (Click any field to edit)
-                  </span>
-                )}
-              </div>
-              <h2 className="text-base font-bold text-charcoal font-display mt-0.5">
-                {!initialTrade ? 'Add New Trade' : isEditing ? 'Edit Trade Details' : 'Trade Specifications'}
-              </h2>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-2 py-0.5">
+                  <ShieldCheck className="w-3 h-3 text-slate-500" /> Active Trade
+                </span>
+              )}
             </div>
+            <h2 className="text-base font-bold text-slate-900 mt-1">
+              {!initialTrade ? 'Add New Trade' : isEditing ? 'Edit Trade Details' : 'Trade Specifications'}
+            </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            {!isEditing && !isLocked && (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="btn btn--secondary flex items-center gap-1.5 py-1.5 px-3 text-xs font-semibold cursor-pointer"
-                title="Edit this trade"
-              >
-                <Pencil className="w-3.5 h-3.5 text-(--color-forest)" />
-                <span>Edit Trade</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Content Body */}
@@ -462,14 +490,23 @@ export function TradeFormModal({
               </div>
             )}
 
+            {/* Validation Error Summary Banner (DESIGN.md §3.13) */}
+            {isEditing && Object.keys(touched).length > 0 && Object.keys(errors).length > 0 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-800">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span className="font-semibold">Please fix highlighted errors:</span>
+                <span className="text-red-700">{Object.values(errors).join(' • ')}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-12 gap-5">
               {/* Left Column: Trade Attributes */}
               <div className="col-span-12 lg:col-span-7 space-y-4">
                 {/* Canonical Security Banner */}
                 {liveSecurityName && (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700">Security:</span>
-                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded border border-slate-200">
+                    <span className="font-semibold text-slate-600 uppercase tracking-wider text-[11px]">Security:</span>
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
                       {liveSecurityName}
                     </span>
                   </div>
@@ -477,19 +514,9 @@ export function TradeFormModal({
 
                 {/* Row 1: Script & Trade Type */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit script' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Script</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Script {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -513,13 +540,15 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="text-sm font-semibold text-charcoal mt-1">
-                        {script?.shortName || initialTrade?.script?.shortName || '—'}{' '}
-                        {script?.exchange?.code && (
-                          <span className="text-[11px] font-mono text-slate-500 font-normal">
-                            ({script.exchange.code})
-                          </span>
-                        )}
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {script?.shortName || initialTrade?.script?.shortName || '—'}{' '}
+                          {script?.exchange?.code && (
+                            <span className="text-[10px] font-mono font-bold bg-slate-200/80 text-slate-700 px-1.5 py-0.5 rounded ml-1">
+                              {script.exchange.code}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
                           {script?.fullName || initialTrade?.script?.fullName || ''}
                         </div>
@@ -527,19 +556,9 @@ export function TradeFormModal({
                     )}
                   </div>
 
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit trade type' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Type</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Type {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -556,8 +575,8 @@ export function TradeFormModal({
                         disabled={isLocked}
                       />
                     ) : (
-                      <div className="mt-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl flex items-center h-15">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 font-mono">
                           {tradeType}
                         </span>
                       </div>
@@ -567,19 +586,9 @@ export function TradeFormModal({
 
                 {/* Row 2: Date & Expiry date */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit trade date' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Trade Date</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Trade Date {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -598,26 +607,18 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="text-sm font-mono font-semibold text-charcoal mt-1">
-                        {formatDateToDDMMYY(date)}
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
+                        <div className="text-sm font-mono font-semibold text-slate-900">
+                          {formatDateToDDMMYY(date)}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit expiry date' : undefined}
-                  >
+                  <div className="flex flex-col">
                     <div className="flex items-center justify-between mb-1">
-                      <label className="form-label text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                        <span>Expiry Date</span>
-                        {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Expiry Date
                       </label>
                       {isEditing && expiryOptions.length > 0 && (
                         <button
@@ -657,8 +658,10 @@ export function TradeFormModal({
                         />
                       )
                     ) : (
-                      <div className="text-sm font-mono font-semibold text-charcoal mt-1">
-                        {formatDateToDDMMYY(expiryDate) || 'None / Cash'}
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
+                        <div className="text-sm font-mono font-semibold text-slate-900">
+                          {formatDateToDDMMYY(expiryDate) || 'None / Cash'}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -666,19 +669,9 @@ export function TradeFormModal({
 
                 {/* Row 3: Client & Broker */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit client' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Client</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Client {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -702,8 +695,10 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="text-sm font-semibold text-charcoal mt-1">
-                        {client?.code || initialTrade?.account?.code || '—'}
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {client?.code || initialTrade?.account?.code || '—'}
+                        </div>
                         <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
                           {client?.name || initialTrade?.account?.name || ''}
                         </div>
@@ -711,19 +706,9 @@ export function TradeFormModal({
                     )}
                   </div>
 
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit broker' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Broker</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Broker {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -747,8 +732,10 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="text-sm font-semibold text-charcoal mt-1">
-                        {broker?.code || initialTrade?.broker?.code || '—'}
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {broker?.code || initialTrade?.broker?.code || '—'}
+                        </div>
                         <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
                           {broker?.name || initialTrade?.broker?.name || ''}
                         </div>
@@ -759,19 +746,9 @@ export function TradeFormModal({
 
                 {/* Row 4: Quantity & Market Rate */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit quantity' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Quantity (Negative for SELL)</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Quantity {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -795,35 +772,25 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl flex items-center gap-2">
                         <span
                           className={cn(
                             'px-2 py-0.5 rounded text-xs font-bold',
-                            isBuy ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                            isBuy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                           )}
                         >
                           {isBuy ? 'BUY' : 'SELL'}
                         </span>
-                        <span className="font-mono font-bold text-sm text-charcoal">
+                        <span className="font-mono font-bold text-sm text-slate-900">
                           {Math.abs(parseFloat(quantity) || initialTrade?.quantity || 0).toLocaleString()}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div
-                    className={cn(
-                      'form-field rounded-xl p-2.5 transition-all',
-                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
-                    )}
-                    onClick={() => {
-                      if (!isEditing && !isLocked) setIsEditing(true);
-                    }}
-                    title={!isEditing && !isLocked ? 'Click to edit market rate' : undefined}
-                  >
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
-                      <span>Market Rate</span>
-                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                  <div className="flex flex-col">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Market Rate {isEditing && <span className="text-red-500 font-bold">*</span>}
                     </label>
 
                     {isEditing ? (
@@ -846,7 +813,7 @@ export function TradeFormModal({
                         )}
                       </>
                     ) : (
-                      <div className="font-mono font-bold text-sm text-charcoal mt-1">
+                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl font-mono font-bold text-sm text-slate-900">
                         {currSym}{parseFloat(marketRate || initialTrade?.rate || 0).toFixed(2)}
                       </div>
                     )}
@@ -861,55 +828,51 @@ export function TradeFormModal({
                     Rate &amp; Brokerage Summary
                   </h3>
 
-                  {isLoadingRules ? (
-                    <div className="p-8 text-center text-xs text-slate-500">
-                      Calculating rates &amp; brokerage...
-                    </div>
-                  ) : !calc ? (
+                  {!displayMetrics ? (
                     <div className="p-8 text-center text-xs text-slate-400 italic">
                       Enter quantity and rate to view calculated rates.
                     </div>
                   ) : (
                     <div className="space-y-3.5">
                       {/* Client Rate Card */}
-                      <div className="bg-white border border-border-light rounded-xl p-3.5 shadow-2xs">
+                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                           <span className="font-semibold uppercase tracking-wider text-[10px]">Client Rate</span>
-                          <span className="font-mono text-[11px]">
-                            {calc.clientBrokerage > 0 ? `+${currSym}${calc.clientBrokerage.toFixed(2)} brk` : '0 brk'}
+                          <span className="font-mono text-[11px] text-slate-600">
+                            {displayMetrics.clientBrokerage > 0 ? `+${currSym}${displayMetrics.clientBrokerage.toFixed(2)} brk` : '0 brk'}
                           </span>
                         </div>
                         <div className="font-mono text-base font-bold text-slate-900">
-                          {currSym}{calc.clientRate.toFixed(2)}
+                          {currSym}{displayMetrics.clientRate.toFixed(2)}
                         </div>
                       </div>
 
                       {/* Broker Rate Card */}
-                      <div className="bg-white border border-border-light rounded-xl p-3.5 shadow-2xs">
+                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                           <span className="font-semibold uppercase tracking-wider text-[10px]">Broker Rate</span>
-                          <span className="font-mono text-[11px]">
-                            {calc.brokerBrokerage > 0 ? `+${currSym}${calc.brokerBrokerage.toFixed(2)} brk` : '0 brk'}
+                          <span className="font-mono text-[11px] text-slate-600">
+                            {displayMetrics.brokerBrokerage > 0 ? `+${currSym}${displayMetrics.brokerBrokerage.toFixed(2)} brk` : '0 brk'}
                           </span>
                         </div>
                         <div className="font-mono text-base font-bold text-slate-900">
-                          {currSym}{calc.brokerRate.toFixed(2)}
+                          {currSym}{displayMetrics.brokerRate.toFixed(2)}
                         </div>
                       </div>
 
                       {/* Trade Volume Metrics */}
-                      <div className="bg-white border border-border-light rounded-xl p-3 text-xs space-y-1.5 font-mono text-slate-600">
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 text-xs space-y-1.5 font-mono text-slate-600">
                         <div className="flex justify-between">
                           <span className="font-sans text-slate-500">Side:</span>
-                          <span className="font-bold text-slate-800">{calc.side}</span>
+                          <span className={cn('font-bold', displayMetrics.side === 'BUY' ? 'text-emerald-700' : 'text-rose-700')}>{displayMetrics.side}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="font-sans text-slate-500">Lot Size:</span>
-                          <span>{calc.marketLot}</span>
+                          <span>{displayMetrics.marketLot}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="font-sans text-slate-500">Total Units:</span>
-                          <span>{calc.totalUnits.toLocaleString()}</span>
+                          <span>{displayMetrics.totalUnits.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -920,7 +883,7 @@ export function TradeFormModal({
           </div>
 
           {/* Footer Bar with Dynamic Actions */}
-          <div className="p-4 border-t border-border-light bg-snow flex items-center justify-between gap-3 shrink-0">
+          <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
             {/* Left: Delete Trade */}
             <div>
               {initialTrade?.id && (

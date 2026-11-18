@@ -39,9 +39,20 @@ export function validatePhone(phone?: string | null, isRequired = false): { isVa
     if (isRequired) return { isValid: false, error: 'Phone number is required.' };
     return { isValid: true };
   }
-  const cleaned = phone.trim().replace(/[\s-]/g, '');
-  if (!PHONE_REGEX.test(cleaned)) {
-    return { isValid: false, error: 'Enter a valid 10-digit mobile or international phone number.' };
+  // Immediately reject alphabetic characters
+  if (/[a-zA-Z]/.test(phone)) {
+    return { isValid: false, error: 'Phone number cannot contain alphabets.' };
+  }
+  // Reject disallowed symbols
+  if (/[^\d+\s()-]/.test(phone)) {
+    return { isValid: false, error: 'Only digits, +, space, and dashes are allowed.' };
+  }
+  const digitsOnly = phone.replace(/\D/g, '');
+  if (digitsOnly.length < 10) {
+    return { isValid: false, error: 'Phone number must have at least 10 digits.' };
+  }
+  if (digitsOnly.length > 15) {
+    return { isValid: false, error: 'Phone number cannot exceed 15 digits.' };
   }
   return { isValid: true };
 }
@@ -140,7 +151,7 @@ export function validateAccountForm(data: Record<string, any>): Record<string, s
   const nameCheck = validateAccountName(data.name);
   if (!nameCheck.isValid) errors.name = nameCheck.error!;
 
-  if (!data.groupId && !data.groupName) {
+  if (!data.groupId && !data.groupName && !data.group && !data.fldGroup) {
     errors.groupId = 'Account group is required.';
   }
 
@@ -160,6 +171,21 @@ export function validateAccountForm(data: Record<string, any>): Record<string, s
   if (data.contactPersonEmail) {
     const cpEmailCheck = validateEmail(data.contactPersonEmail, false);
     if (!cpEmailCheck.isValid) errors.contactPersonEmail = cpEmailCheck.error!;
+  }
+
+  if (data.officeNumber) {
+    const officeCheck = validatePhone(data.officeNumber, false);
+    if (!officeCheck.isValid) errors.officeNumber = officeCheck.error!;
+  }
+
+  if (data.whatsappNumber && !data.isWhatsappSameAsMobile) {
+    const waCheck = validatePhone(data.whatsappNumber, false);
+    if (!waCheck.isValid) errors.whatsappNumber = waCheck.error!;
+  }
+
+  if (data.referenceMobile) {
+    const refCheck = validatePhone(data.referenceMobile, false);
+    if (!refCheck.isValid) errors.referenceMobile = refCheck.error!;
   }
 
   return errors;

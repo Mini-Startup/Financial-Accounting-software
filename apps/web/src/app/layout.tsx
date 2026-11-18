@@ -5,6 +5,8 @@ import { ClerkProvider, SignIn, SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { syncUser } from "../utils/syncUser";
 import { Sidebar } from "../components/navigation/Sidebar";
+import { TopBar } from "../components/navigation/TopBar";
+import { UniversalSearch } from "../components/navigation/UniversalSearch";
 import { TradeImportProvider } from "../components/trades/TradeImportContext";
 import { AuthPermissionsProvider } from "../context/AuthPermissionsContext";
 import { Toaster } from "sonner";
@@ -41,14 +43,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <body className="font-body text-charcoal bg-(--bg-page) min-h-screen">
+      <body className="font-body text-slate-900 bg-[#F1F5F9] min-h-screen">
         <ClerkProvider>
           <TradeImportProvider>
             {!userId ? (
-              <div className="min-h-screen flex items-center justify-center bg-(--bg-page) p-4">
+              <div className="min-h-screen flex items-center justify-center bg-[#F1F5F9] p-4">
                 <div className="max-w-md w-full space-y-8">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-(--color-forest) rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6">
+                    <div className="w-16 h-16 bg-[#2652C8] rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6">
                       <span className="text-white font-bold text-3xl">B</span>
                     </div>
                     <h2 className="text-h2 font-display mb-2">Welcome to BizzMate</h2>
@@ -60,7 +62,7 @@ export default async function RootLayout({
                 </div>
               </div>
             ) : !syncResult.isWhitelisted ? (
-              <div className="min-h-screen flex items-center justify-center bg-(--bg-page) p-4">
+              <div className="min-h-screen flex items-center justify-center bg-[#F1F5F9] p-4">
                 <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200/80 shadow-xl p-8 text-center space-y-6">
                   <div className="w-16 h-16 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,11 +98,12 @@ export default async function RootLayout({
               </div>
             ) : (
               <AuthPermissionsProvider>
-                <div className="flex min-h-screen bg-(--bg-page)">
-                  <Suspense fallback={<div className="w-64 h-screen bg-(--sidebar-bg) border-r border-(--sidebar-divider) shrink-0" />}>
+                <div className="flex min-h-screen bg-[#F1F5F9]">
+                  <Suspense fallback={<div className="w-64 h-screen bg-[#0A1B4D] border-r border-blue-900/60 shrink-0" />}>
                     <Sidebar />
                   </Suspense>
                   <div className="flex-1 flex flex-col min-h-screen min-w-0">
+                    <TopBar />
                     <main className="flex-1 p-3 md:p-4 lg:p-5 overflow-y-auto">
                       <div className="max-w-425 w-full mx-auto">
                         {children}
@@ -108,6 +111,7 @@ export default async function RootLayout({
                     </main>
                   </div>
                 </div>
+                <UniversalSearch />
               </AuthPermissionsProvider>
             )}
           </TradeImportProvider>

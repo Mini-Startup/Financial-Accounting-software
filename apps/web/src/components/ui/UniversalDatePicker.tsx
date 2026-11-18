@@ -299,10 +299,10 @@ export function UniversalDatePicker({
     <div ref={containerRef} className={cn('relative flex flex-col gap-1 w-full', className)}>
       <div
         className={cn(
-          'flex items-center bg-white border rounded-md shadow-xs transition-all duration-150',
+          'flex items-center bg-white border rounded-xl shadow-2xs transition-all duration-150',
           activeError
             ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-950'
-            : 'border-border-medium focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/20',
+            : 'border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
           disabled && 'opacity-60 bg-slate-50 cursor-not-allowed'
         )}
       >
@@ -357,7 +357,7 @@ export function UniversalDatePicker({
           tabIndex={-1}
           disabled={disabled}
           onClick={togglePicker}
-          className="p-2 text-slate hover:text-(--color-forest) transition-colors cursor-pointer select-none"
+          className="p-2 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer select-none"
           title={isOpen ? 'Close Calendar' : 'Open Calendar'}
         >
           <CalendarIcon className="w-4 h-4" />
@@ -396,7 +396,7 @@ export function UniversalDatePicker({
               width: 280,
               zIndex: 999999,
             }}
-            className="bg-white border border-border-light rounded-lg shadow-(--shadow-lg) p-3 duration-100"
+            className="bg-white border border-slate-200 rounded-xl shadow-xl p-3 duration-100"
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-2">
@@ -461,10 +461,10 @@ export function UniversalDatePicker({
                       setIsOpen(false);
                     }}
                     className={cn(
-                      'py-1.5 rounded-sm text-center font-mono text-[11px] transition-colors cursor-pointer',
-                      !item.isCurrentMonth && 'text-fog',
-                      item.isCurrentMonth && !isSelected && 'text-charcoal hover:bg-mist/50',
-                      isSelected && 'bg-(--color-forest) text-white font-bold shadow-xs'
+                      'py-1.5 rounded-lg text-center font-mono text-[11px] transition-colors cursor-pointer',
+                      !item.isCurrentMonth && 'text-slate-400',
+                      item.isCurrentMonth && !isSelected && 'text-slate-800 hover:bg-blue-50',
+                      isSelected && 'bg-[#2652C8] text-white font-bold shadow-xs'
                     )}
                   >
                     {item.day}
