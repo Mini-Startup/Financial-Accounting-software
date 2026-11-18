@@ -15,6 +15,8 @@ import ledgerReportRouter from './features/ledger-report/routes';
 import trialBalanceRouter from './features/trial-balance/routes';
 import usersRouter from './features/users/routes';
 import rolesRouter from './features/roles/routes';
+import reportsRouter from './features/reports/routes';
+import expiryDatesRouter from './features/expiry-dates/routes';
 
 export function registerRoutes(app: Application) {
   // Health check
@@ -41,6 +43,8 @@ export function registerRoutes(app: Application) {
   app.use('/vouchers', vouchersRouter);
   app.use('/ledger-report', ledgerReportRouter);
   app.use('/trial-balance', trialBalanceRouter);
+  app.use('/expiry-dates', expiryDatesRouter);
+  app.use('/reports', reportsRouter);
   app.use('/', tradesRouter);
   app.use('/', tradeFnoRouter);
 }

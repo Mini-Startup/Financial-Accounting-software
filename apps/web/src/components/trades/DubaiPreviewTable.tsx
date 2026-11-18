@@ -260,7 +260,7 @@ export function DubaiPreviewTable({
       {/* Tip Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate bg-emerald-50/60 border border-emerald-200 rounded-lg px-4 py-3 gap-2">
         <span className="flex items-center gap-2">
-          <span className="font-bold text-emerald-800">💡 Quick Tip:</span> Click any row to inspect & edit all fields in the side drawer. Click unmapped client/script badges to add them immediately.
+          <span className="font-bold text-emerald-800">Quick Tip:</span> Click any row to inspect & edit all fields in the side drawer. Click unmapped client/script badges to add them immediately.
         </span>
         {dubaiDebugSample && (
           <button

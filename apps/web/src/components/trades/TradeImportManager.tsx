@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 import './trades-import.css';
 
 export function TradeImportManager({ onBack }: { onBack?: () => void }) {
+  const router = useRouter();
   const {
     step,
     setStep,
@@ -690,7 +692,11 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
       setImportResult({ importedCount: totalImported, failedCount: 0 });
       setStep('RESULT');
-      toast.success(`Import complete! Successfully saved ${totalImported.toLocaleString()} trades.`);
+      toast.success(`Import complete! Successfully saved ${totalImported.toLocaleString()} trades. Redirecting to trades...`);
+      setTimeout(() => {
+        router.push('/trades');
+        router.refresh();
+      }, 500);
     } catch (err: any) {
       toast.error(err.message || 'Error confirming trade import');
     } finally {

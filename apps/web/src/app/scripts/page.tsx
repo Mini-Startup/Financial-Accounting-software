@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ScriptPageManager } from '../../components/scripts/ScriptPageManager';
+import { safeServerFetch } from '@/utils/serverApi';
 
 export const metadata: Metadata = {
   title: 'Scripts & Securities | BizzMate Accounting',
@@ -8,24 +9,13 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-async function safeFetch(url: string) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (err) {
-    console.error(`Failed to fetch from ${url}:`, err);
-    return [];
-  }
-}
-
 export default async function ScriptsPage(props: { searchParams: Promise<{ search?: string }> }) {
   const searchParams = await props.searchParams;
   const query = searchParams?.search ? `?search=${encodeURIComponent(searchParams.search)}` : '';
   
   const [scripts, exchanges] = await Promise.all([
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts${query}`),
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges?active=true`),
+    safeServerFetch(`/scripts${query}`, []),
+    safeServerFetch('/exchanges?active=true', []),
   ]);
 
   return (

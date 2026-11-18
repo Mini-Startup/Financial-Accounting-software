@@ -27,6 +27,7 @@ import {
   type OpenPositionParsedRow 
 } from '../../lib/tradeParser/openPositionParser';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 
 export function ClosingRatePageManager({ 
@@ -998,7 +999,7 @@ export function ClosingRatePageManager({
                             <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
                             <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
                             <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
-                            <td className="py-3 px-4 font-mono text-slate-600">{item.delMonth || item.expiryDate || '—'}</td>
+                            <td className="py-3 px-4 font-mono text-slate-600">{formatDateToDDMMYY(item.expiryDate) || item.delMonth || '—'}</td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
                               {formatCurrencySymbol(item.currencySymbol, item.currencyCode)}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </td>

@@ -2,15 +2,18 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { calculateTradeRates, type TradeRateResult } from '@/utils/brokerage';
-import { validateExpiryAgainstTradeDate, formatDateForInput } from '@/utils/dateUtils';
+import { validateExpiryAgainstTradeDate, formatDateForInput, formatDateToDDMMYY } from '@/utils/dateUtils';
+import { generateSecurityName, formatExpiryToDDMMMYY } from '@/utils/securityName';
+import { validateTradeForm } from '@/utils/validators';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { X, AlertCircle, Lock, Check } from 'lucide-react';
+import { X, AlertCircle, Lock, Check, Sparkles, Calendar, Pencil, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 function todayISO() {
   const d = new Date();
@@ -20,26 +23,37 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+export interface TradeFormModalProps {
+  exchanges?: any[];
+  scripts?: any[];
+  clients?: any[];
+  brokers?: any[];
+  initialTrade?: any;
+  initialMode?: 'view' | 'edit';
+  onClose: () => void;
+  onSave: (row: any) => void;
+  onDelete?: (id: string) => Promise<void>;
+}
+
 export function TradeFormModal({
   exchanges: _exchanges = [],
   scripts = [],
   clients = [],
   brokers = [],
   initialTrade,
+  initialMode = 'view',
   onClose,
   onSave,
-}: {
-  exchanges?: any[];
-  scripts?: any[];
-  clients?: any[];
-  brokers?: any[];
-  initialTrade?: any;
-  onClose: () => void;
-  onSave: (row: any) => void;
-}) {
+  onDelete,
+}: TradeFormModalProps) {
   useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const quantityInputRef = useRef<HTMLInputElement>(null);
+
+  // Dual View / Edit Mode
+  const [isEditing, setIsEditing] = useState<boolean>(!initialTrade || initialMode === 'edit');
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isLocked = Boolean(
     initialTrade?.settlementId != null ||
@@ -54,7 +68,7 @@ export function TradeFormModal({
   const [tradeType, setTradeType] = useState(initialTrade?.tradeType || 'INTERNAL');
   const [date, setDate] = useState(
     initialTrade?.tradeDate
-      ? new Date(initialTrade.tradeDate).toISOString().split('T')[0]
+      ? (formatDateForInput(initialTrade.tradeDate) || todayISO())
       : todayISO()
   );
   const [expiryDate, setExpiryDate] = useState(initialTrade?.expiry || '');
@@ -69,8 +83,25 @@ export function TradeFormModal({
     initialTrade?.rate != null ? String(initialTrade.rate) : ''
   );
 
+  const [expiryList, setExpiryList] = useState<any[]>([]);
+  const [isCustomExpiry, setIsCustomExpiry] = useState<boolean>(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    // Initial setup if needed
+    const fetchExpiries = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates?activeOnly=true`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setExpiryList(data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load active expiry dates:', err);
+      }
+    };
+    fetchExpiries();
   }, []);
 
   const [clientRule, setClientRule] = useState<any | null>(null);
@@ -90,124 +121,176 @@ export function TradeFormModal({
 
   const currSym = formatCurrencySymbol(script?.currency?.symbol, script?.currency?.code);
 
-  // Fetch brokerage rules whenever client, broker, or script changes
+  const expiryOptions = useMemo(() => {
+    return (expiryList || []).map((exp: any) => {
+      const dateVal = exp.date || exp.expiryDate;
+      const formatted = formatDateToDDMMYY(dateVal);
+      const code = formatExpiryToDDMMMYY(dateVal);
+      return {
+        value: dateVal,
+        label: formatted,
+        sublabel: code ? `Exchange Code: ${code}` : undefined,
+      };
+    });
+  }, [expiryList]);
+
+  // Live Canonical Security Name Generator
+  const liveSecurityName = useMemo(() => {
+    if (!script) return initialTrade?.securityName || '';
+    return generateSecurityName({
+      scriptFullName: script.fullName || script.shortName,
+      scriptShortName: script.shortName,
+      expiry: expiryDate,
+      callPut: initialTrade?.callPut,
+      strikePrice: initialTrade?.strikePrice,
+    });
+  }, [script, expiryDate, initialTrade]);
+
+  // Reset form states back to initial trade
+  const handleCancelEdit = () => {
+    if (initialTrade) {
+      setScriptId(initialTrade?.scriptId || initialTrade?.script?.id || '');
+      setTradeType(initialTrade?.tradeType || 'INTERNAL');
+      setDate(initialTrade?.tradeDate ? (formatDateForInput(initialTrade.tradeDate) || todayISO()) : todayISO());
+      setExpiryDate(initialTrade?.expiry || '');
+      setQuantity(
+        initialTrade?.quantity != null
+          ? String(initialTrade.transactionType === 'SELL' ? -Math.abs(initialTrade.quantity) : initialTrade.quantity)
+          : ''
+      );
+      setClientId(initialTrade?.accountId || initialTrade?.account?.id || '');
+      setBrokerId(initialTrade?.brokerId || initialTrade?.broker?.id || '');
+      setMarketRate(initialTrade?.rate != null ? String(initialTrade.rate) : '');
+      setTouched({});
+      setIsEditing(false);
+    } else {
+      onClose();
+    }
+  };
+
+  // Fetch active brokerage rules for client & broker
   useEffect(() => {
-    if (!clientId) {
+    if (!clientId && !brokerId) {
       setClientRule(null);
+      setBrokerRule(null);
       return;
     }
 
+    let active = true;
+    setIsLoadingRules(true);
+
     const fetchRules = async () => {
-      setIsLoadingRules(true);
       try {
-        const scriptQuery = scriptId ? `&scriptId=${scriptId}` : '';
-        const clientRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${clientId}&appliesTo=CLIENT${scriptQuery}`
-        );
+        const clientPromise = clientId
+          ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/account/${clientId}`).then((r) => r.ok ? r.json() : null)
+          : Promise.resolve(null);
 
-        let brokerRes: Response | null = null;
-        if (brokerId) {
-          brokerRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/brokerages/resolve?accountId=${brokerId}&appliesTo=BROKER${scriptQuery}`
-          );
+        const brokerPromise = brokerId
+          ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/account/${brokerId}`).then((r) => r.ok ? r.json() : null)
+          : Promise.resolve(null);
+
+        const [cRule, bRule] = await Promise.all([clientPromise, brokerPromise]);
+        if (active) {
+          setClientRule(cRule);
+          setBrokerRule(bRule);
         }
-
-        const parseSafe = async (res: Response | null) => {
-          if (!res) return null;
-          const raw = await res.text();
-          if (!raw || !raw.trim()) return null;
-          try {
-            return JSON.parse(raw);
-          } catch {
-            return null;
-          }
-        };
-
-        const [clientData, brokerData] = await Promise.all([
-          parseSafe(clientRes),
-          parseSafe(brokerRes),
-        ]);
-
-        setClientRule(clientData?.id ? clientData : null);
-        setBrokerRule(brokerData?.id ? brokerData : null);
-      } catch (e) {
-        console.error(e);
-        setClientRule(null);
-        setBrokerRule(null);
+      } catch (err) {
+        console.error('Failed to fetch brokerage rules:', err);
       } finally {
-        setIsLoadingRules(false);
+        if (active) setIsLoadingRules(false);
       }
     };
 
     fetchRules();
-  }, [clientId, brokerId, scriptId]);
+    return () => { active = false; };
+  }, [clientId, brokerId]);
 
-  // Live calculation: Non-blocking
+  // Recalculate Trade Rates dynamically
   useEffect(() => {
-    const qtyNum = parseFloat(quantity || '0');
-    const rateNum = parseFloat(marketRate || '0');
-    if (!qtyNum || !rateNum) {
+    const qtyNum = parseFloat(quantity);
+    const rateNum = parseFloat(marketRate);
+
+    if (isNaN(qtyNum) || qtyNum === 0 || isNaN(rateNum) || rateNum <= 0) {
       setCalc(null);
       return;
     }
 
-    const side: 'BUY' | 'SELL' = qtyNum >= 0 ? 'BUY' : 'SELL';
-    const absQuantity = Math.abs(qtyNum);
-    const lot = script?.lotSize || 1;
+    const transactionType = qtyNum >= 0 ? 'BUY' : 'SELL';
+    const absQty = Math.abs(qtyNum);
+    const lot = script?.lotSize || initialTrade?.marketLot || 1;
 
-    const result = calculateTradeRates({
+    const res = calculateTradeRates({
       rate: rateNum,
-      quantity: absQuantity,
+      quantity: absQty,
       marketLot: lot,
-      side,
-      clientRule: clientRule
-        ? {
-            quantity: clientRule.quantity,
-            brokerage: clientRule.brokerage,
-            direction: clientRule.direction,
-          }
-        : null,
-      brokerBrokerage: brokerRule?.brokerage || 0,
+      side: transactionType,
       tradeType,
+      clientRule,
+      brokerBrokerage: brokerRule?.brokerage ?? null,
     });
 
-    setCalc(result);
-  }, [quantity, marketRate, clientRule, brokerRule, script, tradeType]);
+    setCalc(res);
+  }, [quantity, marketRate, script, tradeType, clientRule, brokerRule, initialTrade]);
 
-  const handleSave = async () => {
-    if (isLocked) {
-      toast.error('Settlement-generated trades are locked and cannot be edited');
+  // Validation
+  const errors = useMemo(() => {
+    const qtyNum = parseFloat(quantity);
+    const rateNum = parseFloat(marketRate);
+
+    const clientRes = validateTradeForm({
+      accountId: clientId || undefined,
+      scriptId: scriptId || undefined,
+      exchangeId: exchangeId || undefined,
+      brokerId: brokerId || undefined,
+      rate: isNaN(rateNum) ? 0 : rateNum,
+      quantity: isNaN(qtyNum) ? 0 : qtyNum,
+      transactionType: qtyNum >= 0 ? 'BUY' : 'SELL',
+      tradeDate: date,
+    });
+
+    const errMap: Record<string, string> = {};
+    if (!clientRes.isValid) {
+      Object.assign(errMap, clientRes.errors);
+    }
+
+    if (expiryDate && date) {
+      const expErr = validateExpiryAgainstTradeDate(date, expiryDate);
+      if (expErr) errMap.expiryDate = expErr;
+    }
+
+    return errMap;
+  }, [clientId, scriptId, exchangeId, brokerId, marketRate, quantity, date, expiryDate]);
+
+  const isFormValid = Object.keys(errors).length === 0 && Boolean(scriptId && clientId && brokerId && quantity && marketRate);
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isLocked) return;
+
+    setTouched({
+      scriptId: true,
+      tradeDate: true,
+      clientId: true,
+      brokerId: true,
+      quantity: true,
+      marketRate: true,
+      expiryDate: true,
+    });
+
+    if (!isFormValid) {
+      const firstError = Object.values(errors)[0] || 'Please complete all required fields';
+      toast.error(firstError);
       return;
     }
 
-    if (!script || !client || !broker) {
-      toast.error('Please select Script, Client, and Broker');
-      return;
-    }
+    const qtyNum = parseFloat(quantity);
+    const rateNum = parseFloat(marketRate);
 
-    const qtyNum = parseFloat(quantity || '0');
-    const rateNum = parseFloat(marketRate || '0');
-    if (!qtyNum || !rateNum) {
-      toast.error('Please enter valid quantity and market rate');
-      return;
-    }
-
-    if (!Number.isInteger(qtyNum)) {
-      toast.error('Quantity must be a whole number / integer (no decimals)');
-      return;
-    }
-
-    if (!date || !formatDateForInput(date)) {
-      toast.error('Please enter a valid Trade Date (DD-MM-YY)');
-      return;
-    }
-
-    if (expiryDate) {
-      const expNorm = formatDateForInput(expiryDate);
-      if (!expNorm) {
-        toast.error('Please enter a valid Expiry Date (DD-MM-YY)');
-        return;
-      }
+    if (expiryDate && date) {
       const dateErr = validateExpiryAgainstTradeDate(date, expiryDate);
       if (dateErr) {
         toast.error(dateErr);
@@ -241,6 +324,7 @@ export function TradeFormModal({
           marketLot: script?.lotSize || 1,
           remarks: initialTrade?.remarks || 'Manual Entry',
           source: initialTrade?.source || 'MANUAL',
+          securityName: liveSecurityName || undefined,
         }),
       });
 
@@ -254,12 +338,12 @@ export function TradeFormModal({
 
       if (!isEdit) {
         toast.success(`Trade ${savedData.tradeNumber || ''} added successfully! Ready for next entry.`);
-        // Rapid entry persistence: keep scriptId, exchangeId, date, brokerId, tradeType
         setQuantity('');
         setMarketRate('');
         setTimeout(() => quantityInputRef.current?.focus(), 50);
       } else {
         toast.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
+        setIsEditing(false);
         onClose();
       }
     } catch (err: any) {
@@ -269,14 +353,34 @@ export function TradeFormModal({
     }
   };
 
-  const canCalculate = Boolean(scriptId && clientId && brokerId && parseFloat(quantity || '0'));
-  const isFormValid = Boolean(
-    scriptId &&
-    clientId &&
-    brokerId &&
-    parseFloat(quantity || '0') &&
-    parseFloat(marketRate || '0') > 0
-  );
+  // Delete trade handler
+  const handleDeleteTrade = async () => {
+    if (!initialTrade?.id || isLocked) return;
+    setIsDeleting(true);
+    try {
+      if (onDelete) {
+        await onDelete(initialTrade.id);
+      } else {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${initialTrade.id}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Failed to delete trade');
+        }
+        toast.success(`Trade ${initialTrade.tradeNumber || ''} deleted`);
+      }
+      setIsConfirmDeleteOpen(false);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete trade');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const qtyNumber = parseFloat(quantity);
+  const isBuy = !isNaN(qtyNumber) ? qtyNumber >= 0 : (initialTrade?.transactionType !== 'SELL');
 
   return (
     <div
@@ -285,303 +389,632 @@ export function TradeFormModal({
           onClose();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div ref={modalRef} className="card w-245 max-w-[95vw] max-h-[88vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+      <div
+        ref={modalRef}
+        className="card w-245 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-border-light bg-white rounded-2xl"
+      >
         {/* Header */}
-        <div className="card__header bg-snow shrink-0">
-          <div>
-            <h2 className="card__title">{initialTrade ? 'Edit Trade' : 'Add Trade'}</h2>
-            <p className="text-sm text-slate mt-1">Fill the form to instantly calculate client rate, broker rate and profit.</p>
+        <div className="px-6 py-4 border-b border-border-light bg-snow flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-mist border border-(--color-leaf)/30 flex items-center justify-center text-(--color-forest)">
+              <Sparkles className="w-5 h-5 text-(--color-forest)" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-(--color-forest) bg-mist border border-(--color-leaf)/40 rounded-full px-2.5 py-0.5">
+                  #{initialTrade?.tradeNumber || 'New Entry'}
+                </span>
+                {isLocked ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5">
+                    <Lock className="w-3 h-3 text-amber-600" /> Locked Record
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-full px-2 py-0.5">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active Trade
+                  </span>
+                )}
+                {!isEditing && !isLocked && (
+                  <span className="text-[11px] text-slate-500 font-medium ml-1">
+                    (Click any field to edit)
+                  </span>
+                )}
+              </div>
+              <h2 className="text-base font-bold text-charcoal font-display mt-0.5">
+                {!initialTrade ? 'Add New Trade' : isEditing ? 'Edit Trade Details' : 'Trade Specifications'}
+              </h2>
+            </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {!isEditing && !isLocked && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="btn btn--secondary flex items-center gap-1.5 py-1.5 px-3 text-xs font-semibold cursor-pointer"
+                title="Edit this trade"
+              >
+                <Pencil className="w-3.5 h-3.5 text-(--color-forest)" />
+                <span>Edit Trade</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
+        {/* Content Body */}
         <form id="tradeForm" onSubmit={handleSave} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-12 gap-5">
-            {/* Warning Banner if trade is locked */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            {/* Locked Notification */}
             {isLocked && (
-              <div className="col-span-12 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
                 <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                 <div>
-                  <span className="font-bold">Locked Settlement Trade:</span> This trade was automatically generated by settlement or carry-forward processing and cannot be edited or modified.
+                  <span className="font-bold">Locked Settlement Record:</span> This trade was processed by a settlement cycle and is locked against modifications or deletion.
                 </div>
               </div>
             )}
 
-            {/* Left: Inputs */}
-            <fieldset disabled={isLocked} className="col-span-7 space-y-5 disabled:opacity-75">
-              {/* Row 1: Script & Trade Type */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-field">
-                  <label className="form-label form-label--required">Script</label>
-                  <UniversalDropdown
-                    value={scriptId}
-                    options={(scripts || []).map((s) => ({
-                      value: s.id,
-                      label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
-                      sublabel: s.fullName,
-                    }))}
-                    onChange={(val) => setScriptId(val)}
-                    placeholder="Select Script"
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label form-label--required">Type</label>
-                  <UniversalDropdown
-                    value={tradeType}
-                    options={[
-                      { value: 'INTERNAL', label: 'Internal Trade' },
-                      { value: 'CARRY_FORWARD', label: 'Carry Forward' },
-                      { value: 'BACK_FORWARD', label: 'Backforward' },
-                      { value: 'SETTLEMENT', label: 'Settlement' },
-                    ]}
-                    onChange={(val) => setTradeType(val)}
-                    placeholder="Select Type"
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Date & Expiry date */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-field">
-                  <label className="form-label form-label--required">Date</label>
-                  <UniversalDatePicker
-                    value={date}
-                    onChange={(newDate) => setDate(newDate)}
-                    placeholder="DD-MM-YY"
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label">Expiry date</label>
-                  <UniversalDatePicker
-                    value={expiryDate}
-                    onChange={(newDate) => setExpiryDate(newDate)}
-                    placeholder="DD-MM-YY"
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Client & Broker */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-field">
-                  <label className="form-label form-label--required">Client</label>
-                  <UniversalDropdown
-                    value={clientId}
-                    options={(clients || []).map((c) => ({
-                      value: c.id,
-                      label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
-                    }))}
-                    onChange={(val) => setClientId(val)}
-                    placeholder="Select Client"
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label form-label--required">Broker</label>
-                  <UniversalDropdown
-                    value={brokerId}
-                    options={(brokers || []).map((b) => ({
-                      value: b.id,
-                      label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
-                    }))}
-                    onChange={(val) => setBrokerId(val)}
-                    placeholder="Select Broker"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Quantity & Market Rate */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-field">
-                  <label className="form-label form-label--required">Quantity</label>
-                  <input
-                    ref={quantityInputRef}
-                    type="number"
-                    step="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="e.g. 100 or -50"
-                    className="input"
-                  />
-                  <p className="form-hint">Positive = BUY, Negative = SELL (whole number)</p>
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label form-label--required">Market rate</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={marketRate}
-                    onChange={(e) => setMarketRate(e.target.value)}
-                    placeholder="e.g. 250.50"
-                    className="input"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-xs text-slate">
-                  <span className="font-semibold text-charcoal">Client rule:</span>{' '}
-                  {isLoadingRules
-                    ? 'Loading…'
-                    : clientRule
-                    ? `${currSym}${clientRule.brokerage} / ${clientRule.quantity} qty (${clientRule.direction || 'BOTH'})`
-                    : 'Not set'}
-                </div>
-                <div className="text-xs text-slate text-right">
-                  <span className="font-semibold text-charcoal">Broker rule:</span>{' '}
-                  {isLoadingRules
-                    ? 'Loading…'
-                    : brokerRule
-                    ? `${currSym}${brokerRule.brokerage} / ${brokerRule.quantity} qty`
-                    : 'From file charges / Not set'}
-                </div>
-              </div>
-            </fieldset>
-
-            {/* Right: Results */}
-            <div className="col-span-5">
-              <div className="bg-snow border border-border-light rounded-2xl p-5 space-y-4 h-full">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-charcoal">Live result</h3>
-                  {calc?.side ? (
-                    <span className={cn("badge badge--dot", calc.side === 'BUY' ? 'badge--success' : 'badge--error')}>
-                      {calc.side}
+            <div className="grid grid-cols-12 gap-5">
+              {/* Left Column: Trade Attributes */}
+              <div className="col-span-12 lg:col-span-7 space-y-4">
+                {/* Canonical Security Banner */}
+                {liveSecurityName && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700">Security:</span>
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded border border-slate-200">
+                      {liveSecurityName}
                     </span>
-                  ) : null}
+                  </div>
+                )}
+
+                {/* Row 1: Script & Trade Type */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit script' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Script</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <>
+                        <UniversalDropdown
+                          value={scriptId}
+                          options={(scripts || []).map((s) => ({
+                            value: s.id,
+                            label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
+                            sublabel: s.fullName,
+                          }))}
+                          onChange={(val) => {
+                            setScriptId(val);
+                            handleBlur('scriptId');
+                          }}
+                          placeholder="Select Script"
+                          disabled={isLocked}
+                        />
+                        {touched.scriptId && errors.scriptId && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.scriptId}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm font-semibold text-charcoal mt-1">
+                        {script?.shortName || initialTrade?.script?.shortName || '—'}{' '}
+                        {script?.exchange?.code && (
+                          <span className="text-[11px] font-mono text-slate-500 font-normal">
+                            ({script.exchange.code})
+                          </span>
+                        )}
+                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
+                          {script?.fullName || initialTrade?.script?.fullName || ''}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit trade type' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Type</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <UniversalDropdown
+                        value={tradeType}
+                        options={[
+                          { value: 'INTERNAL', label: 'Internal Trade' },
+                          { value: 'CARRY_FORWARD', label: 'Carry Forward' },
+                          { value: 'BACK_FORWARD', label: 'Backforward' },
+                          { value: 'SETTLEMENT', label: 'Settlement' },
+                        ]}
+                        onChange={(val) => setTradeType(val)}
+                        placeholder="Select Type"
+                        disabled={isLocked}
+                      />
+                    ) : (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                          {tradeType}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {!canCalculate ? (
-                  <div className="text-sm text-fog pt-8">
-                    Select script, client, broker and enter quantity to calculate.
-                  </div>
-                ) : isLoadingRules ? (
-                  <div className="text-sm text-fog pt-8">Loading brokerage rules…</div>
-                ) : !calc ? (
-                  <div className="text-sm text-fog pt-8">Enter market rate to see rates and profit.</div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Notice for zero-brokerage trade types vs missing rules */}
-                    {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType) ? (
-                      <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <div className="leading-relaxed">
-                          <span className="font-semibold text-emerald-950">Straightforward Rates:</span> Carry Forward / Back Forward / Settlement trades carry <strong className="font-semibold">zero brokerage / commission</strong>. Client rate and broker rate equal market rate directly.
-                        </div>
-                      </div>
-                    ) : (
-                      (!clientRule || !brokerRule) && (
-                        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
-                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                          <div className="leading-relaxed">
-                            <span className="font-semibold text-amber-950">Note:</span> Brokerage for{' '}
-                            {!clientRule && !brokerRule
-                              ? 'this client and broker is'
-                              : !clientRule
-                              ? 'this client is'
-                              : 'this broker is'}{' '}
-                            not set. Remember to set brokerage to get perfect calculation and perfect reports.
-                          </div>
-                        </div>
-                      )
+                {/* Row 2: Date & Expiry date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
                     )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit trade date' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Trade Date</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-(--bg-card) border border-border-light rounded-xl p-4">
-                        <p className="text-[11px] text-slate font-semibold uppercase tracking-wide">Client</p>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate">Rate</span>
-                            <span className="font-mono font-semibold text-charcoal">{currSym}{calc.clientRate.toFixed(4)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-fog">Brokerage</span>
-                            <span className="font-mono text-slate">
-                              {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
-                                ? '0.0000 (Waived)'
-                                : !clientRule
-                                ? 'Not set'
-                                : `${currSym}${calc.clientBrokerage.toFixed(4)}`}
-                            </span>
-                          </div>
+                    {isEditing ? (
+                      <>
+                        <UniversalDatePicker
+                          value={date}
+                          onChange={(newDate) => {
+                            setDate(newDate);
+                            handleBlur('tradeDate');
+                          }}
+                          placeholder="DD-MM-YY"
+                          disabled={isLocked}
+                        />
+                        {touched.tradeDate && errors.tradeDate && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.tradeDate}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm font-mono font-semibold text-charcoal mt-1">
+                        {formatDateToDDMMYY(date)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit expiry date' : undefined}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="form-label text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <span>Expiry Date</span>
+                        {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                      </label>
+                      {isEditing && expiryOptions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomExpiry(!isCustomExpiry)}
+                          className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                        >
+                          {isCustomExpiry ? 'Choose from Master' : 'Custom Date...'}
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      isCustomExpiry || expiryOptions.length === 0 ? (
+                        <UniversalDatePicker
+                          value={expiryDate}
+                          onChange={(newDate) => {
+                            setExpiryDate(newDate);
+                            handleBlur('expiryDate');
+                          }}
+                          placeholder="DD-MM-YY"
+                          disabled={isLocked}
+                        />
+                      ) : (
+                        <UniversalDropdown
+                          value={expiryDate}
+                          options={[
+                            { value: '', label: 'None / Cash' },
+                            ...expiryOptions,
+                          ]}
+                          onChange={(val) => {
+                            setExpiryDate(val);
+                            handleBlur('expiryDate');
+                          }}
+                          placeholder="Select Expiry"
+                          disabled={isLocked}
+                        />
+                      )
+                    ) : (
+                      <div className="text-sm font-mono font-semibold text-charcoal mt-1">
+                        {formatDateToDDMMYY(expiryDate) || 'None / Cash'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 3: Client & Broker */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit client' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Client</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <>
+                        <UniversalDropdown
+                          value={clientId}
+                          options={(clients || []).map((c) => ({
+                            value: c.id,
+                            label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
+                          }))}
+                          onChange={(val) => {
+                            setClientId(val);
+                            handleBlur('clientId');
+                          }}
+                          placeholder="Select Client"
+                          disabled={isLocked}
+                          searchable={true}
+                        />
+                        {touched.clientId && errors.accountId && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.accountId}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm font-semibold text-charcoal mt-1">
+                        {client?.code || initialTrade?.account?.code || '—'}
+                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
+                          {client?.name || initialTrade?.account?.name || ''}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit broker' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Broker</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <>
+                        <UniversalDropdown
+                          value={brokerId}
+                          options={(brokers || []).map((b) => ({
+                            value: b.id,
+                            label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
+                          }))}
+                          onChange={(val) => {
+                            setBrokerId(val);
+                            handleBlur('brokerId');
+                          }}
+                          placeholder="Select Broker"
+                          disabled={isLocked}
+                          searchable={true}
+                        />
+                        {touched.brokerId && !brokerId && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">Broker selection is required.</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm font-semibold text-charcoal mt-1">
+                        {broker?.code || initialTrade?.broker?.code || '—'}
+                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
+                          {broker?.name || initialTrade?.broker?.name || ''}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 4: Quantity & Market Rate */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit quantity' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Quantity (Negative for SELL)</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <>
+                        <input
+                          ref={quantityInputRef}
+                          type="number"
+                          step="1"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          onBlur={() => handleBlur('quantity')}
+                          placeholder="e.g. 100 or -50"
+                          disabled={isLocked}
+                          className={cn(
+                            'input text-xs font-mono font-bold',
+                            touched.quantity && errors.quantity && 'border-rose-400 focus:border-rose-500 ring-rose-200'
+                          )}
+                        />
+                        {touched.quantity && errors.quantity && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.quantity}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 rounded text-xs font-bold',
+                            isBuy ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          )}
+                        >
+                          {isBuy ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="font-mono font-bold text-sm text-charcoal">
+                          {Math.abs(parseFloat(quantity) || initialTrade?.quantity || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className={cn(
+                      'form-field rounded-xl p-2.5 transition-all',
+                      !isEditing && !isLocked && 'cursor-pointer hover:bg-slate-50 hover:border-slate-300 border border-transparent'
+                    )}
+                    onClick={() => {
+                      if (!isEditing && !isLocked) setIsEditing(true);
+                    }}
+                    title={!isEditing && !isLocked ? 'Click to edit market rate' : undefined}
+                  >
+                    <label className="form-label form-label--required text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Market Rate</span>
+                      {!isEditing && !isLocked && <Pencil className="w-3 h-3 text-slate-400" />}
+                    </label>
+
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={marketRate}
+                          onChange={(e) => setMarketRate(e.target.value)}
+                          onBlur={() => handleBlur('marketRate')}
+                          placeholder="0.00"
+                          disabled={isLocked}
+                          className={cn(
+                            'input text-xs font-mono font-bold',
+                            touched.marketRate && errors.rate && 'border-rose-400 focus:border-rose-500 ring-rose-200'
+                          )}
+                        />
+                        {touched.marketRate && errors.rate && (
+                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.rate}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="font-mono font-bold text-sm text-charcoal mt-1">
+                        {currSym}{parseFloat(marketRate || initialTrade?.rate || 0).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Rate & Brokerage Calculation Summary */}
+              <div className="col-span-12 lg:col-span-5 bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                    Rate &amp; Brokerage Summary
+                  </h3>
+
+                  {isLoadingRules ? (
+                    <div className="p-8 text-center text-xs text-slate-500">
+                      Calculating rates &amp; brokerage...
+                    </div>
+                  ) : !calc ? (
+                    <div className="p-8 text-center text-xs text-slate-400 italic">
+                      Enter quantity and rate to view calculated rates.
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5">
+                      {/* Client Rate Card */}
+                      <div className="bg-white border border-border-light rounded-xl p-3.5 shadow-2xs">
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
+                          <span className="font-semibold uppercase tracking-wider text-[10px]">Client Rate</span>
+                          <span className="font-mono text-[11px]">
+                            {calc.clientBrokerage > 0 ? `+${currSym}${calc.clientBrokerage.toFixed(2)} brk` : '0 brk'}
+                          </span>
+                        </div>
+                        <div className="font-mono text-base font-bold text-slate-900">
+                          {currSym}{calc.clientRate.toFixed(2)}
                         </div>
                       </div>
 
-                      <div className="bg-(--bg-card) border border-border-light rounded-xl p-4">
-                        <p className="text-[11px] text-slate font-semibold uppercase tracking-wide">Broker</p>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate">Rate</span>
-                            <span className="font-mono font-semibold text-charcoal">{currSym}{calc.brokerRate.toFixed(4)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-fog">Brokerage</span>
-                            <span className="font-mono text-slate">
-                              {['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(tradeType)
-                                ? '0.0000 (Waived)'
-                                : `${currSym}${calc.brokerBrokerage.toFixed(4)}`}
-                            </span>
-                          </div>
+                      {/* Broker Rate Card */}
+                      <div className="bg-white border border-border-light rounded-xl p-3.5 shadow-2xs">
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
+                          <span className="font-semibold uppercase tracking-wider text-[10px]">Broker Rate</span>
+                          <span className="font-mono text-[11px]">
+                            {calc.brokerBrokerage > 0 ? `+${currSym}${calc.brokerBrokerage.toFixed(2)} brk` : '0 brk'}
+                          </span>
+                        </div>
+                        <div className="font-mono text-base font-bold text-slate-900">
+                          {currSym}{calc.brokerRate.toFixed(2)}
+                        </div>
+                      </div>
+
+                      {/* Trade Volume Metrics */}
+                      <div className="bg-white border border-border-light rounded-xl p-3 text-xs space-y-1.5 font-mono text-slate-600">
+                        <div className="flex justify-between">
+                          <span className="font-sans text-slate-500">Side:</span>
+                          <span className="font-bold text-slate-800">{calc.side}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-sans text-slate-500">Lot Size:</span>
+                          <span>{calc.marketLot}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-sans text-slate-500">Total Units:</span>
+                          <span>{calc.totalUnits.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Profit box - commented out as requested */}
-                    {/* <div className={cn("border rounded-xl p-4",
-                      calc.profitTotal > 0 ? 'bg-mist border-(--color-leaf)' :
-                      calc.profitTotal < 0 ? 'bg-red-50 border-red-200' :
-                      'bg-snow border-border-light'
-                    )}>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-charcoal">Profit</span>
-                        <span className={cn("font-mono text-lg font-bold",
-                          calc.profitTotal > 0 ? 'text-(--color-positive)' :
-                          calc.profitTotal < 0 ? 'text-negative' :
-                          'text-charcoal'
-                        )}>
-                          {calc.profitTotal > 0 ? '+' : ''}{currSym}{calc.profitTotal.toFixed(4)}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate mt-1">
-                        Market value {currSym}{calc.marketValue.toFixed(4)} • per-unit {currSym}{calc.profitPerUnit.toFixed(4)}
-                      </p>
-                    </div> */}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          </div>
 
-          {/* Fixed Footer */}
-          <div className="p-4 border-t border-border-light bg-snow flex justify-end gap-3 shrink-0">
-            <button type="button" onClick={onClose} className="btn btn--secondary">Cancel</button>
-            <button
-              type="submit"
-              form="tradeForm"
-              className="btn btn--primary flex items-center gap-2 min-w-27.5 justify-center"
-              disabled={isSaving || isLocked || !isFormValid}
-            >
-              {isSaving ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  <span>Saving…</span>
-                </>
-              ) : initialTrade ? (
-                'Update Trade'
-              ) : (
-                'Add Trade'
+          {/* Footer Bar with Dynamic Actions */}
+          <div className="p-4 border-t border-border-light bg-snow flex items-center justify-between gap-3 shrink-0">
+            {/* Left: Delete Trade */}
+            <div>
+              {initialTrade?.id && (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmDeleteOpen(true)}
+                  disabled={isLocked || isDeleting}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors',
+                    isLocked
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 cursor-pointer'
+                  )}
+                  title={isLocked ? 'Settled trades cannot be deleted' : 'Delete this trade'}
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Delete Trade</span>
+                </button>
               )}
-            </button>
+            </div>
+
+            {/* Right: Cancel / Save or Close / Edit */}
+            <div className="flex items-center gap-2.5">
+              {isEditing ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="btn btn--secondary text-xs px-4 py-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="tradeForm"
+                    disabled={isSaving || isLocked || !isFormValid}
+                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center"
+                  >
+                    {isSaving ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        <span>Saving…</span>
+                      </>
+                    ) : initialTrade ? (
+                      'Save Changes'
+                    ) : (
+                      'Add Trade'
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn btn--secondary text-xs px-4 py-2"
+                  >
+                    Close
+                  </button>
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="btn btn--primary flex items-center gap-1.5 text-xs px-4 py-2"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit Trade</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </form>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isConfirmDeleteOpen}
+        title="Delete Trade"
+        message={
+          <div>
+            <p>Are you sure you want to delete trade <strong className="font-mono">{initialTrade?.tradeNumber}</strong>?</p>
+            <p className="text-xs text-slate-500 mt-2">
+              This trade will be soft-deleted and removed from live position calculations.
+            </p>
+          </div>
+        }
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete Trade'}
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteTrade}
+        onCancel={() => setIsConfirmDeleteOpen(false)}
+      />
     </div>
   );
 }

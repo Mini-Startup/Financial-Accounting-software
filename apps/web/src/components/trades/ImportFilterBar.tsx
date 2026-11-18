@@ -149,11 +149,11 @@ export function ImportFilterBar({
               searchable={false}
               options={[
                 { value: 'ALL', label: 'All Parsed Rows' },
-                { value: 'VALID', label: '✓ Valid Trades Only' },
-                { value: 'INVALID', label: '⚠ Invalid / Unmapped Trades' },
-                { value: 'UNMAPPED_CLIENT', label: '🔴 Unmapped Clients' },
-                { value: 'UNMAPPED_SCRIPT', label: '🔴 Unmapped Scripts' },
-                { value: 'UNMAPPED_EXCHANGE', label: '🔴 Unmapped Exchanges' },
+                { value: 'VALID', label: 'Valid Trades Only' },
+                { value: 'INVALID', label: 'Invalid / Unmapped Trades' },
+                { value: 'UNMAPPED_CLIENT', label: 'Unmapped Clients' },
+                { value: 'UNMAPPED_SCRIPT', label: 'Unmapped Scripts' },
+                { value: 'UNMAPPED_EXCHANGE', label: 'Unmapped Exchanges' },
               ]}
               triggerClassName="min-h-8.5 h-8.5 text-xs font-semibold px-2.5 py-1.5"
             />

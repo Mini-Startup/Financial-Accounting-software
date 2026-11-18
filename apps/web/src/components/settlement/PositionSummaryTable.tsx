@@ -5,6 +5,7 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import type { SettlementItem } from './types';
 
 interface PositionSummaryTableProps {
@@ -301,7 +302,7 @@ export function PositionSummaryTable({
 
                       {/* Expiry */}
                       <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
-                        {item.expiry || '—'}
+                        {formatDateToDDMMYY(item.expiry) || '—'}
                       </td>
 
                       {/* Market Lot */}

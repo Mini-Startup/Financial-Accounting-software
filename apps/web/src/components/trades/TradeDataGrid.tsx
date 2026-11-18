@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { ParsedTrade } from '../../lib/tradeParser';
 import { CustomSelect } from '../ui/CustomSelect';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
 interface TradeDataGridProps {
   trades: ParsedTrade[];
@@ -161,9 +162,9 @@ export function TradeDataGrid({ trades }: TradeDataGridProps) {
                     {idx + 1}
                   </td>
                   <td className="mono">{trade.tradeNo}</td>
-                  <td className="mono">{trade.tradeTime}</td>
+                  <td className="mono">{formatDateToDDMMYY(trade.tradeTime) || trade.tradeTime}</td>
                   <td style={{ fontWeight: 600 }}>{trade.script}</td>
-                  <td style={{ color: '#64748b' }}>{trade.expiry || '—'}</td>
+                  <td style={{ color: '#64748b' }}>{formatDateToDDMMYY(trade.expiry) || trade.expiry || '—'}</td>
                   <td>
                     <span
                       className={`trade-type-badge ${trade.type === 'BUY' ? 'buy' : 'sell'}`}

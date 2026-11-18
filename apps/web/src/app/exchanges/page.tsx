@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ExchangePageManager } from '../../components/exchanges/ExchangePageManager';
+import { safeServerFetch } from '@/utils/serverApi';
 
 export const metadata: Metadata = {
   title: 'Exchanges | BizzMate Accounting',
@@ -8,18 +9,7 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-async function safeFetch(url: string) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (err) {
-    console.error(`Failed to fetch from ${url}:`, err);
-    return [];
-  }
-}
-
 export default async function ExchangesPage() {
-  const exchanges = await safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges`);
+  const exchanges = await safeServerFetch('/exchanges', []);
   return <ExchangePageManager initialExchanges={exchanges} />;
 }

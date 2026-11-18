@@ -23,10 +23,10 @@ export function SettlementCycleSelector({
   const formatDateStr = (dateStr: string) => formatDateToDDMMYY(dateStr);
 
   const cycleOptions = [
-    { value: 'LIVE', label: '⚡ Live / Open Positions (Unsettled Trades)' },
+    { value: 'LIVE', label: 'Live / Open Positions (Unsettled Trades)' },
     ...settlementsList.map((s) => ({
       value: s.id,
-      label: `📁 ${s.name} (${formatDateStr(s.fromDate)} – ${formatDateStr(s.toDate)})`,
+      label: `${s.name} (${formatDateStr(s.fromDate)} – ${formatDateStr(s.toDate)})`,
       sublabel: `${s._count?.trades || 0} trades recorded`,
     })),
   ];

@@ -24,6 +24,7 @@ import {
   ChevronRight,
   ChevronDown,
   Sliders,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePermissions } from "@/context/AuthPermissionsContext";
@@ -75,6 +76,7 @@ const sections: NavSection[] = [
       { name: "Scripts",   path: "/scripts",       icon: ScrollText,      feature: "SCRIPTS" },
       { name: "Exchanges", path: "/exchanges",     icon: Globe,           feature: "EXCHANGES" },
       { name: "Currencies", path: "/currencies",   icon: Coins,           feature: "CURRENCIES" },
+      { name: "Expiry Dates", path: "/expiry-dates", icon: Calendar,       feature: "SCRIPTS" },
       { name: "Brokerage", path: "/brokerage",     icon: Percent,         feature: "BROKERAGE" },
       { name: "Others",    path: "/account-master", icon: Layers,          feature: "ACCOUNT_MASTER" },
     ],
@@ -101,9 +103,36 @@ const sections: NavSection[] = [
   {
     id: "reports",
     label: "Reports",
-    icon: Coins,
+    icon: FileSpreadsheet,
     children: [
-      { name: "Sattelment Reports", path: "/settlement", icon: Scale, feature: "SETTLEMENT" },
+      {
+        name: "Net Position Report",
+        path: "/reports/net-position",
+        icon: TrendingUp,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Settlement Audit Report",
+        path: "/reports/settlement-detail",
+        icon: ScrollText,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Financial Settlement Sheet",
+        path: "/reports/settlement-summary",
+        icon: BookText,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Settlement Operations",
+        path: "/settlement",
+        icon: Scale,
+        feature: "SETTLEMENT",
+        permission: { feature: "SETTLEMENT", action: "VIEW" },
+      },
     ],
   },
   {

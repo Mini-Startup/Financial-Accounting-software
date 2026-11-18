@@ -107,6 +107,8 @@ model Account {
   bankAccountNumber   String?  @map("bank_account_number")
   upiId               String?  @map("upi_id")
   isActive            Boolean  @default(true) @map("is_active")
+  isDeleted           Boolean  @default(false) @map("is_deleted")
+  deletedAt           DateTime? @map("deleted_at")
   isDirectClient      Boolean  @default(true) @map("is_direct_client")
   dealerCode          String?  @map("dealer_code")
   openingBalance      Float    @default(0) @map("opening_balance")
@@ -122,6 +124,7 @@ model Account {
 
   @@index([name])
   @@index([groupId])
+  @@index([isDeleted])
   @@map("accounts")
 }
 
@@ -138,6 +141,8 @@ model Script {
   exchangeId String?   @map("exchange_id")
   currencyId String?   @map("currency_id")
   isActive   Boolean   @default(true) @map("is_active")
+  isDeleted  Boolean   @default(false) @map("is_deleted")
+  deletedAt  DateTime? @map("deleted_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt      @map("updated_at")
 
@@ -150,6 +155,7 @@ model Script {
   @@index([shortName])
   @@index([fullName])
   @@index([exchangeId])
+  @@index([isDeleted])
   @@map("scripts")
 }
 
@@ -182,6 +188,8 @@ model Exchange {
   code     String  @unique
   name     String?
   isActive Boolean @default(true) @map("is_active")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
@@ -190,6 +198,7 @@ model Exchange {
   closingRates ClosingRate[]
   scripts      Script[]
 
+  @@index([isDeleted])
   @@map("exchanges")
 }
 
@@ -256,6 +265,8 @@ model Trade {
   tradeType          String      @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
   settlementId       String?     @map("settlement_id")
   originSettlementId String?     @map("origin_settlement_id")
+  isDeleted          Boolean     @default(false) @map("is_deleted")
+  deletedAt          DateTime?   @map("deleted_at")
 
   createdAt          DateTime    @default(now()) @map("created_at")
   updatedAt          DateTime    @updatedAt      @map("updated_at")
@@ -284,6 +295,8 @@ model Trade {
   @@index([tradeDate])
   @@index([settlementId, tradeDate])
   @@index([tradeType])
+  @@index([isDeleted])
+  @@index([isDeleted, settlementId])
   @@map("trades")
 }
 
@@ -303,6 +316,9 @@ model Brokerage {
   quantity    Float          @map("quantity")
   brokerage   Float          @map("brokerage")
 
+  isDeleted   Boolean        @default(false) @map("is_deleted")
+  deletedAt   DateTime?      @map("deleted_at")
+
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt      @map("updated_at")
 
@@ -312,6 +328,7 @@ model Brokerage {
   @@unique([accountId, appliesTo, scope, scriptId, direction], name: "uq_brokerage_rule")
   @@index([accountId])
   @@index([scriptId])
+  @@index([isDeleted])
   @@map("brokerages")
 }
 
@@ -433,5 +450,24 @@ model VoucherLine {
   @@index([voucherId])
   @@index([accountId])
   @@map("voucher_lines")
+}
+
+// ─────────────────────────────────────────────
+// EXPIRY DATES
+// ─────────────────────────────────────────────
+
+model ExpiryDate {
+  id             String    @id @default(uuid())
+  date           String    @unique
+  normalizedDate DateTime  @map("normalized_date")
+  isActive       Boolean   @default(true) @map("is_active")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt      @map("updated_at")
+
+  @@index([normalizedDate])
+  @@index([isDeleted])
+  @@map("expiry_dates")
 }
 

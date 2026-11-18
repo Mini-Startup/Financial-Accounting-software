@@ -252,7 +252,7 @@ export function NormalPreviewTable({
 
       {/* Tip Banner */}
       <div className="flex items-center justify-between text-xs text-slate bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-        <span>💡 Tip: Click any row to view &amp; edit trade fields in a side inspector panel. Click &apos;+Map&apos; on unmapped clients/scripts to resolve them.</span>
+        <span>Tip: Click any row to view &amp; edit trade fields in a side inspector panel. Click &apos;+Map&apos; on unmapped clients/scripts to resolve them.</span>
         <button
           onClick={handleRevalidate}
           disabled={isProcessing}
@@ -293,7 +293,7 @@ export function NormalPreviewTable({
       {/* Future Trades Table */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-charcoal flex items-center gap-2">
-          <span>📈 Future Trades Preview</span>
+          <span>Future Trades Preview</span>
           <span className="text-xs font-normal bg-emerald-50 text-emerald px-2.5 py-0.5 rounded-full font-mono">
             {validFuturesCount} valid / {futureRows.length} total
           </span>
@@ -525,7 +525,7 @@ export function NormalPreviewTable({
                         <td className="py-3 px-3 font-mono text-slate-600">{row.terminal || '—'}</td>
 
                         {/* Expiry */}
-                        <td className="py-3 px-3 text-slate-600">{row.expiry || '—'}</td>
+                        <td className="py-3 px-3 text-slate-600 font-mono">{formatDateToDDMMYY(row.expiry) || '—'}</td>
 
                         {/* Status */}
                         <td className="py-3 px-3 text-center">

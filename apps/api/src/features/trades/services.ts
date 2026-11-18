@@ -2,6 +2,7 @@ import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 import { brokeragesService } from '../brokerages/services';
 import { calculateTradeRates, round } from '../../utils/brokerage';
+import { generateSecurityName } from './securityName';
 
 import { parseFlexibleDate } from '../Trade_FnO/services';
 
@@ -67,6 +68,14 @@ export class TradesService {
       });
     }
 
+    const genSecurityName = (data as any).securityName || generateSecurityName({
+      scriptFullName: script.fullName,
+      scriptShortName: script.shortName,
+      expiry: data.expiry,
+      callPut: (data as any).callPut,
+      strikePrice: (data as any).strikePrice,
+    });
+
     return prisma.trade.create({
       data: {
         tradeNumber: data.tradeNumber.trim(),
@@ -82,6 +91,9 @@ export class TradesService {
         remarks: data.remarks?.trim() || null,
         source: data.source || 'MANUAL',
         expiry: data.expiry || null,
+        securityName: genSecurityName || null,
+        callPut: (data as any).callPut || null,
+        strikePrice: (data as any).strikePrice ? Number((data as any).strikePrice) : null,
         marketLot: resolvedLot,
         tradeType: data.tradeType || 'INTERNAL',
         clientRate: calcs.clientRate,
@@ -115,7 +127,9 @@ export class TradesService {
     tradeType?: string;
     settlementId?: string;
   }) {
-    const where: Prisma.TradeWhereInput = {};
+    const where: Prisma.TradeWhereInput = {
+      isDeleted: false,
+    };
 
     if (params) {
       if (params.accountId) where.accountId = params.accountId;
@@ -174,9 +188,10 @@ export class TradesService {
         },
         exchange: true,
         broker: true,
+        settlement: true,
       },
     });
-    if (!trade) {
+    if (!trade || trade.isDeleted) {
       throw new NotFoundException(`Trade with ID ${id} not found`);
     }
     return trade;
@@ -265,6 +280,8 @@ export class TradesService {
       ...(data.remarks !== undefined && { remarks: data.remarks?.trim() || null }),
       ...(data.source && { source: data.source }),
       ...(data.expiry !== undefined && { expiry: data.expiry || null }),
+      ...((data as any).callPut !== undefined && { callPut: (data as any).callPut || null }),
+      ...((data as any).strikePrice !== undefined && { strikePrice: (data as any).strikePrice ? Number((data as any).strikePrice) : null }),
       ...((data as any).marketLot !== undefined && { marketLot: Number((data as any).marketLot) }),
       ...(data.tradeType && { tradeType: data.tradeType }),
       clientRate: calcs.clientRate,
@@ -273,6 +290,21 @@ export class TradesService {
       brokerBrokerage: calcs.brokerBrokerage,
       profitTotal: calcs.profitTotal,
     };
+
+    const targetScript = data.scriptId ? await prisma.script.findUnique({ where: { id: data.scriptId } }) : existing.script;
+    const genSecName = (data as any).securityName !== undefined
+      ? (data as any).securityName
+      : generateSecurityName({
+          scriptFullName: targetScript?.fullName || existing.script?.fullName,
+          scriptShortName: targetScript?.shortName || existing.script?.shortName,
+          expiry: data.expiry !== undefined ? data.expiry : existing.expiry,
+          callPut: (data as any).callPut !== undefined ? (data as any).callPut : (existing as any).callPut,
+          strikePrice: (data as any).strikePrice !== undefined ? (data as any).strikePrice : (existing as any).strikePrice,
+        });
+
+    if (genSecName) {
+      (updatePayload as any).securityName = genSecName;
+    }
 
     return prisma.trade.update({
       where: { id },
@@ -296,11 +328,18 @@ export class TradesService {
       existing.settlementId != null ||
       (existing.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(existing.tradeType))
     ) {
-      throw new BadRequestException('Settlement-generated trades cannot be deleted');
+      const settlementMsg = (existing as any).settlement?.name
+        ? `Cannot delete Trade: Trade is locked under Settlement '${(existing as any).settlement.name}'. You must delete or revert the settlement first.`
+        : 'Cannot delete Trade: Trade is locked under a settlement. You must delete or revert the settlement first.';
+      throw new BadRequestException(settlementMsg);
     }
 
-    return prisma.trade.delete({
+    return prisma.trade.update({
       where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
     });
   }
 

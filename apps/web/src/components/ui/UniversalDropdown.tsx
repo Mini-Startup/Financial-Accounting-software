@@ -60,6 +60,8 @@ export function UniversalDropdown({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
   const selectedOption = options.find((opt) => opt.value === value);
 
   const [prevValue, setPrevValue] = useState(value);
@@ -79,6 +81,16 @@ export function UniversalDropdown({
       opt.value.toLowerCase().includes(q)
     );
   });
+
+  // Automatically scroll highlighted option into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const el = listRef.current.children[highlightedIndex] as HTMLElement;
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
 
   // Calculate coordinates with space collision detection (flip upward if close to bottom)
   const calculateCoords = useCallback((): Coords | null => {
@@ -127,6 +139,7 @@ export function UniversalDropdown({
     setIsOpen(false);
     setSearchQuery('');
     setInputValue(selectedOption ? selectedOption.label : '');
+    setHighlightedIndex(-1);
   }, [selectedOption]);
 
   const openDropdown = () => {
@@ -136,11 +149,17 @@ export function UniversalDropdown({
       setCoords(initialCoords);
     }
     setIsOpen(true);
+    // User requirement: When dropdown is opened, clear the text written in the input and auto-focus
+    setInputValue('');
     setSearchQuery('');
-    setHighlightedIndex(-1);
-    // Focus the input so the user can immediately type
+    
+    // Highlight currently selected option index or default to 0
+    const currentIdx = options.findIndex((opt) => opt.value === value);
+    setHighlightedIndex(currentIdx >= 0 ? currentIdx : 0);
+
+    // Auto-focus immediately so user can type or use arrow keys
     setTimeout(() => {
-      inputRef.current?.select();
+      inputRef.current?.focus();
     }, 10);
   };
 
@@ -360,7 +379,7 @@ export function UniversalDropdown({
             className="bg-white border border-border-light rounded-md shadow-(--shadow-lg) overflow-hidden flex flex-col max-h-60 duration-100"
           >
             {/* Options List */}
-            <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+            <div ref={listRef} className="overflow-y-auto flex-1 divide-y divide-slate-50">
               {filteredOptions.length === 0 ? (
                 <div className="p-3 text-center text-xs text-slate italic">
                   No matching options found

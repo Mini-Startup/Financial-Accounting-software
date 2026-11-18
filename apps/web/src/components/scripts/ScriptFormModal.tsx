@@ -12,6 +12,7 @@ import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { cn } from '@/utils/cn';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { validateScriptForm } from '@/utils/validators';
 
 export function ScriptFormModal({
   initialData,
@@ -90,6 +91,9 @@ export function ScriptFormModal({
     currencyId: resolveInitialCurrencyId(initialCurrencies, initialData, targetCurrencyCode),
     isActive: initialData?.isActive ?? true,
   });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const errors = useMemo(() => validateScriptForm(formData), [formData]);
 
   const lastInitialIdRef = useRef(initialData?.id);
   useEffect(() => {
@@ -202,6 +206,10 @@ export function ScriptFormModal({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
   // Check if target exchange is missing
   const isTargetExchangeMissing =
     Boolean(targetExchangeCode) &&
@@ -233,6 +241,19 @@ export function ScriptFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validationErrors = validateScriptForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setTouched({
+        shortName: true,
+        fullName: true,
+        lotSize: true,
+        exchangeId: true,
+      });
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError);
+      return;
+    }
 
     if (!formData.exchangeId) {
       toast.error(
@@ -408,9 +429,16 @@ export function ScriptFormModal({
                     name="shortName"
                     value={formData.shortName}
                     onChange={handleChange}
-                    className="input text-xs font-mono font-bold uppercase"
+                    onBlur={() => handleBlur('shortName')}
+                    className={cn(
+                      "input text-xs font-mono font-bold uppercase",
+                      touched.shortName && errors.shortName && "border-rose-400 focus:border-rose-500 ring-rose-200"
+                    )}
                     placeholder="e.g. GIN, GOLD"
                   />
+                  {touched.shortName && errors.shortName && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.shortName}</p>
+                  )}
                 </div>
 
                 <div className="form-field">
@@ -426,14 +454,22 @@ export function ScriptFormModal({
                       setFormData((prev) => ({ ...prev, lotSize: val }));
                     }}
                     onBlur={() => {
+                      handleBlur('lotSize');
                       if (!formData.lotSize || parseInt(formData.lotSize, 10) < 1) {
                         setFormData((prev) => ({ ...prev, lotSize: '1' }));
                       }
                     }}
-                    className="input text-xs font-mono text-right font-bold"
+                    className={cn(
+                      "input text-xs font-mono text-right font-bold",
+                      touched.lotSize && errors.lotSize && "border-rose-400 focus:border-rose-500 ring-rose-200"
+                    )}
                     placeholder="1"
                   />
-                  <p className="form-hint text-[10px]">Positive integer (defaults to 1)</p>
+                  {touched.lotSize && errors.lotSize ? (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.lotSize}</p>
+                  ) : (
+                    <p className="form-hint text-[10px]">Positive integer (defaults to 1)</p>
+                  )}
                 </div>
 
                 <div className="form-field col-span-2">
@@ -443,9 +479,16 @@ export function ScriptFormModal({
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="input text-xs"
+                    onBlur={() => handleBlur('fullName')}
+                    className={cn(
+                      "input text-xs",
+                      touched.fullName && errors.fullName && "border-rose-400 focus:border-rose-500 ring-rose-200"
+                    )}
                     placeholder="e.g. GIFT CONN NIFTY 50 IND"
                   />
+                  {touched.fullName && errors.fullName && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.fullName}</p>
+                  )}
                 </div>
 
                 {/* Exchange Select */}
@@ -464,11 +507,14 @@ export function ScriptFormModal({
                       </span>
                     )}
                   </div>
-                  <div className={isTargetExchangeMissing || !formData.exchangeId ? 'rounded-lg border-2 border-rose-300' : ''}>
+                  <div className={isTargetExchangeMissing || (!formData.exchangeId && touched.exchangeId) ? 'rounded-lg border-2 border-rose-300' : ''}>
                     <UniversalDropdown
                       value={formData.exchangeId}
                       options={exchangeOptions}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
+                      onChange={(val) => {
+                        setFormData((prev) => ({ ...prev, exchangeId: val }));
+                        handleBlur('exchangeId');
+                      }}
                       placeholder={
                         isTargetExchangeMissing
                           ? `⚠️ Add '${targetExchangeCode}' first`
@@ -478,6 +524,9 @@ export function ScriptFormModal({
                       addLabel={targetExchangeCode ? `Add '${targetExchangeCode}'` : 'Add Exchange'}
                     />
                   </div>
+                  {touched.exchangeId && errors.exchangeId && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.exchangeId}</p>
+                  )}
                 </div>
 
                 {/* Currency Select */}

@@ -51,4 +51,33 @@ router.put('/:id/role', requirePermission('USER_MANAGEMENT', 'ASSIGN_ROLE'), asy
   }
 });
 
+// Pre-whitelist user by email (requires USER_MANAGEMENT:ASSIGN_ROLE)
+router.post('/whitelist', requirePermission('USER_MANAGEMENT', 'ASSIGN_ROLE'), async (req, res, next) => {
+  try {
+    const { email, name, roleId } = req.body || {};
+    if (!email) {
+      throw new BadRequestException('email is required.');
+    }
+    const actor = req.user!;
+    const result = await userService.whitelistUser({ email, name, roleId }, actor);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/', requirePermission('USER_MANAGEMENT', 'ASSIGN_ROLE'), async (req, res, next) => {
+  try {
+    const { email, name, roleId } = req.body || {};
+    if (!email) {
+      throw new BadRequestException('email is required.');
+    }
+    const actor = req.user!;
+    const result = await userService.whitelistUser({ email, name, roleId }, actor);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

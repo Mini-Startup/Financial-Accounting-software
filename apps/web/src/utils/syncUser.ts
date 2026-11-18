@@ -1,45 +1,82 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/database';
 
-export async function syncUser(): Promise<void> {
-  const user = await currentUser();
-  if (!user) return;
+export interface SyncUserResult {
+  isWhitelisted: boolean;
+  email?: string;
+  user?: any;
+}
 
-  // Look up user to avoid writing to DB on every single page load
-  const existingUser = await prisma.user.findUnique({
+/**
+ * Pure helper function to verify email against a whitelist list.
+ * Performs case-insensitive, whitespace-trimmed comparison.
+ */
+export function isEmailWhitelisted(email?: string | null, allowedEmails: string[] = []): boolean {
+  if (!email || typeof email !== 'string') return false;
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  return allowedEmails.some((allowed) => allowed && typeof allowed === 'string' && allowed.trim().toLowerCase() === normalized);
+}
+
+/**
+ * Verify whether authenticated Clerk user is pre-whitelisted in database.
+ * Does NOT auto-create arbitrary users with Employee role.
+ */
+export async function syncUser(): Promise<SyncUserResult> {
+  const user = await currentUser();
+  if (!user) {
+    return { isWhitelisted: false };
+  }
+
+  const email = user.emailAddresses?.[0]?.emailAddress?.toLowerCase().trim();
+  if (!email) {
+    return { isWhitelisted: false };
+  }
+
+  // 1. Check if user already exists by Clerk ID
+  let dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true }
+    include: { role: true },
   });
 
-  if (!existingUser) {
-    const email = user.emailAddresses[0]?.emailAddress;
-    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined;
+  if (!dbUser) {
+    // 2. Check if pre-whitelisted by email
+    dbUser = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive',
+        },
+      },
+      include: { role: true },
+    });
 
-    if (email) {
+    if (!dbUser) {
+      // User is not whitelisted by Admin/Owner! Block auto-creation
+      console.warn(`[Clerk Whitelist Guard] Denied access to non-whitelisted email: ${email} (Clerk ID: ${user.id})`);
+      return { isWhitelisted: false, email };
+    }
+
+    // Link clerk user id and update name if needed
+    if (dbUser.id !== user.id) {
       try {
-        let defaultRole = await prisma.role.findUnique({
-          where: { name: 'Employee' },
-        });
-        if (!defaultRole) {
-          defaultRole = await prisma.role.upsert({
-            where: { name: 'Employee' },
-            update: {},
-            create: { name: 'Employee', description: 'Standard operational employee.' },
-          });
-        }
-
-        await prisma.user.create({
+        dbUser = await prisma.user.update({
+          where: { id: dbUser.id },
           data: {
             id: user.id,
-            email,
-            name,
-            roleId: defaultRole.id,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || dbUser.name,
           },
+          include: { role: true },
         });
-        console.log(`Clerk User ${user.id} dynamically synced into Prisma DB with role: ${defaultRole.name}`);
-      } catch (e) {
-        console.error("Failed to sync Clerk User to DB:", e);
+      } catch {
+        // If ID update has FK conflicts or unique constraints, dbUser is still valid
       }
     }
   }
+
+  return {
+    isWhitelisted: true,
+    email,
+    user: dbUser,
+  };
 }

@@ -105,6 +105,18 @@ export async function authenticateUser(req: Request, _res: Response, next: NextF
       if (user) {
         req.user = user;
       }
+    } else if (process.env.NODE_ENV !== 'production') {
+      // Dev fallback: when calling from Next.js server components or local dev without headers, default to Owner
+      const defaultOwner = await prisma.user.findFirst({
+        where: { role: { name: 'Owner' } },
+        select: { id: true },
+      });
+      if (defaultOwner) {
+        const user = await resolveUser(defaultOwner.id);
+        if (user) {
+          req.user = user;
+        }
+      }
     }
     next();
   } catch (err) {

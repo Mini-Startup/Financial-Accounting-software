@@ -461,6 +461,17 @@
   .data-table tr:last-child td {
     border-bottom: none;
   }
+
+  /* High-density financial blotter data table */
+  .data-table-dense th {
+    padding: 0.5rem 0.75rem;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .data-table-dense td {
+    padding: 0.45rem 0.75rem;
+    font-size: 12px;
+  }
 }
 
 select option {

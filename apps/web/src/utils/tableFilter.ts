@@ -61,6 +61,34 @@ function getNestedValue(obj: Record<string, any>, path: string): any {
 
 export type SortDirection = 'asc' | 'desc' | null;
 
+/**
+ * Algebraic numeric parser that strips currency symbols, commas, spaces, and formatting.
+ * Preserves negative numbers and decimals. Returns null if not a parseable number or if input is a date.
+ */
+export function parseSortableNumber(val: any): number | null {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    // Exclude date patterns so they fall through to date sorting
+    if (/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/.test(trimmed)) {
+      return null;
+    }
+    // Strip currency symbols ($, ₹, د.إ, etc.), commas, spaces, percentages
+    const cleaned = trimmed.replace(/[^0-9.-]/g, '');
+    if (!cleaned || cleaned === '-' || cleaned === '.' || cleaned === '-.') return null;
+    const minusCount = (cleaned.match(/-/g) || []).length;
+    const dotCount = (cleaned.match(/\./g) || []).length;
+    if (minusCount > 1 || dotCount > 1 || (minusCount === 1 && !cleaned.startsWith('-'))) {
+      return null;
+    }
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+  return null;
+}
+
 export function sortRecords<T extends Record<string, any>>(
   records: T[],
   sortKey: keyof T | string | null,
@@ -76,17 +104,21 @@ export function sortRecords<T extends Record<string, any>>(
     if (valA === null || valA === undefined) return direction === 'asc' ? 1 : -1;
     if (valB === null || valB === undefined) return direction === 'asc' ? -1 : 1;
 
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return direction === 'asc' ? valA - valB : valB - valA;
+    // 1. Numeric Comparison (handles raw numbers and currency/formatted strings)
+    const numA = parseSortableNumber(valA);
+    const numB = parseSortableNumber(valB);
+    if (numA !== null && numB !== null) {
+      return direction === 'asc' ? numA - numB : numB - numA;
     }
 
-    // Date check
+    // 2. Date Comparison
     const dateA = Date.parse(String(valA));
     const dateB = Date.parse(String(valB));
     if (!isNaN(dateA) && !isNaN(dateB) && typeof valA === 'string' && (valA.includes('-') || valA.includes('/'))) {
       return direction === 'asc' ? dateA - dateB : dateB - dateA;
     }
 
+    // 3. String Collation
     const strA = String(valA).toLowerCase();
     const strB = String(valB).toLowerCase();
     return direction === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);

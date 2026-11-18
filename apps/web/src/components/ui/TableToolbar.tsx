@@ -17,6 +17,7 @@ import { cn } from '@/utils/cn';
 import type { AdvancedCondition } from '@/utils/tableFilter';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { ColumnSettingsPopover, ColumnDefinition } from '@/components/ui/ColumnSettingsPopover';
 
 export interface ColumnOption {
   key: string;
@@ -54,11 +55,18 @@ export interface TableToolbarProps {
   totalItems: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
+  pageSizeOptions?: Array<number | { value: number; label: string }>;
+  compactSearch?: boolean;
 
   // Custom slots
   filterSlot?: React.ReactNode;
   actionSlot?: React.ReactNode;
+  columnSettings?: {
+    columns?: ColumnDefinition[];
+    visibleColumns: string[];
+    onChange: (visibleKeys: string[]) => void;
+    storageKey?: string;
+  };
   className?: string;
 }
 
@@ -84,10 +92,13 @@ export function TableToolbar({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [15, 25, 50, 100],
+  compactSearch = false,
   filterSlot,
   actionSlot,
+  columnSettings,
   className,
 }: TableToolbarProps) {
+  const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(searchQuery));
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [conditions, setConditions] = useState<AdvancedCondition[]>(advancedConditions || []);
 
@@ -188,89 +199,166 @@ export function TableToolbar({
             </div>
           ) : (
             <>
-              {onSearchChange && (
-                <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all min-w-65 max-w-md flex-1">
-                  {/* Column targeting dropdown in front of search */}
-                  {columns && columns.length > 0 && onSearchColumnChange && (
-                    <div className="w-31.25 shrink-0 border-r border-border-light">
-                      <UniversalDropdown
-                        value={searchColumn}
-                        onChange={onSearchColumnChange}
-                        searchable={false}
-                        options={[
-                          { value: 'ALL', label: 'All Columns' },
-                          ...columns.map((c) => ({ value: c.key, label: c.label })),
-                        ]}
-                        triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
-                      />
+              {compactSearch ? (
+                <>
+                  {onSearchChange && (
+                    <div className="flex items-center">
+                      {isSearchExpanded ? (
+                        <div className="flex items-center bg-white border border-(--color-border-focus) ring-2 ring-(--color-leaf)/15 rounded-xl px-2 h-8.5 shadow-2xs transition-all w-60">
+                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1.5" />
+                          <input
+                            type="text"
+                            autoFocus
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder={searchPlaceholder}
+                            className="w-full text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
+                          />
+                          {searchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => onSearchChange('')}
+                              className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer mr-1"
+                              title="Clear search"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!searchQuery) setIsSearchExpanded(false);
+                            }}
+                            className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                            title="Close search"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsSearchExpanded(true)}
+                          className={cn(
+                            'h-8.5 w-8.5 flex items-center justify-center rounded-xl border transition-all cursor-pointer',
+                            searchQuery
+                              ? 'bg-mist text-(--color-forest) border-(--color-leaf)'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          )}
+                          title="Search trades..."
+                        >
+                          <Search className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )}
 
-                  {/* Search text input */}
-                  <div className="relative flex-1 flex items-center">
-                    <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => onSearchChange(e.target.value)}
-                      placeholder={searchPlaceholder}
-                      className="w-full h-8.5 px-2.5 text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => onSearchChange('')}
-                        className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                        title="Clear search"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Advanced Filter condition trigger button */}
-                  {onAdvancedConditionsChange && columns && columns.length > 0 && (
+                  {showFindReplaceButton && onToggleFindReplace && (
                     <button
                       type="button"
-                      onClick={() => setIsAdvancedOpen(true)}
+                      onClick={onToggleFindReplace}
                       className={cn(
-                        'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-border-light rounded-r-lg transition-colors cursor-pointer select-none',
-                        activeAdvancedCount > 0
-                          ? 'bg-mist text-(--color-forest)'
-                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                        'h-8.5 px-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer',
+                        isFindReplaceOpen
+                          ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                       )}
-                      title="Advanced Filter (AND / OR conditions)"
+                      title="Find & Replace in Table"
                     >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      {activeAdvancedCount > 0 && (
-                        <span className="w-4 h-4 bg-(--color-forest) text-white text-[9px] rounded-full flex items-center justify-center font-mono">
-                          {activeAdvancedCount}
-                        </span>
-                      )}
+                      <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
+                      <span className="hidden sm:inline">Find & Replace</span>
                     </button>
                   )}
-                </div>
-              )}
 
-              {/* Find & Replace Trigger Button */}
-              {showFindReplaceButton && onToggleFindReplace && (
-                <button
-                  type="button"
-                  onClick={onToggleFindReplace}
-                  className={cn(
-                    'h-8.5 px-2.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer',
-                    isFindReplaceOpen
-                      ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                  {filterSlot}
+                </>
+              ) : (
+                <>
+                  {onSearchChange && (
+                    <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all min-w-65 max-w-md flex-1">
+                      {/* Column targeting dropdown in front of search */}
+                      {columns && columns.length > 0 && onSearchColumnChange && (
+                        <div className="w-31.25 shrink-0 border-r border-border-light">
+                          <UniversalDropdown
+                            value={searchColumn}
+                            onChange={onSearchColumnChange}
+                            searchable={false}
+                            options={[
+                              { value: 'ALL', label: 'All Columns' },
+                              ...columns.map((c) => ({ value: c.key, label: c.label })),
+                            ]}
+                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
+                          />
+                        </div>
+                      )}
+
+                      {/* Search text input */}
+                      <div className="relative flex-1 flex items-center">
+                        <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => onSearchChange(e.target.value)}
+                          placeholder={searchPlaceholder}
+                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-charcoal placeholder:text-slate-400 outline-none"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => onSearchChange('')}
+                            className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Advanced Filter condition trigger button */}
+                      {onAdvancedConditionsChange && columns && columns.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAdvancedOpen(true)}
+                          className={cn(
+                            'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-border-light rounded-r-lg transition-colors cursor-pointer select-none',
+                            activeAdvancedCount > 0
+                              ? 'bg-mist text-(--color-forest)'
+                              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                          )}
+                          title="Advanced Filter (AND / OR conditions)"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5" />
+                          {activeAdvancedCount > 0 && (
+                            <span className="w-4 h-4 bg-(--color-forest) text-white text-[9px] rounded-full flex items-center justify-center font-mono">
+                              {activeAdvancedCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   )}
-                  title="Find & Replace in Table (Ctrl+H)"
-                >
-                  <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
-                  <span className="hidden sm:inline">Find & Replace</span>
-                </button>
-              )}
 
-              {filterSlot}
+                  {/* Find & Replace Trigger Button */}
+                  {showFindReplaceButton && onToggleFindReplace && (
+                    <button
+                      type="button"
+                      onClick={onToggleFindReplace}
+                      className={cn(
+                        'h-8.5 px-2.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer',
+                        isFindReplaceOpen
+                          ? 'bg-mist text-(--color-forest) border-(--color-leaf) shadow-2xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                      )}
+                      title="Find & Replace in Table (Ctrl+H)"
+                    >
+                      <Replace className="w-3.5 h-3.5 text-(--color-leaf)" />
+                      <span className="hidden sm:inline">Find & Replace</span>
+                    </button>
+                  )}
+
+                  {filterSlot}
+                </>
+              )}
             </>
           )}
         </div>
@@ -278,6 +366,20 @@ export function TableToolbar({
         {/* Right side: Actions & Top Pagination Toolbar */}
         <div className="flex items-center gap-3 self-end lg:self-auto flex-wrap">
           {actionSlot}
+
+          {columnSettings && (
+            <ColumnSettingsPopover
+              columns={(columnSettings.columns || columns || []).map((c) => ({
+                key: c.key,
+                label: c.label,
+                isDefault: (c as any).isDefault ?? true,
+                required: (c as any).required ?? false,
+              }))}
+              visibleColumns={columnSettings.visibleColumns}
+              onChange={columnSettings.onChange}
+              storageKey={columnSettings.storageKey}
+            />
+          )}
 
           {/* Pagination Toolbar */}
           <div className="flex items-center gap-2 text-xs text-slate-600 font-mono select-none">

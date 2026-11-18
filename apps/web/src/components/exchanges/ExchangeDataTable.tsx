@@ -3,9 +3,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ExchangeFormModal } from './ExchangeFormModal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ExchangeDeleteModal } from './ExchangeDeleteModal';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { FindAndReplace } from '@/components/ui/FindAndReplace';
+import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -22,10 +23,17 @@ const EXCHANGE_COLUMNS = [
 
 export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: any[] }) {
   const router = useRouter();
-  const [exchangesList, setExchangesList] = useState<any[]>(initialExchanges);
+  const {
+    items: exchangesList,
+    setItems: setExchangesList,
+    addEntity,
+    updateEntity,
+    removeEntity,
+    syncWithServer,
+  } = useOptimisticEntityList<any>(initialExchanges);
+
   const [editingExchange, setEditingExchange] = useState<any | null>(null);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTargetExchange, setDeleteTargetExchange] = useState<any | null>(null);
 
   // Search, Sort, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,9 +45,9 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  useMemo(() => {
-    setExchangesList(initialExchanges);
-  }, [initialExchanges]);
+  useEffect(() => {
+    syncWithServer(initialExchanges);
+  }, [initialExchanges, syncWithServer]);
 
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
@@ -93,26 +101,6 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
     const { updatedRecords, count } = replaceValueInRecords(exchangesList, columnKey, findVal, replaceVal, true);
     setExchangesList(updatedRecords);
     toast.success(`Replaced ${count} occurrences in ${columnKey}`);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges/${deleteTargetId}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Exchange deactivated successfully');
-        setDeleteTargetId(null);
-        router.refresh();
-      } else {
-        throw new Error('Failed to deactivate exchange');
-      }
-    } catch(e: any) {
-      console.error(e);
-      toast.error(e.message || 'Failed to delete right now.');
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   return (
@@ -231,7 +219,7 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
                       Edit
                     </button>
                     <button 
-                      onClick={() => setDeleteTargetId(exc.id)}
+                      onClick={() => setDeleteTargetExchange(exc)}
                       className="text-negative hover:opacity-80 font-semibold transition text-xs cursor-pointer"
                     >
                       Delete
@@ -257,18 +245,21 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
       <ExchangeFormModal 
         initialData={editingExchange} 
         onClose={() => setEditingExchange(null)} 
+        onSuccess={(updated) => {
+          if (updated) updateEntity(updated);
+          setEditingExchange(null);
+        }}
       />
     )}
 
-    <ConfirmDialog
-      isOpen={!!deleteTargetId}
-      title="Deactivate Exchange"
-      message="Are you sure you want to deactivate this exchange?"
-      variant="danger"
-      confirmLabel="Deactivate"
-      isLoading={isDeleting}
-      onConfirm={confirmDelete}
-      onCancel={() => setDeleteTargetId(null)}
+    <ExchangeDeleteModal
+      isOpen={!!deleteTargetExchange}
+      exchange={deleteTargetExchange}
+      onClose={() => setDeleteTargetExchange(null)}
+      onDeleted={(deletedId) => {
+        removeEntity(deletedId);
+        setDeleteTargetExchange(null);
+      }}
     />
     </>
   );

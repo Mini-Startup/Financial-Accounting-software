@@ -325,7 +325,7 @@ export function TradeDetailModal({
               </div>
               <div>
                 <span className="text-[11px] text-slate block">Expiry Date</span>
-                <span className="font-mono text-xs">{trade.expiry || '—'}</span>
+                <span className="font-mono text-xs">{formatDateToDDMMYY(trade.expiry) || '—'}</span>
               </div>
               <div>
                 <span className="text-[11px] text-slate block">Order ID</span>

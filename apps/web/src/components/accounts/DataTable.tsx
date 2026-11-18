@@ -9,6 +9,7 @@ import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-re
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
+import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -20,11 +21,13 @@ import { cn } from '@/utils/cn';
 import { apiFetch } from '../../utils/apiClient';
 
 const TABLE_COLUMNS = [
-  { key: 'code', label: 'Code / ID' },
-  { key: 'name', label: 'Account Name' },
+  { key: 'code', label: 'Code / ID', required: true },
+  { key: 'name', label: 'Account Name', required: true },
+  { key: 'openingBalance', label: 'Opening Balance' },
   { key: 'mobileNumber', label: 'Mobile Number' },
   { key: 'email', label: 'Email Address' },
-  { key: 'openingBalance', label: 'Opening Balance' },
+  { key: 'bankName', label: 'Bank Name', isDefault: false },
+  { key: 'ifscCode', label: 'IFSC Code', isDefault: false },
 ];
 
 export function DataTable({
@@ -41,7 +44,15 @@ export function DataTable({
   canDelete?: boolean;
 }) {
   const router = useRouter();
-  const [accountsList, setAccountsList] = useState<any[]>(initialAccounts);
+  const {
+    items: accountsList,
+    setItems: setAccountsList,
+    addEntity,
+    updateEntity,
+    removeEntity,
+    syncWithServer,
+  } = useOptimisticEntityList<any>(initialAccounts);
+
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
@@ -53,6 +64,12 @@ export function DataTable({
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('code');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'code',
+    'name',
+    'openingBalance',
+    'mobileNumber',
+  ]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -67,9 +84,9 @@ export function DataTable({
   });
 
   // Keep local list in sync with props
-  useMemo(() => {
-    setAccountsList(initialAccounts);
-  }, [initialAccounts]);
+  useEffect(() => {
+    syncWithServer(initialAccounts);
+  }, [initialAccounts, syncWithServer]);
 
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
@@ -176,17 +193,18 @@ export function DataTable({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
+            removeEntity(id);
             toast.success(`${entityLabel} deleted successfully`);
-            router.refresh();
-          } else if (res.status !== 403) {
-            toast.error('Failed to delete account');
+          } else {
+            const err = await res.json().catch(() => ({}));
+            toast.error(err.message || 'Failed to delete account');
           }
-        } catch {
-          toast.error('Failed to delete record');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete record');
         }
       },
     });
@@ -210,16 +228,20 @@ export function DataTable({
         setIsDeleting(true);
         try {
           const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          toast.success(`${count} records deleted successfully`);
+          let successCount = 0;
+          for (const id of ids) {
+            const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              removeEntity(id);
+              successCount++;
+            }
+          }
+          if (successCount > 0) {
+            toast.success(`${successCount} records deleted successfully`);
+          }
           setSelectedIds(new Set());
-          router.refresh();
         } catch {
           toast.error('Failed to delete some records');
         } finally {
@@ -260,7 +282,7 @@ export function DataTable({
   return (
     <div className="space-y-4">
       {/* Seamless Table Container with Zero Gap between Toolbar and Grid */}
-      <div className="border border-border-light rounded-xl shadow-xs overflow-hidden bg-white">
+      <div className="border border-border-light rounded-xl shadow-xs bg-white relative">
         <TableToolbar
           searchQuery={searchQuery}
           onSearchChange={(q) => {
@@ -291,6 +313,12 @@ export function DataTable({
           totalItems={totalItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
+          columnSettings={{
+            columns: TABLE_COLUMNS,
+            visibleColumns,
+            onChange: setVisibleColumns,
+            storageKey: `bizzmate_cols_accounts_${groupName}`,
+          }}
           className="border-0 rounded-none border-b border-border-light"
         />
 
@@ -481,6 +509,12 @@ export function DataTable({
           groupName={groupName}
           accounts={accountsList}
           onClose={() => setEditingAccount(null)}
+          onSuccess={(saved) => {
+            if (saved) {
+              updateEntity(saved);
+            }
+            setEditingAccount(null);
+          }}
         />
       )}
 

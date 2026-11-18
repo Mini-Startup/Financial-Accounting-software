@@ -137,6 +137,61 @@ export class UserService {
     clearUserPermissionCache(targetUserId);
     return updated;
   }
+
+  async whitelistUser(data: { email: string; name?: string; roleId?: string }, actor: AuthUser) {
+    const email = data.email.trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException('Valid email address is required.');
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+
+    if (existing) {
+      throw new BadRequestException(`User with email '${email}' is already registered or whitelisted.`);
+    }
+
+    let targetRoleId = data.roleId;
+    if (!targetRoleId) {
+      const defaultRole = await prisma.role.findFirst({
+        where: { name: { in: ['Employee', 'User'] } },
+      });
+      targetRoleId = defaultRole?.id;
+    }
+
+    if (targetRoleId) {
+      const role = await prisma.role.findUnique({ where: { id: targetRoleId } });
+      if (!role) {
+        throw new NotFoundException(`Role with ID ${targetRoleId} not found.`);
+      }
+      if (role.name.toLowerCase() === 'owner' && !actor.isOwner) {
+        throw new ForbiddenException('Only Owners can assign the Owner role to new users.');
+      }
+    }
+
+    return prisma.user.create({
+      data: {
+        email,
+        name: data.name?.trim() || null,
+        roleId: targetRoleId || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roleId: true,
+        createdAt: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+        },
+      },
+    });
+  }
 }
 
 export const userService = new UserService();

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { TradesPageManager } from '../../components/trades/TradesPageManager';
+import { safeServerFetch } from '@/utils/serverApi';
 
 export const metadata: Metadata = {
   title: 'Trades | BizzMate Accounting',
@@ -9,23 +10,14 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-async function safeFetch(url: string) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (err) {
-    console.error(`Failed to fetch from ${url}:`, err);
-    return [];
-  }
-}
-
 export default async function TradesPage() {
-  const [exchanges, accounts, scripts, trades] = await Promise.all([
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges?active=true`),
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`),
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts`),
-    safeFetch(`${process.env.NEXT_PUBLIC_API_URL}/trades`),
+  const [exchanges, accounts, scripts, trades, settlements, expiries] = await Promise.all([
+    safeServerFetch('/exchanges?active=true'),
+    safeServerFetch('/account-masters'),
+    safeServerFetch('/scripts'),
+    safeServerFetch('/trades'),
+    safeServerFetch('/settlement/list', []),
+    safeServerFetch('/expiry-dates?activeOnly=true', []),
   ]);
 
   return (
@@ -35,6 +27,8 @@ export default async function TradesPage() {
         accounts={accounts} 
         scripts={scripts} 
         initialTrades={trades} 
+        settlements={settlements}
+        initialExpiries={expiries}
       />
     </Suspense>
   );

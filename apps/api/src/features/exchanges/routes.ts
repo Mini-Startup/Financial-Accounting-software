@@ -25,6 +25,13 @@ router.get('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:id/impact', async (req, res, next) => {
+  try {
+    const result = await exchangesService.getImpact(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.patch('/:id', async (req, res, next) => {
   try {
     const result = await exchangesService.update(req.params.id, req.body);

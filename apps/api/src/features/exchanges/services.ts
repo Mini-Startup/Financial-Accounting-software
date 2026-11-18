@@ -13,7 +13,9 @@ export class ExchangesService {
   }
 
   async findAll(activeOnly?: boolean) {
-    const where: Prisma.ExchangeWhereInput = {};
+    const where: Prisma.ExchangeWhereInput = {
+      isDeleted: false,
+    };
 
     if (activeOnly) {
       where.isActive = true;
@@ -27,8 +29,30 @@ export class ExchangesService {
 
   async findOne(id: string) {
     const exchange = await prisma.exchange.findUnique({ where: { id } });
-    if (!exchange) throw new NotFoundException(`Exchange ${id} not found`);
+    if (!exchange || exchange.isDeleted) throw new NotFoundException(`Exchange ${id} not found`);
     return exchange;
+  }
+
+  async getImpact(id: string) {
+    const exchange = await this.findOne(id);
+    const activeScriptsCount = await prisma.script.count({
+      where: { exchangeId: id, isDeleted: false },
+    });
+    const totalTradesCount = await prisma.trade.count({
+      where: { exchangeId: id, isDeleted: false },
+    });
+    const openTradesCount = await prisma.trade.count({
+      where: { exchangeId: id, settlementId: null, isDeleted: false },
+    });
+
+    return {
+      exchange,
+      activeScriptsCount,
+      totalTradesCount,
+      openTradesCount,
+      canHardDelete: totalTradesCount === 0 && activeScriptsCount === 0,
+      warning: `Deleting exchange ${exchange.code} will affect ${activeScriptsCount} configured scripts and ${totalTradesCount} historical trades. Any future trade files containing exchange code ${exchange.code} will fail validation.`,
+    };
   }
 
   async update(id: string, data: { code?: string; name?: string; isActive?: boolean }) {
@@ -47,7 +71,11 @@ export class ExchangesService {
     await this.findOne(id); // ensure exists
     return prisma.exchange.update({
       where: { id },
-      data: { isActive: false },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        isActive: false,
+      },
     });
   }
 }

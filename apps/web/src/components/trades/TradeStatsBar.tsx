@@ -1,5 +1,6 @@
 'use client';
 
+import { BarChart3, CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Users } from 'lucide-react';
 import type { ParseResult } from '../../lib/tradeParser';
 
 interface TradeStatsBarProps {
@@ -13,37 +14,43 @@ export function TradeStatsBar({ result }: TradeStatsBarProps) {
 
   const stats = [
     {
-      icon: '📊',
+      icon: BarChart3,
+      iconColor: 'text-indigo-600',
       iconBg: '#e0e7ff',
       label: 'Total Rows',
       value: result.totalRows,
     },
     {
-      icon: '✅',
+      icon: CheckCircle2,
+      iconColor: 'text-emerald-600',
       iconBg: '#dcfce7',
       label: 'Parsed',
       value: result.successCount,
     },
     {
-      icon: '⚠️',
+      icon: AlertTriangle,
+      iconColor: 'text-amber-600',
       iconBg: '#fef3c7',
       label: 'Errors',
       value: result.errorCount,
     },
     {
-      icon: '📈',
+      icon: TrendingUp,
+      iconColor: 'text-emerald-700',
       iconBg: 'rgba(13, 159, 79, 0.1)',
       label: 'Buy',
       value: buyCount,
     },
     {
-      icon: '📉',
+      icon: TrendingDown,
+      iconColor: 'text-rose-600',
       iconBg: 'rgba(214, 51, 90, 0.1)',
       label: 'Sell',
       value: sellCount,
     },
     {
-      icon: '👤',
+      icon: Users,
+      iconColor: 'text-sky-600',
       iconBg: '#e0f2fe',
       label: 'Clients',
       value: uniqueClients,
@@ -52,20 +59,23 @@ export function TradeStatsBar({ result }: TradeStatsBarProps) {
 
   return (
     <div className="trade-stats-bar trade-animate-in">
-      {stats.map((stat) => (
-        <div className="trade-stat-chip" key={stat.label}>
-          <div
-            className="trade-stat-icon"
-            style={{ background: stat.iconBg }}
-          >
-            {stat.icon}
+      {stats.map((stat) => {
+        const IconComponent = stat.icon;
+        return (
+          <div className="trade-stat-chip" key={stat.label}>
+            <div
+              className="trade-stat-icon flex items-center justify-center"
+              style={{ background: stat.iconBg }}
+            >
+              <IconComponent className={`w-3.5 h-3.5 ${stat.iconColor}`} />
+            </div>
+            <div className="flex flex-col">
+              <span className="trade-stat-label">{stat.label}</span>
+              <span className="trade-stat-value">{stat.value.toLocaleString()}</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="trade-stat-label">{stat.label}</span>
-            <span className="trade-stat-value">{stat.value.toLocaleString()}</span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
