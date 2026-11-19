@@ -210,6 +210,7 @@ export function ScriptDataTable({
       {/* Top Controls Toolbar */}
       <TableToolbar
         tableName="Scripts"
+        records={scriptsList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

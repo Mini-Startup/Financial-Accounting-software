@@ -395,6 +395,45 @@ const REGISTRY: SearchItem[] = [
 
 const MAIN_TABS: MainTab[] = ['All', 'Pages', 'Actions', 'Shortcuts'];
 
+function getRecordValue(record: any, key: string): any {
+  if (!record || !key) return '';
+  if (key.includes('.')) {
+    const parts = key.split('.');
+    let cur = record;
+    for (const p of parts) {
+      if (cur == null) return '';
+      cur = cur[p];
+    }
+    return cur ?? '';
+  }
+  return record[key] ?? '';
+}
+
+function highlightMatch(text: any, query: string): React.ReactNode {
+  const str = String(text ?? '');
+  if (!query?.trim() || !str) return str;
+  const terms = query
+    .toLowerCase()
+    .trim()
+    .split(/[,\s]+/)
+    .filter(Boolean);
+  if (terms.length === 0) return str;
+
+  const escapedTerms = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+  const parts = str.split(pattern);
+
+  return parts.map((part, i) =>
+    terms.some((t) => part.toLowerCase() === t.toLowerCase()) ? (
+      <mark key={i} className="bg-amber-200 text-amber-950 font-bold px-0.5 rounded">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
 export function UniversalSearch() {
   const { isOpen, mode, setMode, closeModal, activeTable } = useTableSearch();
   const [query, setQuery] = useState('');
@@ -402,6 +441,7 @@ export function UniversalSearch() {
   const [subCategory, setSubCategory] = useState<'All' | 'Blotter' | 'Report' | 'Master'>('All');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [keyboardIndex, setKeyboardIndex] = useState<number>(-1);
+  const [selectedTableIndex, setSelectedTableIndex] = useState(0);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const tableInputRef = useRef<HTMLInputElement>(null);
@@ -418,10 +458,122 @@ export function UniversalSearch() {
         setKeyboardIndex(-1);
         setTimeout(() => inputRef.current?.focus(), 60);
       } else {
+        setSelectedTableIndex(0);
         setTimeout(() => tableInputRef.current?.focus(), 60);
       }
     }
   }, [isOpen, mode]);
+
+  // Reset selected table index when table search query changes
+  useEffect(() => {
+    setSelectedTableIndex(0);
+  }, [activeTable?.searchQuery]);
+
+  // Primary 2 to 3 columns to display in the modal table
+  const primaryCols = useMemo(() => {
+    if (!activeTable?.columns || activeTable.columns.length === 0) return [];
+    return activeTable.columns.slice(0, 3);
+  }, [activeTable?.columns]);
+
+  // Filtered rows for the current active table with match detection
+  const filteredTableRows = useMemo(() => {
+    const records = activeTable?.records || [];
+    const q = (activeTable?.searchQuery || '').trim().toLowerCase();
+    const columns = activeTable?.columns || [];
+
+    if (!records.length) return [];
+
+    // Target columns to search
+    let targetCols = columns;
+    if (
+      activeTable?.selectedColumns &&
+      activeTable.selectedColumns.length > 0 &&
+      !activeTable.selectedColumns.includes('ALL')
+    ) {
+      targetCols = columns.filter((c) => activeTable.selectedColumns?.includes(c.key));
+    } else if (activeTable?.searchColumn && activeTable.searchColumn !== 'ALL') {
+      targetCols = columns.filter((c) => c.key === activeTable.searchColumn);
+    }
+
+    // If search query is empty, show first 25 records
+    if (!q) {
+      return records.slice(0, 25).map((record) => ({
+        record,
+        matchedColumn: null,
+      }));
+    }
+
+    const terms = q.split(/[,\s]+/).filter(Boolean);
+    const results: { record: any; matchedColumn: { key: string; label: string; value: string } | null }[] = [];
+
+    for (const record of records) {
+      let matchedColInfo: { key: string; label: string; value: string } | null = null;
+      let isMatch = false;
+
+      // 1. Search in targeted columns
+      for (const col of targetCols) {
+        const val = String(getRecordValue(record, col.key) ?? '');
+        const lowerVal = val.toLowerCase();
+
+        const matchesAll = terms.every((t) => lowerVal.includes(t));
+        const matchesAny = terms.some((t) => lowerVal.includes(t));
+
+        if (matchesAll || (terms.length > 1 && matchesAny)) {
+          isMatch = true;
+          if (!matchedColInfo || matchesAll) {
+            matchedColInfo = {
+              key: col.key,
+              label: col.label,
+              value: val,
+            };
+            if (matchesAll) break;
+          }
+        }
+      }
+
+      // 2. If not matched in targetCols and searching ALL columns, check any other columns
+      if (!isMatch && (!activeTable?.searchColumn || activeTable.searchColumn === 'ALL')) {
+        for (const col of columns) {
+          const val = String(getRecordValue(record, col.key) ?? '');
+          const lowerVal = val.toLowerCase();
+          if (terms.some((t) => lowerVal.includes(t))) {
+            isMatch = true;
+            matchedColInfo = {
+              key: col.key,
+              label: col.label,
+              value: val,
+            };
+            break;
+          }
+        }
+      }
+
+      if (isMatch) {
+        results.push({
+          record,
+          matchedColumn: matchedColInfo,
+        });
+      }
+    }
+
+    return results;
+  }, [
+    activeTable?.records,
+    activeTable?.searchQuery,
+    activeTable?.columns,
+    activeTable?.searchColumn,
+    activeTable?.selectedColumns,
+  ]);
+
+  const handleApplyFilterAndClose = useCallback(
+    (selectedRecord?: any) => {
+      if (selectedRecord && activeTable?.onSelectRow) {
+        activeTable.onSelectRow(selectedRecord);
+      }
+      closeModal();
+    },
+    [activeTable, closeModal]
+  );
 
   // Filter items based on active tab & query
   const filteredItems = useMemo(() => {
@@ -503,7 +655,10 @@ export function UniversalSearch() {
       onClick={closeModal}
     >
       <div
-        className="bg-white border border-slate-200/90 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className={cn(
+          'bg-white border border-slate-200/90 rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 transition-all',
+          mode === 'table' ? 'max-w-3xl' : 'max-w-2xl'
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Mode Segmented Switcher (Ctrl+K App Search / Ctrl+F Table Filter) */}
@@ -578,11 +733,24 @@ export function UniversalSearch() {
                 placeholder={`Search ${activeTable?.tableName || 'table'} records (e.g. Reliance, +91 98765, active)...`}
                 className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-emerald-600"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setSelectedTableIndex((prev) =>
+                      filteredTableRows.length > 0 ? (prev < filteredTableRows.length - 1 ? prev + 1 : 0) : 0
+                    );
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setSelectedTableIndex((prev) =>
+                      filteredTableRows.length > 0 ? (prev > 0 ? prev - 1 : filteredTableRows.length - 1) : 0
+                    );
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const targetRecord = filteredTableRows[selectedTableIndex]?.record;
+                    handleApplyFilterAndClose(targetRecord);
+                  } else if (e.key === 'Escape') {
                     e.preventDefault();
                     closeModal();
-                  }
-                  if (e.key === 'Tab') {
+                  } else if (e.key === 'Tab') {
                     e.preventDefault();
                     setMode('app');
                   }
@@ -668,62 +836,209 @@ export function UniversalSearch() {
               </div>
             )}
 
-            {/* Live Filter Summary Card */}
-            <div className="p-8 flex flex-col items-center justify-center text-center">
-              <div className="size-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3.5 shadow-2xs">
-                <Layers className="w-7 h-7" />
+            {/* Live Filter Preview Table */}
+            {activeTable?.records && activeTable.records.length > 0 ? (
+              <div className="relative overflow-hidden flex flex-col">
+                {filteredTableRows.length > 0 ? (
+                  <div className="overflow-x-auto max-h-[380px] overflow-y-auto divide-y divide-slate-100">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200">
+                        <tr>
+                          {primaryCols.map((col) => (
+                            <th
+                              key={col.key}
+                              className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider"
+                            >
+                              {col.label}
+                            </th>
+                          ))}
+                          <th className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            {activeTable?.searchQuery
+                              ? 'Matched In'
+                              : activeTable?.columns[3]?.label || 'Status'}
+                          </th>
+                          <th className="w-20 px-3 py-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {filteredTableRows.map((row, idx) => {
+                          const isSelected = idx === selectedTableIndex;
+                          return (
+                            <tr
+                              key={row.record.id || idx}
+                              onClick={() => handleApplyFilterAndClose(row.record)}
+                              onMouseEnter={() => setSelectedTableIndex(idx)}
+                              className={cn(
+                                'transition-colors duration-75 cursor-pointer group',
+                                isSelected
+                                  ? 'bg-emerald-50/70 border-l-4 border-l-emerald-600'
+                                  : 'hover:bg-slate-50/80 border-l-4 border-l-transparent'
+                              )}
+                            >
+                              {primaryCols.map((col) => {
+                                const val = String(getRecordValue(row.record, col.key) ?? '');
+                                return (
+                                  <td
+                                    key={col.key}
+                                    className={cn(
+                                      'px-4 py-2.5 text-xs text-slate-800 font-normal truncate max-w-[180px]',
+                                      isSelected && 'text-slate-950 font-medium'
+                                    )}
+                                  >
+                                    {highlightMatch(val, activeTable?.searchQuery || '')}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-2.5 text-xs truncate max-w-[220px]">
+                                {row.matchedColumn ? (
+                                  <div className="inline-flex items-center gap-1.5 max-w-full">
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      {row.matchedColumn.label}
+                                    </span>
+                                    <span className="text-xs text-slate-700 truncate font-mono">
+                                      {highlightMatch(row.matchedColumn.value, activeTable?.searchQuery || '')}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">
+                                    {activeTable?.columns[3]
+                                      ? String(getRecordValue(row.record, activeTable.columns[3].key) ?? '—')
+                                      : '—'}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="w-20 px-3 py-2.5 text-right">
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold transition-opacity select-none',
+                                    isSelected
+                                      ? 'bg-emerald-600 text-white shadow-2xs opacity-100'
+                                      : 'opacity-0 group-hover:opacity-70 text-slate-500 bg-slate-100'
+                                  )}
+                                >
+                                  Enter ↵
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="size-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 shadow-2xs">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      No records found matching &ldquo;{activeTable?.searchQuery}&rdquo;
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                      Try checking your spelling, choosing &ldquo;✦ All Columns&rdquo;, or searching for a different keyword.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        activeTable?.onSearchChange('');
+                        tableInputRef.current?.focus();
+                      }}
+                      className="mt-3.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                    >
+                      Clear Search
+                    </button>
+                  </div>
+                )}
               </div>
-              <h3 className="text-base font-bold text-slate-900">
-                {activeTable?.searchQuery
-                  ? `Filtering "${activeTable.searchQuery}" in ${activeTable.tableName}`
-                  : `Filtering ${activeTable?.tableName || 'Current Table'}`}
-              </h3>
-              <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
-                {activeTable?.searchQuery
-                  ? `Table records behind this modal are updated live. Press Enter or click below to view the filtered table.`
-                  : `Type above to filter rows live, or click column chips to narrow your search to specific fields.`}
-              </p>
+            ) : (
+              /* Fallback if records are still loading */
+              <div className="p-8 flex flex-col items-center justify-center text-center">
+                <div className="size-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3.5 shadow-2xs">
+                  <Layers className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {activeTable?.searchQuery
+                    ? `Filtering "${activeTable.searchQuery}" in ${activeTable.tableName}`
+                    : `Filtering ${activeTable?.tableName || 'Current Table'}`}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
+                  Press Enter or click below to view the filtered table on the main page.
+                </p>
 
-              <div className="flex items-center gap-3 mt-6">
+                <div className="flex items-center gap-3 mt-6">
+                  {activeTable?.searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => activeTable.onSearchChange('')}
+                      className="h-8.5 px-4 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleApplyFilterAndClose()}
+                    className="h-8.5 px-5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+                  >
+                    <span>Apply & View Table</span>
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-700/60 text-white font-bold">
+                      Enter ↵
+                    </kbd>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Bar for Table Filter */}
+            <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                    ↑↓
+                  </kbd>
+                  <span>navigate rows</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                    ↵
+                  </kbd>
+                  <span>show on page</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                    tab
+                  </kbd>
+                  <span>switch to app search</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                    esc
+                  </kbd>
+                  <span>dismiss</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                {activeTable?.records && (
+                  <span className="text-slate-500 font-sans font-semibold">
+                    {activeTable.searchQuery
+                      ? `${filteredTableRows.length} match${filteredTableRows.length === 1 ? '' : 'es'} in ${activeTable.tableName}`
+                      : `${activeTable.records.length} records in ${activeTable.tableName}`}
+                  </span>
+                )}
                 {activeTable?.searchQuery && (
                   <button
                     type="button"
-                    onClick={() => activeTable.onSearchChange('')}
-                    className="h-8.5 px-4 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                    onClick={() => {
+                      activeTable.onSearchChange('');
+                      tableInputRef.current?.focus();
+                    }}
+                    className="text-slate-500 hover:text-slate-900 underline text-xs cursor-pointer font-medium"
                   >
                     Clear Filter
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="h-8.5 px-5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2 active:scale-95"
-                >
-                  <span>Apply & View Table</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-700/60 text-white font-bold">
-                    Enter ↵
-                  </kbd>
-                </button>
               </div>
-            </div>
-
-            {/* Footer Bar for Table Filter */}
-            <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-              <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">tab</kbd>
-                  <span>switch to app search</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">↵</kbd>
-                  <span>apply filter</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">esc</kbd>
-                  <span>dismiss</span>
-                </span>
-              </div>
-              <span className="text-slate-400 font-sans">{activeTable?.tableName} Table Search</span>
             </div>
           </div>
         ) : (

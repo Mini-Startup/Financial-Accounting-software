@@ -286,6 +286,7 @@ export function DataTable({
       <div className="border border-border-light rounded-xl shadow-xs bg-white relative">
         <TableToolbar
           tableName={entityLabel === 'Broker' ? 'Brokers' : 'Clients'}
+          records={accountsList}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);

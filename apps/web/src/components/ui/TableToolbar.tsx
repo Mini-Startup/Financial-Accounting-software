@@ -28,6 +28,7 @@ export interface ColumnOption {
 
 export interface TableToolbarProps {
   tableName?: string;
+  records?: any[];
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   searchPlaceholder?: string;
@@ -38,6 +39,7 @@ export interface TableToolbarProps {
   onSearchColumnChange?: (col: string) => void;
   selectedColumns?: string[];
   onSelectedColumnsChange?: (cols: string[]) => void;
+  onSelectRow?: (row: any) => void;
 
   // Advanced search conditions
   advancedConditions?: AdvancedCondition[];
@@ -77,6 +79,7 @@ export interface TableToolbarProps {
 
 export function TableToolbar({
   tableName,
+  records,
   searchQuery = '',
   onSearchChange,
   searchPlaceholder = 'Type to search...',
@@ -85,6 +88,7 @@ export function TableToolbar({
   onSearchColumnChange,
   selectedColumns,
   onSelectedColumnsChange,
+  onSelectRow,
   advancedConditions,
   onAdvancedConditionsChange,
   showFindReplaceButton = false,
@@ -117,12 +121,14 @@ export function TableToolbar({
       id: toolbarId,
       tableName: tableName || 'Table',
       columns: columns || [],
+      records,
       searchQuery: searchQuery || '',
       onSearchChange,
       searchColumn,
       onSearchColumnChange,
       selectedColumns,
       onSelectedColumnsChange,
+      onSelectRow,
       totalItems,
       filteredItems: totalItems,
     });
@@ -131,12 +137,14 @@ export function TableToolbar({
     toolbarId,
     tableName,
     columns,
+    records,
     searchQuery,
     onSearchChange,
     searchColumn,
     onSearchColumnChange,
     selectedColumns,
     onSelectedColumnsChange,
+    onSelectRow,
     totalItems,
   ]);
 

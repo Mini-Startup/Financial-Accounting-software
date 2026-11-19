@@ -675,6 +675,7 @@ export function TradesPageManager({
       <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
         <TableToolbar
           tableName="Trades"
+          records={trades}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);

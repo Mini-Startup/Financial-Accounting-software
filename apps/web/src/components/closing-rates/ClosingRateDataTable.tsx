@@ -224,6 +224,7 @@ export function ClosingRateDataTable({
       {/* Top Controls Toolbar */}
       <TableToolbar
         tableName="Closing Rates"
+        records={ratesList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

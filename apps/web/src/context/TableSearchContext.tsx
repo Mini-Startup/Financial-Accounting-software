@@ -11,12 +11,14 @@ export interface ActiveTableRegistration {
   id: string;
   tableName: string;
   columns: TableColumnOption[];
+  records?: any[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   searchColumn?: string;
   onSearchColumnChange?: (col: string) => void;
   selectedColumns?: string[];
   onSelectedColumnsChange?: (cols: string[]) => void;
+  onSelectRow?: (row: any) => void;
   totalItems?: number;
   filteredItems?: number;
 }

@@ -243,6 +243,7 @@ export function AccountMasterPageManager({
       {/* Top Controls Toolbar */}
       <TableToolbar
         tableName="Accounts"
+        records={accounts}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

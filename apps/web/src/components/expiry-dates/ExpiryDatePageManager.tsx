@@ -240,6 +240,7 @@ export function ExpiryDatePageManager({
       {/* Standard TableToolbar (identical to Currency, Exchange, and Script pages) */}
       <TableToolbar
         tableName="Expiry Dates"
+        records={expiries}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);
