@@ -795,104 +795,59 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         </div>
       )}
 
-      {/* Top Configuration Panel */}
-      <div className="card shadow-md border border-border-light p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <div className="form-field">
-            <label className="form-label form-label--required flex items-center justify-between">
-              <span>Broker Selection</span>
-              {!selectedBrokerId && (
-                <span className="text-[10px] text-rose-600 font-bold">Required</span>
-              )}
-            </label>
-            <UniversalDropdown
-              value={selectedBrokerId}
-              options={brokers.map((b) => ({
-                value: b.id,
-                label: `${b.name} (${b.code})`,
-              }))}
-              onChange={(val) => setSelectedBrokerId(val)}
-              placeholder="Select Broker (Required)"
-              disabled={isProcessing}
-              onAddClick={() => setShowBrokerModal(true)}
-              addLabel="Add Broker"
-            />
-          </div>
-
-          {!isDubaiImport && (
-            <div className="form-field">
-              <label className="form-label form-label--required">Exchange Selection</label>
-              <UniversalDropdown
-                value={selectedExchangeId}
-                options={exchanges.map((ex) => ({
-                  value: ex.id,
-                  label: `${ex.code} ${ex.name ? `(${ex.name})` : ''}`,
-                }))}
-                onChange={(val) => setSelectedExchangeId(val)}
-                placeholder="Select Exchange"
-                disabled={isProcessing}
-                onAddClick={() => setShowExchangeModal(true)}
-                addLabel="Add Exchange"
-              />
-            </div>
-          )}
-
-          <div className="form-field">
-            <label className="form-label form-label--required">Import Type</label>
-            <UniversalDropdown
-              value={selectedImportType}
-              options={[
-                { value: 'dubai_trade_fno', label: 'Trade FNO (Dubai)' },
-              ]}
-              onChange={(val) => setSelectedImportType(val as any)}
-              disabled={true}
-            />
-          </div>
-
-          <div>
-            <label className="form-label mb-2">Upload Trade File</label>
-            <div className="flex gap-2">
-              <input
-                type="file"
-                ref={inputRef}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) processFile(f);
-                }}
-                accept=".txt, .csv, .xlsx, .xls"
-                className="hidden"
-                id="file-upload-input"
-              />
-              <label
-                htmlFor="file-upload-input"
-                className="btn btn--secondary flex-1 flex items-center justify-center gap-2 cursor-pointer py-2.5"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-(--color-primary)" />
-                <span>Browse CSV / Excel</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {fileName && (
-          <div className="text-xs text-slate font-semibold mt-4 bg-snow px-3 py-1.5 rounded-lg border border-border-light w-fit flex items-center gap-1.5">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-(--color-primary)" />
-            Selected File: <span className="text-charcoal font-mono">{fileName}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Step = UPLOAD */}
+      {/* Step = UPLOAD Configuration & File Dropzone (Intelligent, compact single card) */}
       {step === 'UPLOAD' && (
-        <div className="max-w-3xl mx-auto py-6">
-          <UniversalFileUploader
-            onFileSelect={processFile}
-            isProcessing={isProcessing}
-            fileName={fileName}
-            accept=".txt, .csv, .xlsx, .xls"
-            title="Drag & Drop your Dubai FNO Trade file here"
-            description="Supports CSV, TXT, Excel files. You can also paste clipboard data (Ctrl+V)."
-          />
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-2xs space-y-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="form-field">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center justify-between mb-1.5">
+                  <span>Select Broker <span className="text-rose-500">*</span></span>
+                  {!selectedBrokerId && (
+                    <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">Required</span>
+                  )}
+                </label>
+                <UniversalDropdown
+                  value={selectedBrokerId}
+                  options={brokers.map((b) => ({
+                    value: b.id,
+                    label: `${b.name} (${b.code})`,
+                  }))}
+                  onChange={(val) => setSelectedBrokerId(val)}
+                  placeholder="Select Broker for Settlement..."
+                  disabled={isProcessing}
+                  onAddClick={() => setShowBrokerModal(true)}
+                  addLabel="Add Broker"
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5 block">
+                  Blotter Format
+                </label>
+                <UniversalDropdown
+                  value={selectedImportType}
+                  options={[
+                    { value: 'dubai_trade_fno', label: 'Trade FNO (Dubai Format)' },
+                  ]}
+                  onChange={(val) => setSelectedImportType(val as any)}
+                  disabled={true}
+                />
+              </div>
+            </div>
+
+            {/* Direct File Dropzone */}
+            <div className="pt-2">
+              <UniversalFileUploader
+                onFileSelect={processFile}
+                isProcessing={isProcessing}
+                fileName={fileName}
+                accept=".txt, .csv, .xlsx, .xls"
+                title="Select or Drop Trade Blotter File"
+                description="Supports CSV, TXT, Excel files (.xlsx, .xls) up to 25MB."
+              />
+            </div>
+          </div>
         </div>
       )}
 

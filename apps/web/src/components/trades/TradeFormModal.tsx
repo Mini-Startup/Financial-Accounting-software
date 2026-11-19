@@ -767,7 +767,7 @@ export function TradeFormModal({
                       placeholder="e.g. 100 or -50"
                       disabled={isLocked}
                       className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none text-left',
                         isExistingTrade
                           ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
                           : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
@@ -791,7 +791,7 @@ export function TradeFormModal({
                       placeholder="0.00"
                       disabled={isLocked}
                       className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none text-left',
                         isExistingTrade
                           ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
                           : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',

@@ -196,14 +196,9 @@ export function ClosingRateFormModal({
                 <TrendingUp className="w-4 h-4 stroke-[2.2]" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                    {initialData ? 'Edit Closing Rate' : 'Add Closing Rate'}
-                  </h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
-                    Rate
-                  </span>
-                </div>
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {initialData ? 'Edit Closing Rate' : 'Add Closing Rate'}
+                </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Daily settlement closing rates for scripts & options
                 </p>

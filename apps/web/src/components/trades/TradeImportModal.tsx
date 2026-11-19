@@ -50,7 +50,12 @@ export function TradeImportModal({ isOpen, onClose, onComplete }: TradeImportMod
     >
       <div
         ref={modalRef}
-        className="w-[98vw] max-w-7xl h-[94vh] max-h-[94vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+        className={cn(
+          "flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transition-all duration-200",
+          step === 'PREVIEW'
+            ? "w-[98vw] max-w-7xl h-[92vh] max-h-[92vh]"
+            : "w-full max-w-xl max-h-[85vh]"
+        )}
       >
         {/* Modal Header */}
         <div className="px-6 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">

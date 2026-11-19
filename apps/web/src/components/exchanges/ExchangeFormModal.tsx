@@ -103,37 +103,32 @@ export function ExchangeFormModal({
         ref={modalRef}
         className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
       >
-        {/* Unified Modal Header */}
-        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+        {/* Clean Modal Header — No redundant badge */}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
-              <Building2 className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Building2 className="w-4 h-4 stroke-[2]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                  {initialData?.id ? 'Edit Exchange' : 'Create New Exchange'}
-                </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
-                  Exchange
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                {initialData?.id ? 'Edit Exchange' : 'Create New Exchange'}
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">Market exchange definition (e.g. SGX, NSE, DGCX)</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form id="exchangeForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          <div className="p-6 space-y-4 flex-1 bg-white">
+        <form id="exchangeForm" onSubmit={handleSubmit} className="flex-1 flex flex-col">
+          <div className="p-5 space-y-3.5 bg-white">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                 Exchange Code <span className="text-rose-500">*</span>
               </label>
               <input
@@ -143,12 +138,12 @@ export function ExchangeFormModal({
                 value={formData.code}
                 onChange={handleChange}
                 placeholder="e.g. SGX"
-                className="w-full h-10 px-3.5 text-sm uppercase font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                className="w-36 h-9 px-3 text-xs uppercase font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                 Exchange Full Name
               </label>
               <input
@@ -156,11 +151,11 @@ export function ExchangeFormModal({
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g. Singapore Exchange"
-                className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
               />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <label className="flex items-center gap-2.5 text-xs text-slate-700 select-none cursor-pointer">
                 <CustomCheckbox
                   id="exchangeActive"
@@ -175,7 +170,7 @@ export function ExchangeFormModal({
           </div>
 
           {/* Unified Modal Footer */}
-          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+          <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}

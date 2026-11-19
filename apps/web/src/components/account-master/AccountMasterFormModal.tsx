@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Building2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 
@@ -161,23 +161,18 @@ export function AccountMasterFormModal({
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-4xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
       >
-        {/* Unified Modal Header */}
-        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+        {/* Clean Modal Header — No GL box, no redundant badges */}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
-              <span className="text-xs font-bold font-mono">GL</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Building2 className="w-4 h-4 stroke-[2]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                  {initialData ? 'Edit Account Master' : 'Create New Account Master'}
-                </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
-                  Master
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                {initialData ? 'Edit Account Master' : 'Create New Account Master'}
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 General ledger accounts, banking parameters, and contact directory
               </p>
@@ -185,70 +180,71 @@ export function AccountMasterFormModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-white">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+          <div className="p-5 space-y-3.5 bg-white">
             {/* Duplicate Warning Banner */}
             {isDuplicate && (
-              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
-                <div className="space-y-0.5">
-                  <div className="font-bold text-amber-950">Account Master Already Exists</div>
-                  <div className="text-[11px] text-amber-850">
-                    {duplicateCodeAccount && (
-                      <p>An account with code <strong>&quot;{formData.code.trim()}&quot;</strong> already exists ({duplicateCodeAccount.name}).</p>
-                    )}
-                    {duplicateNameAccount && (
-                      <p>An account with name <strong>&quot;{formData.name.trim()}&quot;</strong> already exists in this group.</p>
-                    )}
-                    Duplicate entries are blocked.
-                  </div>
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2 text-xs text-amber-900 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px]">
+                  <span className="font-bold">Account Master Already Exists: </span>
+                  {duplicateCodeAccount && `Code "${formData.code.trim()}" is already assigned to ${duplicateCodeAccount.name}. `}
+                  {duplicateNameAccount && `Name "${formData.name.trim()}" already exists in this group. `}
+                  Duplicate entries are blocked.
                 </div>
               </div>
             )}
 
-            {/* Basic Account Master Section */}
-            <div className="space-y-3.5">
-              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100">
-                1. Basic Information
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Account Code <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    name="code"
-                    value={formData.code}
-                    onChange={handleChange}
-                    placeholder="e.g. ACC-001"
-                    className="w-full h-10 px-3.5 text-sm font-mono uppercase rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
+            {/* Intelligent 2-Column Space-Efficient Layout — No Scrollbars */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              {/* Left Column: Account Profile & Contact */}
+              <div className="space-y-3 bg-slate-50/40 p-3.5 rounded-xl border border-slate-200/70">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
+                  <span>1. General Ledger & Profile</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Account Group <span className="text-rose-500">*</span>
-                  </label>
-                  <UniversalDropdown
-                    value={String(formData.groupId)}
-                    options={allowedGroups.map((g) => ({
-                      value: String(g.id),
-                      label: g.name,
-                    }))}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, groupId: Number(val) }))}
-                    placeholder="Select Group"
-                  />
+                {/* Code (compact) + Group (flexible) */}
+                <div className="flex items-center gap-3">
+                  <div className="w-36 shrink-0">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Code <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      name="code"
+                      value={formData.code}
+                      onChange={handleChange}
+                      placeholder="e.g. ACC-001"
+                      className="w-full h-9 px-3 text-xs font-mono font-bold uppercase rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Account Group <span className="text-rose-500">*</span>
+                    </label>
+                    <UniversalDropdown
+                      value={String(formData.groupId)}
+                      options={allowedGroups.map((g) => ({
+                        value: String(g.id),
+                        label: g.name,
+                      }))}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, groupId: Number(val) }))}
+                      placeholder="Select Group"
+                    />
+                  </div>
                 </div>
 
+                {/* Account Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
                     Account Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -256,245 +252,224 @@ export function AccountMasterFormModal({
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="e.g. HDFC Bank Ltd"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="e.g. HDFC Bank Ltd or Office Expenses"
+                    className="w-full h-9 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Opening Balance
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="openingBalance"
-                    value={formData.openingBalance}
-                    onChange={handleChange}
-                    className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    placeholder="0.00"
-                  />
+                {/* Opening Balance */}
+                <div className="flex items-center gap-3">
+                  <div className="w-40 shrink-0">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Opening Balance
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="openingBalance"
+                      value={formData.openingBalance}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all text-left"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <span className="text-[11px] text-slate-400 pt-5 font-mono">
+                    + Credit / - Debit
+                  </span>
+                </div>
+
+                {/* Communication Numbers */}
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Mobile Number
+                    </label>
+                    <input
+                      name="mobileNumber"
+                      value={formData.mobileNumber}
+                      onChange={handleChange}
+                      placeholder="+91 98765 43210"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      WhatsApp Number
+                    </label>
+                    <input
+                      name="whatsappNumber"
+                      value={formData.whatsappNumber}
+                      onChange={handleChange}
+                      placeholder="+91 98765 43210"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="account@company.com"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Office Landline
+                    </label>
+                    <input
+                      name="officeNumber"
+                      value={formData.officeNumber}
+                      onChange={handleChange}
+                      placeholder="022-12345678"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Contact Details */}
-            <div className="space-y-3.5">
-              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100">
-                2. Contact Details
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Full Address
+              {/* Right Column: Address, Contact Person & Bank Details */}
+              <div className="space-y-3 bg-slate-50/40 p-3.5 rounded-xl border border-slate-200/70">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-1.5">
+                  <span>2. Address & Settlements</span>
+                </div>
+
+                {/* Postal Address */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    Postal Address
                   </label>
                   <textarea
                     name="address"
                     rows={2}
                     value={formData.address}
                     onChange={handleChange}
-                    placeholder="Enter postal street address, office or flat number..."
-                    className="w-full p-3 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all resize-none"
+                    placeholder="Street address, building, floor or landmark..."
+                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all resize-none"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Mobile Number
-                  </label>
-                  <input
-                    name="mobileNumber"
-                    value={formData.mobileNumber}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
+                {/* Contact Person */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Contact Person
+                    </label>
+                    <input
+                      name="contactPersonName"
+                      value={formData.contactPersonName}
+                      onChange={handleChange}
+                      placeholder="Representative Name"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Direct Mobile
+                    </label>
+                    <input
+                      name="contactPersonMobile"
+                      value={formData.contactPersonMobile}
+                      onChange={handleChange}
+                      placeholder="+91 98765 00000"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Office Number
-                  </label>
-                  <input
-                    name="officeNumber"
-                    value={formData.officeNumber}
-                    onChange={handleChange}
-                    placeholder="022-12345678"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
+                {/* Conditional Bank Details if Bank Accounts */}
+                {selectedGroupName === 'Bank Accounts' ? (
+                  <div className="space-y-2.5 pt-2 border-t border-slate-200/60">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                      Bank Settlement Credentials
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    WhatsApp Number
-                  </label>
-                  <input
-                    name="whatsappNumber"
-                    value={formData.whatsappNumber}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          Bank Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          required
+                          name="bankName"
+                          value={formData.bankName}
+                          onChange={handleChange}
+                          placeholder="e.g. State Bank of India"
+                          className="w-full h-8.5 px-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#2652C8] focus:ring-1 focus:ring-[#2652C8]/15 outline-none"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Email Address
-                  </label>
-                  <input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="account@example.com"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          Branch Name
+                        </label>
+                        <input
+                          name="bankBranch"
+                          value={formData.bankBranch}
+                          onChange={handleChange}
+                          placeholder="e.g. Fort, Mumbai"
+                          className="w-full h-8.5 px-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#2652C8] focus:ring-1 focus:ring-[#2652C8]/15 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          Account Number <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          required
+                          name="bankAccountNumber"
+                          value={formData.bankAccountNumber}
+                          onChange={handleChange}
+                          placeholder="Bank account number"
+                          className="w-full h-8.5 px-2.5 text-xs font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#2652C8] focus:ring-1 focus:ring-[#2652C8]/15 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          IFSC Code <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          required
+                          name="ifscCode"
+                          value={formData.ifscCode}
+                          onChange={handleChange}
+                          placeholder="e.g. SBIN0001234"
+                          className="w-full h-8.5 px-2.5 text-xs font-mono uppercase rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#2652C8] focus:ring-1 focus:ring-[#2652C8]/15 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                      Contact Person Email
+                    </label>
+                    <input
+                      name="contactPersonEmail"
+                      type="email"
+                      value={formData.contactPersonEmail}
+                      onChange={handleChange}
+                      placeholder="person@example.com"
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    />
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Contact Person Details */}
-            <div className="space-y-3.5">
-              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100">
-                3. Contact Person
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Person Name
-                  </label>
-                  <input
-                    name="contactPersonName"
-                    value={formData.contactPersonName}
-                    onChange={handleChange}
-                    placeholder="e.g. Rahul Sharma"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Direct Mobile
-                  </label>
-                  <input
-                    name="contactPersonMobile"
-                    value={formData.contactPersonMobile}
-                    onChange={handleChange}
-                    placeholder="+91 98765 00000"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                    Email
-                  </label>
-                  <input
-                    name="contactPersonEmail"
-                    type="email"
-                    value={formData.contactPersonEmail}
-                    onChange={handleChange}
-                    placeholder="person@example.com"
-                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Conditional Bank Accounts Section */}
-            {selectedGroupName === 'Bank Accounts' && (
-              <div className="space-y-3.5 pt-2">
-                <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100">
-                  4. Bank Account Details
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      Bank Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      required={selectedGroupName === 'Bank Accounts'}
-                      name="bankName"
-                      value={formData.bankName}
-                      onChange={handleChange}
-                      placeholder="e.g. State Bank of India"
-                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      Branch
-                    </label>
-                    <input
-                      name="bankBranch"
-                      value={formData.bankBranch}
-                      onChange={handleChange}
-                      placeholder="e.g. Nariman Point, Mumbai"
-                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      IFSC Code <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      required={selectedGroupName === 'Bank Accounts'}
-                      name="ifscCode"
-                      value={formData.ifscCode}
-                      onChange={handleChange}
-                      placeholder="e.g. SBIN0001234"
-                      className="w-full h-10 px-3.5 text-sm font-mono uppercase rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      MICR Code
-                    </label>
-                    <input
-                      name="micrCode"
-                      value={formData.micrCode}
-                      onChange={handleChange}
-                      placeholder="9-digit MICR code"
-                      className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      Bank Account Number <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      required={selectedGroupName === 'Bank Accounts'}
-                      name="bankAccountNumber"
-                      value={formData.bankAccountNumber}
-                      onChange={handleChange}
-                      placeholder="Enter account number"
-                      className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
-                      UPI ID / VPA
-                    </label>
-                    <input
-                      name="upiId"
-                      value={formData.upiId}
-                      onChange={handleChange}
-                      placeholder="name@okaxis"
-                      className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Unified Modal Footer */}
-          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+          <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}

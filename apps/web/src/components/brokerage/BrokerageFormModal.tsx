@@ -469,14 +469,9 @@ export function BrokerageFormModal({
               <Calculator className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
-                  {initialRule?.id ? 'Edit Brokerage Rule' : 'Configure Brokerage Rules'}
-                </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
-                  Brokerage
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                {initialRule?.id ? 'Edit Brokerage Rule' : 'Configure Brokerage Rules'}
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Set quantity-based brokerage rate formulas for clients or brokers
               </p>
