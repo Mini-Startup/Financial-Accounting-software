@@ -195,24 +195,34 @@ export function ExpiryDatePageManager({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="border border-border-light rounded-xl shadow-xs bg-white p-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
+      {/* Seamless Docked Toolbar */}
+      <div className="px-4 py-3 bg-white border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search bar */}
-          <div className="relative w-64">
+          {/* Standard Search Bar */}
+          <div className="relative w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search date or symbol code..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white transition"
+              placeholder="Search date or contract code..."
+              className="w-full h-9 pl-9 pr-8 text-xs bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#2652C8] rounded-lg outline-none transition shadow-2xs font-sans text-slate-800 placeholder:text-slate-400"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Status Filter */}
-          <div className="w-36">
+          <div className="w-40">
             <UniversalDropdown
               value={statusFilter}
               options={[
@@ -222,179 +232,212 @@ export function ExpiryDatePageManager({
               ]}
               onChange={(val) => setStatusFilter(val as any)}
               placeholder="Status"
+              triggerClassName="h-9 min-h-9"
             />
           </div>
 
           {(searchQuery || statusFilter !== 'ALL') && (
             <button
+              type="button"
               onClick={() => {
                 setSearchQuery('');
                 setStatusFilter('ALL');
               }}
-              className="text-xs text-slate-500 hover:text-slate-800 underline font-medium cursor-pointer"
+              className="h-9 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 flex items-center gap-1.5 cursor-pointer transition shadow-2xs"
             >
-              Reset Filters
+              <X className="w-3.5 h-3.5 text-slate-400" />
+              <span>Reset</span>
             </button>
           )}
         </div>
 
-        <div className="text-xs text-slate-500 font-mono">
-          Total: <span className="font-bold text-slate-800">{filteredExpiries.length}</span> expiries
+        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs font-mono text-slate-600">
+          Total: <span className="font-bold text-slate-900">{filteredExpiries.length}</span> expiries
         </div>
       </div>
 
-      {/* High-density Table */}
-      <div className="border border-border-light rounded-xl shadow-xs bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table data-table-dense w-full text-xs">
-            <thead>
-              <tr className="whitespace-nowrap bg-slate-50/80">
-                <th className="font-semibold text-slate-700">Expiry Date (DD-MM-YY)</th>
-                <th className="font-semibold text-slate-700">Contract Code</th>
-                <th className="font-semibold text-slate-700">Raw Stored Value</th>
-                <th className="font-semibold text-slate-700">Status</th>
-                <th className="text-right font-semibold text-slate-700">Actions</th>
+      {/* Unified Table View */}
+      <div className="overflow-x-auto">
+        <table className="data-table w-full text-xs">
+          <thead className="bg-slate-50/90 border-b border-slate-200/80 select-none">
+            <tr className="whitespace-nowrap">
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Expiry Date</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Contract Code</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Raw Stored Value</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Status</th>
+              <th className="text-right px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white font-sans">
+            {filteredExpiries.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-slate-400 font-medium">
+                  No expiry dates match your search criteria.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-sans">
-              {filteredExpiries.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate font-medium">
-                    No expiry dates match your search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredExpiries.map((exp) => {
-                  const dateStr = exp.normalizedDate || exp.date;
-                  const formatted = formatDateToDDMMYY(dateStr);
-                  const code = formatExpiryToDDMMMYY(dateStr);
+            ) : (
+              filteredExpiries.map((exp) => {
+                const dateStr = exp.normalizedDate || exp.date;
+                const formatted = formatDateToDDMMYY(dateStr);
+                const code = formatExpiryToDDMMMYY(dateStr);
 
-                  return (
-                    <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{formatted}</span>
-                        </div>
-                      </td>
-                      <td className="font-mono text-xs text-slate-700 whitespace-nowrap font-medium">
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                          {code}
-                        </span>
-                      </td>
-                      <td className="font-mono text-xs text-slate-500 whitespace-nowrap">
-                        {exp.date}
-                      </td>
-                      <td className="whitespace-nowrap">
+                return (
+                  <tr key={exp.id} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="px-4 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-[#2652C8]" />
+                        <span>{formatted}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap font-medium">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
+                        {code}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                      {exp.date}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(exp)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border transition cursor-pointer',
+                          exp.isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                        )}
+                        title="Click to toggle status"
+                      >
+                        <span
+                          className={cn(
+                            'w-1.5 h-1.5 rounded-xs',
+                            exp.isActive ? 'bg-emerald-500' : 'bg-slate-400'
+                          )}
+                        />
+                        <span>{exp.isActive ? 'Active' : 'Inactive'}</span>
+                      </button>
+                    </td>
+                    <td className="text-right px-4 py-3 whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => handleToggleActive(exp)}
-                          className={cn(
-                            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold border transition cursor-pointer',
-                            exp.isActive
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                          )}
-                          title="Click to toggle status"
+                          className="p-1.5 text-slate-500 hover:text-[#2652C8] transition-colors rounded-lg hover:bg-blue-50 cursor-pointer"
+                          title={exp.isActive ? 'Deactivate Expiry' : 'Activate Expiry'}
                         >
-                          <span
-                            className={cn(
-                              'w-1.5 h-1.5 rounded-xs',
-                              exp.isActive ? 'bg-emerald-500' : 'bg-slate-400'
-                            )}
-                          />
-                          <span>{exp.isActive ? 'Active' : 'Inactive'}</span>
+                          <Power className="w-3.5 h-3.5" />
                         </button>
-                      </td>
-                      <td className="text-right whitespace-nowrap">
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleActive(exp)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 cursor-pointer"
-                            title={exp.isActive ? 'Deactivate Expiry' : 'Activate Expiry'}
-                          >
-                            <Power className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(exp)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors rounded-md hover:bg-rose-50 cursor-pointer"
-                            title="Delete Expiry"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(exp)}
+                          className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 cursor-pointer"
+                          title="Delete Expiry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+          <tfoot className="bg-slate-50/90 border-t border-slate-200/80">
+            <tr>
+              <td colSpan={5} className="px-4 py-2.5 text-xs text-slate-500 font-medium">
+                Showing {filteredExpiries.length} expiry date {filteredExpiries.length === 1 ? 'record' : 'records'}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       {/* Add Expiry Date Modal */}
       {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-border-light animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 border-b border-border-light flex items-center justify-between">
-              <h2 className="text-base font-bold text-charcoal font-display">Add Expiry Date</h2>
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setIsAdding(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+            {/* Unified Modal Header */}
+            <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">Add Expiry Date</h2>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
+                      Expiry
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">Contract expiration date for derivatives trading</p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsAdding(false)}
-                className="p-1 text-slate hover:text-charcoal rounded-lg hover:bg-snow transition cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                title="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateExpiry} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Expiry Date <span className="text-rose-500">*</span>
-                </label>
-                <UniversalDatePicker
-                  value={newDate}
-                  onChange={(d) => setNewDate(d)}
-                  placeholder="DD-MM-YY"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Format is strictly DD-MM-YY (e.g. 15-12-26).
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs font-semibold text-slate-700">Active by default</span>
-                <button
-                  type="button"
-                  onClick={() => setNewIsActive(!newIsActive)}
-                  className={cn(
-                    'w-10 h-6 flex items-center rounded-lg p-1 cursor-pointer transition-colors',
-                    newIsActive ? 'bg-emerald-600' : 'bg-slate-300'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'bg-white w-4 h-4 rounded-md shadow-md transform transition-transform',
-                      newIsActive ? 'translate-x-4' : 'translate-x-0'
-                    )}
+            <form onSubmit={handleCreateExpiry} className="flex-1 flex flex-col min-h-0">
+              <div className="p-6 space-y-4 flex-1 bg-white">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Expiry Date <span className="text-rose-500">*</span>
+                  </label>
+                  <UniversalDatePicker
+                    value={newDate}
+                    onChange={(d) => setNewDate(d)}
+                    placeholder="DD-MM-YY"
                   />
-                </button>
+                  <p className="text-[11px] text-slate-500 mt-1.5">
+                    Format is strictly DD-MM-YY (e.g. 15-12-26).
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                    Active by default
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNewIsActive(!newIsActive)}
+                    className={cn(
+                      'w-10 h-6 flex items-center rounded-lg p-1 cursor-pointer transition-colors',
+                      newIsActive ? 'bg-emerald-600' : 'bg-slate-300'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'bg-white w-4 h-4 rounded-md shadow-md transform transition-transform',
+                        newIsActive ? 'translate-x-4' : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-border-light">
+              {/* Unified Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
-                  className="btn btn--secondary text-xs px-4 py-2"
+                  className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !newDate}
-                  className="btn btn--primary text-xs px-4 py-2 min-w-24 justify-center"
+                  className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isSubmitting ? 'Adding...' : 'Add Expiry'}
                 </button>

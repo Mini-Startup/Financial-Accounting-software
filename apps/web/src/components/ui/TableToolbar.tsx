@@ -166,190 +166,116 @@ export function TableToolbar({
     <>
       <div
         className={cn(
-          'flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white border border-border-light rounded-t-xl shadow-xs',
+          'flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 bg-white border-b border-slate-200/80',
           className
         )}
       >
-        {/* Left side: Search & Filters (Stable: Zero Layout Shift on Selection) */}
+        {/* Left side: Search & Filters */}
         <div className="flex items-center gap-2.5 flex-1 flex-wrap">
-          {compactSearch ? (
-            <>
-              {onSearchChange && (
-                    <div className="flex items-center">
-                      {isSearchExpanded ? (
-                        <div className="flex items-center bg-white border border-blue-500 ring-2 ring-blue-100 rounded-xl px-2 h-8.5 shadow-2xs transition-all w-60">
-                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1.5" />
-                          <input
-                            type="text"
-                            autoFocus
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder={searchPlaceholder}
-                            className="w-full text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
-                          />
-                          {searchQuery && (
-                            <button
-                              type="button"
-                              onClick={() => onSearchChange('')}
-                              className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer mr-1"
-                              title="Clear search"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!searchQuery) setIsSearchExpanded(false);
-                            }}
-                            className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                            title="Close search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setIsSearchExpanded(true)}
-                          className={cn(
-                            'h-8.5 w-8.5 flex items-center justify-center rounded-xl border transition-all cursor-pointer',
-                            searchQuery
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                          )}
-                          title="Search trades..."
-                        >
-                          <Search className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+          {onSearchChange && (
+            <div className={cn(
+              "flex items-center bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 focus-within:border-[#2652C8] focus-within:ring-2 focus-within:ring-[#2652C8]/15 transition-all",
+              compactSearch ? "w-56 sm:w-64" : "min-w-65 max-w-md flex-1"
+            )}>
+              {/* Column targeting dropdown in front of search */}
+              {columns && columns.length > 0 && onSearchColumnChange && !compactSearch && (
+                <div className="w-31.25 shrink-0 border-r border-slate-200">
+                  <UniversalDropdown
+                    value={searchColumn}
+                    onChange={onSearchColumnChange}
+                    searchable={false}
+                    options={[
+                      { value: 'ALL', label: 'All Columns' },
+                      ...columns.map((c) => ({ value: c.key, label: c.label })),
+                    ]}
+                    triggerClassName="min-h-9 h-9 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2.5 text-xs font-semibold text-slate-700"
+                  />
+                </div>
+              )}
+
+              {/* Search text input */}
+              <div className="relative flex-1 flex items-center">
+                <Search className="w-4 h-4 text-slate-400 ml-2.5 shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full h-9 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    className="p-1 mr-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 cursor-pointer transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Advanced Filter condition trigger button */}
+              {onAdvancedConditionsChange && columns && columns.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancedOpen(true)}
+                  className={cn(
+                    'h-9 px-2.5 flex items-center gap-1.5 text-xs font-semibold border-l border-slate-200 rounded-r-lg transition-colors cursor-pointer select-none',
+                    activeAdvancedCount > 0
+                      ? 'bg-blue-50 text-[#2652C8]'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                   )}
-
-                  {showFindReplaceButton && onToggleFindReplace && (
-                    <UniversalTooltip content="Find & Replace in Table (Ctrl+H)">
-                      <button
-                        type="button"
-                        onClick={onToggleFindReplace}
-                        className={cn(
-                          'h-8.5 px-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer',
-                          isFindReplaceOpen
-                            ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
-                        )}
-                      >
-                        <Replace className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="hidden sm:inline">Find & Replace</span>
-                      </button>
-                    </UniversalTooltip>
+                  title="Advanced Filter (AND / OR conditions)"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {activeAdvancedCount > 0 && (
+                    <span className="w-4 h-4 bg-[#2652C8] text-white text-[10px] rounded-md flex items-center justify-center font-bold">
+                      {activeAdvancedCount}
+                    </span>
                   )}
-
-                  {filterSlot}
-                </>
-              ) : (
-                <>
-                  {onSearchChange && (
-                    <div className="flex items-center bg-white border border-slate-300 rounded-lg shadow-2xs hover:border-blue-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all min-w-65 max-w-md flex-1">
-                      {/* Column targeting dropdown in front of search */}
-                      {columns && columns.length > 0 && onSearchColumnChange && (
-                        <div className="w-31.25 shrink-0 border-r border-slate-200">
-                          <UniversalDropdown
-                            value={searchColumn}
-                            onChange={onSearchColumnChange}
-                            searchable={false}
-                            options={[
-                              { value: 'ALL', label: 'All Columns' },
-                              ...columns.map((c) => ({ value: c.key, label: c.label })),
-                            ]}
-                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-slate-800"
-                          />
-                        </div>
-                      )}
-
-                      {/* Search text input */}
-                      <div className="relative flex-1 flex items-center">
-                        <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => onSearchChange(e.target.value)}
-                          placeholder={searchPlaceholder}
-                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
-                        />
-                        {searchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => onSearchChange('')}
-                            className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                            title="Clear search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Advanced Filter condition trigger button */}
-                      {onAdvancedConditionsChange && columns && columns.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setIsAdvancedOpen(true)}
-                          className={cn(
-                            'h-8.5 px-2.5 flex items-center gap-1 text-[11px] font-semibold border-l border-slate-200 rounded-r-lg transition-colors cursor-pointer select-none',
-                            activeAdvancedCount > 0
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                          )}
-                          title="Advanced Filter (AND / OR conditions)"
-                        >
-                          <SlidersHorizontal className="w-3.5 h-3.5" />
-                          {activeAdvancedCount > 0 && (
-                            <span className="w-4 h-4 bg-blue-600 text-white text-[9px] rounded-md flex items-center justify-center font-mono">
-                              {activeAdvancedCount}
-                            </span>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Find & Replace Trigger Button */}
-                  {showFindReplaceButton && onToggleFindReplace && (
-                    <button
-                      type="button"
-                      onClick={onToggleFindReplace}
-                      className={cn(
-                        'h-8.5 px-2.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer',
-                        isFindReplaceOpen
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
-                      )}
-                      title="Find & Replace in Table (Ctrl+H)"
-                    >
-                      <Replace className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="hidden sm:inline">Find & Replace</span>
-                    </button>
-                  )}
-
-                  {filterSlot}
-                </>
+                </button>
               )}
             </div>
+          )}
 
-        {/* Floating Bulk Action Bar (Brand Ledger Blue #2652C8, Smooth Motion, Zero UI Jumping) */}
+          {/* Find & Replace Trigger Button */}
+          {showFindReplaceButton && onToggleFindReplace && (
+            <UniversalTooltip content="Find & Replace in Table (Ctrl+H)">
+              <button
+                type="button"
+                onClick={onToggleFindReplace}
+                className={cn(
+                  'h-9 px-3 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs',
+                  isFindReplaceOpen
+                    ? 'bg-blue-50 text-[#2652C8] border-blue-200'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                )}
+              >
+                <Replace className="w-3.5 h-3.5 text-[#2652C8]" />
+                <span className="hidden sm:inline">Find & Replace</span>
+              </button>
+            </UniversalTooltip>
+          )}
+
+          {filterSlot}
+        </div>
+
+        {/* Floating Bulk Action Bar (Executive Dark Slate Pill, High Contrast) */}
         {selectedCount > 0 && typeof document !== 'undefined' && createPortal(
-          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-[#2652C8] text-white rounded-2xl shadow-[0_16px_36px_rgba(38,82,200,0.35)] px-5 py-2.5 flex items-center gap-4 border border-[#3B66DF] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5 duration-250 ease-out">
+          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-slate-900/95 text-white rounded-xl shadow-[0_16px_36px_rgba(15,23,42,0.4)] px-4 py-2 flex items-center gap-3.5 border border-slate-700/80 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-200 ease-out select-none">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-xs bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              <span className="text-xs font-bold text-white tracking-wide">
+              <span className="text-xs font-bold text-slate-100 tracking-wide">
                 {selectedCount} selected
               </span>
             </div>
-            <div className="h-4 w-px bg-white/25" />
+            <div className="h-4 w-px bg-slate-700" />
             {onClearSelection && (
               <button
                 type="button"
                 onClick={onClearSelection}
-                className="text-xs text-blue-100 hover:text-white font-semibold hover:bg-white/15 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                className="text-xs text-slate-300 hover:text-white font-medium hover:bg-slate-800 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
               >
                 Clear
               </button>
@@ -359,7 +285,7 @@ export function TableToolbar({
                 type="button"
                 onClick={onBulkDelete}
                 disabled={isDeleting}
-                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md hover:shadow-rose-600/30 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 active:scale-95"
+                className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 active:scale-95"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{isDeleting ? 'Deleting...' : `Delete Selected (${selectedCount})`}</span>
@@ -441,24 +367,25 @@ export function TableToolbar({
         </div>
       </div>
 
-      {/* Advanced Filter Modal Overlay (No section inserted between tables) */}
+      {/* Advanced Filter Modal Overlay */}
       {isAdvancedOpen &&
         columns &&
         columns.length > 0 &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-            <div className="bg-white border border-border-light rounded-2xl shadow-2xl max-w-xl w-full p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b border-border-light pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+          <div className="fixed inset-0 z-999999 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white border border-slate-200/90 rounded-2xl shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+              {/* Unified Modal Header */}
+              <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
                     <SlidersHorizontal className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 font-display">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-tight">
                       Advanced Multi-Column Filter
                     </h3>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Combine AND / OR rules across multiple table columns
                     </p>
                   </div>
@@ -466,23 +393,24 @@ export function TableToolbar({
                 <button
                   type="button"
                   onClick={() => setIsAdvancedOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                  title="Close"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Conditions Rows */}
-              <div className="flex flex-col gap-2.5 max-h-72 overflow-y-auto pr-1">
+              <div className="p-6 flex flex-col gap-2.5 max-h-72 overflow-y-auto">
                 {conditions.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-slate-500 bg-snow rounded-xl border border-dashed border-border-medium">
+                  <div className="py-8 text-center text-xs text-slate-500 bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
                     No advanced conditions configured. Click below to add your first rule.
                   </div>
                 ) : (
                   conditions.map((cond, idx) => (
                     <div
                       key={cond.id}
-                      className="flex flex-wrap items-center gap-2 p-2 bg-snow border border-border-light rounded-lg text-xs"
+                      className="flex flex-wrap items-center gap-2 p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-lg text-xs"
                     >
                       {idx > 0 && (
                         <CustomSelect<'AND' | 'OR'>
@@ -533,14 +461,14 @@ export function TableToolbar({
                         value={cond.value}
                         onChange={(e) => handleUpdateCondition(cond.id, { value: e.target.value })}
                         placeholder="Filter value..."
-                        className="h-8 flex-1 min-w-30 px-2.5 bg-white border border-border-medium rounded text-charcoal outline-none focus:border-(--color-border-focus)"
+                        className="h-8 flex-1 min-w-30 px-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs outline-none focus:border-[#2652C8] focus:ring-1 focus:ring-[#2652C8]/20 transition-all"
                       />
 
                       {/* Remove button */}
                       <button
                         type="button"
                         onClick={() => handleRemoveCondition(cond.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         title="Remove condition"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -550,12 +478,12 @@ export function TableToolbar({
                 )}
               </div>
 
-              {/* Action Footer */}
-              <div className="flex items-center justify-between border-t border-border-light pt-3">
+              {/* Unified Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between shrink-0 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={handleAddCondition}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2652C8] bg-blue-50 hover:bg-blue-100 border border-blue-200/80 rounded-lg transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Condition</span>
@@ -566,7 +494,7 @@ export function TableToolbar({
                     <button
                       type="button"
                       onClick={handleClearAdvanced}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>Clear All</span>
@@ -575,7 +503,7 @@ export function TableToolbar({
                   <button
                     type="button"
                     onClick={handleApplyAdvanced}
-                    className="px-4 py-1.5 text-xs font-semibold bg-[#2652C8] hover:bg-blue-700 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-1.5 text-xs font-semibold bg-[#2652C8] hover:bg-[#1E42A8] text-white rounded-lg shadow-xs transition-colors cursor-pointer"
                   >
                     Apply Rules
                   </button>

@@ -206,7 +206,7 @@ export function ScriptDataTable({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       {/* Top Controls Toolbar */}
       <TableToolbar
         searchQuery={searchQuery}
@@ -251,151 +251,148 @@ export function ScriptDataTable({
         />
       )}
 
-      {/* Main Table Card */}
-      <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
+      <div className="overflow-x-auto">
+        <table className="data-table w-full text-xs">
+          <thead className="bg-slate-50/90 border-b border-slate-200/80 select-none">
+            <tr className="whitespace-nowrap">
+              <th style={{ width: '40px' }} className="text-center px-4 py-3">
+                <CustomCheckbox
+                  checked={isAllVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                />
+              </th>
+              <th
+                style={{ width: '140px' }}
+                onClick={() => handleSort('shortName')}
+                className="cursor-pointer hover:bg-slate-100 select-none px-4 py-3"
+              >
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-600 text-[11px]">
+                  <span>Symbol / Code</span>
+                  {sortKey === 'shortName' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('fullName')}
+                className="cursor-pointer hover:bg-slate-100 select-none px-4 py-3"
+              >
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-600 text-[11px]">
+                  <span>Full Description</span>
+                  {sortKey === 'fullName' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                style={{ width: '130px' }}
+                onClick={() => handleSort('lotSize')}
+                className="cursor-pointer hover:bg-slate-100 select-none px-4 py-3"
+              >
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-600 text-[11px]">
+                  <span>Market Lot</span>
+                  {sortKey === 'lotSize' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th style={{ width: '110px' }} className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Exchange</th>
+              <th style={{ width: '130px' }} className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Currency</th>
+              <th style={{ width: '90px' }} className="text-right px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {paginatedScripts.length === 0 ? (
               <tr>
-                <th style={{ width: '40px' }} className="text-center">
-                  <CustomCheckbox
-                    checked={isAllVisibleSelected}
-                    onChange={handleToggleSelectAll}
-                  />
-                </th>
-                <th
-                  style={{ width: '140px' }}
-                  onClick={() => handleSort('shortName')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Short Name</span>
-                    {sortKey === 'shortName' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('fullName')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Full Name</span>
-                    {sortKey === 'fullName' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  style={{ width: '130px' }}
-                  onClick={() => handleSort('lotSize')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Market Lot</span>
-                    {sortKey === 'lotSize' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th style={{ width: '100px' }}>Exchange</th>
-                <th style={{ width: '120px' }}>Currency</th>
-                <th style={{ width: '90px' }} className="text-right">Actions</th>
+                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                  No scripts found matching your search.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {paginatedScripts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
-                    No scripts found matching your search.
+            ) : null}
+            {paginatedScripts.map((script) => {
+              const isSelected = selectedIds.has(script.id);
+              const exCode = script.exchange?.code || script.scriptExchangeMappings?.[0]?.exchange?.code || '—';
+              const currCode = script.currency
+                ? `${script.currency.code} ${script.currency.symbol ? `(${script.currency.symbol})` : ''}`
+                : 'USD ($)';
+
+              return (
+                <tr
+                  key={script.id}
+                  onClick={() => setEditingScript(script)}
+                  className={cn(
+                    'cursor-pointer transition-colors',
+                    isSelected ? 'bg-blue-50/60 hover:bg-blue-50/80' : 'hover:bg-slate-50/70'
+                  )}
+                >
+                  <td className="text-center px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <CustomCheckbox
+                      checked={isSelected}
+                      onChange={() => handleToggleRow(script.id)}
+                    />
+                  </td>
+                  <td className="font-mono font-bold text-slate-900 px-4 py-3 text-xs">
+                    {script.shortName}
+                  </td>
+                  <td className="font-medium text-slate-800 px-4 py-3 text-xs">
+                    {script.fullName}
+                  </td>
+                  <td className="font-semibold text-slate-700 font-mono px-4 py-3 text-xs">
+                    {Number(script.lotSize).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-[#2652C8] border border-blue-200/80">
+                      {exCode}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-mono">
+                      {currCode}
+                    </span>
+                  </td>
+                  <td className="text-right px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setEditingScript(script)}
+                        className="p-1.5 text-slate-400 hover:text-[#2652C8] transition-colors rounded-lg hover:bg-blue-50 cursor-pointer"
+                        title="Edit Script"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSingle(script.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 cursor-pointer"
+                        title="Delete Script"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ) : null}
-              {paginatedScripts.map((script) => {
-                const isSelected = selectedIds.has(script.id);
-                const exCode = script.exchange?.code || script.scriptExchangeMappings?.[0]?.exchange?.code || '—';
-                const currCode = script.currency
-                  ? `${script.currency.code} ${script.currency.symbol ? `(${script.currency.symbol})` : ''}`
-                  : 'USD ($)';
-
-                return (
-                  <tr
-                    key={script.id}
-                    onClick={() => setEditingScript(script)}
-                    className={cn(
-                      'cursor-pointer transition-colors',
-                      isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/70'
-                    )}
-                  >
-                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <CustomCheckbox
-                        checked={isSelected}
-                        onChange={() => handleToggleRow(script.id)}
-                      />
-                    </td>
-                    <td className="font-mono font-bold text-slate-800">
-                      {script.shortName}
-                    </td>
-                    <td className="font-medium text-slate-900">
-                      {script.fullName}
-                    </td>
-                    <td className="font-semibold text-slate-700 font-mono">
-                      {Number(script.lotSize).toLocaleString()}
-                    </td>
-                    <td>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                        {exCode}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
-                        {currCode}
-                      </span>
-                    </td>
-                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setEditingScript(script)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors rounded-md hover:bg-slate-100"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSingle(script.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-md hover:bg-red-50"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            {/* Sticky Total / Summary Row */}
-            <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
-              <tr>
-                <td className="py-2.5 px-4 text-center" colSpan={3}>
-                  Total Visible: {paginatedScripts.length} of {totalItems} scripts
-                </td>
-                <td className="py-2.5 px-4 font-mono font-bold text-slate-900">
-                  Lot Total: {totalLotSize.toLocaleString()}
-                </td>
-                <td className="py-2.5 px-4 text-slate-500 font-normal" colSpan={3}>
-                  Page {currentPage} of {Math.max(1, Math.ceil(totalItems / pageSize))}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+          {/* Summary / Total Footer */}
+          <tfoot className="border-t border-slate-200 bg-slate-50/80 font-medium text-xs text-slate-600">
+            <tr>
+              <td className="py-3 px-4 text-center font-bold text-slate-700" colSpan={3}>
+                Total Visible: {paginatedScripts.length} of {totalItems} scripts
+              </td>
+              <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                Lot Total: {totalLotSize.toLocaleString()}
+              </td>
+              <td className="py-3 px-4 text-slate-500 font-normal text-right" colSpan={3}>
+                Page {currentPage} of {Math.max(1, Math.ceil(totalItems / pageSize))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       {editingScript && (

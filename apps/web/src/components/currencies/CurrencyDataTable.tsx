@@ -119,7 +119,7 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
 
   return (
     <>
-    <div className="space-y-2">
+    <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       <TableToolbar
         searchQuery={searchQuery}
         onSearchChange={(q) => {
@@ -159,121 +159,121 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
         />
       )}
 
-      <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">
+      <div className="overflow-x-auto">
+        <table className="data-table w-full text-xs">
+          <thead className="bg-slate-50/90 border-b border-slate-200/80 select-none">
+            <tr className="whitespace-nowrap">
+              <th
+                onClick={() => handleSort('code')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Currency Code</span>
+                  {sortKey === 'code' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('name')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Currency Name</span>
+                  {sortKey === 'name' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('symbol')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Symbol</span>
+                  {sortKey === 'symbol' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('isActive')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Status</span>
+                  {sortKey === 'isActive' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th className="text-right py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {paginatedCurrencies.length === 0 ? (
               <tr>
-                <th
-                  onClick={() => handleSort('code')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Code</span>
-                    {sortKey === 'code' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('name')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Name</span>
-                    {sortKey === 'name' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('symbol')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Symbol</span>
-                    {sortKey === 'symbol' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('isActive')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Status</span>
-                    {sortKey === 'isActive' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th className="text-right py-3 px-4">Actions</th>
+                <td colSpan={5} className="py-12 text-center text-slate-400 font-medium">
+                  No currencies match search criteria.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedCurrencies.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate font-medium">
-                    No currencies match search criteria.
-                  </td>
-                </tr>
-              ) : null}
-              {paginatedCurrencies.map((cur) => (
-                <tr
-                  key={cur.id}
-                  onClick={() => setEditingCurrency(cur)}
-                  className="hover:bg-slate-50/70 transition-colors cursor-pointer"
-                >
-                  <td className="font-mono font-bold text-slate-800 py-2.5 px-4">{cur.code}</td>
-                  <td className="text-slate-700 font-medium py-2.5 px-4">{cur.name || '-'}</td>
-                  <td className="text-slate-900 font-semibold text-base py-2.5 px-4">{cur.symbol || '-'}</td>
-                  <td className="py-2.5 px-4">
-                    {cur.isActive ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="text-right py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      onClick={() => setEditingCurrency(cur)}
-                      className="text-[#2652C8] hover:text-[#1F42A3] mr-4 font-semibold transition text-xs cursor-pointer"
-                    >
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => setDeleteTargetId(cur.id)}
-                      className="text-rose-600 hover:text-rose-700 font-semibold transition text-xs cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {/* Sticky Total / Summary Row */}
-            <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
-              <tr>
-                <td className="py-2.5 px-4">Total Currencies: {sortedCurrencies.length}</td>
-                <td className="py-2.5 px-4 text-slate-500 font-normal">Active: {activeCount} | Inactive: {currenciesList.length - activeCount}</td>
-                <td className="py-2.5 px-4" colSpan={3}></td>
+            ) : null}
+            {paginatedCurrencies.map((cur) => (
+              <tr
+                key={cur.id}
+                onClick={() => setEditingCurrency(cur)}
+                className="hover:bg-blue-50/40 transition-colors cursor-pointer"
+              >
+                <td className="font-mono font-bold text-slate-900 py-3 px-4 text-xs">{cur.code}</td>
+                <td className="text-slate-800 font-medium py-3 px-4 text-xs">{cur.name || '—'}</td>
+                <td className="text-slate-900 font-semibold text-sm py-3 px-4">{cur.symbol || '—'}</td>
+                <td className="py-3 px-4">
+                  {cur.isActive ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
+                      Inactive
+                    </span>
+                  )}
+                </td>
+                <td className="text-right py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={() => setEditingCurrency(cur)}
+                    className="text-[#2652C8] hover:text-[#1E42A8] mr-3 font-semibold transition text-xs cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => setDeleteTargetId(cur.id)}
+                    className="text-rose-600 hover:text-rose-700 font-semibold transition text-xs cursor-pointer"
+                  >
+                    Deactivate
+                  </button>
+                </td>
               </tr>
-            </tfoot>
-          </table>
-        </div>
+            ))}
+          </tbody>
+          {/* Summary / Total Footer */}
+          <tfoot className="border-t border-slate-200 bg-slate-50/80 font-medium text-xs text-slate-600">
+            <tr>
+              <td className="py-3 px-4 font-bold text-slate-700" colSpan={2}>Total Currencies: {sortedCurrencies.length}</td>
+              <td className="py-3 px-4 text-slate-500 font-normal">Active: {activeCount} | Inactive: {currenciesList.length - activeCount}</td>
+              <td className="py-3 px-4 text-right text-slate-500 font-normal" colSpan={2}>
+                Page {currentPage} of {Math.max(1, Math.ceil(sortedCurrencies.length / pageSize))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
 

@@ -610,7 +610,7 @@ select option {
 
 /* Sonner Toaster Container & Reset for HeroUI Executive Alerts */
 [data-sonner-toaster] {
-  --width: 360px !important;
+  --width: 290px !important;
   max-width: calc(100vw - 32px) !important;
   z-index: 99999 !important;
 }
@@ -624,7 +624,7 @@ select option {
   margin: 0 !important;
   overflow: visible !important;
   width: auto !important;
-  max-width: 360px !important;
+  max-width: 290px !important;
   display: block !important;
 }
 

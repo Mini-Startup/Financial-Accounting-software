@@ -90,7 +90,7 @@ export function showExecutiveToast(
 
   return toast.custom((t) => {
     return (
-      <div className="w-fit max-w-[360px] min-w-[240px] select-none">
+      <div className="w-fit max-w-[290px] select-none">
         <div
           className={cn(
             'relative overflow-hidden rounded-xl border p-3 sm:p-3.5 transition-all duration-200 animate-in fade-in zoom-in-95',

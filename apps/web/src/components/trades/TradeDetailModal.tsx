@@ -49,15 +49,15 @@ export function TradeDetailModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-(--color-forest) bg-mist border border-(--color-leaf)/40 rounded-full px-2.5 py-0.5">
+                <span className="text-xs font-mono font-bold text-(--color-forest) bg-mist border border-(--color-leaf)/40 rounded-md px-2.5 py-0.5">
                   #{trade.tradeNumber}
                 </span>
                 {isLocked ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-md px-2 py-0.5">
                     <Lock className="w-3 h-3 text-amber-600" /> Locked Record
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-full px-2 py-0.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-md px-2 py-0.5">
                     <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active Trade
                   </span>
                 )}
@@ -136,7 +136,7 @@ export function TradeDetailModal({
                 <span className="text-[11px] text-slate block">Trade Type</span>
                 <span
                   className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold mt-1 border',
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold mt-1 border',
                     trade.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                     trade.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
                     trade.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',

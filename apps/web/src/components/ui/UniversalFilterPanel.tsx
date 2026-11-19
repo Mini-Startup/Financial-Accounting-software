@@ -80,7 +80,7 @@ export function UniversalFilterPanel({
             <Filter className="w-3.5 h-3.5 text-(--color-leaf)" />
             <span>Filters</span>
             {activeCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-full font-mono">
+              <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-md font-mono">
                 {activeCount}
               </span>
             )}
@@ -106,14 +106,14 @@ export function UniversalFilterPanel({
             return (
               <div
                 key={key}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] text-(--color-forest) font-medium animate-in fade-in duration-100"
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-(--color-forest) font-medium animate-in fade-in duration-100"
               >
                 <span className="text-slate">{conf?.label || key}:</span>
                 <span className="font-semibold">{displayVal}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveChip(key)}
-                  className="p-0.5 text-emerald-700 hover:text-negative transition-colors rounded-full"
+                  className="p-0.5 text-emerald-700 hover:text-negative transition-colors rounded-md"
                 >
                   <X className="w-3 h-3" />
                 </button>

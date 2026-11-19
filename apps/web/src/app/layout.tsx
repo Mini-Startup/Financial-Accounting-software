@@ -154,7 +154,7 @@ export default async function RootLayout({
               unstyled: true,
             }}
             style={{
-              '--width': '360px',
+              '--width': '290px',
             } as React.CSSProperties}
             richColors={false}
           />

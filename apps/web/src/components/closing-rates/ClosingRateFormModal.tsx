@@ -9,6 +9,7 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { generateSecurityName } from '@/utils/securityName';
 import { validateExpiryAgainstTradeDate } from '@/utils/dateUtils';
+import { cn } from '@/utils/cn';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
 
 export interface ClosingRateFormModalProps {
@@ -179,44 +180,52 @@ export function ClosingRateFormModal({
   return (
     <>
       <div
-        onMouseDown={(e) => e.stopPropagation()}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
       >
         <div
           ref={modalRef}
-          className="card w-140 max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-border-light rounded-xl bg-white animate-in zoom-in-95 duration-150"
+          className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         >
-          {/* Header */}
-          <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-border-light">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-mist text-(--color-forest) rounded-md">
-                <TrendingUp className="w-5 h-5 stroke-[2.2]" />
+          {/* Unified Modal Header */}
+          <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+                <TrendingUp className="w-4 h-4 stroke-[2.2]" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-charcoal font-display">
-                  {initialData ? 'Edit Closing Rate' : 'Add Closing Rate'}
-                </h2>
-                <p className="text-[11px] text-slate">
-                  Enter daily settlement closing rates for scripts & options
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                    {initialData ? 'Edit Closing Rate' : 'Add Closing Rate'}
+                  </h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
+                    Rate
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Daily settlement closing rates for scripts & options
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Body */}
-          <div className="card__body p-6">
-            <form id="closingRateForm" onSubmit={handleSubmit} className="space-y-4">
+          {/* Form Wrap */}
+          <form id="closingRateForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
               {/* Row 1: Date & Script */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-charcoal">
-                    Rate Date <span className="text-negative">*</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Rate Date <span className="text-rose-500">*</span>
                   </label>
                   <UniversalDatePicker
                     value={rateDate}
@@ -224,9 +233,9 @@ export function ClosingRateFormModal({
                   />
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-charcoal">
-                    Script <span className="text-negative">*</span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Script <span className="text-rose-500">*</span>
                   </label>
                   <UniversalDropdown
                     value={scriptId}
@@ -245,39 +254,41 @@ export function ClosingRateFormModal({
 
               {/* Derived Exchange Display */}
               {resolvedExchange && (
-                <div className="px-3 py-2 bg-snow border border-border-light rounded-md flex items-center justify-between text-xs">
-                  <span className="text-slate">Assigned Exchange:</span>
-                  <span className="font-bold text-(--color-forest) font-mono">
+                <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-lg flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Assigned Exchange:</span>
+                  <span className="font-bold text-[#2652C8] font-mono">
                     {resolvedExchange.code} - {resolvedExchange.name || ''}
                   </span>
                 </div>
               )}
 
               {/* Instrument Type Selector (Future / Option) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-charcoal">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                   Instrument Type
                 </label>
-                <div className="grid grid-cols-2 gap-2 bg-snow p-1 rounded-md border border-border-light">
+                <div className="grid grid-cols-2 p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 gap-1 select-none">
                   <button
                     type="button"
                     onClick={() => setInstrumentType('FUTURE')}
-                    className={`py-1.5 text-xs font-semibold rounded-sm transition-all cursor-pointer ${
+                    className={cn(
+                      'py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer',
                       instrumentType === 'FUTURE'
-                        ? 'bg-white text-(--color-forest) shadow-xs'
-                        : 'text-slate hover:text-charcoal'
-                    }`}
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    )}
                   >
                     Future
                   </button>
                   <button
                     type="button"
                     onClick={() => setInstrumentType('OPTION')}
-                    className={`py-1.5 text-xs font-semibold rounded-sm transition-all cursor-pointer ${
+                    className={cn(
+                      'py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer',
                       instrumentType === 'OPTION'
-                        ? 'bg-white text-(--color-forest) shadow-xs'
-                        : 'text-slate hover:text-charcoal'
-                    }`}
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    )}
                   >
                     Option
                   </button>
@@ -285,8 +296,8 @@ export function ClosingRateFormModal({
               </div>
 
               {/* Expiry Date */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-charcoal">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                   Expiry Date
                 </label>
                 <UniversalDatePicker
@@ -298,39 +309,41 @@ export function ClosingRateFormModal({
 
               {/* Option-specific fields: Strike Price & Call/Put */}
               {instrumentType === 'OPTION' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-lg animate-in fade-in duration-100">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-charcoal">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50/70 border border-slate-200/80 rounded-xl animate-in fade-in duration-100">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                       Option Type
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => setCallPut('CALL')}
-                        className={`py-1.5 text-xs font-bold rounded-sm border transition-all cursor-pointer ${
+                        className={cn(
+                          'py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer',
                           callPut === 'CALL'
-                            ? 'bg-(--color-forest) text-white border-(--color-forest)'
-                            : 'bg-white text-charcoal border-border-medium'
-                        }`}
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        )}
                       >
                         CALL (CE)
                       </button>
                       <button
                         type="button"
                         onClick={() => setCallPut('PUT')}
-                        className={`py-1.5 text-xs font-bold rounded-sm border transition-all cursor-pointer ${
+                        className={cn(
+                          'py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer',
                           callPut === 'PUT'
-                            ? 'bg-negative text-white border-negative'
-                            : 'bg-white text-charcoal border-border-medium'
-                        }`}
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        )}
                       >
                         PUT (PE)
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-charcoal">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                       Strike Price
                     </label>
                     <input
@@ -340,15 +353,15 @@ export function ClosingRateFormModal({
                       value={strikePrice}
                       onChange={(e) => setStrikePrice(e.target.value)}
                       placeholder="e.g. 7280"
-                      className="input font-mono text-xs py-1.5"
+                      className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                     />
                   </div>
                 </div>
               )}
 
               {/* Generated Security Name */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-charcoal">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
                   Security Name
                 </label>
                 <input
@@ -356,14 +369,14 @@ export function ClosingRateFormModal({
                   value={manualSecurityName}
                   onChange={(e) => setManualSecurityName(e.target.value)}
                   placeholder="Generated automatically from script & expiry"
-                  className="input font-mono font-medium text-xs py-2 bg-snow"
+                  className="w-full h-10 px-3.5 text-sm font-mono font-medium rounded-lg border border-slate-200 bg-slate-50/60 text-slate-800 placeholder:text-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                 />
               </div>
 
               {/* Closing Rate */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-charcoal">
-                  Closing Rate <span className="text-negative">*</span>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Closing Rate <span className="text-rose-500">*</span>
                 </label>
                 <input
                   ref={rateInputRef}
@@ -374,31 +387,31 @@ export function ClosingRateFormModal({
                   value={rate}
                   onChange={(e) => setRate(e.target.value)}
                   placeholder="0.00"
-                  className="input font-mono text-sm py-2"
+                  className="w-full h-10 px-3.5 text-sm font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                 />
               </div>
+            </div>
 
-              {/* Actions Footer */}
-              <div className="mt-6 pt-4 flex items-center justify-end gap-2.5 border-t border-border-light">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="btn btn--secondary text-xs py-2 px-3"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  form="closingRateForm"
-                  disabled={isSubmitting}
-                  className="btn btn--primary text-xs py-2 px-4 shadow-xs"
-                >
-                  {isSubmitting ? 'Saving...' : initialData ? 'Update Rate' : 'Save Rate'}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Unified Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="closingRateForm"
+                disabled={isSubmitting || !rateDate || !scriptId || !rate}
+                className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isSubmitting ? 'Saving...' : initialData ? 'Update Rate' : 'Save Rate'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 

@@ -462,47 +462,54 @@ export function BrokerageFormModal({
             : 'w-145 max-w-[95vw] max-h-[88vh]'
         )}
       >
-        {/* Header (Aligned with Brand Style Guide) */}
-        <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-border-light shrink-0">
+        {/* Unified Modal Header */}
+        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100/70 text-emerald-800 rounded-lg flex items-center justify-center">
-              <Calculator className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Calculator className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="card__title text-base font-bold text-charcoal">
-                {initialRule?.id ? 'Edit Brokerage Rule' : 'Configure Brokerage Rules'}
-              </h2>
-              <p className="text-xs text-slate mt-0.5">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {initialRule?.id ? 'Edit Brokerage Rule' : 'Configure Brokerage Rules'}
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
+                  Brokerage
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
                 Set quantity-based brokerage rate formulas for clients or brokers
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Wrap */}
         <form id="brokerageForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          {/* Modal Body: overflow-hidden in ALL mode so popup NEVER has a scrollbar */}
+          {/* Modal Body */}
           <div
             className={cn(
-              'card__body p-5 flex-1 flex flex-col min-h-0',
-              scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-4'
+              'p-6 flex-1 flex flex-col min-h-0 bg-white',
+              scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-5'
             )}
           >
           {/* Top Configuration Controls */}
-          <div className="space-y-4 shrink-0 bg-snow p-4 rounded-xl border border-border-light">
+          <div className="space-y-4 shrink-0 pb-4 border-b border-slate-100">
             {/* Row 1: Applies To & Select Account */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* 1. Applies To */}
-              <div className="form-field">
-                <label className="form-label form-label--required">Applies To</label>
-                <div className="inline-flex p-1 bg-white rounded-lg border border-border-light gap-1 w-full">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Applies To <span className="text-rose-500">*</span>
+                </label>
+                <div className="inline-flex p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 gap-1 w-full select-none">
                   <button
                     type="button"
                     onClick={() => {
@@ -512,8 +519,8 @@ export function BrokerageFormModal({
                     className={cn(
                       'flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none',
                       appliesTo === 'CLIENT'
-                        ? 'bg-(--color-forest) text-white shadow-xs'
-                        : 'text-slate hover:text-charcoal hover:bg-mist/30'
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     )}
                   >
                     <User className="w-3.5 h-3.5" />
@@ -528,8 +535,8 @@ export function BrokerageFormModal({
                     className={cn(
                       'flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none',
                       appliesTo === 'BROKER'
-                        ? 'bg-(--color-forest) text-white shadow-xs'
-                        : 'text-slate hover:text-charcoal hover:bg-mist/30'
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     )}
                   >
                     <Building2 className="w-3.5 h-3.5" />
@@ -539,9 +546,9 @@ export function BrokerageFormModal({
               </div>
 
               {/* 2. Select Account */}
-              <div className="form-field">
-                <label className="form-label form-label--required">
-                  {appliesTo === 'CLIENT' ? 'Select Client' : 'Select Broker'}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  {appliesTo === 'CLIENT' ? 'Select Client' : 'Select Broker'} <span className="text-rose-500">*</span>
                 </label>
                 <UniversalDropdown
                   value={accountId}
@@ -850,12 +857,12 @@ export function BrokerageFormModal({
           )}
         </div>
 
-        {/* Footer (Aligned with Brand Style Guide) */}
-        <div className="p-4 border-t border-border-light bg-snow flex items-center justify-between shrink-0">
-          <div className="text-xs text-slate">
+        {/* Unified Modal Footer */}
+        <div className="px-6 py-4 border-t border-slate-200/80 bg-slate-50/80 flex items-center justify-between shrink-0 rounded-b-2xl">
+          <div className="text-xs text-slate-500">
             {scope === 'ALL' ? (
               <span>
-                <strong>{configuredAllCount}</strong> of {scriptRows.length} scripts will be saved individually
+                <strong className="text-slate-800 font-bold">{configuredAllCount}</strong> of {scriptRows.length} scripts will be configured individually
               </span>
             ) : (
               <span>Individual script rule will be configured for selected account</span>
@@ -866,7 +873,7 @@ export function BrokerageFormModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="btn btn--secondary text-xs py-2 px-4 cursor-pointer"
+              className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
             >
               Cancel
             </button>
@@ -875,8 +882,10 @@ export function BrokerageFormModal({
               form="brokerageForm"
               disabled={isSubmitting || !accountId}
               className={cn(
-                'btn btn--primary text-xs py-2 px-5 flex items-center gap-1.5 shadow-xs cursor-pointer',
-                (!accountId || isSubmitting) && 'opacity-60 cursor-not-allowed'
+                'h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer',
+                (!accountId || isSubmitting)
+                  ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                  : 'bg-[#2652C8] hover:bg-[#1E42A8]'
               )}
             >
               {isSubmitting ? (

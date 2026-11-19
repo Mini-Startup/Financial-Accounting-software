@@ -330,55 +330,69 @@ export function FormModal({
 
   return (
     <div
-      onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50 border-b border-slate-200/70 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs">
+        {/* Unified Modal Header */}
+        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900 leading-tight">
-                {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
-              </h2>
-              <p className="text-[11px] text-slate-500 font-medium">Group: {groupName}</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
+                  {groupName}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Manage account profile, contact credentials, and banking settlements
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body: 4-Quadrant Single-View Grid (Zero-Scroll) */}
-        <form id="accountForm" onSubmit={handleSubmit} className="flex-1 overflow-y-auto lg:overflow-hidden p-4 space-y-3 flex flex-col justify-between">
-
-          {/* Duplicate Warning */}
-          {isDuplicate && (
-            <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center gap-2 text-xs text-amber-900 shrink-0">
-              <span className="font-bold text-amber-950">Notice:</span>
-              <span>An account with this code or name already exists in database.</span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-1 min-h-0">
-            {/* QUADRANT 1: Basic Identifiers & Balance */}
-            <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>1. Account Identifiers</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+        {/* Modal Form */}
+        <form id="accountForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-white">
+            {/* Duplicate Warning */}
+            {isDuplicate && (
+              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in shrink-0">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Code *</label>
+                  <span className="font-bold text-amber-950">Notice: </span>
+                  <span>An account with this code or name already exists in the database. Duplicate entries are blocked.</span>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 1: Account Identifiers & Balance */}
+            <div className="space-y-3.5">
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100 flex items-center gap-2">
+                <Building2 className="w-3.5 h-3.5 text-[#2652C8]" />
+                <span>1. Account Identifiers & Balance</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Account Code <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     ref={codeInputRef}
                     name="code"
@@ -386,120 +400,140 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('code')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs font-mono rounded-xl border bg-white focus:outline-none transition',
+                      'w-full h-10 px-3.5 text-sm font-mono uppercase rounded-lg border bg-white focus:outline-none transition-all',
                       getFieldError('code')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
                     placeholder="e.g. CL001"
                   />
                   {getFieldError('code') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('code')}</span>
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Name *</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Account Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     onBlur={() => handleBlur('name')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white focus:outline-none transition-all',
                       getFieldError('name')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
-                    placeholder="Account Name"
+                    placeholder="e.g. ACME Securities Ltd"
                   />
                   {getFieldError('name') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('name')}</span>
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Opening Balance</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Opening Balance
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     name="openingBalance"
                     value={formData.openingBalance}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                    className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                     placeholder="0.00"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-0.5">+ for Credit, - for Debit</span>
+                  <span className="text-[10px] text-slate-400 block mt-1">+ for Credit, - for Debit</span>
                 </div>
 
-                <div className="flex flex-col justify-center pt-2">
-                  {groupName === 'Sundry Debtors' ? (
-                    <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                {groupName === 'Sundry Debtors' && (
+                  <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-6 pt-1">
+                    <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
                       <CustomCheckbox
                         checked={Boolean(formData.isDirectClient)}
                         onChange={(checked) => setFormData((prev) => ({ ...prev, isDirectClient: checked }))}
                       />
-                      <span className="font-medium text-[11px]">Direct Client</span>
+                      <span className="font-semibold text-slate-800">Direct Client</span>
                     </label>
-                  ) : null}
-                </div>
 
-                {groupName === 'Sundry Debtors' && !formData.isDirectClient && (
-                  <div className="col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Assigned Dealer</label>
-                    <UniversalDropdown
-                      value={formData.dealerCode}
-                      options={directClients.map((c) => ({
-                        value: c.code,
-                        label: `${c.code} - ${c.name}`,
-                      }))}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, dealerCode: val }))}
-                      placeholder="-- Select Direct Client --"
-                      triggerClassName="h-8 text-xs py-1 rounded-xl"
-                    />
+                    {!formData.isDirectClient && (
+                      <div className="flex-1 max-w-sm">
+                        <UniversalDropdown
+                          value={formData.dealerCode}
+                          options={directClients.map((c) => ({
+                            value: c.code,
+                            label: `${c.code} - ${c.name}`,
+                          }))}
+                          onChange={(val) => setFormData((prev) => ({ ...prev, dealerCode: val }))}
+                          placeholder="Assign Direct Client / Dealer"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* QUADRANT 2: Contact Information */}
-            <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Phone className="w-3.5 h-3.5 text-blue-600" />
+            {/* SECTION 2: Contact Information */}
+            <div className="space-y-3.5">
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100 flex items-center gap-2">
+                <Phone className="w-3.5 h-3.5 text-[#2652C8]" />
                 <span>2. Contact Details</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Postal Address
+                  </label>
+                  <textarea
+                    name="address"
+                    rows={2}
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Enter full address, street, building, city..."
+                    className="w-full p-3 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all resize-none"
+                  />
+                </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Mobile Number</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Mobile Number
+                  </label>
                   <input
                     name="mobileNumber"
                     value={formData.mobileNumber}
                     onChange={handleChange}
                     onBlur={() => handleBlur('mobileNumber')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white focus:outline-none transition-all',
                       getFieldError('mobileNumber')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
                     placeholder="+91 98765 43210"
                   />
                   {getFieldError('mobileNumber') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('mobileNumber')}</span>
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Email Address</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Email Address
+                  </label>
                   <input
                     name="email"
                     type="email"
@@ -507,23 +541,34 @@ export function FormModal({
                     onChange={handleChange}
                     onBlur={() => handleBlur('email')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white focus:outline-none transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white focus:outline-none transition-all',
                       getFieldError('email')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600 focus:ring-red-200'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
                     placeholder="accounts@client.com"
                   />
                   {getFieldError('email') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('email')}</span>
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">WhatsApp Number</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                      WhatsApp Number
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+                      <CustomCheckbox
+                        checked={Boolean(formData.isWhatsappSameAsMobile)}
+                        onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
+                      />
+                      <span>Same as Mobile</span>
+                    </label>
+                  </div>
                   <input
                     name="whatsappNumber"
                     value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
@@ -531,46 +576,41 @@ export function FormModal({
                     onBlur={() => handleBlur('whatsappNumber')}
                     disabled={formData.isWhatsappSameAsMobile}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white disabled:opacity-60 disabled:bg-slate-100 transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white disabled:opacity-60 disabled:bg-slate-50 transition-all',
                       getFieldError('whatsappNumber')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
-                    placeholder="WhatsApp No."
+                    placeholder="+91 98765 43210"
                   />
                   {getFieldError('whatsappNumber') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('whatsappNumber')}</span>
                     </span>
                   )}
-                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-1 cursor-pointer">
-                    <CustomCheckbox
-                      checked={Boolean(formData.isWhatsappSameAsMobile)}
-                      onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
-                    />
-                    <span>Same as Mobile</span>
-                  </label>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Office Phone</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Office Landline
+                  </label>
                   <input
                     name="officeNumber"
                     value={formData.officeNumber}
                     onChange={handleChange}
                     onBlur={() => handleBlur('officeNumber')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white transition-all',
                       getFieldError('officeNumber')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
-                    placeholder="Office landline"
+                    placeholder="022-12345678"
                   />
                   {getFieldError('officeNumber') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('officeNumber')}</span>
                     </span>
                   )}
@@ -578,152 +618,180 @@ export function FormModal({
               </div>
             </div>
 
-            {/* QUADRANT 3: Banking Details */}
-            <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+            {/* SECTION 3: Banking & Settlement */}
+            <div className="space-y-3.5">
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100 flex items-center gap-2">
+                <CreditCard className="w-3.5 h-3.5 text-[#2652C8]" />
                 <span>3. Banking & Settlement</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Bank Name</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Bank Name
+                  </label>
                   <input
                     name="bankName"
                     value={formData.bankName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="Bank"
+                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="e.g. HDFC Bank"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Account No.</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Account Number
+                  </label>
                   <input
                     name="bankAccountNumber"
                     value={formData.bankAccountNumber}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="A/C No."
+                    className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="e.g. 50100234567890"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">IFSC Code</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    IFSC Code
+                  </label>
                   <input
                     name="ifscCode"
                     value={formData.ifscCode}
                     onChange={handleChange}
                     onBlur={() => handleBlur('ifscCode')}
                     className={cn(
-                      'w-full h-8 px-2 text-xs font-mono uppercase rounded-xl border bg-white transition',
+                      'w-full h-10 px-3.5 text-sm font-mono uppercase rounded-lg border bg-white transition-all',
                       getFieldError('ifscCode')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950 focus:border-red-600'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
                     placeholder="HDFC0001234"
                   />
                   {getFieldError('ifscCode') && (
-                    <span className="text-[9px] text-red-600 font-medium block mt-0.5">{getFieldError('ifscCode')}</span>
+                    <span className="text-[11px] text-rose-600 font-medium block mt-1">{getFieldError('ifscCode')}</span>
                   )}
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Branch</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Branch Name
+                  </label>
                   <input
                     name="bankBranch"
                     value={formData.bankBranch}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="Branch"
+                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="e.g. Fort, Mumbai"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">UPI ID</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    UPI ID / VPA
+                  </label>
                   <input
                     name="upiId"
                     value={formData.upiId}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="id@upi"
+                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="client@upi"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">MICR</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    MICR Code
+                  </label>
                   <input
                     name="micrCode"
                     value={formData.micrCode}
                     onChange={handleChange}
-                    className="w-full h-8 px-2 text-xs font-mono rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="MICR"
+                    className="w-full h-10 px-3.5 text-sm font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="e.g. 400240002"
                   />
                 </div>
               </div>
             </div>
 
-            {/* QUADRANT 4: References & Contact Persons */}
-            <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between space-y-2">
-              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60 text-xs font-bold text-slate-800">
-                <Users2 className="w-3.5 h-3.5 text-blue-600" />
+            {/* SECTION 4: References & Representatives */}
+            <div className="space-y-3.5">
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase pb-1.5 border-b border-slate-100 flex items-center gap-2">
+                <Users2 className="w-3.5 h-3.5 text-[#2652C8]" />
                 <span>4. References & Representatives</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Contact Person Name</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Contact Person Name
+                  </label>
                   <input
                     name="contactPersonName"
                     value={formData.contactPersonName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="Representative"
+                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                    placeholder="Representative Name"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Contact Person Mobile</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Contact Person Mobile
+                  </label>
                   <input
                     name="contactPersonMobile"
                     value={formData.contactPersonMobile}
                     onChange={handleChange}
                     onBlur={() => handleBlur('contactPersonMobile')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white transition-all',
                       getFieldError('contactPersonMobile')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
-                    placeholder="Phone"
+                    placeholder="+91 98765 00000"
                   />
                   {getFieldError('contactPersonMobile') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('contactPersonMobile')}</span>
                     </span>
                   )}
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Referred By Name</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Referred By Name
+                  </label>
                   <input
                     name="referenceName"
                     value={formData.referenceName}
                     onChange={handleChange}
-                    className="w-full h-8 px-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                     placeholder="Referral Contact"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Referral Phone</label>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                    Referral Phone
+                  </label>
                   <input
                     name="referenceMobile"
                     value={formData.referenceMobile}
                     onChange={handleChange}
                     onBlur={() => handleBlur('referenceMobile')}
                     className={cn(
-                      'w-full h-8 px-2.5 text-xs rounded-xl border bg-white transition',
+                      'w-full h-10 px-3.5 text-sm rounded-lg border bg-white transition-all',
                       getFieldError('referenceMobile')
-                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20 text-red-950'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
                     )}
                     placeholder="Referral Phone"
                   />
                   {getFieldError('referenceMobile') && (
-                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
                       <span>{getFieldError('referenceMobile')}</span>
                     </span>
                   )}
@@ -732,17 +800,17 @@ export function FormModal({
             </div>
           </div>
 
-          {/* Footer Controls */}
-          <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between shrink-0">
-            <span className="text-[11px] text-slate-400">
-              * Required fields: Code, Name. Immediate spontaneous feedback on invalid inputs.
+          {/* Unified Modal Footer */}
+          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between shrink-0 rounded-b-2xl">
+            <span className="text-xs text-slate-500 hidden sm:inline">
+              * Required fields: Code, Name.
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
               >
                 Cancel
               </button>
@@ -751,10 +819,10 @@ export function FormModal({
                 form="accountForm"
                 disabled={isSubmitting || isDuplicate}
                 className={cn(
-                  'px-5 py-2 text-xs font-semibold rounded-xl text-white shadow-xs transition flex items-center gap-2 cursor-pointer',
+                  'h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer',
                   isSubmitting || isDuplicate
                     ? 'bg-slate-400 cursor-not-allowed opacity-60'
-                    : 'bg-[#2652C8] hover:bg-[#1F42A3]'
+                    : 'bg-[#2652C8] hover:bg-[#1E42A8]'
                 )}
               >
                 {isSubmitting ? (

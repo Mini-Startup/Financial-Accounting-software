@@ -75,6 +75,19 @@ export function UniversalDateRangePicker({
   const [viewYear, setViewYear] = useState<number>(initialParsed?.year ?? today.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(initialParsed?.month ?? today.getMonth());
 
+  // Keep draft and visible month synchronized when opened or external value changes
+  useEffect(() => {
+    if (isOpen) {
+      setDraftStart(currentStart);
+      setDraftEnd(currentEnd);
+      const parsed = parseISODate(currentStart) || parseISODate(currentEnd);
+      if (parsed) {
+        setViewYear(parsed.year);
+        setViewMonth(parsed.month);
+      }
+    }
+  }, [isOpen, currentStart, currentEnd]);
+
   // Calculate coordinates to portal above table overflow boundaries
   const calculateCoords = useCallback((): Coords | null => {
     if (!containerRef.current) return null;
@@ -229,6 +242,12 @@ export function UniversalDateRangePicker({
         setDraftEnd('');
       } else {
         setDraftEnd(dateStr);
+        // Automatically apply and close immediately when both dates are selected
+        onChange({
+          startDate: draftStart,
+          endDate: dateStr,
+        });
+        setIsOpen(false);
       }
     }
   };
@@ -477,11 +496,13 @@ export function UniversalDateRangePicker({
                     className={cn(
                       'h-8 w-full flex items-center justify-center font-medium transition-all cursor-pointer relative',
                       !isCurrentMonth && 'text-slate-300',
-                      isCurrentMonth && !isStart && !isEnd && !isInRange && 'text-slate-700 hover:bg-slate-100 rounded-md',
-                      isStart && 'bg-[#2652C8] text-white font-bold rounded-l-md shadow-2xs z-1',
-                      isEnd && 'bg-[#2652C8] text-white font-bold rounded-r-md shadow-2xs z-1',
-                      isStart && isEnd && 'rounded-md',
+                      isCurrentMonth && !isStart && !isEnd && !isInRange && 'text-slate-700 hover:bg-slate-100 rounded-lg',
+                      isStart && (!effectiveEnd || effectiveEnd === draftStart) && 'bg-[#2652C8] text-white font-bold rounded-lg shadow-2xs z-1',
+                      isStart && effectiveEnd && effectiveEnd !== draftStart && 'bg-[#2652C8] text-white font-bold rounded-l-lg shadow-2xs z-1',
+                      isEnd && effectiveEnd && effectiveEnd !== draftStart && 'bg-[#2652C8] text-white font-bold rounded-r-lg shadow-2xs z-1',
                       isInRange && 'bg-blue-50 text-blue-900 font-semibold',
+                      isInRange && idx % 7 === 0 && 'rounded-l-lg',
+                      isInRange && idx % 7 === 6 && 'rounded-r-lg',
                       isToday && !isStart && !isEnd && 'underline decoration-[#2652C8] decoration-2 underline-offset-2 font-bold'
                     )}
                   >

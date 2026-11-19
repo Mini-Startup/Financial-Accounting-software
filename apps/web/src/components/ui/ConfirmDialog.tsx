@@ -99,10 +99,10 @@ export function ConfirmDialog({
     >
       {/* Modal Container: Matching Image 3 Reference */}
       <div className="bg-white border border-slate-200/90 rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-150">
-        {/* Soft Ambient Radial Gradient Aura at Top (Matching Image 3) */}
+        {/* Soft Ambient Radial Gradient Aura at Top */}
         <div
           className={cn(
-            'absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-44 rounded-full blur-2xl pointer-events-none bg-gradient-to-b opacity-80',
+            'absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-44 rounded-2xl blur-2xl pointer-events-none bg-gradient-to-b opacity-80',
             config.aura
           )}
         />
@@ -111,7 +111,7 @@ export function ConfirmDialog({
         <button
           onClick={onCancel}
           disabled={isLoading}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer z-10 disabled:opacity-50"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer z-10 disabled:opacity-50"
           title="Dismiss"
         >
           <X className="w-4 h-4" />
@@ -119,9 +119,9 @@ export function ConfirmDialog({
 
         {/* Content Body */}
         <div className="px-6 pt-9 pb-6 text-center relative z-1">
-          {/* Central Circular Icon Badge (Matching Image 3) */}
-          <div className="w-14 h-14 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-4">
-            <div className={cn('w-10 h-10 rounded-full flex items-center justify-center border', config.iconBg)}>
+          {/* Central Icon Badge */}
+          <div className="w-14 h-14 rounded-xl bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-4">
+            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center border', config.iconBg)}>
               <IconComponent className={cn('w-5 h-5 stroke-[2]', config.iconColor)} />
             </div>
           </div>

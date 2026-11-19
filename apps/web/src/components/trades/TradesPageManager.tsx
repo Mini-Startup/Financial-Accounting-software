@@ -1243,7 +1243,7 @@ export function TradesPageManager({
                       <td className="whitespace-nowrap">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap',
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap',
                             t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                             t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
                             t.tradeType === 'SETTLEMENT' && 'bg-blue-50 text-blue-800 border-blue-200',

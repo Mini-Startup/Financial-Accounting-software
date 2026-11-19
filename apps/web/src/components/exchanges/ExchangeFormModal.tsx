@@ -94,90 +94,106 @@ export function ExchangeFormModal({
 
   return (
     <div
-      onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-100000 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-100000 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
     >
       <div
         ref={modalRef}
-        className="card w-120 max-w-[95vw] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
       >
-        {/* Header */}
-        <div className="card__header bg-snow flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-100/70 text-emerald-800 rounded-md">
+        {/* Unified Modal Header */}
+        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-800">
-                {initialData?.id ? 'Edit Exchange' : 'Create New Exchange'}
-              </h2>
-              <p className="text-[11px] text-slate-500">Market exchange definition (e.g. SGX, NSE, DGCX)</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {initialData?.id ? 'Edit Exchange' : 'Create New Exchange'}
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
+                  Exchange
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">Market exchange definition (e.g. SGX, NSE, DGCX)</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate hover:text-charcoal hover:bg-mist rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="card__body p-6">
-          <form id="exchangeForm" onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Exchange Code <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  required
-                  autoFocus
-                  name="code"
-                  value={formData.code}
-                  onChange={handleChange}
-                  placeholder="e.g. SGX"
-                  className="input uppercase font-mono font-bold w-full text-xs py-2"
-                />
-              </div>
+        <form id="exchangeForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <div className="p-6 space-y-4 flex-1 bg-white">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                Exchange Code <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                autoFocus
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                placeholder="e.g. SGX"
+                className="w-full h-10 px-3.5 text-sm uppercase font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+              />
+            </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Exchange Full Name</label>
-                <input
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="e.g. Singapore Exchange"
-                  className="input w-full text-xs py-2"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                Exchange Full Name
+              </label>
+              <input
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="e.g. Singapore Exchange"
+                className="w-full h-10 px-3.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+              />
+            </div>
 
-              <div className="flex items-center gap-2 pt-1">
+            <div className="pt-2">
+              <label className="flex items-center gap-2.5 text-xs text-slate-700 select-none cursor-pointer">
                 <CustomCheckbox
                   id="exchangeActive"
                   checked={Boolean(formData.isActive)}
                   onChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
                 />
-                <label htmlFor="exchangeActive" className="text-slate-700 select-none cursor-pointer font-medium text-xs">
-                  Active in trading and imports
-                </label>
-              </div>
+                <span className="font-semibold text-slate-800">
+                  Active in trading operations and contract imports
+                </span>
+              </label>
             </div>
+          </div>
 
-            <div className="mt-6 pt-4 flex justify-end gap-2.5 border-t border-border-light">
-              <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary text-xs py-2 px-3">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="exchangeForm"
-                disabled={isSubmitting}
-                className="btn btn--primary text-xs py-2 px-4 shadow-xs"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Exchange'}
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Unified Modal Footer */}
+          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="exchangeForm"
+              disabled={isSubmitting || !formData.code.trim()}
+              className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              {isSubmitting ? 'Saving...' : initialData?.id ? 'Update Exchange' : 'Save Exchange'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
