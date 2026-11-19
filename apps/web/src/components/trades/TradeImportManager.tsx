@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
-import { toast } from 'sonner';
+import { notify } from '../../utils/toastNotify';
 import { ArrowLeft, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { parseTradeFile, parseDubaiTradeFile } from '../../lib/tradeParser';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
@@ -240,10 +240,10 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       if (!isDubaiImport) {
         handleRevalidate();
       }
-      toast.success('Database validation checks updated');
+      notify.success('Validation Updated', { description: 'Database validation checks updated.' });
     } catch (err) {
       console.error('Failed to revalidate master data:', err);
-      toast.error('Failed to rerun checks');
+      notify.error('Validation Check Failed', { description: 'Failed to rerun checks.' });
     } finally {
       setIsValidatingMasterData(false);
     }
@@ -340,7 +340,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     const isCsv = file.name.endsWith('.csv') || file.name.endsWith('.txt');
 
     if (!isExcel && !isCsv) {
-      toast.error('Unsupported file format. Please upload an Excel (.xlsx, .xls) or CSV (.csv, .txt) file.');
+      notify.error('Unsupported File Format', { description: 'Please upload an Excel (.xlsx, .xls) or CSV (.csv, .txt) file.' });
       setIsProcessing(false);
       return;
     }
@@ -356,12 +356,12 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           const csvContent = XLSX.utils.sheet_to_csv(sheet);
           await handleFileRead(csvContent, file.name);
         } catch (err: any) {
-          toast.error('Failed to parse Excel file: ' + (err.message || 'Invalid format'));
+          notify.error('File Parsing Failed', { description: 'Failed to parse Excel file: ' + (err.message || 'Invalid format') });
           setIsProcessing(false);
         }
       };
       reader.onerror = () => {
-        toast.error('Failed to read Excel file.');
+        notify.error('File Read Error', { description: 'Failed to read Excel file.' });
         setIsProcessing(false);
       };
       reader.readAsArrayBuffer(file);
@@ -374,7 +374,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         }
       };
       reader.onerror = () => {
-        toast.error('Failed to read the file.');
+        notify.error('File Read Error', { description: 'Failed to read the file.' });
         setIsProcessing(false);
       };
       reader.readAsText(file);
@@ -395,7 +395,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
-        toast.success(`Parsed ${dubaiResult.trades.length} Dubai trade rows.`);
+        notify.success('Dubai Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length} Dubai trade rows.` });
 
         setIsValidatingMasterData(true);
         setTimeout(async () => {
@@ -451,7 +451,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       setPreviewRows(instantPreview);
       setNormalizedRows(instantPreview);
       setStep('PREVIEW');
-      toast.success(`Parsed ${parseResult.trades.length} rows. Validating against database…`);
+      notify.success('Trades Parsed', { description: `Parsed ${parseResult.trades.length} rows. Validating against database…` });
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
@@ -469,9 +469,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       const deselectedPreview = previewData.map((r: any) => ({ ...r, selected: false }));
       setPreviewRows(deselectedPreview);
       setNormalizedRows(deselectedPreview);
-      toast.success('Validation complete.');
+      notify.success('Validation Complete', { description: 'All trade records checked against master data.' });
     } catch (err: any) {
-      toast.error(err.message || 'Error uploading file');
+      notify.error('Upload Error', { description: err.message || 'Error uploading file' });
       if (step === 'UPLOAD') {
         setFileName('');
       }
@@ -529,9 +529,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           selected: selectionMap.get(r.uniqueTradeId || r.tradeNumber) || false,
         }));
       });
-      toast.success('Validation updated with latest database records.');
+      notify.success('Validation Updated', { description: 'Validation updated with latest database records.' });
     } catch (err: any) {
-      toast.error(err.message || 'Error re-validating trades');
+      notify.error('Re-validation Failed', { description: err.message || 'Error re-validating trades' });
     } finally {
       setIsProcessing(false);
     }
@@ -542,7 +542,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     try {
       const validRowsToImport = normalizedRows.filter((r) => r.selected === true && r.status === 'Valid');
       if (validRowsToImport.length === 0) {
-        toast.error('No selected valid trades found to import. Please select at least one trade.');
+        notify.error('Selection Required', { description: 'No selected valid trades found to import. Please select at least one trade.' });
         setIsProcessing(false);
         return;
       }
@@ -566,9 +566,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       const result = await res.json();
       setImportResult(result);
       setStep('RESULT');
-      toast.success(`Import completed! ${result.importedCount} trades created.`);
+      notify.success('Import Completed', { description: `Successfully created ${result.importedCount} trades.` });
     } catch (err: any) {
-      toast.error(err.message || 'Error confirming import');
+      notify.error('Import Failed', { description: err.message || 'Error confirming import' });
     } finally {
       setIsProcessing(false);
     }
@@ -598,7 +598,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       );
 
       if (validActiveRows.length === 0) {
-        toast.error('No selected valid trades found to import. Please select at least one trade.');
+        notify.error('Selection Required', { description: 'No selected valid trades found to import. Please select at least one trade.' });
         setIsProcessing(false);
         setImportProgress(null);
         return;
@@ -692,13 +692,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
       setImportResult({ importedCount: totalImported, failedCount: 0 });
       setStep('RESULT');
-      toast.success(`Import complete! Successfully saved ${totalImported.toLocaleString()} trades. Redirecting to trades...`);
+      notify.success('Import Complete', { description: `Successfully saved ${totalImported.toLocaleString()} trades. Redirecting to trades...` });
       setTimeout(() => {
         router.push('/trades');
         router.refresh();
       }, 500);
     } catch (err: any) {
-      toast.error(err.message || 'Error confirming trade import');
+      notify.error('Import Failed', { description: err.message || 'Error confirming trade import' });
     } finally {
       setIsProcessing(false);
       setImportProgress(null);
