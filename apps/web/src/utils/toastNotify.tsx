@@ -93,24 +93,24 @@ export function showExecutiveToast(
       <div className="w-[350px] min-w-[350px] max-w-[350px] h-[250px] min-h-[250px] max-h-[250px] select-none pointer-events-auto">
         <div
           className={cn(
-            'relative h-full w-full overflow-hidden rounded-2xl border bg-white p-4 flex flex-col justify-between shadow-2xl transition-all duration-200 animate-in fade-in zoom-in-95',
+            'relative h-full w-full overflow-hidden rounded-2xl border bg-white p-4.5 flex flex-col justify-between shadow-2xl transition-all duration-200 animate-in fade-in zoom-in-95',
             statusConfig.cardClass,
             customClassName
           )}
         >
           {/* Top Header */}
-          <div className="flex items-start justify-between gap-2.5 shrink-0">
-            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3 shrink-0">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <div
                 className={cn(
-                  'size-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 shadow-2xs',
+                  'size-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs',
                   statusConfig.badgeClass
                 )}
               >
                 {statusConfig.icon}
               </div>
               <div className="min-w-0 flex-1 pr-1">
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug break-words">
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-snug break-words">
                   {title}
                 </h4>
               </div>
@@ -118,24 +118,24 @@ export function showExecutiveToast(
             <button
               type="button"
               onClick={() => toast.dismiss(t)}
-              className="p-1 -mr-1 -mt-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
+              className="p-1.5 -mr-1.5 -mt-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
               title="Dismiss notification"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Scrollable Content Area — strictly prevents any overflow */}
-          <div className="flex-1 my-2 min-h-0 overflow-y-auto pr-1">
+          <div className="flex-1 my-2.5 min-h-0 overflow-y-auto pr-1">
             {description && (
-              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+              <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed">
                 {description}
               </p>
             )}
 
-            {/* Bulleted Error List */}
+            {/* Bulleted Error List with prominent, readable typography */}
             {errors && errors.length > 0 && (
-              <ul className="space-y-1.5 text-xs text-slate-700">
+              <ul className="space-y-2 text-xs sm:text-[13px] text-slate-700">
                 {errors.map((err, idx) => {
                   const colonIndex = err.indexOf(':');
                   const hasPrefix = colonIndex > 0 && colonIndex < 30;
@@ -144,15 +144,15 @@ export function showExecutiveToast(
 
                   return (
                     <li key={idx} className="flex items-start gap-2 leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-xs bg-rose-500 shrink-0 mt-1.5" />
-                      <span className="text-xs break-words flex-1">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-1.5" />
+                      <span className="break-words flex-1">
                         {prefix ? (
                           <>
-                            <strong className="font-semibold text-slate-900">{prefix}:</strong>{' '}
-                            <span className="text-slate-600">{rest}</span>
+                            <strong className="font-bold text-slate-950">{prefix}:</strong>{' '}
+                            <span className="font-medium text-slate-700">{rest}</span>
                           </>
                         ) : (
-                          <span className="text-slate-600">{err}</span>
+                          <span className="font-medium text-slate-700">{err}</span>
                         )}
                       </span>
                     </li>
@@ -162,8 +162,8 @@ export function showExecutiveToast(
             )}
           </div>
 
-          {/* Bottom Footer */}
-          <div className="shrink-0 pt-2 border-t border-slate-100 flex items-center justify-between">
+          {/* Bottom Footer with real button */}
+          <div className="shrink-0 pt-2.5 border-t border-slate-100 flex items-center justify-between">
             {typeof progress === 'number' ? (
               <div className="w-full space-y-1">
                 <div className="w-full h-1.5 bg-slate-100 rounded-md overflow-hidden">
@@ -186,7 +186,7 @@ export function showExecutiveToast(
                       if (onCancel) onCancel();
                       toast.dismiss(t);
                     }}
-                    className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    className="h-8 px-3.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                   >
                     {cancelLabel}
                   </button>
@@ -199,7 +199,7 @@ export function showExecutiveToast(
                       toast.dismiss(t);
                     }}
                     className={cn(
-                      'px-3 py-1 text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer',
+                      'h-8 px-4 text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer',
                       alertStatus === 'danger'
                         ? 'bg-rose-600 hover:bg-rose-700 text-white'
                         : 'bg-[#2652C8] hover:bg-[#1F42A3] text-white'
@@ -210,11 +210,11 @@ export function showExecutiveToast(
                 )}
               </div>
             ) : (
-              <div className="w-full flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                <span className="flex items-center gap-1.5">
+              <div className="w-full flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                   <span
                     className={cn(
-                      'w-1.5 h-1.5 rounded-xs',
+                      'w-2 h-2 rounded-full',
                       alertStatus === 'danger'
                         ? 'bg-rose-500'
                         : alertStatus === 'success'
@@ -224,12 +224,14 @@ export function showExecutiveToast(
                         : 'bg-[#2652C8]'
                     )}
                   />
-                  <span>{alertStatus === 'danger' ? 'Validation Error' : 'System Notice'}</span>
+                  <span className={alertStatus === 'danger' ? 'text-rose-600 font-bold' : 'text-slate-600 font-medium'}>
+                    {alertStatus === 'danger' ? 'Validation Error' : 'System Notice'}
+                  </span>
                 </span>
                 <button
                   type="button"
                   onClick={() => toast.dismiss(t)}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                  className="h-8 px-4 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-xs cursor-pointer active:scale-95"
                 >
                   Dismiss
                 </button>
