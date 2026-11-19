@@ -142,6 +142,17 @@ export function FormModal({
     return null;
   };
 
+  const renderFieldError = (field: string) => {
+    const err = getFieldError(field);
+    if (!err) return null;
+    return (
+      <span className="text-xs font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+        <span>{err}</span>
+      </span>
+    );
+  };
+
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
@@ -387,7 +398,7 @@ export function FormModal({
                 {/* Code (compact) + Opening Balance */}
                 <div className="flex items-center gap-3">
                   <div className="w-36 shrink-0">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Code <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -407,7 +418,7 @@ export function FormModal({
                   </div>
 
                   <div className="w-40 shrink-0">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Opening Balance
                     </label>
                     <input
@@ -421,20 +432,15 @@ export function FormModal({
                     />
                   </div>
 
-                  <span className="text-[11px] text-slate-400 pt-5 font-mono">
+                  <span className="text-xs text-slate-400 pt-5 font-mono">
                     + Cr / - Dr
                   </span>
                 </div>
-                {getFieldError('code') && (
-                  <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                    <span>{getFieldError('code')}</span>
-                  </span>
-                )}
+                {renderFieldError('code')}
 
                 {/* Account Name */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                     Account Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -450,12 +456,7 @@ export function FormModal({
                     )}
                     placeholder="e.g. ACME Securities Ltd"
                   />
-                  {getFieldError('name') && (
-                    <span className="text-[11px] text-rose-600 font-medium flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                      <span>{getFieldError('name')}</span>
-                    </span>
-                  )}
+                  {renderFieldError('name')}
                 </div>
 
                 {/* Direct Client Toggle if Sundry Debtors */}
@@ -488,7 +489,7 @@ export function FormModal({
                 {/* Mobile & WhatsApp Numbers */}
                 <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Mobile Number
                     </label>
                     <input
@@ -504,11 +505,12 @@ export function FormModal({
                       )}
                       placeholder="+91 98765 43210"
                     />
+                    {renderFieldError('mobileNumber')}
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
                         WhatsApp
                       </label>
                       <label className="flex items-center gap-1 text-[10px] text-slate-500 cursor-pointer select-none">
@@ -533,10 +535,11 @@ export function FormModal({
                       )}
                       placeholder="+91 98765 43210"
                     />
+                    {renderFieldError('whatsappNumber')}
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Email Address
                     </label>
                     <input
@@ -553,10 +556,11 @@ export function FormModal({
                       )}
                       placeholder="account@client.com"
                     />
+                    {renderFieldError('email')}
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Office Landline
                     </label>
                     <input
@@ -572,12 +576,13 @@ export function FormModal({
                       )}
                       placeholder="022-12345678"
                     />
+                    {renderFieldError('officeNumber')}
                   </div>
                 </div>
 
                 {/* Postal Address */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                     Postal Address
                   </label>
                   <textarea
@@ -600,7 +605,7 @@ export function FormModal({
                 {/* Bank Name + Account No */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Bank Name
                     </label>
                     <input
@@ -613,7 +618,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Account Number
                     </label>
                     <input
@@ -626,7 +631,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       IFSC Code
                     </label>
                     <input
@@ -642,10 +647,11 @@ export function FormModal({
                       )}
                       placeholder="HDFC0001234"
                     />
+                    {renderFieldError('ifscCode')}
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Branch Name
                     </label>
                     <input
@@ -658,7 +664,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       UPI ID / VPA
                     </label>
                     <input
@@ -671,7 +677,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       MICR Code
                     </label>
                     <input
@@ -691,7 +697,7 @@ export function FormModal({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Contact Person
                     </label>
                     <input
@@ -704,7 +710,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Person Mobile
                     </label>
                     <input
@@ -720,10 +726,11 @@ export function FormModal({
                       )}
                       placeholder="+91 98765 00000"
                     />
+                    {renderFieldError('contactPersonMobile')}
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Referred By
                     </label>
                     <input
@@ -736,7 +743,7 @@ export function FormModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
                       Referral Phone
                     </label>
                     <input
@@ -752,6 +759,7 @@ export function FormModal({
                       )}
                       placeholder="+91 98765 00000"
                     />
+                    {renderFieldError('referenceMobile')}
                   </div>
                 </div>
               </div>

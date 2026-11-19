@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { OpenPositionVerificationPanel, type PositionVerificationItem } from '../trades/OpenPositionVerificationPanel';
 import { generateDubaiSecurityName, cleanScriptFullName } from '../trades/tradeImportHelpers';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
@@ -288,10 +289,14 @@ export function ClosingRatePageManager({
         setRawOpenPositionRows(rawRows);
         const items = processOpenPositionClosingRates(rawRows, exchanges, localScripts);
         setParsedItems(items);
-        toast.success(`Successfully extracted ${items.length} unique closing rates from ${rawRows.length} open position rows`);
+        notify.success('Rates Extracted Successfully', {
+          description: `Extracted ${items.length} unique closing rates from ${rawRows.length} open position rows.`,
+        });
       } catch (err: any) {
         console.error(err);
-        toast.error('Failed to parse open position CSV file.');
+        notify.error('File Parsing Failed', {
+          description: 'Failed to parse open position CSV file.',
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -502,14 +507,18 @@ export function ClosingRatePageManager({
       }
 
       const result = await res.json();
-      toast.success(`Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`);
+      notify.success('Trade Adjustments Completed', {
+        description: `Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`,
+      });
       setShowAdjustConfirm(false);
       
       // Refresh settlement data
       await fetchSettlementForDate(importDate);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Error executing trade adjustments');
+      notify.error('Adjustment Failed', {
+        description: err.message || 'Error executing trade adjustments',
+      });
     } finally {
       setIsAdjusting(false);
     }
@@ -517,7 +526,7 @@ export function ClosingRatePageManager({
 
   const executeImport = async (ratesToImport: any[]) => {
     if (!ratesToImport || ratesToImport.length === 0) {
-      toast.error('No rates to import.');
+      notify.error('Import Failed', { description: 'No rates to import.' });
       return;
     }
 
@@ -535,7 +544,9 @@ export function ClosingRatePageManager({
       }
 
       const result = await res.json();
-      toast.success(`Successfully imported ${result.importedCount} closing rates for ${importDate}!`);
+      notify.success('Rates Imported', {
+        description: `Successfully imported ${result.importedCount} closing rates for ${importDate}!`,
+      });
       setDuplicateCheckModal(null);
       handleImportBack();
     } catch (err: any) {

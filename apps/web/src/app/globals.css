@@ -610,9 +610,11 @@ select option {
 
 /* Sonner Toaster Container & Reset for HeroUI Executive Alerts */
 [data-sonner-toaster] {
-  --width: 290px !important;
+  --width: 350px !important;
+  width: 350px !important;
   max-width: calc(100vw - 32px) !important;
-  z-index: 99999 !important;
+  z-index: 999999 !important;
+  right: 24px !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {
@@ -623,8 +625,10 @@ select option {
   padding: 0 !important;
   margin: 0 !important;
   overflow: visible !important;
-  width: auto !important;
-  max-width: 290px !important;
+  width: 350px !important;
+  max-width: 350px !important;
+  height: 250px !important;
+  max-height: 250px !important;
   display: block !important;
 }
 

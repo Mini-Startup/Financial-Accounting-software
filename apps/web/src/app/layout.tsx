@@ -150,13 +150,14 @@ export default async function RootLayout({
           <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4500,
-              unstyled: true,
+              duration: 5000,
+              className: 'z-[999999]',
             }}
             style={{
-              '--width': '290px',
+              '--width': '350px',
+              zIndex: 999999,
             } as React.CSSProperties}
-            richColors={false}
+            richColors
           />
         </ClerkProvider>
          <Agentation />
