@@ -6,7 +6,6 @@ import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { X, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { CustomCheckbox } from '../ui/CustomCheckbox';
 
 export function ExchangeFormModal({
   initialData,
@@ -23,7 +22,6 @@ export function ExchangeFormModal({
   const [formData, setFormData] = useState({
     code: initialData?.code || '',
     name: initialData?.name || initialData?.code || '',
-    isActive: initialData?.isActive ?? true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,7 +30,6 @@ export function ExchangeFormModal({
       setFormData({
         code: initialData.code || '',
         name: initialData.name || initialData.code || '',
-        isActive: initialData.isActive ?? true,
       });
     }
   }, [initialData]);
@@ -48,7 +45,7 @@ export function ExchangeFormModal({
       const payload = {
         code: formData.code.trim().toUpperCase(),
         name: formData.name.trim() || formData.code.trim().toUpperCase(),
-        isActive: formData.isActive,
+        isActive: true,
       };
 
       const res = await fetch(url, {
@@ -72,7 +69,6 @@ export function ExchangeFormModal({
           setFormData({
             code: '',
             name: '',
-            isActive: true,
           });
         }
       } else {
@@ -88,8 +84,7 @@ export function ExchangeFormModal({
   };
 
   const handleChange = (e: any) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setFormData((prev: any) => ({ ...prev, [e.target.name]: value }));
+    setFormData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   return (
@@ -153,19 +148,6 @@ export function ExchangeFormModal({
                 placeholder="e.g. Singapore Exchange"
                 className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
               />
-            </div>
-
-            <div className="pt-1">
-              <label className="flex items-center gap-2.5 text-xs text-slate-700 select-none cursor-pointer">
-                <CustomCheckbox
-                  id="exchangeActive"
-                  checked={Boolean(formData.isActive)}
-                  onChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
-                />
-                <span className="font-semibold text-slate-800">
-                  Active in trading operations and contract imports
-                </span>
-              </label>
             </div>
           </div>
 

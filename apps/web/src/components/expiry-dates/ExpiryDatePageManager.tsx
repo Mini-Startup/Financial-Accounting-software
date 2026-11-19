@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Plus, Calendar, Check, X, Trash2, Power, Search, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Calendar, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/utils/cn';
-import { formatDateToDDMMYY, formatDateForInput } from '@/utils/dateUtils';
-import { formatExpiryToDDMMMYY } from '@/utils/securityName';
+import { formatDateToDDMMYY, parseDateDetailed } from '@/utils/dateUtils';
 import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { useTopBar } from '@/context/TopBarContext';
 import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import type { AdvancedCondition } from '@/utils/tableFilter';
-import { useEffect } from 'react';
 
 export interface ExpiryDateRecord {
   id: string;
@@ -28,9 +24,65 @@ export interface ExpiryDateRecord {
 
 const EXPIRY_COLUMNS = [
   { key: 'date', label: 'Expiry Date' },
-  { key: 'code', label: 'Contract Code' },
-  { key: 'raw', label: 'Raw Stored Value' },
+  { key: 'dayOfWeek', label: 'Day of Week' },
+  { key: 'contractMonth', label: 'Contract Month' },
+  { key: 'timeline', label: 'Timeline' },
 ];
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function getExpiryCalendarDetails(dateStr: string) {
+  const parsed = parseDateDetailed(dateStr);
+  if (!parsed.isValid || !parsed.year || !parsed.month || !parsed.day) {
+    return {
+      formattedDate: dateStr,
+      dayOfWeek: '—',
+      contractMonth: '—',
+      timeline: '—',
+      timelineType: 'neutral' as const,
+    };
+  }
+
+  const expDate = new Date(parsed.year, parsed.month - 1, parsed.day);
+  const formattedDate = formatDateToDDMMYY(dateStr);
+  const dayOfWeek = WEEKDAYS[expDate.getDay()] || '—';
+  const contractMonth = `${MONTH_FULL[parsed.month - 1]} ${parsed.year}`;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDay = new Date(parsed.year, parsed.month - 1, parsed.day, 0, 0, 0, 0);
+  const diffTime = targetDay.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  let timeline = '';
+  let timelineType: 'matured' | 'today' | 'upcoming' = 'upcoming';
+
+  if (diffDays < 0) {
+    timeline = 'Matured';
+    timelineType = 'matured';
+  } else if (diffDays === 0) {
+    timeline = 'Expires Today';
+    timelineType = 'today';
+  } else if (diffDays === 1) {
+    timeline = 'Expires Tomorrow';
+    timelineType = 'upcoming';
+  } else {
+    timeline = `In ${diffDays} days`;
+    timelineType = 'upcoming';
+  }
+
+  return {
+    formattedDate,
+    dayOfWeek,
+    contractMonth,
+    timeline,
+    timelineType,
+  };
+}
 
 export function ExpiryDatePageManager({
   initialExpiries = [],
@@ -40,21 +92,17 @@ export function ExpiryDatePageManager({
   const {
     items: expiries,
     addEntity,
-    updateEntity,
     removeEntity,
-    syncWithServer,
   } = useOptimisticEntityList<ExpiryDateRecord>(initialExpiries);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newDate, setNewDate] = useState('');
-  const [newIsActive, setNewIsActive] = useState(true);
 
   // Deletion modal state
   const [deleteTarget, setDeleteTarget] = useState<ExpiryDateRecord | null>(null);
@@ -87,22 +135,20 @@ export function ExpiryDatePageManager({
   const filteredExpiries = useMemo(() => {
     let list = [...expiries];
 
-    if (statusFilter === 'ACTIVE') {
-      list = list.filter((e) => e.isActive);
-    } else if (statusFilter === 'INACTIVE') {
-      list = list.filter((e) => !e.isActive);
-    }
-
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((e) => {
-        const formatted = formatDateToDDMMYY(e.normalizedDate || e.date).toLowerCase();
-        const code = formatExpiryToDDMMMYY(e.normalizedDate || e.date).toLowerCase();
-        const raw = (e.date || '').toLowerCase();
+        const details = getExpiryCalendarDetails(e.normalizedDate || e.date);
+        const formatted = details.formattedDate.toLowerCase();
+        const day = details.dayOfWeek.toLowerCase();
+        const month = details.contractMonth.toLowerCase();
+        const time = details.timeline.toLowerCase();
+
         if (searchColumn === 'date') return formatted.includes(q);
-        if (searchColumn === 'code') return code.includes(q);
-        if (searchColumn === 'raw') return raw.includes(q);
-        return formatted.includes(q) || code.includes(q) || raw.includes(q);
+        if (searchColumn === 'dayOfWeek') return day.includes(q);
+        if (searchColumn === 'contractMonth') return month.includes(q);
+        if (searchColumn === 'timeline') return time.includes(q);
+        return formatted.includes(q) || day.includes(q) || month.includes(q) || time.includes(q);
       });
     }
 
@@ -111,36 +157,12 @@ export function ExpiryDatePageManager({
       const timeB = new Date(b.normalizedDate || b.date).getTime() || 0;
       return timeA - timeB;
     });
-  }, [expiries, statusFilter, searchQuery, searchColumn]);
+  }, [expiries, searchQuery, searchColumn]);
 
   const paginatedExpiries = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredExpiries.slice(start, start + pageSize);
   }, [filteredExpiries, currentPage, pageSize]);
-
-  // Toggle active/inactive
-  const handleToggleActive = async (expiry: ExpiryDateRecord) => {
-    const updated = { ...expiry, isActive: !expiry.isActive };
-    updateEntity(updated);
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates/${expiry.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !expiry.isActive }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to update status on server');
-      }
-      toast.success(
-        `Expiry ${formatDateToDDMMYY(expiry.normalizedDate || expiry.date)} marked ${!expiry.isActive ? 'Active' : 'Inactive'}`
-      );
-    } catch {
-      updateEntity(expiry); // Revert
-      toast.error('Failed to update expiry status');
-    }
-  };
 
   // Delete expiry date
   const handleConfirmDelete = async () => {
@@ -192,7 +214,7 @@ export function ExpiryDatePageManager({
         body: JSON.stringify({
           date: newDate,
           normalizedDate: new Date(`${newDate}T00:00:00Z`).toISOString(),
-          isActive: newIsActive,
+          isActive: true,
         }),
       });
 
@@ -206,7 +228,6 @@ export function ExpiryDatePageManager({
       toast.success(`Expiry date ${formattedNew} added successfully`);
       setIsAdding(false);
       setNewDate('');
-      setNewIsActive(true);
     } catch (err: any) {
       toast.error(err.message || 'Failed to add expiry date');
     } finally {
@@ -223,7 +244,7 @@ export function ExpiryDatePageManager({
           setSearchQuery(q);
           setCurrentPage(1);
         }}
-        searchPlaceholder="Search expiry date or contract code..."
+        searchPlaceholder="Search expiry date, day, month, or timeline..."
         columns={EXPIRY_COLUMNS}
         searchColumn={searchColumn}
         onSearchColumnChange={(col) => {
@@ -235,24 +256,6 @@ export function ExpiryDatePageManager({
           setAdvancedConditions(conds);
           setCurrentPage(1);
         }}
-        filterSlot={
-          <div className="w-36">
-            <UniversalDropdown
-              value={statusFilter}
-              options={[
-                { value: 'ALL', label: 'All Statuses' },
-                { value: 'ACTIVE', label: 'Active Only' },
-                { value: 'INACTIVE', label: 'Inactive Only' },
-              ]}
-              onChange={(val) => {
-                setStatusFilter(val as any);
-                setCurrentPage(1);
-              }}
-              placeholder="Status"
-              triggerClassName="h-9 min-h-9"
-            />
-          </div>
-        }
         currentPage={currentPage}
         pageSize={pageSize}
         totalItems={filteredExpiries.length}
@@ -267,9 +270,9 @@ export function ExpiryDatePageManager({
           <thead className="bg-slate-50/90 border-b border-slate-200/80 select-none">
             <tr className="whitespace-nowrap">
               <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Expiry Date</th>
-              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Contract Code</th>
-              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Raw Stored Value</th>
-              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Status</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Day of Week</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Contract Month</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Timeline</th>
               <th className="text-right px-4 py-3 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Actions</th>
             </tr>
           </thead>
@@ -282,66 +285,46 @@ export function ExpiryDatePageManager({
               </tr>
             ) : (
               paginatedExpiries.map((exp) => {
-                const dateStr = exp.normalizedDate || exp.date;
-                const formatted = formatDateToDDMMYY(dateStr);
-                const code = formatExpiryToDDMMMYY(dateStr);
+                const details = getExpiryCalendarDetails(exp.normalizedDate || exp.date);
 
                 return (
                   <tr key={exp.id} className="hover:bg-blue-50/40 transition-colors">
                     <td className="px-4 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-[#2652C8]" />
-                        <span>{formatted}</span>
+                        <span>{details.formattedDate}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap font-medium">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
-                        {code}
-                      </span>
+                    <td className="px-4 py-3 text-slate-700 font-medium whitespace-nowrap">
+                      {details.dayOfWeek}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                      {exp.date}
+                    <td className="px-4 py-3 text-slate-700 font-medium whitespace-nowrap">
+                      {details.contractMonth}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(exp)}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border transition cursor-pointer',
-                          exp.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                        )}
-                        title="Click to toggle status"
-                      >
-                        <span
-                          className={cn(
-                            'w-1.5 h-1.5 rounded-xs',
-                            exp.isActive ? 'bg-emerald-500' : 'bg-slate-400'
-                          )}
-                        />
-                        <span>{exp.isActive ? 'Active' : 'Inactive'}</span>
-                      </button>
+                      {details.timelineType === 'matured' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                          {details.timeline}
+                        </span>
+                      ) : details.timelineType === 'today' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                          {details.timeline}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#2652C8] border border-blue-200">
+                          {details.timeline}
+                        </span>
+                      )}
                     </td>
                     <td className="text-right px-4 py-3 whitespace-nowrap">
-                      <div className="inline-flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(exp)}
-                          className="p-1.5 text-slate-500 hover:text-[#2652C8] transition-colors rounded-lg hover:bg-blue-50 cursor-pointer"
-                          title={exp.isActive ? 'Deactivate Expiry' : 'Activate Expiry'}
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(exp)}
-                          className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 cursor-pointer"
-                          title="Delete Expiry"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(exp)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 cursor-pointer inline-flex items-center justify-center"
+                        title="Delete Expiry"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -367,25 +350,20 @@ export function ExpiryDatePageManager({
           className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
         >
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-            {/* Unified Modal Header */}
-            <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+            {/* Unified Modal Header — No redundant badge */}
+            <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">Add Expiry Date</h2>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-[#2652C8] tracking-wider uppercase">
-                      Expiry
-                    </span>
-                  </div>
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">Add Expiry Date</h2>
                   <p className="text-xs text-slate-500 mt-0.5">Contract expiration date for derivatives trading</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAdding(false)}
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
                 title="Close"
               >
                 <X className="w-4 h-4" />
@@ -407,31 +385,10 @@ export function ExpiryDatePageManager({
                     Format is strictly DD-MM-YY (e.g. 15-12-26).
                   </p>
                 </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                    Active by default
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setNewIsActive(!newIsActive)}
-                    className={cn(
-                      'w-10 h-6 flex items-center rounded-lg p-1 cursor-pointer transition-colors',
-                      newIsActive ? 'bg-emerald-600' : 'bg-slate-300'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'bg-white w-4 h-4 rounded-md shadow-md transform transition-transform',
-                        newIsActive ? 'translate-x-4' : 'translate-x-0'
-                      )}
-                    />
-                  </button>
-                </div>
               </div>
 
               {/* Unified Modal Footer */}
-              <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+              <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}

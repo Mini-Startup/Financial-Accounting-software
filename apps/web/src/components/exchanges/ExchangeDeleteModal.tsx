@@ -169,7 +169,7 @@ export function ExchangeDeleteModal({
                 <div className="text-xs text-rose-800 space-y-1">
                   <p className="font-semibold">Future Trade Import Warning:</p>
                   <p className="leading-relaxed">
-                    Deactivating exchange <strong>{exchange.code}</strong> will preserve historical records via soft delete. However, any future trade CSV/Excel files containing exchange code <strong>{exchange.code}</strong> will be flagged as invalid during file parsing.
+                    Deleting exchange <strong>{exchange.code}</strong> will preserve historical records. However, any future trade CSV/Excel files containing exchange code <strong>{exchange.code}</strong> will be flagged as invalid during file parsing.
                   </p>
                 </div>
               </div>
