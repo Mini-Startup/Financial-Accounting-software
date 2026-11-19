@@ -12,6 +12,8 @@ import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { useTopBar } from '@/context/TopBarContext';
 import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import type { AdvancedCondition } from '@/utils/tableFilter';
 import { useEffect } from 'react';
 
 export interface ExpiryDateRecord {
@@ -23,6 +25,12 @@ export interface ExpiryDateRecord {
   createdAt?: string;
   updatedAt?: string;
 }
+
+const EXPIRY_COLUMNS = [
+  { key: 'date', label: 'Expiry Date' },
+  { key: 'code', label: 'Contract Code' },
+  { key: 'raw', label: 'Raw Stored Value' },
+];
 
 export function ExpiryDatePageManager({
   initialExpiries = [],
@@ -38,7 +46,11 @@ export function ExpiryDatePageManager({
   } = useOptimisticEntityList<ExpiryDateRecord>(initialExpiries);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchColumn, setSearchColumn] = useState('ALL');
+  const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newDate, setNewDate] = useState('');
@@ -87,6 +99,9 @@ export function ExpiryDatePageManager({
         const formatted = formatDateToDDMMYY(e.normalizedDate || e.date).toLowerCase();
         const code = formatExpiryToDDMMMYY(e.normalizedDate || e.date).toLowerCase();
         const raw = (e.date || '').toLowerCase();
+        if (searchColumn === 'date') return formatted.includes(q);
+        if (searchColumn === 'code') return code.includes(q);
+        if (searchColumn === 'raw') return raw.includes(q);
         return formatted.includes(q) || code.includes(q) || raw.includes(q);
       });
     }
@@ -96,7 +111,12 @@ export function ExpiryDatePageManager({
       const timeB = new Date(b.normalizedDate || b.date).getTime() || 0;
       return timeA - timeB;
     });
-  }, [expiries, statusFilter, searchQuery]);
+  }, [expiries, statusFilter, searchQuery, searchColumn]);
+
+  const paginatedExpiries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExpiries.slice(start, start + pageSize);
+  }, [filteredExpiries, currentPage, pageSize]);
 
   // Toggle active/inactive
   const handleToggleActive = async (expiry: ExpiryDateRecord) => {
@@ -196,33 +216,27 @@ export function ExpiryDatePageManager({
 
   return (
     <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
-      {/* Seamless Docked Toolbar */}
-      <div className="px-4 py-3 bg-white border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Standard Search Bar */}
-          <div className="relative w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search date or contract code..."
-              className="w-full h-9 pl-9 pr-8 text-xs bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#2652C8] rounded-lg outline-none transition shadow-2xs font-sans text-slate-800 placeholder:text-slate-400"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded transition-colors cursor-pointer"
-                title="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Status Filter */}
-          <div className="w-40">
+      {/* Standard TableToolbar (identical to Currency, Exchange, and Script pages) */}
+      <TableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder="Search expiry date or contract code..."
+        columns={EXPIRY_COLUMNS}
+        searchColumn={searchColumn}
+        onSearchColumnChange={(col) => {
+          setSearchColumn(col);
+          setCurrentPage(1);
+        }}
+        advancedConditions={advancedConditions}
+        onAdvancedConditionsChange={(conds) => {
+          setAdvancedConditions(conds);
+          setCurrentPage(1);
+        }}
+        filterSlot={
+          <div className="w-36">
             <UniversalDropdown
               value={statusFilter}
               options={[
@@ -230,31 +244,22 @@ export function ExpiryDatePageManager({
                 { value: 'ACTIVE', label: 'Active Only' },
                 { value: 'INACTIVE', label: 'Inactive Only' },
               ]}
-              onChange={(val) => setStatusFilter(val as any)}
+              onChange={(val) => {
+                setStatusFilter(val as any);
+                setCurrentPage(1);
+              }}
               placeholder="Status"
               triggerClassName="h-9 min-h-9"
             />
           </div>
-
-          {(searchQuery || statusFilter !== 'ALL') && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('ALL');
-              }}
-              className="h-9 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 flex items-center gap-1.5 cursor-pointer transition shadow-2xs"
-            >
-              <X className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset</span>
-            </button>
-          )}
-        </div>
-
-        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs font-mono text-slate-600">
-          Total: <span className="font-bold text-slate-900">{filteredExpiries.length}</span> expiries
-        </div>
-      </div>
+        }
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={filteredExpiries.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[10, 25, 50, 100]}
+      />
 
       {/* Unified Table View */}
       <div className="overflow-x-auto">
@@ -269,14 +274,14 @@ export function ExpiryDatePageManager({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white font-sans">
-            {filteredExpiries.length === 0 ? (
+            {paginatedExpiries.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-400 font-medium">
                   No expiry dates match your search criteria.
                 </td>
               </tr>
             ) : (
-              filteredExpiries.map((exp) => {
+              paginatedExpiries.map((exp) => {
                 const dateStr = exp.normalizedDate || exp.date;
                 const formatted = formatDateToDDMMYY(dateStr);
                 const code = formatExpiryToDDMMMYY(dateStr);
@@ -346,7 +351,7 @@ export function ExpiryDatePageManager({
           <tfoot className="bg-slate-50/90 border-t border-slate-200/80">
             <tr>
               <td colSpan={5} className="px-4 py-2.5 text-xs text-slate-500 font-medium">
-                Showing {filteredExpiries.length} expiry date {filteredExpiries.length === 1 ? 'record' : 'records'}
+                Showing {paginatedExpiries.length} of {filteredExpiries.length} expiry date {filteredExpiries.length === 1 ? 'record' : 'records'}
               </td>
             </tr>
           </tfoot>
