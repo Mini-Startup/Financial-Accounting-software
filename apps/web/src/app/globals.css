@@ -610,8 +610,8 @@ select option {
 
 /* Sonner Toaster Container & Reset for HeroUI Executive Alerts */
 [data-sonner-toaster] {
-  --width: 350px !important;
-  width: 350px !important;
+  --width: 380px !important;
+  width: 380px !important;
   max-width: calc(100vw - 32px) !important;
   z-index: 999999 !important;
   right: 24px !important;
@@ -625,10 +625,10 @@ select option {
   padding: 0 !important;
   margin: 0 !important;
   overflow: visible !important;
-  width: 350px !important;
-  max-width: 350px !important;
-  height: 250px !important;
-  max-height: 250px !important;
+  width: 380px !important;
+  max-width: 380px !important;
+  height: 180px !important;
+  max-height: 180px !important;
   display: block !important;
 }
 

@@ -154,7 +154,7 @@ export default async function RootLayout({
               className: 'z-[999999]',
             }}
             style={{
-              '--width': '350px',
+              '--width': '380px',
               zIndex: 999999,
             } as React.CSSProperties}
             richColors

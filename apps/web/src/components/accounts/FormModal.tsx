@@ -228,7 +228,7 @@ export function FormModal({
         return `${fieldName}: ${msg}`;
       });
 
-      notify.error('Please correct the highlighted errors before saving:', {
+      notify.error('Validation Error', {
         description: errorList.length === 1 ? errorList[0] : undefined,
         errors: errorList.length > 1 ? errorList : undefined,
         duration: 7000,
