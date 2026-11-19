@@ -30,6 +30,10 @@ import {
   FileCheck2,
   Sliders,
   Sparkles,
+  Check,
+  ChevronDown,
+  SlidersHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useTableSearch } from '@/context/TableSearchContext';
@@ -395,8 +399,33 @@ const REGISTRY: SearchItem[] = [
 
 const MAIN_TABS: MainTab[] = ['All', 'Pages', 'Actions', 'Shortcuts'];
 
+export interface MultiFieldCondition {
+  id: string;
+  column: string;
+  operator: 'contains' | 'equals' | 'starts_with';
+  value: string;
+  conjunction: 'AND' | 'OR';
+}
+
 function getRecordValue(record: any, key: string): any {
   if (!record || !key) return '';
+
+  // 1. Direct property check (if it's a primitive or object with code/name)
+  if (record[key] !== undefined && record[key] !== null) {
+    if (typeof record[key] === 'object') {
+      return (
+        record[key].code ||
+        record[key].name ||
+        record[key].shortName ||
+        record[key].symbol ||
+        record[key].label ||
+        ''
+      );
+    }
+    return record[key];
+  }
+
+  // 2. Nested dot notation e.g. "account.code", "account.name", "group.name", "exchange.code"
   if (key.includes('.')) {
     const parts = key.split('.');
     let cur = record;
@@ -406,7 +435,66 @@ function getRecordValue(record: any, key: string): any {
     }
     return cur ?? '';
   }
-  return record[key] ?? '';
+
+  // 3. Known domain aliases across trades and master blotters
+  if (key === 'client' || key === 'account') {
+    const code = record.account?.code || record.clientCode || '';
+    const name = record.account?.name || record.clientName || record.client || '';
+    if (code && name) return `${code} - ${name}`;
+    return code || name;
+  }
+  if (key === 'broker') {
+    const code = record.broker?.code || record.brokerCode || '';
+    const name = record.broker?.name || record.brokerName || '';
+    if (code && name) return `${code} - ${name}`;
+    return code || name;
+  }
+  if (key === 'securityName' || key === 'script' || key === 'symbol') {
+    const short = record.script?.shortName || record.symbol || '';
+    const name = record.script?.name || '';
+    if (record.securityName) return record.securityName;
+    if (short && name) return `${short} - ${name}`;
+    return short || name;
+  }
+  if (key === 'tradeDate' || key === 'date') {
+    return record.tradeDate || record.date || record.normalizedDate || '';
+  }
+  if (key === 'exchange') {
+    return record.exchange?.code || record.exchange?.name || record.exchange || '';
+  }
+
+  return '';
+}
+
+function getAllSearchableStrings(record: any): { key: string; label: string; value: string }[] {
+  if (!record) return [];
+  const entries: { key: string; label: string; value: string }[] = [];
+
+  function walk(obj: any, prefix = '', labelPrefix = '', depth = 0) {
+    if (depth > 3 || !obj) return;
+    if (typeof obj === 'string' || typeof obj === 'number') {
+      const valStr = String(obj).trim();
+      if (valStr) {
+        entries.push({
+          key: prefix || 'field',
+          label: labelPrefix || prefix || 'Field',
+          value: valStr,
+        });
+      }
+      return;
+    }
+    if (typeof obj === 'object') {
+      for (const [k, v] of Object.entries(obj)) {
+        if (k === 'id' || k === 'createdAt' || k === 'updatedAt' || k === 'isDeleted') continue;
+        const subKey = prefix ? `${prefix}.${k}` : k;
+        const subLabel = k.charAt(0).toUpperCase() + k.slice(1);
+        walk(v, subKey, labelPrefix ? `${labelPrefix} ${subLabel}` : subLabel, depth + 1);
+      }
+    }
+  }
+
+  walk(record);
+  return entries;
 }
 
 function highlightMatch(text: any, query: string): React.ReactNode {
@@ -442,6 +530,14 @@ export function UniversalSearch() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [keyboardIndex, setKeyboardIndex] = useState<number>(-1);
   const [selectedTableIndex, setSelectedTableIndex] = useState(0);
+
+  // Table Mode: Match Mode, Multi-Field & Columns Dropdown State
+  const [searchMatchMode, setSearchMatchMode] = useState<'AND' | 'OR'>('AND');
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+  const [isMultiFieldOpen, setIsMultiFieldOpen] = useState(false);
+  const [conditions, setConditions] = useState<MultiFieldCondition[]>([]);
+  const columnDropdownRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const tableInputRef = useRef<HTMLInputElement>(null);
@@ -459,15 +555,29 @@ export function UniversalSearch() {
         setTimeout(() => inputRef.current?.focus(), 60);
       } else {
         setSelectedTableIndex(0);
+        setIsColumnDropdownOpen(false);
         setTimeout(() => tableInputRef.current?.focus(), 60);
       }
     }
   }, [isOpen, mode]);
 
-  // Reset selected table index when table search query changes
+  // Click outside to close column dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (columnDropdownRef.current && !columnDropdownRef.current.contains(e.target as Node)) {
+        setIsColumnDropdownOpen(false);
+      }
+    };
+    if (isColumnDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isColumnDropdownOpen]);
+
+  // Reset selected table index when table search query or conditions change
   useEffect(() => {
     setSelectedTableIndex(0);
-  }, [activeTable?.searchQuery]);
+  }, [activeTable?.searchQuery, conditions]);
 
   // Primary 2 to 3 columns to display in the modal table
   const primaryCols = useMemo(() => {
@@ -475,13 +585,46 @@ export function UniversalSearch() {
     return activeTable.columns.slice(0, 3);
   }, [activeTable?.columns]);
 
+  const hasSelectedSpecificCols = Boolean(
+    (activeTable?.searchColumn && activeTable.searchColumn !== 'ALL' && activeTable.searchColumn.trim() !== '') ||
+      (activeTable?.selectedColumns &&
+        activeTable.selectedColumns.length > 0 &&
+        !activeTable.selectedColumns.includes('ALL'))
+  );
+
+  const columnButtonLabel = useMemo(() => {
+    if (!activeTable?.columns || !hasSelectedSpecificCols) return '✦ All Columns';
+    if (
+      activeTable.selectedColumns &&
+      activeTable.selectedColumns.length > 0 &&
+      !activeTable.selectedColumns.includes('ALL')
+    ) {
+      if (activeTable.selectedColumns.length === 1) {
+        const col = activeTable.columns.find((c) => c.key === activeTable.selectedColumns![0]);
+        return col ? col.label : '1 Column';
+      }
+      return `${activeTable.selectedColumns.length} Columns`;
+    }
+    if (activeTable.searchColumn && activeTable.searchColumn !== 'ALL') {
+      const col = activeTable.columns.find((c) => c.key === activeTable.searchColumn);
+      return col ? col.label : '1 Column';
+    }
+    return '✦ All Columns';
+  }, [activeTable?.columns, activeTable?.selectedColumns, activeTable?.searchColumn, hasSelectedSpecificCols]);
+
   // Filtered rows for the current active table with match detection
   const filteredTableRows = useMemo(() => {
     const records = activeTable?.records || [];
     const q = (activeTable?.searchQuery || '').trim().toLowerCase();
     const columns = activeTable?.columns || [];
+    const activeConditions = conditions.filter((c) => c.value && c.value.trim());
 
     if (!records.length) return [];
+
+    // USER REQUIREMENT: If nothing is typed (and no multi-field conditions), show nothing!
+    if (!q && activeConditions.length === 0) {
+      return [];
+    }
 
     // Target columns to search
     let targetCols = columns;
@@ -495,60 +638,112 @@ export function UniversalSearch() {
       targetCols = columns.filter((c) => c.key === activeTable.searchColumn);
     }
 
-    // If search query is empty, show first 25 records
-    if (!q) {
-      return records.slice(0, 25).map((record) => ({
-        record,
-        matchedColumn: null,
-      }));
-    }
-
-    const terms = q.split(/[,\s]+/).filter(Boolean);
+    const terms = q ? q.split(/[,\s]+/).filter(Boolean) : [];
     const results: { record: any; matchedColumn: { key: string; label: string; value: string } | null }[] = [];
 
     for (const record of records) {
       let matchedColInfo: { key: string; label: string; value: string } | null = null;
-      let isMatch = false;
+      let textMatchPassed = terms.length === 0;
 
-      // 1. Search in targeted columns
-      for (const col of targetCols) {
-        const val = String(getRecordValue(record, col.key) ?? '');
-        const lowerVal = val.toLowerCase();
+      // 1. Text Search matching (respecting searchMatchMode: AND vs OR)
+      if (terms.length > 0) {
+        const candidateEntries: { key: string; label: string; value: string }[] = [];
 
-        const matchesAll = terms.every((t) => lowerVal.includes(t));
-        const matchesAny = terms.some((t) => lowerVal.includes(t));
-
-        if (matchesAll || (terms.length > 1 && matchesAny)) {
-          isMatch = true;
-          if (!matchedColInfo || matchesAll) {
-            matchedColInfo = {
-              key: col.key,
-              label: col.label,
-              value: val,
-            };
-            if (matchesAll) break;
-          }
-        }
-      }
-
-      // 2. If not matched in targetCols and searching ALL columns, check any other columns
-      if (!isMatch && (!activeTable?.searchColumn || activeTable.searchColumn === 'ALL')) {
-        for (const col of columns) {
+        for (const col of targetCols) {
           const val = String(getRecordValue(record, col.key) ?? '');
-          const lowerVal = val.toLowerCase();
-          if (terms.some((t) => lowerVal.includes(t))) {
-            isMatch = true;
-            matchedColInfo = {
-              key: col.key,
-              label: col.label,
-              value: val,
-            };
-            break;
+          if (val) candidateEntries.push({ key: col.key, label: col.label, value: val });
+        }
+
+        // If searching ALL, also include any deep nested searchable fields
+        if (!activeTable?.searchColumn || activeTable.searchColumn === 'ALL') {
+          const deepStrings = getAllSearchableStrings(record);
+          for (const ds of deepStrings) {
+            candidateEntries.push(ds);
+          }
+        }
+
+        if (searchMatchMode === 'AND') {
+          // AND mode: Every term in terms must match in at least one candidate entry
+          const termMatches = terms.map((term) =>
+            candidateEntries.find((entry) => entry.value.toLowerCase().includes(term))
+          );
+          const allTermsFound = termMatches.every(Boolean);
+
+          if (allTermsFound) {
+            textMatchPassed = true;
+            const firstFound = termMatches[0];
+            if (firstFound) {
+              matchedColInfo = {
+                key: firstFound.key,
+                label: firstFound.label,
+                value: firstFound.value,
+              };
+            }
+          }
+        } else {
+          // OR mode: Any term matches
+          for (const entry of candidateEntries) {
+            const lower = entry.value.toLowerCase();
+            const matchedTerm = terms.find((t) => lower.includes(t));
+            if (matchedTerm) {
+              textMatchPassed = true;
+              matchedColInfo = {
+                key: entry.key,
+                label: entry.label,
+                value: entry.value,
+              };
+              break;
+            }
           }
         }
       }
 
-      if (isMatch) {
+      // 2. Multi-Field Conditions matching (with AND / OR conjunctions)
+      let conditionMatchPassed = true;
+      if (activeConditions.length > 0) {
+        activeConditions.forEach((c, idx) => {
+          const rawVal = getRecordValue(record, c.column);
+          const valStr = String(rawVal ?? '').toLowerCase();
+          const targetStr = c.value.toLowerCase().trim();
+
+          let passed = false;
+          switch (c.operator) {
+            case 'equals':
+              passed = valStr === targetStr;
+              break;
+            case 'starts_with':
+              passed = valStr.startsWith(targetStr);
+              break;
+            case 'contains':
+            default:
+              passed = valStr.includes(targetStr);
+              break;
+          }
+
+          if (idx === 0) {
+            conditionMatchPassed = passed;
+          } else {
+            const conj = c.conjunction || 'AND';
+            if (conj === 'OR') {
+              conditionMatchPassed = conditionMatchPassed || passed;
+            } else {
+              conditionMatchPassed = conditionMatchPassed && passed;
+            }
+          }
+
+          if (passed && !matchedColInfo) {
+            const colDef = columns.find((col) => col.key === c.column);
+            matchedColInfo = {
+              key: c.column,
+              label: colDef?.label || c.column,
+              value: String(rawVal ?? ''),
+            };
+          }
+        });
+      }
+
+      // Both text query and multi-field conditions must pass
+      if (textMatchPassed && conditionMatchPassed) {
         results.push({
           record,
           matchedColumn: matchedColInfo,
@@ -563,6 +758,8 @@ export function UniversalSearch() {
     activeTable?.columns,
     activeTable?.searchColumn,
     activeTable?.selectedColumns,
+    searchMatchMode,
+    conditions,
   ]);
 
   const handleApplyFilterAndClose = useCallback(
@@ -570,9 +767,14 @@ export function UniversalSearch() {
       if (selectedRecord && activeTable?.onSelectRow) {
         activeTable.onSelectRow(selectedRecord);
       }
+      if (activeTable?.onAdvancedConditionsChange && conditions.length > 0) {
+        activeTable.onAdvancedConditionsChange(
+          conditions.filter((c) => c.value && c.value.trim())
+        );
+      }
       closeModal();
     },
-    [activeTable, closeModal]
+    [activeTable, conditions, closeModal]
   );
 
   // Filter items based on active tab & query
@@ -656,7 +858,7 @@ export function UniversalSearch() {
     >
       <div
         className={cn(
-          'bg-white border border-slate-200/90 rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 transition-all',
+          'bg-white border border-slate-200/90 rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 transition-all max-h-[85vh]',
           mode === 'table' ? 'max-w-3xl' : 'max-w-2xl'
         )}
         onClick={(e) => e.stopPropagation()}
@@ -721,16 +923,16 @@ export function UniversalSearch() {
         </div>
 
         {mode === 'table' ? (
-          <div>
-            {/* Table Search Input */}
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 bg-white">
+          <div className="flex flex-col overflow-hidden">
+            {/* Table Search Input Bar with AND/OR toggle, Columns Dropdown & Multi-Field */}
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-white">
               <Search className="w-5 h-5 text-emerald-600 shrink-0" />
               <input
                 ref={tableInputRef}
                 type="text"
                 value={activeTable?.searchQuery || ''}
                 onChange={(e) => activeTable?.onSearchChange(e.target.value)}
-                placeholder={`Search ${activeTable?.tableName || 'table'} records (e.g. Reliance, +91 98765, active)...`}
+                placeholder={`Search ${activeTable?.tableName || 'table'} records (e.g. ele01, reliance)...`}
                 className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-emerald-600"
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
@@ -756,6 +958,7 @@ export function UniversalSearch() {
                   }
                 }}
               />
+
               {activeTable?.searchQuery ? (
                 <button
                   type="button"
@@ -763,76 +966,309 @@ export function UniversalSearch() {
                     activeTable?.onSearchChange('');
                     tableInputRef.current?.focus();
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors shrink-0"
                   title="Clear search"
                 >
                   <X className="w-4 h-4" />
                 </button>
               ) : null}
-            </div>
 
-            {/* Column Targeting Chips Toolbar (Multi-Column Selection Made Easy) */}
-            {activeTable?.columns && activeTable.columns.length > 0 && (
-              <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
-                  Target Columns:
-                </span>
+              {/* AND / OR Match Mode Toggle Button */}
+              <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-bold select-none shrink-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    activeTable.onSearchColumnChange?.('ALL');
-                    activeTable.onSelectedColumnsChange?.(['ALL']);
-                  }}
+                  onClick={() => setSearchMatchMode('AND')}
                   className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
-                    (!activeTable.searchColumn || activeTable.searchColumn === 'ALL')
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer text-xs',
+                    searchMatchMode === 'AND'
+                      ? 'bg-white text-emerald-700 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
                   )}
+                  title="AND: Row must match ALL typed words"
                 >
-                  ✦ All Columns
+                  AND
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMatchMode('OR')}
+                  className={cn(
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer text-xs',
+                    searchMatchMode === 'OR'
+                      ? 'bg-white text-emerald-700 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                  title="OR: Row can match ANY typed word"
+                >
+                  OR
+                </button>
+              </div>
 
-                {activeTable.columns.map((col) => {
-                  const isSelected =
-                    activeTable.searchColumn === col.key ||
-                    (activeTable.selectedColumns?.includes(col.key) && activeTable.searchColumn !== 'ALL');
-                  return (
+              {/* Target Columns Dropdown (at right corner of search) */}
+              {activeTable?.columns && activeTable.columns.length > 0 && (
+                <div className="relative shrink-0" ref={columnDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsColumnDropdownOpen((prev) => !prev)}
+                    className={cn(
+                      'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border select-none',
+                      hasSelectedSpecificCols
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs font-bold'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    )}
+                    title="Select columns to search in"
+                  >
+                    <span className="max-w-[120px] truncate">{columnButtonLabel}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isColumnDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 px-1">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Search Columns
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            activeTable.onSearchColumnChange?.('ALL');
+                            activeTable.onSelectedColumnsChange?.(['ALL']);
+                          }}
+                          className="text-[11px] text-emerald-600 hover:text-emerald-800 font-semibold cursor-pointer"
+                        >
+                          Reset to All
+                        </button>
+                      </div>
+
+                      {/* All Columns Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          activeTable.onSearchColumnChange?.('ALL');
+                          activeTable.onSelectedColumnsChange?.(['ALL']);
+                          setIsColumnDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer text-left',
+                          !hasSelectedSpecificCols
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : 'hover:bg-slate-50 text-slate-700'
+                        )}
+                      >
+                        <span>✦ All Columns</span>
+                        {!hasSelectedSpecificCols && <Check className="w-4 h-4 text-emerald-600" />}
+                      </button>
+
+                      <div className="my-1 border-t border-slate-100" />
+
+                      {/* List of Individual Columns */}
+                      <div className="space-y-0.5">
+                        {activeTable.columns.map((col) => {
+                          const isChecked =
+                            hasSelectedSpecificCols &&
+                            (activeTable.searchColumn === col.key ||
+                              activeTable.selectedColumns?.includes(col.key));
+                          return (
+                            <button
+                              key={col.key}
+                              type="button"
+                              onClick={() => {
+                                if (activeTable.selectedColumns && activeTable.onSelectedColumnsChange) {
+                                  const current = activeTable.selectedColumns.filter((k) => k !== 'ALL');
+                                  const exists = current.includes(col.key);
+                                  const next = exists
+                                    ? current.filter((k) => k !== col.key)
+                                    : [...current, col.key];
+                                  if (next.length === 0) {
+                                    activeTable.onSelectedColumnsChange(['ALL']);
+                                    activeTable.onSearchColumnChange?.('ALL');
+                                  } else {
+                                    activeTable.onSelectedColumnsChange(next);
+                                    activeTable.onSearchColumnChange?.(next[0]);
+                                  }
+                                } else {
+                                  const nextCol = activeTable.searchColumn === col.key ? 'ALL' : col.key;
+                                  activeTable.onSearchColumnChange?.(nextCol);
+                                }
+                              }}
+                              className={cn(
+                                'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer text-left',
+                                isChecked
+                                  ? 'bg-emerald-50/70 text-emerald-800 font-semibold'
+                                  : 'hover:bg-slate-50 text-slate-700 font-medium'
+                              )}
+                            >
+                              <span className="truncate">{col.label}</span>
+                              {isChecked && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Multi-Field Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMultiFieldOpen((prev) => !prev);
+                  if (!isMultiFieldOpen && conditions.length === 0 && activeTable?.columns?.length) {
+                    setConditions([
+                      {
+                        id: Math.random().toString(36).slice(2, 8),
+                        column: activeTable.columns[0].key,
+                        operator: 'contains',
+                        value: '',
+                        conjunction: 'AND',
+                      },
+                    ]);
+                  }
+                }}
+                className={cn(
+                  'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border select-none shrink-0',
+                  isMultiFieldOpen || conditions.some((c) => c.value.trim())
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                )}
+                title="Toggle Multi-Field Column Search (query different words in specific columns)"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Multi-Field</span>
+                {conditions.filter((c) => c.value.trim()).length > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-bold flex items-center justify-center">
+                    {conditions.filter((c) => c.value.trim()).length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Multi-Field / Multi-Row Query Builder Panel */}
+            {isMultiFieldOpen && (
+              <div className="px-5 py-3 bg-slate-50/90 border-b border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span>Multi-Column Search (Diff Words in Diff Columns)</span>
+                  <div className="flex items-center gap-3">
                     <button
-                      key={col.key}
                       type="button"
                       onClick={() => {
-                        // Toggle column selection
-                        if (activeTable.selectedColumns && activeTable.onSelectedColumnsChange) {
-                          const current = activeTable.selectedColumns.filter((k) => k !== 'ALL');
-                          const exists = current.includes(col.key);
-                          const next = exists
-                            ? current.filter((k) => k !== col.key)
-                            : [...current, col.key];
-                          if (next.length === 0) {
-                            activeTable.onSelectedColumnsChange(['ALL']);
-                            activeTable.onSearchColumnChange?.('ALL');
-                          } else {
-                            activeTable.onSelectedColumnsChange(next);
-                            activeTable.onSearchColumnChange?.(next[0]);
-                          }
-                        } else {
-                          const nextCol = activeTable.searchColumn === col.key ? 'ALL' : col.key;
-                          activeTable.onSearchColumnChange?.(nextCol);
+                        if (activeTable?.columns?.length) {
+                          setConditions((prev) => [
+                            ...prev,
+                            {
+                              id: Math.random().toString(36).slice(2, 8),
+                              column: activeTable.columns[0].key,
+                              operator: 'contains',
+                              value: '',
+                              conjunction: 'AND',
+                            },
+                          ]);
                         }
                       }}
-                      className={cn(
-                        'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 select-none',
-                        isSelected
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold shadow-2xs'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                      )}
+                      className="text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer flex items-center gap-1"
                     >
-                      <span>{col.label}</span>
-                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />}
+                      <Plus className="w-3 h-3" />
+                      <span>Add Row</span>
                     </button>
-                  );
-                })}
+                    {conditions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setConditions([])}
+                        className="text-slate-400 hover:text-slate-700 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {conditions.map((cond, idx) => (
+                    <div key={cond.id} className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      {/* Conjunction connector for rows after first */}
+                      {idx > 0 ? (
+                        <select
+                          value={cond.conjunction}
+                          onChange={(e) => {
+                            const val = e.target.value as 'AND' | 'OR';
+                            setConditions((prev) =>
+                              prev.map((c) => (c.id === cond.id ? { ...c, conjunction: val } : c))
+                            );
+                          }}
+                          className="h-8 px-2 bg-emerald-50 text-emerald-800 font-bold text-xs rounded-lg border border-emerald-200 outline-none cursor-pointer"
+                        >
+                          <option value="AND">AND</option>
+                          <option value="OR">OR</option>
+                        </select>
+                      ) : (
+                        <span className="w-14 text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
+                          Where
+                        </span>
+                      )}
+
+                      {/* Column Select */}
+                      <select
+                        value={cond.column}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setConditions((prev) =>
+                            prev.map((c) => (c.id === cond.id ? { ...c, column: val } : c))
+                          );
+                        }}
+                        className="h-8 px-2.5 bg-white text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 outline-none cursor-pointer shadow-2xs max-w-[160px]"
+                      >
+                        {activeTable?.columns.map((c) => (
+                          <option key={c.key} value={c.key}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Operator */}
+                      <select
+                        value={cond.operator}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          setConditions((prev) =>
+                            prev.map((c) => (c.id === cond.id ? { ...c, operator: val } : c))
+                          );
+                        }}
+                        className="h-8 px-2 bg-white text-slate-600 text-xs font-medium rounded-lg border border-slate-200 outline-none cursor-pointer shadow-2xs"
+                      >
+                        <option value="contains">contains</option>
+                        <option value="equals">equals</option>
+                        <option value="starts_with">starts with</option>
+                      </select>
+
+                      {/* Value Input */}
+                      <input
+                        type="text"
+                        value={cond.value}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setConditions((prev) =>
+                            prev.map((c) => (c.id === cond.id ? { ...c, value: val } : c))
+                          );
+                        }}
+                        placeholder="Search value..."
+                        className="h-8 px-3 flex-1 min-w-[120px] bg-white text-slate-900 text-xs font-medium rounded-lg border border-slate-200 outline-none focus:border-emerald-500 shadow-2xs"
+                      />
+
+                      {/* Remove row */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConditions((prev) => prev.filter((c) => c.id !== cond.id));
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer transition-colors"
+                        title="Remove condition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -840,7 +1276,7 @@ export function UniversalSearch() {
             {activeTable?.records && activeTable.records.length > 0 ? (
               <div className="relative overflow-hidden flex flex-col">
                 {filteredTableRows.length > 0 ? (
-                  <div className="overflow-x-auto max-h-[380px] overflow-y-auto divide-y divide-slate-100">
+                  <div className="overflow-x-auto max-h-[42vh] overflow-y-auto divide-y divide-slate-100">
                     <table className="w-full text-left border-collapse">
                       <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200">
                         <tr>
@@ -853,7 +1289,7 @@ export function UniversalSearch() {
                             </th>
                           ))}
                           <th className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                            {activeTable?.searchQuery
+                            {activeTable?.searchQuery || conditions.some((c) => c.value.trim())
                               ? 'Matched In'
                               : activeTable?.columns[3]?.label || 'Status'}
                           </th>
@@ -891,7 +1327,7 @@ export function UniversalSearch() {
                                   </td>
                                 );
                               })}
-                              <td className="px-4 py-2.5 text-xs truncate max-w-[220px]">
+                              <td className="px-4 py-2.5 text-xs truncate max-w-[240px]">
                                 {row.matchedColumn ? (
                                   <div className="inline-flex items-center gap-1.5 max-w-full">
                                     <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -927,27 +1363,41 @@ export function UniversalSearch() {
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="size-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 shadow-2xs">
+                ) : activeTable?.searchQuery.trim() || conditions.some((c) => c.value.trim()) ? (
+                  <div className="py-10 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="size-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-2.5 shadow-2xs">
                       <Search className="w-5 h-5" />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">
-                      No records found matching &ldquo;{activeTable?.searchQuery}&rdquo;
+                      No records found matching your search
                     </p>
                     <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Try checking your spelling, choosing &ldquo;✦ All Columns&rdquo;, or searching for a different keyword.
+                      Check your spelling, try toggling to &ldquo;OR&rdquo; mode, or select &ldquo;✦ All Columns&rdquo; in the top-right dropdown.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
                         activeTable?.onSearchChange('');
+                        setConditions([]);
                         tableInputRef.current?.focus();
                       }}
                       className="mt-3.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
                     >
                       Clear Search
                     </button>
+                  </div>
+                ) : (
+                  /* Nothing typed prompt (USER REQUIREMENT: don't show anything when nothing is typed) */
+                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 shadow-2xs">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Type above to search {activeTable?.tableName || 'table'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                      Filter by code, name, client, or script. Use the Columns dropdown on the right or click Multi-Field for multi-column search.
+                    </p>
                   </div>
                 )}
               </div>
@@ -1021,16 +1471,17 @@ export function UniversalSearch() {
               <div className="flex items-center gap-3">
                 {activeTable?.records && (
                   <span className="text-slate-500 font-sans font-semibold">
-                    {activeTable.searchQuery
+                    {activeTable.searchQuery || conditions.some((c) => c.value.trim())
                       ? `${filteredTableRows.length} match${filteredTableRows.length === 1 ? '' : 'es'} in ${activeTable.tableName}`
-                      : `${activeTable.records.length} records in ${activeTable.tableName}`}
+                      : `${activeTable.records.length} total records in ${activeTable.tableName}`}
                   </span>
                 )}
-                {activeTable?.searchQuery && (
+                {(activeTable?.searchQuery || conditions.some((c) => c.value.trim())) && (
                   <button
                     type="button"
                     onClick={() => {
-                      activeTable.onSearchChange('');
+                      activeTable?.onSearchChange('');
+                      setConditions([]);
                       tableInputRef.current?.focus();
                     }}
                     className="text-slate-500 hover:text-slate-900 underline text-xs cursor-pointer font-medium"

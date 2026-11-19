@@ -128,6 +128,8 @@ export function TableToolbar({
       onSearchColumnChange,
       selectedColumns,
       onSelectedColumnsChange,
+      advancedConditions,
+      onAdvancedConditionsChange,
       onSelectRow,
       totalItems,
       filteredItems: totalItems,
@@ -144,6 +146,8 @@ export function TableToolbar({
     onSearchColumnChange,
     selectedColumns,
     onSelectedColumnsChange,
+    advancedConditions,
+    onAdvancedConditionsChange,
     onSelectRow,
     totalItems,
   ]);

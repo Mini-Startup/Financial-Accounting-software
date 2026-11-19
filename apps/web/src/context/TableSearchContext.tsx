@@ -18,6 +18,10 @@ export interface ActiveTableRegistration {
   onSearchColumnChange?: (col: string) => void;
   selectedColumns?: string[];
   onSelectedColumnsChange?: (cols: string[]) => void;
+  advancedConditions?: any[];
+  onAdvancedConditionsChange?: (conditions: any[]) => void;
+  searchMatchMode?: 'AND' | 'OR';
+  onSearchMatchModeChange?: (mode: 'AND' | 'OR') => void;
   onSelectRow?: (row: any) => void;
   totalItems?: number;
   filteredItems?: number;
