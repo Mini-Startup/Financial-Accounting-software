@@ -7,9 +7,8 @@ import { generateSecurityName, formatExpiryToDDMMMYY } from '@/utils/securityNam
 import { validateTradeForm } from '@/utils/validators';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { X, AlertCircle, Lock, Check, Sparkles, Calendar, Pencil, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { toast } from 'sonner';
 import { notify } from '@/utils/toastNotify';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
@@ -51,10 +50,9 @@ export function TradeFormModal({
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
   const quantityInputRef = useRef<HTMLInputElement>(null);
 
-  // Dual View / Edit Mode
-  const [isEditing, setIsEditing] = useState<boolean>(!initialTrade || initialMode === 'edit');
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const isLocked = Boolean(
     initialTrade?.settlementId != null ||
@@ -65,29 +63,52 @@ export function TradeFormModal({
     ))
   );
 
-  const [scriptId, setScriptId] = useState(initialTrade?.scriptId || initialTrade?.script?.id || '');
-  const [tradeType, setTradeType] = useState(initialTrade?.tradeType || 'INTERNAL');
-  const [date, setDate] = useState(
-    initialTrade?.tradeDate
-      ? (formatDateForInput(initialTrade.tradeDate) || todayISO())
-      : todayISO()
-  );
-  const [expiryDate, setExpiryDate] = useState(initialTrade?.expiry || '');
-  const [quantity, setQuantity] = useState<string>(
-    initialTrade?.quantity != null
-      ? String(initialTrade.transactionType === 'SELL' ? -Math.abs(initialTrade.quantity) : initialTrade.quantity)
-      : ''
-  );
-  const [clientId, setClientId] = useState(initialTrade?.accountId || initialTrade?.account?.id || '');
-  const [brokerId, setBrokerId] = useState(initialTrade?.brokerId || initialTrade?.broker?.id || '');
-  const [marketRate, setMarketRate] = useState<string>(
-    initialTrade?.rate != null ? String(initialTrade.rate) : ''
-  );
+  // Original snapshot for change detection & discard changes
+  const originalValues = useMemo(() => {
+    return {
+      scriptId: initialTrade?.scriptId || initialTrade?.script?.id || '',
+      tradeType: initialTrade?.tradeType || 'INTERNAL',
+      date: initialTrade?.tradeDate
+        ? (formatDateForInput(initialTrade.tradeDate) || todayISO())
+        : todayISO(),
+      expiryDate: initialTrade?.expiry || '',
+      quantity: initialTrade?.quantity != null
+        ? String(initialTrade.transactionType === 'SELL' ? -Math.abs(initialTrade.quantity) : initialTrade.quantity)
+        : '',
+      clientId: initialTrade?.accountId || initialTrade?.account?.id || '',
+      brokerId: initialTrade?.brokerId || initialTrade?.broker?.id || '',
+      marketRate: initialTrade?.rate != null ? String(initialTrade.rate) : '',
+    };
+  }, [initialTrade]);
+
+  // Form states
+  const [scriptId, setScriptId] = useState(originalValues.scriptId);
+  const [tradeType, setTradeType] = useState(originalValues.tradeType);
+  const [date, setDate] = useState(originalValues.date);
+  const [expiryDate, setExpiryDate] = useState(originalValues.expiryDate);
+  const [quantity, setQuantity] = useState(originalValues.quantity);
+  const [clientId, setClientId] = useState(originalValues.clientId);
+  const [brokerId, setBrokerId] = useState(originalValues.brokerId);
+  const [marketRate, setMarketRate] = useState(originalValues.marketRate);
 
   const [expiryList, setExpiryList] = useState<any[]>([]);
   const [isCustomExpiry, setIsCustomExpiry] = useState<boolean>(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Reset form to original values whenever initialTrade changes
+  useEffect(() => {
+    setScriptId(originalValues.scriptId);
+    setTradeType(originalValues.tradeType);
+    setDate(originalValues.date);
+    setExpiryDate(originalValues.expiryDate);
+    setQuantity(originalValues.quantity);
+    setClientId(originalValues.clientId);
+    setBrokerId(originalValues.brokerId);
+    setMarketRate(originalValues.marketRate);
+    setTouched({});
+  }, [originalValues]);
+
+  // Fetch active expiry dates
   useEffect(() => {
     const fetchExpiries = async () => {
       try {
@@ -107,11 +128,9 @@ export function TradeFormModal({
 
   const [clientRule, setClientRule] = useState<any | null>(null);
   const [brokerRule, setBrokerRule] = useState<any | null>(null);
-  const [isLoadingRules, setIsLoadingRules] = useState(false);
   const [calc, setCalc] = useState<TradeRateResult | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
-  // Derive exchange directly from selected script
+  // Derive entities
   const script = useMemo(() => (scripts || []).find((s) => s.id === scriptId), [scripts, scriptId]);
   const exchangeId = useMemo(
     () => script?.exchangeId || script?.exchange?.id || initialTrade?.exchangeId || initialTrade?.exchange?.id || '',
@@ -147,26 +166,32 @@ export function TradeFormModal({
     });
   }, [script, expiryDate, initialTrade]);
 
-  // Reset form states back to initial trade
-  const handleCancelEdit = () => {
-    if (initialTrade) {
-      setScriptId(initialTrade?.scriptId || initialTrade?.script?.id || '');
-      setTradeType(initialTrade?.tradeType || 'INTERNAL');
-      setDate(initialTrade?.tradeDate ? (formatDateForInput(initialTrade.tradeDate) || todayISO()) : todayISO());
-      setExpiryDate(initialTrade?.expiry || '');
-      setQuantity(
-        initialTrade?.quantity != null
-          ? String(initialTrade.transactionType === 'SELL' ? -Math.abs(initialTrade.quantity) : initialTrade.quantity)
-          : ''
-      );
-      setClientId(initialTrade?.accountId || initialTrade?.account?.id || '');
-      setBrokerId(initialTrade?.brokerId || initialTrade?.broker?.id || '');
-      setMarketRate(initialTrade?.rate != null ? String(initialTrade.rate) : '');
-      setTouched({});
-      setIsEditing(false);
-    } else {
-      onClose();
-    }
+  // Calculate dirty state
+  const isDirty = useMemo(() => {
+    if (!initialTrade) return true;
+    return (
+      scriptId !== originalValues.scriptId ||
+      tradeType !== originalValues.tradeType ||
+      date !== originalValues.date ||
+      expiryDate !== originalValues.expiryDate ||
+      quantity !== originalValues.quantity ||
+      clientId !== originalValues.clientId ||
+      brokerId !== originalValues.brokerId ||
+      marketRate !== originalValues.marketRate
+    );
+  }, [initialTrade, originalValues, scriptId, tradeType, date, expiryDate, quantity, clientId, brokerId, marketRate]);
+
+  // Handle discarding edits
+  const handleDiscardChanges = () => {
+    setScriptId(originalValues.scriptId);
+    setTradeType(originalValues.tradeType);
+    setDate(originalValues.date);
+    setExpiryDate(originalValues.expiryDate);
+    setQuantity(originalValues.quantity);
+    setClientId(originalValues.clientId);
+    setBrokerId(originalValues.brokerId);
+    setMarketRate(originalValues.marketRate);
+    setTouched({});
   };
 
   // Fetch active brokerage rules for client & broker
@@ -178,7 +203,6 @@ export function TradeFormModal({
     }
 
     let active = true;
-    setIsLoadingRules(true);
 
     const fetchRules = async () => {
       try {
@@ -197,8 +221,6 @@ export function TradeFormModal({
         }
       } catch (err) {
         console.error('Failed to fetch brokerage rules:', err);
-      } finally {
-        if (active) setIsLoadingRules(false);
       }
     };
 
@@ -233,7 +255,7 @@ export function TradeFormModal({
     setCalc(res);
   }, [quantity, marketRate, script, tradeType, clientRule, brokerRule, initialTrade]);
 
-  // Instant display numbers fallback: Never leaves right column blank or stuck on "calculating"
+  // Metrics fallback: always displays stable calculation values
   const displayMetrics = useMemo(() => {
     if (calc) return calc;
     if (!initialTrade) return null;
@@ -256,6 +278,12 @@ export function TradeFormModal({
       totalUnits,
     };
   }, [calc, initialTrade, script, quantity]);
+
+  // Total gross/net trade value
+  const netTradeValue = useMemo(() => {
+    if (!displayMetrics) return null;
+    return displayMetrics.totalUnits * displayMetrics.clientRate;
+  }, [displayMetrics]);
 
   // Validation
   const errors = useMemo(() => {
@@ -394,7 +422,6 @@ export function TradeFormModal({
         setTimeout(() => quantityInputRef.current?.focus(), 50);
       } else {
         notify.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
-        setIsEditing(false);
         onClose();
       }
     } catch (err: any) {
@@ -432,6 +459,19 @@ export function TradeFormModal({
 
   const qtyNumber = parseFloat(quantity);
   const isBuy = !isNaN(qtyNumber) ? qtyNumber >= 0 : (initialTrade?.transactionType !== 'SELL');
+  const isExistingTrade = Boolean(initialTrade);
+
+  // Toggle side (BUY <-> SELL) by inverting quantity sign
+  const handleToggleSide = (newSide: 'BUY' | 'SELL') => {
+    if (isLocked) return;
+    const currentAbs = Math.abs(parseFloat(quantity) || 0);
+    if (currentAbs === 0) {
+      setQuantity(newSide === 'BUY' ? '' : '-');
+    } else {
+      setQuantity(newSide === 'BUY' ? String(currentAbs) : String(-currentAbs));
+    }
+    handleBlur('quantity');
+  };
 
   return (
     <div
@@ -446,21 +486,44 @@ export function TradeFormModal({
         ref={modalRef}
         className="w-245 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 bg-white rounded-2xl"
       >
-        {/* Sleek Financial Modal Header */}
+        {/* Executive Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 rounded-md px-2.5 py-0.5 shadow-2xs">
                 #{initialTrade?.tradeNumber || 'New Entry'}
               </span>
-              <span
-                className={cn(
-                  'px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase',
-                  isBuy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                )}
-              >
-                {isBuy ? 'BUY' : 'SELL'}
-              </span>
+
+              {/* Side Badge or Toggle (Concentric executive radius: outer rounded-xl p-1, inner rounded-lg) */}
+              <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200/90">
+                <button
+                  type="button"
+                  onClick={() => handleToggleSide('BUY')}
+                  disabled={isLocked}
+                  className={cn(
+                    'px-3 py-1 rounded-lg text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
+                    isBuy
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-emerald-700'
+                  )}
+                >
+                  BUY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleSide('SELL')}
+                  disabled={isLocked}
+                  className={cn(
+                    'px-3 py-1 rounded-lg text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
+                    !isBuy
+                      ? 'bg-rose-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-rose-700'
+                  )}
+                >
+                  SELL
+                </button>
+              </div>
+
               {isLocked ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-md px-2 py-0.5">
                   <Lock className="w-3 h-3 text-amber-600" /> Locked Record
@@ -471,8 +534,9 @@ export function TradeFormModal({
                 </span>
               )}
             </div>
+
             <h2 className="text-base font-bold text-slate-900 mt-1">
-              {!initialTrade ? 'Add New Trade' : isEditing ? 'Edit Trade Details' : 'Trade Specifications'}
+              {!initialTrade ? 'Add New Trade' : isDirty ? 'Edit Trade Details' : 'Trade Specifications'}
             </h2>
           </div>
 
@@ -491,9 +555,7 @@ export function TradeFormModal({
           id="tradeForm"
           onSubmit={(e) => {
             e.preventDefault();
-            if (isEditing) {
-              handleSave(e);
-            }
+            handleSave(e);
           }}
           className="flex-1 flex flex-col min-h-0"
         >
@@ -509,7 +571,7 @@ export function TradeFormModal({
             )}
 
             <div className="grid grid-cols-12 gap-5">
-              {/* Left Column: Trade Attributes */}
+              {/* Left Column: Trade Specifications & Click-To-Edit Fields */}
               <div className="col-span-12 lg:col-span-7 space-y-4">
                 {/* Canonical Security Banner */}
                 {liveSecurityName && (
@@ -525,71 +587,46 @@ export function TradeFormModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Script {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Script <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <UniversalDropdown
-                          value={scriptId}
-                          options={(scripts || []).map((s) => ({
-                            value: s.id,
-                            label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
-                            sublabel: s.fullName,
-                          }))}
-                          onChange={(val) => {
-                            setScriptId(val);
-                            handleBlur('scriptId');
-                          }}
-                          placeholder="Select Script"
-                          disabled={isLocked}
-                        />
-                        {touched.scriptId && errors.scriptId && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.scriptId}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {script?.shortName || initialTrade?.script?.shortName || '—'}{' '}
-                          {script?.exchange?.code && (
-                            <span className="text-[10px] font-mono font-bold bg-slate-200/80 text-slate-700 px-1.5 py-0.5 rounded ml-1">
-                              {script.exchange.code}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
-                          {script?.fullName || initialTrade?.script?.fullName || ''}
-                        </div>
-                      </div>
-                    )}
+                    <div className={cn(touched.scriptId && errors.scriptId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                      <UniversalDropdown
+                        value={scriptId}
+                        options={(scripts || []).map((s) => ({
+                          value: s.id,
+                          label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
+                          sublabel: s.fullName,
+                        }))}
+                        onChange={(val) => {
+                          setScriptId(val);
+                          handleBlur('scriptId');
+                        }}
+                        variant={isExistingTrade ? 'seamless' : 'default'}
+                        placeholder="Select Script"
+                        disabled={isLocked}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Type {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Type <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <UniversalDropdown
-                        value={tradeType}
-                        options={[
-                          { value: 'INTERNAL', label: 'Internal Trade' },
-                          { value: 'CARRY_FORWARD', label: 'Carry Forward' },
-                          { value: 'BACK_FORWARD', label: 'Backforward' },
-                          { value: 'SETTLEMENT', label: 'Settlement' },
-                        ]}
-                        onChange={(val) => setTradeType(val)}
-                        placeholder="Select Type"
-                        disabled={isLocked}
-                      />
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl flex items-center h-15">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 font-mono">
-                          {tradeType}
-                        </span>
-                      </div>
-                    )}
+                    <UniversalDropdown
+                      value={tradeType}
+                      options={[
+                        { value: 'INTERNAL', label: 'Internal Trade' },
+                        { value: 'CARRY_FORWARD', label: 'Carry Forward' },
+                        { value: 'BACK_FORWARD', label: 'Backforward' },
+                        { value: 'SETTLEMENT', label: 'Settlement' },
+                      ]}
+                      onChange={(val) => setTradeType(val)}
+                      variant={isExistingTrade ? 'seamless' : 'default'}
+                      placeholder="Select Type"
+                      disabled={isLocked}
+                    />
                   </div>
                 </div>
 
@@ -597,31 +634,21 @@ export function TradeFormModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Trade Date {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Trade Date <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <UniversalDatePicker
-                          value={date}
-                          onChange={(newDate) => {
-                            setDate(newDate);
-                            handleBlur('tradeDate');
-                          }}
-                          placeholder="DD-MM-YY"
-                          disabled={isLocked}
-                        />
-                        {touched.tradeDate && errors.tradeDate && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.tradeDate}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
-                        <div className="text-sm font-mono font-semibold text-slate-900">
-                          {formatDateToDDMMYY(date)}
-                        </div>
-                      </div>
-                    )}
+                    <div className={cn(touched.tradeDate && errors.tradeDate && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                      <UniversalDatePicker
+                        value={date}
+                        onChange={(newDate) => {
+                          setDate(newDate);
+                          handleBlur('tradeDate');
+                        }}
+                        variant={isExistingTrade ? 'seamless' : 'default'}
+                        placeholder="DD-MM-YY"
+                        disabled={isLocked}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col">
@@ -629,7 +656,7 @@ export function TradeFormModal({
                       <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                         Expiry Date
                       </label>
-                      {isEditing && expiryOptions.length > 0 && (
+                      {expiryOptions.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setIsCustomExpiry(!isCustomExpiry)}
@@ -640,14 +667,15 @@ export function TradeFormModal({
                       )}
                     </div>
 
-                    {isEditing ? (
-                      isCustomExpiry || expiryOptions.length === 0 ? (
+                    <div className={cn(touched.expiryDate && errors.expiryDate && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                      {isCustomExpiry || expiryOptions.length === 0 ? (
                         <UniversalDatePicker
                           value={expiryDate}
                           onChange={(newDate) => {
                             setExpiryDate(newDate);
                             handleBlur('expiryDate');
                           }}
+                          variant={isExistingTrade ? 'seamless' : 'default'}
                           placeholder="DD-MM-YY"
                           disabled={isLocked}
                         />
@@ -662,17 +690,12 @@ export function TradeFormModal({
                             setExpiryDate(val);
                             handleBlur('expiryDate');
                           }}
+                          variant={isExistingTrade ? 'seamless' : 'default'}
                           placeholder="Select Expiry"
                           disabled={isLocked}
                         />
-                      )
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
-                        <div className="text-sm font-mono font-semibold text-slate-900">
-                          {formatDateToDDMMYY(expiryDate) || 'None / Cash'}
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -680,76 +703,50 @@ export function TradeFormModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Client {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Client <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <UniversalDropdown
-                          value={clientId}
-                          options={(clients || []).map((c) => ({
-                            value: c.id,
-                            label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
-                          }))}
-                          onChange={(val) => {
-                            setClientId(val);
-                            handleBlur('clientId');
-                          }}
-                          placeholder="Select Client"
-                          disabled={isLocked}
-                          searchable={true}
-                        />
-                        {touched.clientId && errors.accountId && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.accountId}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {client?.code || initialTrade?.account?.code || '—'}
-                        </div>
-                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
-                          {client?.name || initialTrade?.account?.name || ''}
-                        </div>
-                      </div>
-                    )}
+                    <div className={cn(touched.clientId && errors.accountId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                      <UniversalDropdown
+                        value={clientId}
+                        options={(clients || []).map((c) => ({
+                          value: c.id,
+                          label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
+                        }))}
+                        onChange={(val) => {
+                          setClientId(val);
+                          handleBlur('clientId');
+                        }}
+                        variant={isExistingTrade ? 'seamless' : 'default'}
+                        placeholder="Select Client"
+                        disabled={isLocked}
+                        searchable={true}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Broker {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Broker <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <UniversalDropdown
-                          value={brokerId}
-                          options={(brokers || []).map((b) => ({
-                            value: b.id,
-                            label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
-                          }))}
-                          onChange={(val) => {
-                            setBrokerId(val);
-                            handleBlur('brokerId');
-                          }}
-                          placeholder="Select Broker"
-                          disabled={isLocked}
-                          searchable={true}
-                        />
-                        {touched.brokerId && !brokerId && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">Broker selection is required.</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {broker?.code || initialTrade?.broker?.code || '—'}
-                        </div>
-                        <div className="text-xs text-slate-500 font-normal truncate mt-0.5">
-                          {broker?.name || initialTrade?.broker?.name || ''}
-                        </div>
-                      </div>
-                    )}
+                    <div className={cn(touched.brokerId && !brokerId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                      <UniversalDropdown
+                        value={brokerId}
+                        options={(brokers || []).map((b) => ({
+                          value: b.id,
+                          label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
+                        }))}
+                        onChange={(val) => {
+                          setBrokerId(val);
+                          handleBlur('brokerId');
+                        }}
+                        variant={isExistingTrade ? 'seamless' : 'default'}
+                        placeholder="Select Broker"
+                        disabled={isLocked}
+                        searchable={true}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -757,75 +754,51 @@ export function TradeFormModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Quantity {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Quantity <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <input
-                          ref={quantityInputRef}
-                          type="number"
-                          step="1"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          onBlur={() => handleBlur('quantity')}
-                          placeholder="e.g. 100 or -50"
-                          disabled={isLocked}
-                          className={cn(
-                            'input text-xs font-mono font-bold',
-                            touched.quantity && errors.quantity && 'border-rose-400 focus:border-rose-500 ring-rose-200'
-                          )}
-                        />
-                        {touched.quantity && errors.quantity && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.quantity}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl flex items-center gap-2">
-                        <span
-                          className={cn(
-                            'px-2 py-0.5 rounded text-xs font-bold',
-                            isBuy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          )}
-                        >
-                          {isBuy ? 'BUY' : 'SELL'}
-                        </span>
-                        <span className="font-mono font-bold text-sm text-slate-900">
-                          {Math.abs(parseFloat(quantity) || initialTrade?.quantity || 0).toLocaleString()}
-                        </span>
-                      </div>
-                    )}
+                    <input
+                      ref={quantityInputRef}
+                      type="number"
+                      step="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      onBlur={() => handleBlur('quantity')}
+                      placeholder="e.g. 100 or -50"
+                      disabled={isLocked}
+                      className={cn(
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-xl border transition-all duration-150 outline-none',
+                        isExistingTrade
+                          ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
+                          : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
+                        isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed',
+                        touched.quantity && errors.quantity && 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-100'
+                      )}
+                    />
                   </div>
 
                   <div className="flex flex-col">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Market Rate {isEditing && <span className="text-red-500 font-bold">*</span>}
+                      Market Rate <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    {isEditing ? (
-                      <>
-                        <input
-                          type="number"
-                          step="0.0001"
-                          value={marketRate}
-                          onChange={(e) => setMarketRate(e.target.value)}
-                          onBlur={() => handleBlur('marketRate')}
-                          placeholder="0.00"
-                          disabled={isLocked}
-                          className={cn(
-                            'input text-xs font-mono font-bold',
-                            touched.marketRate && errors.rate && 'border-rose-400 focus:border-rose-500 ring-rose-200'
-                          )}
-                        />
-                        {touched.marketRate && errors.rate && (
-                          <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.rate}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-2.5 bg-slate-50/60 border border-slate-200/80 rounded-xl font-mono font-bold text-sm text-slate-900">
-                        {currSym}{parseFloat(marketRate || initialTrade?.rate || 0).toFixed(2)}
-                      </div>
-                    )}
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={marketRate}
+                      onChange={(e) => setMarketRate(e.target.value)}
+                      onBlur={() => handleBlur('marketRate')}
+                      placeholder="0.00"
+                      disabled={isLocked}
+                      className={cn(
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-xl border transition-all duration-150 outline-none',
+                        isExistingTrade
+                          ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
+                          : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
+                        isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed',
+                        touched.marketRate && errors.rate && 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-100'
+                      )}
+                    />
                   </div>
                 </div>
               </div>
@@ -869,6 +842,18 @@ export function TradeFormModal({
                         </div>
                       </div>
 
+                      {/* Net Trade Value */}
+                      {netTradeValue != null && !isNaN(netTradeValue) && (
+                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
+                          <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider text-[10px] mb-1">
+                            Total Net Value
+                          </div>
+                          <div className="font-mono text-lg font-bold text-[#2652C8]">
+                            {currSym}{netTradeValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Trade Volume Metrics */}
                       <div className="bg-white border border-slate-200 rounded-xl p-3 text-xs space-y-1.5 font-mono text-slate-600">
                         <div className="flex justify-between">
@@ -891,9 +876,9 @@ export function TradeFormModal({
             </div>
           </div>
 
-          {/* Footer Bar with Dynamic Actions */}
+          {/* Dynamic Footer Bar */}
           <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
-            {/* Left: Delete Trade */}
+            {/* Left Action: Delete Trade (Only for existing trades) */}
             <div>
               {initialTrade?.id && (
                 <button
@@ -914,75 +899,70 @@ export function TradeFormModal({
               )}
             </div>
 
-            {/* Right: Cancel / Save or Close / Edit */}
-            {isEditing ? (
-              <div key="edit-actions-group" className="flex items-center gap-2.5">
+            {/* Right Action: Cancel / Discard Changes / Save */}
+            <div className="flex items-center gap-2.5">
+              {!initialTrade ? (
+                // Add New Trade Mode
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving || !isFormValid}
+                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
+                  >
+                    {isSaving ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        <span>Adding…</span>
+                      </>
+                    ) : (
+                      'Add Trade'
+                    )}
+                  </button>
+                </>
+              ) : isDirty ? (
+                // Existing Trade with Dirty Edits
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDiscardChanges}
+                    className="btn btn--secondary flex items-center gap-1.5 text-xs px-4 py-2 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Discard Changes</span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving || isLocked || !isFormValid}
+                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
+                  >
+                    {isSaving ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        <span>Saving…</span>
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                </>
+              ) : (
+                // Existing Trade with Clean / Unchanged View
                 <button
-                  key="btn-cancel-edit"
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleCancelEdit();
-                  }}
-                  className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  key="btn-save-trade"
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSave(e);
-                  }}
-                  disabled={isSaving || isLocked || !isFormValid}
-                  className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
-                >
-                  {isSaving ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      <span>Saving…</span>
-                    </>
-                  ) : initialTrade ? (
-                    'Save Changes'
-                  ) : (
-                    'Add Trade'
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div key="view-actions-group" className="flex items-center gap-2.5">
-                <button
-                  key="btn-close-modal"
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onClose();
-                  }}
-                  className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
+                  onClick={onClose}
+                  className="btn btn--secondary text-xs px-5 py-2 cursor-pointer font-semibold"
                 >
                   Close
                 </button>
-                {!isLocked && (
-                  <button
-                    key="btn-start-edit"
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsEditing(true);
-                    }}
-                    className="btn btn--primary flex items-center gap-1.5 text-xs px-4 py-2 cursor-pointer"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    <span>Edit Trade</span>
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </form>
       </div>

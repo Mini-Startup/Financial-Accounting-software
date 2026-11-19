@@ -319,12 +319,20 @@ export function UniversalDateRangePicker({
 
   return (
     <div ref={containerRef} className={cn('relative select-none', className)}>
-      {/* Trigger Button */}
-      <button
-        type="button"
+      {/* Trigger Button Container */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => {
           setIsOpen((prev) => !prev);
           updateCoords();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+            updateCoords();
+          }
         }}
         className={cn(
           'w-full flex items-center justify-between border bg-white rounded-xl shadow-2xs transition-all cursor-pointer font-sans text-xs',
@@ -344,14 +352,17 @@ export function UniversalDateRangePicker({
         {hasValue && (
           <button
             type="button"
-            onClick={handleClear}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClear(e);
+            }}
             className="p-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition-colors shrink-0 ml-1.5 cursor-pointer"
             title="Clear date range"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
-      </button>
+      </div>
 
       {/* Portaled Popover Card: Floating freely above table scrollbars and card overflow boundaries */}
       {isOpen &&

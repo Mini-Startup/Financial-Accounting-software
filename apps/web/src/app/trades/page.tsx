@@ -16,7 +16,7 @@ export default async function TradesPage() {
     safeServerFetch('/account-masters'),
     safeServerFetch('/scripts'),
     safeServerFetch('/trades'),
-    safeServerFetch('/settlement/list', []),
+    safeServerFetch('/settlement/settlements', []),
     safeServerFetch('/expiry-dates?activeOnly=true', []),
   ]);
 

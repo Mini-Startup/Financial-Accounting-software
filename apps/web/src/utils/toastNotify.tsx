@@ -1,8 +1,9 @@
 'use client';
 
+import React from 'react';
 import { toast } from 'sonner';
-import { Alert, Button, CloseButton } from '@heroui/react';
 import { cn } from '@/utils/cn';
+import { Check, AlertCircle, AlertTriangle, Info, UploadCloud, X } from 'lucide-react';
 
 export type AlertStatus = 'success' | 'danger' | 'warning' | 'accent' | 'default';
 
@@ -11,6 +12,7 @@ export interface ToastOptions {
   errors?: string[]; // Multiple error points formatted as clean bullets
   duration?: number;
   status?: AlertStatus;
+  progress?: number; // 0 to 100
   actionLabel?: string;
   onAction?: () => void;
   cancelLabel?: string;
@@ -19,9 +21,9 @@ export interface ToastOptions {
 }
 
 /**
- * HeroUI v3 Executive Alert Notification Toaster
- * Built with @heroui/react (Alert, Button, CloseButton)
- * Features ambient glow, semantic statuses, action triggers, and custom styles.
+ * Executive Alert Notification Toaster
+ * Built with precision layout, circular status badge, sleek progress indicator, and clean inline dismiss.
+ * Matches executive design reference.
  */
 export function showExecutiveToast(
   type: 'success' | 'error' | 'warning' | 'info' | 'upload',
@@ -33,6 +35,7 @@ export function showExecutiveToast(
     errors,
     duration = errors && errors.length > 0 ? 7000 : 4500,
     status: explicitStatus,
+    progress,
     actionLabel,
     onAction,
     cancelLabel,
@@ -40,7 +43,7 @@ export function showExecutiveToast(
     className: customClassName,
   } = options || {};
 
-  // Map application type to HeroUI Alert status
+  // Map application type to Alert status
   const alertStatus: AlertStatus =
     explicitStatus ||
     (type === 'success'
@@ -51,154 +54,153 @@ export function showExecutiveToast(
       ? 'warning'
       : 'accent');
 
-  // Semantic styles for status-specific gradients and ambient auras
+  // Status configuration
   const statusConfig = {
     success: {
-      alertClass:
-        'border-emerald-500/30 bg-gradient-to-br from-emerald-500/12 via-white to-slate-50 shadow-xl shadow-emerald-950/5',
-      auraClass: 'bg-emerald-500/25',
-      indicatorClass: 'text-emerald-600',
+      cardClass: 'border-emerald-200/80 bg-white shadow-xl shadow-emerald-950/5',
+      badgeClass: 'bg-emerald-50 text-emerald-600 border border-emerald-200/80',
+      progressBarClass: 'bg-emerald-500',
+      icon: <Check className="w-4 h-4 stroke-[2.5]" />,
     },
     danger: {
-      alertClass:
-        'border-rose-500/30 bg-gradient-to-br from-rose-500/12 via-white to-slate-50 shadow-xl shadow-rose-950/5',
-      auraClass: 'bg-rose-500/25',
-      indicatorClass: 'text-rose-600',
+      cardClass: 'border-rose-200/80 bg-white shadow-xl shadow-rose-950/5',
+      badgeClass: 'bg-rose-50 text-rose-600 border border-rose-200/80',
+      progressBarClass: 'bg-rose-500',
+      icon: <AlertCircle className="w-4 h-4 stroke-[2.5]" />,
     },
     warning: {
-      alertClass:
-        'border-amber-500/30 bg-gradient-to-br from-amber-500/12 via-white to-slate-50 shadow-xl shadow-amber-950/5',
-      auraClass: 'bg-amber-500/25',
-      indicatorClass: 'text-amber-600',
+      cardClass: 'border-amber-200/80 bg-white shadow-xl shadow-amber-950/5',
+      badgeClass: 'bg-amber-50 text-amber-600 border border-amber-200/80',
+      progressBarClass: 'bg-amber-500',
+      icon: <AlertTriangle className="w-4 h-4 stroke-[2.5]" />,
     },
     accent: {
-      alertClass:
-        'border-[#2652C8]/30 bg-gradient-to-br from-[#2652C8]/12 via-white to-slate-50 shadow-xl shadow-[#2652C8]/5',
-      auraClass: 'bg-[#2652C8]/25',
-      indicatorClass: 'text-[#2652C8]',
+      cardClass: 'border-blue-200/80 bg-white shadow-xl shadow-[#2652C8]/5',
+      badgeClass: 'bg-blue-50 text-[#2652C8] border border-blue-200/80',
+      progressBarClass: 'bg-[#2652C8]',
+      icon: type === 'upload' ? <UploadCloud className="w-4 h-4 stroke-[2.5]" /> : <Info className="w-4 h-4 stroke-[2.5]" />,
     },
     default: {
-      alertClass:
-        'border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-50 shadow-xl shadow-slate-900/5',
-      auraClass: 'bg-slate-400/20',
-      indicatorClass: 'text-slate-600',
+      cardClass: 'border-slate-200/80 bg-white shadow-xl shadow-slate-900/5',
+      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
+      progressBarClass: 'bg-slate-700',
+      icon: <Info className="w-4 h-4 stroke-[2.5]" />,
     },
   }[alertStatus];
 
   return toast.custom((t) => {
     return (
-      <div className="w-[460px] sm:w-[500px] md:w-[540px] max-w-[calc(100vw-32px)] select-none">
-        <Alert
-          status={alertStatus}
+      <div className="w-fit max-w-[360px] min-w-[260px] select-none">
+        <div
           className={cn(
-            'relative overflow-hidden rounded-2xl border shadow-xl p-4 sm:p-5 w-full',
-            statusConfig.alertClass,
+            'relative overflow-hidden rounded-xl border p-3.5 sm:p-4 transition-all duration-200 animate-in fade-in zoom-in-95',
+            statusConfig.cardClass,
             customClassName
           )}
         >
-          {/* Ambient blurred aura matching HeroUI design reference */}
-          <div
-            aria-hidden="true"
-            className={cn(
-              'pointer-events-none absolute -top-10 -right-10 size-36 rounded-full blur-2xl',
-              statusConfig.auraClass
-            )}
-          />
-
-          <Alert.Indicator className={cn('relative shrink-0 mt-0.5', statusConfig.indicatorClass)} />
-
-          <Alert.Content className="relative min-w-0 pr-2 flex-1">
-            <Alert.Title className="text-sm font-bold text-slate-900 tracking-tight leading-snug">
-              {title}
-            </Alert.Title>
-
-            {description && (
-              <Alert.Description className="text-xs text-slate-600 font-normal leading-relaxed mt-1">
-                {description}
-              </Alert.Description>
-            )}
-
-            {errors && errors.length > 0 && (
-              <div className="mt-2.5 text-xs">
-                <ul className="list-inside list-disc space-y-1.5 text-slate-700 font-medium">
-                  {errors.map((err, idx) => (
-                    <li key={idx} className="leading-relaxed">
-                      {err}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Mobile Actions */}
-            {(actionLabel || cancelLabel) && (
-              <div className="mt-3 flex items-center gap-2 sm:hidden">
-                {cancelLabel && (
-                  <Button
-                    size="sm"
-                    variant="tertiary"
-                    onPress={() => {
-                      if (onCancel) onCancel();
-                      toast.dismiss(t);
-                    }}
-                  >
-                    {cancelLabel}
-                  </Button>
-                )}
-                {actionLabel && (
-                  <Button
-                    size="sm"
-                    variant={alertStatus === 'danger' ? 'danger' : 'primary'}
-                    onPress={() => {
-                      if (onAction) onAction();
-                      toast.dismiss(t);
-                    }}
-                  >
-                    {actionLabel}
-                  </Button>
-                )}
-              </div>
-            )}
-          </Alert.Content>
-
-          {/* Desktop Actions */}
-          {(actionLabel || cancelLabel) && (
-            <div className="relative hidden shrink-0 sm:flex items-center gap-2 mr-2 self-center">
-              {cancelLabel && (
-                <Button
-                  size="sm"
-                  variant="tertiary"
-                  onPress={() => {
-                    if (onCancel) onCancel();
-                    toast.dismiss(t);
-                  }}
-                >
-                  {cancelLabel}
-                </Button>
+          <div className="flex items-start gap-3">
+            {/* Status Icon Badge (rounded-xl, brand consistent) */}
+            <div
+              className={cn(
+                'size-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs',
+                statusConfig.badgeClass
               )}
-              {actionLabel && (
-                <Button
-                  size="sm"
-                  variant={alertStatus === 'danger' ? 'danger' : 'primary'}
-                  onPress={() => {
-                    if (onAction) onAction();
-                    toast.dismiss(t);
-                  }}
+            >
+              {statusConfig.icon}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 min-w-0 pr-1">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-bold text-slate-900 tracking-tight leading-snug">
+                  {title}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => toast.dismiss(t)}
+                  className="p-1 -mr-1 -mt-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Dismiss notification"
                 >
-                  {actionLabel}
-                </Button>
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {description && (
+                <p className="text-[11px] text-slate-500 font-normal leading-relaxed mt-0.5">
+                  {description}
+                </p>
+              )}
+
+              {/* Progress Bar Display */}
+              {typeof progress === 'number' && (
+                <div className="mt-2.5 space-y-1">
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full transition-all duration-300 rounded-full', statusConfig.progressBarClass)}
+                      style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                    <span>Processing</span>
+                    <span>{progress}%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Bulleted Error List */}
+              {errors && errors.length > 0 && (
+                <div className="mt-2 text-[11px]">
+                  <ul className="space-y-1 text-slate-600">
+                    {errors.map((err, idx) => (
+                      <li key={idx} className="flex items-start gap-1.5 leading-tight">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1" />
+                        <span>{err}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {(actionLabel || cancelLabel) && (
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-end gap-2">
+                  {cancelLabel && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onCancel) onCancel();
+                        toast.dismiss(t);
+                      }}
+                      className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      {cancelLabel}
+                    </button>
+                  )}
+                  {actionLabel && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onAction) onAction();
+                        toast.dismiss(t);
+                      }}
+                      className={cn(
+                        'px-3 py-1 text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer',
+                        alertStatus === 'danger'
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                          : 'bg-[#2652C8] hover:bg-[#1F42A3] text-white'
+                      )}
+                    >
+                      {actionLabel}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-
-          <CloseButton
-            className="relative cursor-pointer shrink-0 self-start text-slate-400 hover:text-slate-700 transition"
-            onPress={() => toast.dismiss(t)}
-          />
-        </Alert>
+          </div>
+        </div>
       </div>
     );
-  }, { duration, unstyled: true });
+  }, { duration });
 }
 
 export const notify = {

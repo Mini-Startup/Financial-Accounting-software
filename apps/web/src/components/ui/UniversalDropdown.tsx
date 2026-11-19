@@ -18,6 +18,7 @@ export interface UniversalDropdownProps {
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  variant?: 'default' | 'seamless';
   searchable?: boolean;
   disabled?: boolean;
   clearable?: boolean;
@@ -42,6 +43,7 @@ export function UniversalDropdown({
   placeholder = 'Select...',
   className,
   triggerClassName,
+  variant = 'default',
   searchable = true,
   disabled = false,
   clearable = false,
@@ -260,11 +262,19 @@ export function UniversalDropdown({
     >
       <div
         className={cn(
-          'w-full min-h-9.5 px-2.5 py-1 bg-white border border-slate-300 rounded-xl text-xs text-slate-800',
-          'flex items-center justify-between gap-1.5 transition-all duration-150 select-none shadow-2xs',
+          'w-full min-h-9.5 px-2.5 py-1 rounded-xl text-xs text-slate-800',
+          'flex items-center justify-between gap-1.5 transition-all duration-150 select-none',
           searchable ? 'cursor-text' : 'cursor-pointer',
-          isOpen && 'border-blue-500 ring-2 ring-blue-100',
-          !disabled && 'hover:border-slate-400',
+          variant === 'seamless'
+            ? cn(
+                'border border-transparent bg-slate-50/70 hover:bg-slate-100/90 hover:border-slate-300 shadow-none',
+                isOpen && 'border-[#2652C8] ring-2 ring-blue-100 bg-white shadow-2xs'
+              )
+            : cn(
+                'bg-white border border-slate-300 shadow-2xs',
+                isOpen && 'border-blue-500 ring-2 ring-blue-100',
+                !disabled && 'hover:border-slate-400'
+              ),
           triggerClassName
         )}
         onClick={() => {

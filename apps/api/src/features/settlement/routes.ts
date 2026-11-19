@@ -4,7 +4,7 @@ import { requirePermission } from '../../middleware/auth';
 
 const router = Router();
 
-router.get('/settlements', requirePermission('SETTLEMENT', 'VIEW'), async (_req, res, next) => {
+router.get(['/settlements', '/list'], requirePermission('SETTLEMENT', 'VIEW'), async (_req, res, next) => {
   try {
     const result = await settlementService.listSettlements();
     res.json(result);

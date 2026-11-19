@@ -335,21 +335,21 @@ export function TableToolbar({
               )}
             </div>
 
-        {/* Floating Bulk Action Bar (Brand Gradient, Smooth Cubic-Bezier Animation, Zero UI Jumping) */}
+        {/* Floating Bulk Action Bar (Brand Ledger Blue #2652C8, Smooth Motion, Zero UI Jumping) */}
         {selectedCount > 0 && typeof document !== 'undefined' && createPortal(
-          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-gradient-to-r from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] text-white rounded-2xl shadow-[0_20px_50px_rgba(10,26,74,0.45)] px-5 py-2.5 flex items-center gap-4 border border-white/25 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-6 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
+          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-[#2652C8] text-white rounded-2xl shadow-[0_16px_36px_rgba(38,82,200,0.35)] px-5 py-2.5 flex items-center gap-4 border border-[#3B66DF] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5 duration-250 ease-out">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               <span className="text-xs font-bold text-white tracking-wide">
                 {selectedCount} selected
               </span>
             </div>
-            <div className="h-4 w-px bg-white/20" />
+            <div className="h-4 w-px bg-white/25" />
             {onClearSelection && (
               <button
                 type="button"
                 onClick={onClearSelection}
-                className="text-xs text-blue-100 hover:text-white font-semibold hover:bg-white/10 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                className="text-xs text-blue-100 hover:text-white font-semibold hover:bg-white/15 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 Clear
               </button>

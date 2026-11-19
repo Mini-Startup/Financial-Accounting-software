@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TradeFormModal } from './TradeFormModal';
-import { TradeImportManager } from './TradeImportManager';
+import { TradeImportModal } from './TradeImportModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
@@ -104,7 +104,7 @@ export function TradesPageManager({
   const isImportParam = searchParams.get('import') === 'true';
   const isAddParam = searchParams.get('action') === 'add';
 
-  const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
   const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [viewingTrade, setViewingTrade] = useState<any | null>(null);
@@ -115,13 +115,12 @@ export function TradesPageManager({
       setIsAdding(true);
     }
     if (isImportParam) {
-      setViewMode('import');
+      setIsImportModalOpen(true);
     }
   }, [isAddParam, isImportParam]);
 
   useEffect(() => {
     const handleOpenAdd = () => {
-      setViewMode('list');
       setIsAdding(true);
     };
     window.addEventListener('bizzmate-open-add-trade', handleOpenAdd);
@@ -171,7 +170,7 @@ export function TradesPageManager({
   const [tradeTypeFilter, setTradeTypeFilter] = useState('');
   const [findReplaceMatch, setFindReplaceMatch] = useState<FindReplaceMatchState | null>(null);
 
-  // Date filter state: defaults from earliest open trade to today
+  // Date filter state: defaults from earliest open trade to latest open trade in data
   const [fromDate, setFromDate] = useState<string>(() => {
     const openTrades = (initialTrades || []).filter((t: any) => !t.settlementId && t.tradeDate);
     if (openTrades.length === 0) return '';
@@ -182,8 +181,13 @@ export function TradesPageManager({
     }, '');
   });
   const [toDate, setToDate] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const openTrades = (initialTrades || []).filter((t: any) => !t.settlementId && t.tradeDate);
+    if (openTrades.length === 0) return '';
+    return openTrades.reduce((max: string, t: any) => {
+      const parts = parseTradeDateString(t.tradeDate);
+      if (!parts) return max;
+      return !max || parts.yyyyMmDd > max ? parts.yyyyMmDd : max;
+    }, '');
   });
 
   // Sorting & Pagination
@@ -219,7 +223,7 @@ export function TradesPageManager({
                 const url = new URL(window.location.href);
                 url.searchParams.set('import', 'true');
                 window.history.pushState({}, '', url.toString());
-                setViewMode('import');
+                setIsImportModalOpen(true);
               }}
               className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
             >
@@ -236,7 +240,9 @@ export function TradesPageManager({
 
   // Sync state with query parameters (e.g. sidebar links)
   useEffect(() => {
-    setViewMode(isImportParam ? 'import' : 'list');
+    if (isImportParam) {
+      setIsImportModalOpen(true);
+    }
   }, [isImportParam]);
 
   // Update local trades list when initialTrades changes
@@ -631,18 +637,6 @@ export function TradesPageManager({
     }
   };
 
-  const handleImportBack = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('import');
-    window.history.pushState({}, '', url.toString());
-    setViewMode('list');
-    router.refresh();
-  };
-
-  if (viewMode === 'import') {
-    return <TradeImportManager onBack={handleImportBack} />;
-  }
-
   const renderWithDiff = (colKey: string, currentVal: any, isActiveMatch: boolean) => {
     const rawText = String(currentVal ?? '');
     if (!isActiveMatch || findReplaceMatch?.targetColumn !== colKey || !findReplaceMatch?.findText.trim()) {
@@ -1025,7 +1019,7 @@ export function TradesPageManager({
                 )}
                 {visibleColumns.includes('price') && (
                   <th
-                    className="text-right cursor-pointer hover:bg-slate-100 select-none font-bold"
+                    className="text-right cursor-pointer hover:bg-slate-100 select-none font-semibold text-slate-700"
                     onClick={() => handleSort('price')}
                   >
                     <div className="flex items-center justify-end gap-1.5">
@@ -1354,6 +1348,24 @@ export function TradesPageManager({
           }}
         />
       )}
+
+      {/* Bulk Trade Import Modal (Preserves parsed state across open/close) */}
+      <TradeImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => {
+          setIsImportModalOpen(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('import');
+          window.history.pushState({}, '', url.toString());
+        }}
+        onComplete={() => {
+          setIsImportModalOpen(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('import');
+          window.history.pushState({}, '', url.toString());
+          router.refresh();
+        }}
+      />
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

@@ -14,6 +14,7 @@ export interface UniversalDatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  variant?: 'default' | 'seamless';
   id?: string;
   error?: string;
   compact?: boolean;
@@ -34,6 +35,7 @@ export function UniversalDatePicker({
   placeholder = 'DD-MM-YY',
   disabled = false,
   className,
+  variant = 'default',
   id,
   error,
   compact = false,
@@ -301,10 +303,19 @@ export function UniversalDatePicker({
     <div ref={containerRef} className={cn('relative flex flex-col gap-1 w-full', className)}>
       <div
         className={cn(
-          'flex items-center bg-white border rounded-xl shadow-2xs transition-all duration-150',
+          'flex items-center rounded-xl transition-all duration-150',
           activeError
-            ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-950'
-            : 'border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
+            ? 'border border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-950'
+            : variant === 'seamless'
+            ? cn(
+                'border border-transparent bg-slate-50/70 hover:bg-slate-100/90 hover:border-slate-300 shadow-none',
+                'focus-within:border-[#2652C8] focus-within:ring-2 focus-within:ring-blue-100 focus-within:bg-white focus-within:shadow-2xs',
+                isOpen && 'border-[#2652C8] ring-2 ring-blue-100 bg-white shadow-2xs'
+              )
+            : cn(
+                'bg-white border border-slate-300 shadow-2xs',
+                'focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100'
+              ),
           disabled && 'opacity-60 bg-slate-50 cursor-not-allowed'
         )}
       >

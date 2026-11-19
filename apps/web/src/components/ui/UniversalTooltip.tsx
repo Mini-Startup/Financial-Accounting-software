@@ -18,7 +18,7 @@ export function UniversalTooltip({
   content,
   children,
   side = 'top',
-  delayMs = 350,
+  delayMs = 450,
   closeDelayMs = 0,
   className,
   disabled = false,
@@ -35,12 +35,13 @@ export function UniversalTooltip({
       <TooltipContent
         showArrow
         placement={side}
+        style={{ '--tooltip-arrow-fill': '#0A1B4D' } as React.CSSProperties}
         className={cn(
           'text-xs font-medium py-1 px-2.5 rounded-lg bg-[#0A1B4D] text-white shadow-xl border border-white/10 select-none z-50',
           className
         )}
       >
-        <TooltipArrow className="[&_svg]:fill-[#0A1B4D]! [&_svg]:stroke-transparent! [&_path]:fill-[#0A1B4D]!">
+        <TooltipArrow className="text-[#0A1B4D] fill-[#0A1B4D] [&_svg]:fill-[#0A1B4D]! [&_svg]:stroke-transparent! [&_path]:fill-[#0A1B4D]!">
           <svg
             data-slot="overlay-arrow"
             fill="#0A1B4D"

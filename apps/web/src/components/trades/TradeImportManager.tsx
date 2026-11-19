@@ -747,72 +747,53 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const invalidDubaiRowsCount = activeDubaiRows.length - validDubaiRowsCount;
 
   return (
-    <div className="p-4 md:p-6 max-w-full mx-auto space-y-6">
-      {/* Top Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
-        <div>
-          <h1 className="text-h2 font-display">Trade Import</h1>
-          <p className="text-sm text-slate mt-1">
-            {step === 'UPLOAD' && 'Upload files exported from your broker (CSV or Excel format).'}
-            {step === 'PREVIEW' && `Preview and validate trades from ${fileName} before importing.`}
-            {step === 'RESULT' && 'Import complete. Review execution results below.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {onBack && (step === 'UPLOAD' || step === 'RESULT') && (
-            <button
-              onClick={() => {
-                if (step === 'RESULT') resetImportState();
-                onBack();
-              }}
-              className="btn btn--secondary flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to Trades
+    <div className="p-2 md:p-4 max-w-full mx-auto space-y-5">
+      {/* Action Bar for Preview Step (Header title and X close are handled by TradeImportModal) */}
+      {step === 'PREVIEW' && (
+        <div className="flex items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs">
+          <div className="text-xs font-semibold text-slate-700">
+            Previewing <span className="font-mono font-bold text-slate-900">{fileName}</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <button onClick={handleReset} className="btn btn--secondary text-xs px-3.5 py-1.5 flex items-center gap-1.5 cursor-pointer">
+              <ArrowLeft className="w-3.5 h-3.5" /> Cancel
             </button>
-          )}
-          {step === 'PREVIEW' && (
-            <>
-              <button onClick={handleReset} className="btn btn--secondary flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" /> Cancel
+            {isDubaiImport ? (
+              <button
+                onClick={handleConfirmDubaiImport}
+                disabled={isProcessing || selectedValidDubaiCount === 0}
+                className="btn btn--primary text-xs px-4 py-1.5 flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Importing…
+                  </>
+                ) : (
+                  <>Import {selectedValidDubaiCount} Selected Trades</>
+                )}
               </button>
-              {isDubaiImport ? (
-                <button
-                  onClick={handleConfirmDubaiImport}
-                  disabled={isProcessing || selectedValidDubaiCount === 0}
-                  className="btn btn--primary flex items-center gap-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
-                    </>
-                  ) : (
-                    <>Import {selectedValidDubaiCount} Selected Trades</>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={handleConfirmImport}
-                  disabled={validRowsCount === 0 || isProcessing || isValidating}
-                  className="btn btn--primary flex items-center gap-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Importing…
-                    </>
-                  ) : isValidating ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Validating…
-                    </>
-                  ) : (
-                    <>Import {validRowsCount} Valid Trades</>
-                  )}
-                </button>
-              )}
-            </>
-          )}
+            ) : (
+              <button
+                onClick={handleConfirmImport}
+                disabled={validRowsCount === 0 || isProcessing || isValidating}
+                className="btn btn--primary text-xs px-4 py-1.5 flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Importing…
+                  </>
+                ) : isValidating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Validating…
+                  </>
+                ) : (
+                  <>Import {validRowsCount} Valid Trades</>
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Top Configuration Panel */}
       <div className="card shadow-md border border-border-light p-6">

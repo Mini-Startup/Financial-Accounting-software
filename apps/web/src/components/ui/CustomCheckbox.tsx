@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export interface CustomCheckboxProps {
@@ -51,14 +52,7 @@ export function CustomCheckbox({
         )}
       >
         {checked && (
-          <svg
-            viewBox="0 0 16 16"
-            className="w-3 h-3 fill-none stroke-current stroke-[2.4] shrink-0"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="3.5 8.5 6.5 11.5 12.5 4.5" />
-          </svg>
+          <Check className="w-2.5 h-2.5 text-white stroke-[3] shrink-0" />
         )}
       </div>
       {label && <span className="text-charcoal">{label}</span>}
