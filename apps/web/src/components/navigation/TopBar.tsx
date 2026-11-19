@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Search, Command } from 'lucide-react';
 import { useTopBar } from '@/context/TopBarContext';
+import { useTableSearch } from '@/context/TableSearchContext';
 
 const DEFAULT_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -29,14 +30,13 @@ const DEFAULT_TITLES: Record<string, string> = {
 export function TopBar() {
   const pathname = usePathname();
   const { config } = useTopBar();
+  const { openModal, activeTable } = useTableSearch();
 
   // Page title: priority given to active page config, then default route title
   const activeTitle = config.title || DEFAULT_TITLES[pathname] || pathname.replace('/', '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Dashboard';
 
   const handleOpenSearch = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('open-universal-search'));
-    }
+    openModal(activeTable ? 'table' : 'app');
   };
 
   return (
@@ -59,16 +59,25 @@ export function TopBar() {
           type="button"
           onClick={handleOpenSearch}
           className="w-56 sm:w-64 md:w-80 h-9 px-3.5 bg-slate-100/90 hover:bg-slate-100 text-slate-500 rounded-lg flex items-center justify-between border border-slate-200/80 shadow-2xs transition-all cursor-pointer group hover:border-blue-400 hover:ring-2 hover:ring-blue-100"
-          title="Search anything... (Ctrl+K / ⌘K)"
+          title={activeTable ? `Filter ${activeTable.tableName} (Ctrl+F) or App Search (Ctrl+K)` : "Search anything... (Ctrl+K / ⌘K)"}
         >
           <div className="flex items-center gap-2 text-xs">
             <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
-            <span className="text-slate-500 font-medium">Search...</span>
+            <span className="text-slate-500 font-medium truncate">
+              {activeTable ? `Filter ${activeTable.tableName}...` : 'Search...'}
+            </span>
           </div>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold shadow-2xs flex items-center gap-0.5">
-            <Command className="w-2.5 h-2.5 text-slate-400" />
-            <span>K</span>
-          </kbd>
+          <div className="flex items-center gap-1">
+            {activeTable && (
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-blue-600 font-bold shadow-2xs">
+                Ctrl+F
+              </kbd>
+            )}
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold shadow-2xs flex items-center gap-0.5">
+              <Command className="w-2.5 h-2.5 text-slate-400" />
+              <span>K</span>
+            </kbd>
+          </div>
         </button>
 
         {/* Dynamic Page Action Buttons Rendered from Active Page (Add Trade, Import, etc.) */}

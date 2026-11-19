@@ -137,7 +137,8 @@ export function filterRecordsWithAdvanced<T extends Record<string, any>>(
   records: T[],
   searchQuery: string,
   searchColumn: string = 'ALL',
-  conditions?: AdvancedCondition[]
+  conditions?: AdvancedCondition[],
+  selectedColumns?: string[]
 ): T[] {
   let result = records;
 
@@ -146,6 +147,15 @@ export function filterRecordsWithAdvanced<T extends Record<string, any>>(
     const tokens = splitSearchTokens(searchQuery);
     if (tokens.length > 0) {
       result = result.filter((row) => {
+        // Multi-column targeting if selectedColumns provided
+        if (selectedColumns && selectedColumns.length > 0 && !selectedColumns.includes('ALL')) {
+          return selectedColumns.some((colKey) => {
+            const val = getNestedValue(row, colKey);
+            if (val === null || val === undefined) return false;
+            const strVal = String(val).toLowerCase();
+            return tokens.some((token) => strVal.includes(token));
+          });
+        }
         if (searchColumn && searchColumn !== 'ALL') {
           const val = getNestedValue(row, searchColumn);
           if (val === null || val === undefined) return false;

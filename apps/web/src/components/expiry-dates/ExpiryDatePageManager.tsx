@@ -239,6 +239,7 @@ export function ExpiryDatePageManager({
     <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       {/* Standard TableToolbar (identical to Currency, Exchange, and Script pages) */}
       <TableToolbar
+        tableName="Expiry Dates"
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

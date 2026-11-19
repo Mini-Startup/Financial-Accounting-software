@@ -163,6 +163,7 @@ export function TradesPageManager({
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['ALL']);
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [exchangeFilter, setExchangeFilter] = useState('');
@@ -375,7 +376,7 @@ export function TradesPageManager({
 
   // Filter trades list with column targeting + advanced conditions + business filters
   const filteredTrades = useMemo(() => {
-    let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions);
+    let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions, selectedColumns);
 
     // 1. Settlement filter (default 'OPEN' shows only open/unsettled positions)
     if (settlementFilter === 'OPEN') {
@@ -446,6 +447,7 @@ export function TradesPageManager({
     trades,
     searchQuery,
     searchColumn,
+    selectedColumns,
     advancedConditions,
     settlementFilter,
     clientFilter,
@@ -672,6 +674,7 @@ export function TradesPageManager({
       {/* Table Container Card (Clean unified card: Toolbar -> Secondary Filters -> Data Table) */}
       <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
         <TableToolbar
+          tableName="Trades"
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -682,6 +685,11 @@ export function TradesPageManager({
           searchColumn={searchColumn}
           onSearchColumnChange={(col) => {
             setSearchColumn(col);
+            setCurrentPage(1);
+          }}
+          selectedColumns={selectedColumns}
+          onSelectedColumnsChange={(cols) => {
+            setSelectedColumns(cols);
             setCurrentPage(1);
           }}
           advancedConditions={advancedConditions}

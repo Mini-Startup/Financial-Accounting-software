@@ -242,6 +242,7 @@ export function AccountMasterPageManager({
     <div className="space-y-4">
       {/* Top Controls Toolbar */}
       <TableToolbar
+        tableName="Accounts"
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

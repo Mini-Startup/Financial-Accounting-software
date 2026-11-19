@@ -56,6 +56,7 @@ export function DataTable({
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['ALL']);
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -112,8 +113,8 @@ export function DataTable({
 
   // Filter accounts with column targeting + advanced conditions
   const filteredAccounts = useMemo(() => {
-    return filterRecordsWithAdvanced(accountsList, searchQuery, searchColumn, advancedConditions);
-  }, [accountsList, searchQuery, searchColumn, advancedConditions]);
+    return filterRecordsWithAdvanced(accountsList, searchQuery, searchColumn, advancedConditions, selectedColumns);
+  }, [accountsList, searchQuery, searchColumn, advancedConditions, selectedColumns]);
 
   // Sorted and Paginated accounts
   const sortedAccounts = useMemo(() => {
@@ -284,6 +285,7 @@ export function DataTable({
       {/* Seamless Table Container with Zero Gap between Toolbar and Grid */}
       <div className="border border-border-light rounded-xl shadow-xs bg-white relative">
         <TableToolbar
+          tableName={entityLabel === 'Broker' ? 'Brokers' : 'Clients'}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -294,6 +296,11 @@ export function DataTable({
           searchColumn={searchColumn}
           onSearchColumnChange={(col) => {
             setSearchColumn(col);
+            setCurrentPage(1);
+          }}
+          selectedColumns={selectedColumns}
+          onSelectedColumnsChange={(cols) => {
+            setSelectedColumns(cols);
             setCurrentPage(1);
           }}
           advancedConditions={advancedConditions}

@@ -32,6 +32,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useTableSearch } from '@/context/TableSearchContext';
 
 export type MainTab = 'All' | 'Pages' | 'Actions' | 'Shortcuts';
 
@@ -395,7 +396,7 @@ const REGISTRY: SearchItem[] = [
 const MAIN_TABS: MainTab[] = ['All', 'Pages', 'Actions', 'Shortcuts'];
 
 export function UniversalSearch() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, mode, setMode, closeModal, activeTable } = useTableSearch();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<MainTab>('All');
   const [subCategory, setSubCategory] = useState<'All' | 'Blotter' | 'Report' | 'Master'>('All');
@@ -403,42 +404,24 @@ export function UniversalSearch() {
   const [keyboardIndex, setKeyboardIndex] = useState<number>(-1);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const tableInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Global Keyboard listener for Ctrl+K / Cmd+K and custom trigger
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsOpen((prev) => !prev);
-      } else if (e.key === 'Escape' && isOpen) {
-        e.preventDefault();
-        setIsOpen(false);
-      }
-    };
-
-    const handleCustomOpen = () => setIsOpen(true);
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('open-universal-search', handleCustomOpen);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('open-universal-search', handleCustomOpen);
-    };
-  }, [isOpen]);
-
-  // Focus input and reset hover/keyboard states when opened
+  // Focus input and reset hover/keyboard states when opened or mode switched
   useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setActiveTab('All');
-      setSubCategory('All');
-      setHoveredId(null);
-      setKeyboardIndex(-1);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      if (mode === 'app') {
+        setQuery('');
+        setActiveTab('All');
+        setSubCategory('All');
+        setHoveredId(null);
+        setKeyboardIndex(-1);
+        setTimeout(() => inputRef.current?.focus(), 60);
+      } else {
+        setTimeout(() => tableInputRef.current?.focus(), 60);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, mode]);
 
   // Filter items based on active tab & query
   const filteredItems = useMemo(() => {
@@ -477,7 +460,7 @@ export function UniversalSearch() {
   // Handle selection of item
   const handleSelect = useCallback(
     (item: SearchItem) => {
-      setIsOpen(false);
+      closeModal();
       if (item.action) {
         item.action();
       }
@@ -485,7 +468,7 @@ export function UniversalSearch() {
         router.push(item.href);
       }
     },
-    [router]
+    [router, closeModal]
   );
 
   // Arrow key navigation
@@ -504,6 +487,11 @@ export function UniversalSearch() {
       if (filteredItems[targetIndex]) {
         handleSelect(filteredItems[targetIndex]);
       }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (activeTable) {
+        setMode(mode === 'app' ? 'table' : 'app');
+      }
     }
   };
 
@@ -512,52 +500,265 @@ export function UniversalSearch() {
   return createPortal(
     <div
       className="fixed inset-0 z-999999 flex items-start justify-center pt-16 sm:pt-20 p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={() => setIsOpen(false)}
+      onClick={closeModal}
     >
       <div
         className="bg-white border border-slate-200/90 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search Header Input (Clickable Esc Button in top right) */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 bg-white">
-          <Search className="w-5 h-5 text-[#2652C8] shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setKeyboardIndex(-1);
-              setHoveredId(null);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Type to search pages, reports, actions, or masters... (e.g. trades, net position, add client)"
-            className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-[#2652C8]"
-          />
-          {query ? (
+        {/* Top Header Mode Segmented Switcher (Ctrl+K App Search / Ctrl+F Table Filter) */}
+        <div className="flex items-center justify-between px-5 py-2.5 border-b border-slate-100 bg-slate-50/70 select-none">
+          <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMode('app')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
+                mode === 'app'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-600" />
+              <span>App-Wide Search</span>
+              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-500 font-bold">
+                Ctrl+K
+              </kbd>
+            </button>
             <button
               type="button"
               onClick={() => {
-                setQuery('');
-                setKeyboardIndex(-1);
-                setHoveredId(null);
-                inputRef.current?.focus();
+                if (activeTable) setMode('table');
               }}
-              className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
+              disabled={!activeTable}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
+                mode === 'table'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : activeTable
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-400 cursor-not-allowed opacity-50'
+              )}
             >
-              <X className="w-4 h-4" />
+              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Current Table{activeTable ? `: ${activeTable.tableName}` : ''}</span>
+              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-500 font-bold">
+                Ctrl+F
+              </kbd>
             </button>
-          ) : null}
-          {/* Top-Right Clickable ESC Button (Fixed per user request) */}
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="px-2 py-0.5 text-xs font-mono font-semibold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200/80 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
-            title="Click to close (Esc)"
-          >
-            <span>Esc</span>
-          </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeTable && (
+              <span className="text-[11px] text-slate-400 hidden sm:inline">
+                Press <kbd className="font-mono bg-white border border-slate-200 px-1 py-0.5 rounded text-slate-600 text-[10px]">Tab</kbd> to toggle
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={closeModal}
+              className="px-2 py-0.5 text-xs font-mono font-semibold text-slate-500 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+              title="Close (Esc)"
+            >
+              <span>Esc</span>
+            </button>
+          </div>
         </div>
+
+        {mode === 'table' ? (
+          <div>
+            {/* Table Search Input */}
+            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 bg-white">
+              <Search className="w-5 h-5 text-emerald-600 shrink-0" />
+              <input
+                ref={tableInputRef}
+                type="text"
+                value={activeTable?.searchQuery || ''}
+                onChange={(e) => activeTable?.onSearchChange(e.target.value)}
+                placeholder={`Search ${activeTable?.tableName || 'table'} records (e.g. Reliance, +91 98765, active)...`}
+                className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-emerald-600"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    e.preventDefault();
+                    closeModal();
+                  }
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    setMode('app');
+                  }
+                }}
+              />
+              {activeTable?.searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    activeTable?.onSearchChange('');
+                    tableInputRef.current?.focus();
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
+
+            {/* Column Targeting Chips Toolbar (Multi-Column Selection Made Easy) */}
+            {activeTable?.columns && activeTable.columns.length > 0 && (
+              <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+                  Target Columns:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    activeTable.onSearchColumnChange?.('ALL');
+                    activeTable.onSelectedColumnsChange?.(['ALL']);
+                  }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
+                    (!activeTable.searchColumn || activeTable.searchColumn === 'ALL')
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  )}
+                >
+                  ✦ All Columns
+                </button>
+
+                {activeTable.columns.map((col) => {
+                  const isSelected =
+                    activeTable.searchColumn === col.key ||
+                    (activeTable.selectedColumns?.includes(col.key) && activeTable.searchColumn !== 'ALL');
+                  return (
+                    <button
+                      key={col.key}
+                      type="button"
+                      onClick={() => {
+                        // Toggle column selection
+                        if (activeTable.selectedColumns && activeTable.onSelectedColumnsChange) {
+                          const current = activeTable.selectedColumns.filter((k) => k !== 'ALL');
+                          const exists = current.includes(col.key);
+                          const next = exists
+                            ? current.filter((k) => k !== col.key)
+                            : [...current, col.key];
+                          if (next.length === 0) {
+                            activeTable.onSelectedColumnsChange(['ALL']);
+                            activeTable.onSearchColumnChange?.('ALL');
+                          } else {
+                            activeTable.onSelectedColumnsChange(next);
+                            activeTable.onSearchColumnChange?.(next[0]);
+                          }
+                        } else {
+                          const nextCol = activeTable.searchColumn === col.key ? 'ALL' : col.key;
+                          activeTable.onSearchColumnChange?.(nextCol);
+                        }
+                      }}
+                      className={cn(
+                        'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 select-none',
+                        isSelected
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold shadow-2xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      )}
+                    >
+                      <span>{col.label}</span>
+                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Live Filter Summary Card */}
+            <div className="p-8 flex flex-col items-center justify-center text-center">
+              <div className="size-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3.5 shadow-2xs">
+                <Layers className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                {activeTable?.searchQuery
+                  ? `Filtering "${activeTable.searchQuery}" in ${activeTable.tableName}`
+                  : `Filtering ${activeTable?.tableName || 'Current Table'}`}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
+                {activeTable?.searchQuery
+                  ? `Table records behind this modal are updated live. Press Enter or click below to view the filtered table.`
+                  : `Type above to filter rows live, or click column chips to narrow your search to specific fields.`}
+              </p>
+
+              <div className="flex items-center gap-3 mt-6">
+                {activeTable?.searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => activeTable.onSearchChange('')}
+                    className="h-8.5 px-4 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                  >
+                    Clear Filter
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="h-8.5 px-5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+                >
+                  <span>Apply & View Table</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-700/60 text-white font-bold">
+                    Enter ↵
+                  </kbd>
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Bar for Table Filter */}
+            <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">tab</kbd>
+                  <span>switch to app search</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">↵</kbd>
+                  <span>apply filter</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">esc</kbd>
+                  <span>dismiss</span>
+                </span>
+              </div>
+              <span className="text-slate-400 font-sans">{activeTable?.tableName} Table Search</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Search Header Input (Clickable Esc Button in top right) */}
+            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 bg-white">
+              <Search className="w-5 h-5 text-[#2652C8] shrink-0" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setKeyboardIndex(-1);
+                  setHoveredId(null);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Type to search pages, reports, actions, or masters... (e.g. trades, net position, add client)"
+                className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-[#2652C8]"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setKeyboardIndex(-1);
+                    setHoveredId(null);
+                    inputRef.current?.focus();
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
 
         {/* Tab Navigation: Matching Reference Image (All | Pages | Actions | Shortcuts) */}
         <div className="flex items-center justify-between px-5 pt-2 border-b border-slate-100 bg-white">
@@ -733,8 +934,10 @@ export function UniversalSearch() {
           </div>
           <span className="text-slate-400 font-sans">BizzMate Universal Search</span>
         </div>
-      </div>
-    </div>,
+      </>
+    )}
+  </div>
+</div>,
     document.body
   );
 }

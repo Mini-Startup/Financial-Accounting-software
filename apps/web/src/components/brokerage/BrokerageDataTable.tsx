@@ -202,6 +202,7 @@ export function BrokerageDataTable({
     <>
       <div className="space-y-2">
         <TableToolbar
+          tableName="Brokerage"
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
