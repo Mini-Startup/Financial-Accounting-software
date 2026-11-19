@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback } from 'react';
 import { UploadCloud, FileSpreadsheet, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '../../utils/toastNotify';
 
 interface FileUploadZoneProps {
   onFileSelected: (file: File) => void;
@@ -26,7 +26,7 @@ export function FileUploadZone({ onFileSelected, isProcessing }: FileUploadZoneP
       const validExtensions = ['.txt', '.csv', '.xlsx', '.xls'];
 
       if (!validExtensions.includes(ext)) {
-        toast.error('Please upload a .txt, .csv, or Excel (.xlsx, .xls) file.');
+        notify.error('Unsupported File Type', { description: 'Please upload a .txt, .csv, or Excel (.xlsx, .xls) file.' });
         return;
       }
 

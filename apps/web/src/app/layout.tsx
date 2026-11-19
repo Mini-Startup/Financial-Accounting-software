@@ -149,6 +149,7 @@ export default async function RootLayout({
           {/* Executive Notification Toaster */}
           <Toaster
             position="top-right"
+            offset={36}
             toastOptions={{
               duration: 5000,
               className: 'z-[999999]',
