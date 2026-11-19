@@ -13,7 +13,7 @@ export function ImportResultPanel({ importResult, fileName, onReset, onBack }: I
   return (
     <div className="max-w-md mx-auto py-10">
       <div className="card text-center p-8 space-y-6">
-        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-(--color-positive) mx-auto">
+        <div className="w-16 h-16 bg-green-50 rounded-xl flex items-center justify-center text-(--color-positive) mx-auto">
           <CheckCircle2 className="w-10 h-10" />
         </div>
         <div>

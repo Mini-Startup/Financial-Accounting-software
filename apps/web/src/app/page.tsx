@@ -236,10 +236,10 @@ export default async function Dashboard() {
         <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 text-xs font-semibold uppercase tracking-wider border border-blue-400/30">
+              <span className="px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-200 text-xs font-semibold uppercase tracking-wider border border-blue-400/30">
                 Live Overview
               </span>
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <span className="w-2 h-2 rounded-xs bg-blue-400 animate-pulse" />
             </div>
             <h1 className="text-3xl font-display font-extrabold tracking-tight">
               Financial Accounting Hub
@@ -342,7 +342,7 @@ export default async function Dashboard() {
               <p className="text-xs text-slate mt-0.5">Historical breakdown of monthly volume</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald" />
+              <span className="inline-block w-2.5 h-2.5 rounded-xs bg-emerald" />
               <span className="text-xs text-slate font-medium">BizzMate Core</span>
             </div>
           </div>
@@ -401,7 +401,7 @@ export default async function Dashboard() {
               ].map((item, idx) => (
                 <div key={idx} className="flex flex-col items-center">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className={cn("w-2 h-2 rounded-full", item.dot)} />
+                    <span className={cn("w-2 h-2 rounded-xs", item.dot)} />
                     <span className="text-xs font-bold text-slate-900">{item.label}</span>
                   </div>
                   <span className="text-xs text-slate-500 font-mono font-medium">{item.val}</span>
@@ -466,7 +466,7 @@ export default async function Dashboard() {
                     <td>
                       <span 
                         className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border",
+                          "px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border",
                           t.transactionType?.toUpperCase() === "BUY"
                             ? "bg-emerald-50 text-emerald border-emerald-100"
                             : "bg-rose-50 text-rose-700 border-rose-100"
@@ -531,7 +531,7 @@ export default async function Dashboard() {
                       <td>
                         <span 
                           className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border",
+                            "px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider border",
                             v.type === "PAYMENT" && "bg-amber-50 text-amber-700 border-amber-100",
                             v.type === "RECEIPT" && "bg-teal-50 text-teal-700 border-teal-100",
                             v.type === "JOURNAL" && "bg-sky-50 text-sky-700 border-sky-100",

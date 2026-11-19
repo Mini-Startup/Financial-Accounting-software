@@ -263,7 +263,7 @@ export function TableToolbar({
 
         {/* Floating Bulk Action Bar (Executive Dark Slate Pill, High Contrast) */}
         {selectedCount > 0 && typeof document !== 'undefined' && createPortal(
-          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-slate-900/95 text-white rounded-xl shadow-[0_16px_36px_rgba(15,23,42,0.4)] px-4 py-2 flex items-center gap-3.5 border border-slate-700/80 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-200 ease-out select-none">
+          <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-slate-900/95 text-white rounded-lg shadow-[0_16px_36px_rgba(15,23,42,0.4)] px-4 py-2 flex items-center gap-3.5 border border-slate-700/80 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-200 ease-out select-none">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-xs bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               <span className="text-xs font-bold text-slate-100 tracking-wide">
@@ -403,7 +403,7 @@ export function TableToolbar({
               {/* Conditions Rows */}
               <div className="p-6 flex flex-col gap-2.5 max-h-72 overflow-y-auto">
                 {conditions.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500 bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
+                  <div className="py-8 text-center text-xs text-slate-500 bg-slate-50/70 rounded-lg border border-dashed border-slate-200">
                     No advanced conditions configured. Click below to add your first rule.
                   </div>
                 ) : (

@@ -210,7 +210,7 @@ export function TradesPageManager({
             <button
               type="button"
               onClick={() => setIsAdding(true)}
-              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Add Trade</span>
@@ -225,7 +225,7 @@ export function TradesPageManager({
                 window.history.pushState({}, '', url.toString());
                 setIsImportModalOpen(true);
               }}
-              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
             >
               <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
               <span>Import File</span>
@@ -713,7 +713,7 @@ export function TradesPageManager({
           filterSlot={
             <div className="flex gap-2.5 items-center">
               {/* 1-Click Side Segmented Control: All / BUY / SELL */}
-              <div className="inline-flex p-0.5 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 select-none">
+              <div className="inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200/80 shrink-0 select-none">
                 <UniversalTooltip content="Show all BUY and SELL trades">
                   <button
                     type="button"
@@ -878,7 +878,7 @@ export function TradesPageManager({
                   setSearchQuery('');
                   setCurrentPage(1);
                 }}
-                className="h-8.5 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
+                className="h-8.5 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
               >
                 <X className="w-3.5 h-3.5 text-slate-400" />
                 <span>Reset</span>

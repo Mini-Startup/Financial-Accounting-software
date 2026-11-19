@@ -278,7 +278,7 @@ export function UserManagementDashboard() {
             <h1 className="text-h2 font-display text-charcoal">
               Users & Access Control
             </h1>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
               RBAC
             </span>
           </div>
@@ -377,7 +377,7 @@ export function UserManagementDashboard() {
                         <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-3.5 font-medium text-slate-800">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-(--color-forest)/10 text-(--color-forest) font-bold flex items-center justify-center text-xs shrink-0">
+                              <div className="w-8 h-8 rounded-lg bg-(--color-forest)/10 text-(--color-forest) font-bold flex items-center justify-center text-xs shrink-0">
                                 {(u.name || u.email || 'U')[0].toUpperCase()}
                               </div>
                               <span className="font-semibold text-slate-900">
@@ -393,7 +393,7 @@ export function UserManagementDashboard() {
                           <td className="p-3.5 font-mono text-slate-600">{u.email}</td>
                           <td className="p-3.5">
                             <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border ${getRoleBadgeStyle(
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md border ${getRoleBadgeStyle(
                                 roleName
                               )}`}
                             >
@@ -471,13 +471,13 @@ export function UserManagementDashboard() {
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold text-slate-900 font-display">{r.name}</h3>
                         {r.isSystem && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 uppercase">
                             System
                           </span>
                         )}
                       </div>
                       <span
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getRoleBadgeStyle(
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded-md border ${getRoleBadgeStyle(
                           r.name
                         )}`}
                       >

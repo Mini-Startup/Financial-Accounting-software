@@ -29,12 +29,12 @@ export function ReconciliationSection({ reconciliation }: ReconciliationSectionP
         </div>
         <div>
           {reconciliation.isBalanced ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Equilibrium Verified (Δ ≡ $0.00)
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
               <AlertTriangle className="w-3.5 h-3.5" />
               Imbalance: ${reconciliation.imbalanceDelta.toFixed(2)}
             </span>

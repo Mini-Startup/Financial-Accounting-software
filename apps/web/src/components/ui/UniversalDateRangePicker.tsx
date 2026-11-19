@@ -354,7 +354,7 @@ export function UniversalDateRangePicker({
           }
         }}
         className={cn(
-          'w-full flex items-center justify-between border bg-white rounded-xl shadow-2xs transition-all cursor-pointer font-sans text-xs',
+          'w-full flex items-center justify-between border bg-white rounded-lg shadow-2xs transition-all cursor-pointer font-sans text-xs',
           compact ? 'h-8.5 px-2.5' : 'h-9 px-3',
           isOpen
             ? 'border-[#2652C8] ring-2 ring-blue-100'
@@ -397,7 +397,7 @@ export function UniversalDateRangePicker({
               left: `${coords.left}px`,
               zIndex: 999999,
             }}
-            className="bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-4 w-[330px] animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3 select-none"
+            className="bg-white border border-slate-200/90 rounded-xl shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-4 w-[330px] animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3 select-none"
           >
             {/* Quick Preset Buttons */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">

@@ -352,7 +352,7 @@ export function VoucherForm({
                     >
                       {/* Row Index & Type Badge */}
                       <div className="col-span-1 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-md bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center font-mono">
                           {index + 1}
                         </span>
                       </div>

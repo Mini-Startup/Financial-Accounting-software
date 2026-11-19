@@ -97,7 +97,7 @@ export function FileUploadZone({ onFileSelected, isProcessing }: FileUploadZoneP
         </div>
       ) : (
         <div className="flex flex-col items-center py-8 text-center">
-          <div className="trade-upload-icon bg-mist p-4 rounded-full text-(--color-primary) mb-4">
+          <div className="trade-upload-icon bg-mist p-4 rounded-xl text-(--color-primary) mb-4">
             <UploadCloud className="w-8 h-8" />
           </div>
           <span className="trade-upload-title text-base font-semibold text-charcoal">

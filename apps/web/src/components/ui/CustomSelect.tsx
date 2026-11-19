@@ -303,7 +303,7 @@ export function CustomSelect<T extends string | number = string>({
     if (valStr === 'BUY') {
       return (
         <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="w-1.5 h-1.5 rounded-xs bg-emerald-500" />
           <span>{selectedOption?.label || 'BUY'}</span>
         </span>
       );
@@ -311,7 +311,7 @@ export function CustomSelect<T extends string | number = string>({
     if (valStr === 'SELL') {
       return (
         <span className="inline-flex items-center gap-1 text-rose-700 font-bold">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          <span className="w-1.5 h-1.5 rounded-xs bg-rose-500" />
           <span>{selectedOption?.label || 'SELL'}</span>
         </span>
       );
@@ -319,7 +319,7 @@ export function CustomSelect<T extends string | number = string>({
     if (valStr === 'BOTH') {
       return (
         <span className="inline-flex items-center gap-1 text-indigo-700 font-semibold">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          <span className="w-1.5 h-1.5 rounded-xs bg-indigo-500" />
           <span>{selectedOption?.label || 'Both'}</span>
         </span>
       );
@@ -443,9 +443,9 @@ export function CustomSelect<T extends string | number = string>({
                       )}
                     >
                       <div className="flex items-center gap-1.5 truncate mr-2">
-                        {isBuy && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
-                        {isSell && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />}
-                        {isBoth && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                        {isBuy && <span className="w-1.5 h-1.5 rounded-xs bg-emerald-500 shrink-0" />}
+                        {isSell && <span className="w-1.5 h-1.5 rounded-xs bg-rose-500 shrink-0" />}
+                        {isBoth && <span className="w-1.5 h-1.5 rounded-xs bg-indigo-500 shrink-0" />}
                         <div className="flex flex-col truncate">
                           <span
                             className={cn(

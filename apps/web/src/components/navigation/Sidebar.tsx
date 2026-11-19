@@ -399,7 +399,7 @@ export function Sidebar() {
           <Link
             href="/"
             className={cn(
-              "flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-sm transition-all duration-120 group mb-1 shrink-0",
+              "flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-120 group mb-1 shrink-0",
               pathname === "/"
                 ? "bg-white text-[#0A1B4D] font-bold shadow-md"
                 : "text-blue-100/80 hover:bg-white/10 hover:text-white"
@@ -473,7 +473,7 @@ export function Sidebar() {
                             <button
                               onClick={() => toggleSection(subKey)}
                               className={cn(
-                                "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-120 group shrink-0 cursor-pointer",
+                                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-120 group shrink-0 cursor-pointer",
                                 subGroupActive || subOpen
                                   ? "text-white bg-[#0D2460]/80 border border-blue-400/25 shadow-xs"
                                   : "text-blue-100/80 hover:bg-white/10 hover:text-white"
@@ -531,7 +531,7 @@ export function Sidebar() {
                           key={child.path + child.name}
                           href={child.path}
                           className={cn(
-                            "flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-120 shrink-0 group",
+                            "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-120 shrink-0 group",
                             active
                               ? "bg-white text-[#0A1B4D] font-bold shadow-md"
                               : "text-blue-100/80 hover:bg-white/10 hover:text-white"
@@ -584,7 +584,7 @@ export function Sidebar() {
                 {userName || "My Account"}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-xs bg-blue-400 shrink-0" />
                 <span className="text-[11px] font-medium uppercase tracking-wider text-blue-200 truncate">
                   {roleName}
                 </span>

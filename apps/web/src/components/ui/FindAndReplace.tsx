@@ -221,7 +221,7 @@ export function FindAndReplace<T>({
           {findText && (
             <span
               className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold',
+                'px-2 py-0.5 rounded-md text-[10px] font-mono font-bold',
                 matchCount > 0
                   ? isReplaceActive
                     ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
@@ -273,7 +273,7 @@ export function FindAndReplace<T>({
               <button
                 type="button"
                 onClick={handlePrevMatch}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
                 title="Previous Match (Up Arrow / Shift+Enter)"
               >
                 <ChevronUp className="w-3.5 h-3.5" />
@@ -281,7 +281,7 @@ export function FindAndReplace<T>({
               <button
                 type="button"
                 onClick={handleNextMatch}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
                 title="Next Match (Down Arrow / Enter)"
               >
                 <ChevronDown className="w-3.5 h-3.5" />
@@ -332,7 +332,7 @@ export function FindAndReplace<T>({
                 setCurrentMatchIndex(0);
               }}
               className={cn(
-                'w-6 h-6 rounded-full transition-all cursor-pointer text-xs flex items-center justify-center',
+                'w-6 h-6 rounded-md transition-all cursor-pointer text-xs flex items-center justify-center',
                 matchCase
                   ? 'bg-mist text-(--color-forest) ring-1.5 ring-(--color-leaf) font-bold shadow-2xs'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
@@ -349,7 +349,7 @@ export function FindAndReplace<T>({
                 setCurrentMatchIndex(0);
               }}
               className={cn(
-                'w-6 h-6 rounded-full transition-all cursor-pointer text-xs flex items-center justify-center',
+                'w-6 h-6 rounded-md transition-all cursor-pointer text-xs flex items-center justify-center',
                 matchWholeWord
                   ? 'bg-mist text-(--color-forest) ring-1.5 ring-(--color-leaf) font-bold shadow-2xs'
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
@@ -366,7 +366,7 @@ export function FindAndReplace<T>({
                   setFindText('');
                   setCurrentMatchIndex(0);
                 }}
-                className="w-6 h-6 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+                className="w-6 h-6 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
                 title="Clear find text"
               >
                 <X className="w-3.5 h-3.5" />

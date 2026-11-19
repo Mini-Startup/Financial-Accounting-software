@@ -346,7 +346,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                   {reportData.account.code}
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
                   {reportData.account.group}
                 </span>
               </div>
@@ -622,7 +622,7 @@ export function LedgerReportManager({ accounts }: { accounts: Account[] }) {
                           <td className="p-3 text-center">
                             <span
                               className={cn(
-                                'badge text-[10px] font-bold uppercase py-0.5 px-2 rounded-full',
+                                'badge text-[10px] font-bold uppercase py-0.5 px-2 rounded-md',
                                 (tx.entryType === 'SETTLEMENT' || tx.type === 'TRADE') && 'bg-emerald-100 text-emerald-800 border border-emerald-200',
                                 (tx.entryType === 'VOUCHER' || tx.type === 'PAYMENT') && 'bg-amber-100 text-amber-800 border border-amber-200',
                                 tx.type === 'RECEIPT' && 'bg-blue-100 text-blue-800 border border-blue-200',

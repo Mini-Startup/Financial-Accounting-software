@@ -58,7 +58,7 @@ export function TopBar() {
         <button
           type="button"
           onClick={handleOpenSearch}
-          className="w-56 sm:w-64 md:w-80 h-9 px-3.5 bg-slate-100/90 hover:bg-slate-100 text-slate-500 rounded-xl flex items-center justify-between border border-slate-200/80 shadow-2xs transition-all cursor-pointer group hover:border-blue-400 hover:ring-2 hover:ring-blue-100"
+          className="w-56 sm:w-64 md:w-80 h-9 px-3.5 bg-slate-100/90 hover:bg-slate-100 text-slate-500 rounded-lg flex items-center justify-between border border-slate-200/80 shadow-2xs transition-all cursor-pointer group hover:border-blue-400 hover:ring-2 hover:ring-blue-100"
           title="Search anything... (Ctrl+K / ⌘K)"
         >
           <div className="flex items-center gap-2 text-xs">

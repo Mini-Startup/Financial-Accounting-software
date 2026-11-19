@@ -55,7 +55,7 @@ export function TradeImportModal({ isOpen, onClose, onComplete }: TradeImportMod
         {/* Modal Header */}
         <div className="px-6 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs">
               <UploadCloud className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div>
@@ -90,7 +90,7 @@ export function TradeImportModal({ isOpen, onClose, onComplete }: TradeImportMod
               <button
                 type="button"
                 onClick={() => setIsConfirmResetOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition cursor-pointer"
                 title="Discard active import file and start over"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
@@ -102,7 +102,7 @@ export function TradeImportModal({ isOpen, onClose, onComplete }: TradeImportMod
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
               title="Close modal (your parsed trade data will remain preserved)"
             >
               <X className="w-5 h-5" />

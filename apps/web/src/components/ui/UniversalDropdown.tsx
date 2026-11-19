@@ -262,7 +262,7 @@ export function UniversalDropdown({
     >
       <div
         className={cn(
-          'w-full min-h-9.5 px-2.5 py-1 rounded-xl text-xs text-slate-800',
+          'w-full min-h-9.5 px-2.5 py-1 rounded-lg text-xs text-slate-800',
           'flex items-center justify-between gap-1.5 transition-all duration-150 select-none',
           searchable ? 'cursor-text' : 'cursor-pointer',
           variant === 'seamless'
@@ -386,7 +386,7 @@ export function UniversalDropdown({
               width: `${coords.width}px`,
               zIndex: 999999,
             }}
-            className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden flex flex-col max-h-60 duration-100"
+            className="bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-60 duration-100"
           >
             {/* Options List */}
             <div ref={listRef} className="overflow-y-auto flex-1 divide-y divide-slate-100">

@@ -303,7 +303,7 @@ export function UniversalDatePicker({
     <div ref={containerRef} className={cn('relative flex flex-col gap-1 w-full', className)}>
       <div
         className={cn(
-          'flex items-center rounded-xl transition-all duration-150',
+          'flex items-center rounded-lg transition-all duration-150',
           activeError
             ? 'border border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20 text-rose-950'
             : variant === 'seamless'
@@ -418,7 +418,7 @@ export function UniversalDatePicker({
               width: 280,
               zIndex: 999999,
             }}
-            className="bg-white border border-slate-200 rounded-xl shadow-xl p-3 duration-100"
+            className="bg-white border border-slate-200 rounded-lg shadow-xl p-3 duration-100"
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-2">

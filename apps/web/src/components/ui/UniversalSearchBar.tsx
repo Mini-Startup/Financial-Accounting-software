@@ -136,7 +136,7 @@ export function UniversalSearchBar({
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Advanced</span>
           {activeAdvancedCount > 0 && (
-            <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-full font-mono">
+            <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-md font-mono">
               {activeAdvancedCount}
             </span>
           )}

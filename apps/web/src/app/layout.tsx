@@ -86,8 +86,8 @@ export default async function RootLayout({
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-44 rounded-full blur-2xl pointer-events-none bg-gradient-to-b from-purple-300/60 via-indigo-100/30 to-transparent" />
 
                   {/* Centered Circular Elevated Icon Badge */}
-                  <div className="w-14 h-14 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-4 relative z-1">
-                    <div className="w-10 h-10 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-700">
+                  <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-4 relative z-1">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-700">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
@@ -96,7 +96,7 @@ export default async function RootLayout({
 
                   {/* Content */}
                   <div className="relative z-1 space-y-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 tracking-wide uppercase">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 text-purple-800 tracking-wide uppercase">
                       Access Restricted
                     </span>
                     <h2 className="text-xl font-bold text-slate-900 tracking-tight">Organization Whitelist Required</h2>

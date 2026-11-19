@@ -89,7 +89,7 @@ export function TradeRowDrawer({
               <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
                 <span>Row #{rowIndex + 1} Inspector</span>
                 <span
-                  className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                  className={`px-2 py-0.5 text-xs font-semibold rounded-md ${
                     isValid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                   }`}
                 >

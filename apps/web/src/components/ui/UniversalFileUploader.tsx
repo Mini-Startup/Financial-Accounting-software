@@ -124,7 +124,7 @@ export function UniversalFileUploader({
           className="hidden"
         />
 
-        <div className="w-12 h-12 rounded-full bg-mist flex items-center justify-center text-(--color-forest) mb-3 shadow-xs">
+        <div className="w-12 h-12 rounded-xl bg-mist flex items-center justify-center text-(--color-forest) mb-3 shadow-xs">
           <UploadCloud className="w-6 h-6 stroke-2" />
         </div>
 
@@ -162,7 +162,7 @@ export function UniversalFileUploader({
             <button
               type="button"
               onClick={onClear}
-              className="p-1.5 text-slate hover:text-negative transition-colors rounded-full"
+              className="p-1.5 text-slate hover:text-negative transition-colors rounded-lg"
             >
               <X className="w-4 h-4" />
             </button>
@@ -179,9 +179,9 @@ export function UniversalFileUploader({
             </span>
             <span className="font-mono text-charcoal font-bold">{progress}%</span>
           </div>
-          <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-slate-200 rounded-sm overflow-hidden">
             <div
-              className="h-full bg-(--color-leaf) transition-all duration-200 rounded-full"
+              className="h-full bg-(--color-leaf) transition-all duration-200 rounded-sm"
               style={{ width: `${progress}%` }}
             />
           </div>

@@ -235,7 +235,7 @@ export function PermissionMatrixModal({
                   Permissions Matrix: <span className="text-(--color-forest) font-bold">{role.name}</span>
                 </h2>
                 {role.isSystem && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 tracking-wider uppercase">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 tracking-wider uppercase">
                     System Role
                   </span>
                 )}

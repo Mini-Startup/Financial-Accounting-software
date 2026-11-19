@@ -494,14 +494,14 @@ export function TradeFormModal({
                 #{initialTrade?.tradeNumber || 'New Entry'}
               </span>
 
-              {/* Side Badge or Toggle (Concentric executive radius: outer rounded-xl p-1, inner rounded-lg) */}
-              <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200/90">
+              {/* Side Badge or Toggle */}
+              <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200/90">
                 <button
                   type="button"
                   onClick={() => handleToggleSide('BUY')}
                   disabled={isLocked}
                   className={cn(
-                    'px-3 py-1 rounded-lg text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
+                    'px-3 py-1 rounded-md text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
                     isBuy
                       ? 'bg-emerald-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-emerald-700'
@@ -514,7 +514,7 @@ export function TradeFormModal({
                   onClick={() => handleToggleSide('SELL')}
                   disabled={isLocked}
                   className={cn(
-                    'px-3 py-1 rounded-lg text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
+                    'px-3 py-1 rounded-md text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
                     !isBuy
                       ? 'bg-rose-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-rose-700'
@@ -562,7 +562,7 @@ export function TradeFormModal({
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
             {/* Locked Notification */}
             {isLocked && (
-              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
                 <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                 <div>
                   <span className="font-bold">Locked Settlement Record:</span> This trade was processed by a settlement cycle and is locked against modifications or deletion.
@@ -575,7 +575,7 @@ export function TradeFormModal({
               <div className="col-span-12 lg:col-span-7 space-y-4">
                 {/* Canonical Security Banner */}
                 {liveSecurityName && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-600 uppercase tracking-wider text-[11px]">Security:</span>
                     <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
                       {liveSecurityName}
@@ -590,7 +590,7 @@ export function TradeFormModal({
                       Script <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    <div className={cn(touched.scriptId && errors.scriptId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                    <div className={cn(touched.scriptId && errors.scriptId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
                       <UniversalDropdown
                         value={scriptId}
                         options={(scripts || []).map((s) => ({
@@ -637,7 +637,7 @@ export function TradeFormModal({
                       Trade Date <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    <div className={cn(touched.tradeDate && errors.tradeDate && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                    <div className={cn(touched.tradeDate && errors.tradeDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
                       <UniversalDatePicker
                         value={date}
                         onChange={(newDate) => {
@@ -667,7 +667,7 @@ export function TradeFormModal({
                       )}
                     </div>
 
-                    <div className={cn(touched.expiryDate && errors.expiryDate && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                    <div className={cn(touched.expiryDate && errors.expiryDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
                       {isCustomExpiry || expiryOptions.length === 0 ? (
                         <UniversalDatePicker
                           value={expiryDate}
@@ -706,7 +706,7 @@ export function TradeFormModal({
                       Client <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    <div className={cn(touched.clientId && errors.accountId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                    <div className={cn(touched.clientId && errors.accountId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
                       <UniversalDropdown
                         value={clientId}
                         options={(clients || []).map((c) => ({
@@ -730,7 +730,7 @@ export function TradeFormModal({
                       Broker <span className="text-red-500 font-bold">*</span>
                     </label>
 
-                    <div className={cn(touched.brokerId && !brokerId && 'rounded-xl ring-2 ring-rose-200 border-rose-400')}>
+                    <div className={cn(touched.brokerId && !brokerId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
                       <UniversalDropdown
                         value={brokerId}
                         options={(brokers || []).map((b) => ({
@@ -767,7 +767,7 @@ export function TradeFormModal({
                       placeholder="e.g. 100 or -50"
                       disabled={isLocked}
                       className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-xl border transition-all duration-150 outline-none',
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
                         isExistingTrade
                           ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
                           : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
@@ -791,7 +791,7 @@ export function TradeFormModal({
                       placeholder="0.00"
                       disabled={isLocked}
                       className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-xl border transition-all duration-150 outline-none',
+                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
                         isExistingTrade
                           ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
                           : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
@@ -817,7 +817,7 @@ export function TradeFormModal({
                   ) : (
                     <div className="space-y-3.5">
                       {/* Client Rate Card */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
+                      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                           <span className="font-semibold uppercase tracking-wider text-[10px]">Client Rate</span>
                           <span className="font-mono text-[11px] text-slate-600">
@@ -830,7 +830,7 @@ export function TradeFormModal({
                       </div>
 
                       {/* Broker Rate Card */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
+                      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                           <span className="font-semibold uppercase tracking-wider text-[10px]">Broker Rate</span>
                           <span className="font-mono text-[11px] text-slate-600">
@@ -844,7 +844,7 @@ export function TradeFormModal({
 
                       {/* Net Trade Value */}
                       {netTradeValue != null && !isNaN(netTradeValue) && (
-                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
+                        <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
                           <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider text-[10px] mb-1">
                             Total Net Value
                           </div>
@@ -855,7 +855,7 @@ export function TradeFormModal({
                       )}
 
                       {/* Trade Volume Metrics */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-3 text-xs space-y-1.5 font-mono text-slate-600">
+                      <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs space-y-1.5 font-mono text-slate-600">
                         <div className="flex justify-between">
                           <span className="font-sans text-slate-500">Side:</span>
                           <span className={cn('font-bold', displayMetrics.side === 'BUY' ? 'text-emerald-700' : 'text-rose-700')}>{displayMetrics.side}</span>
@@ -886,7 +886,7 @@ export function TradeFormModal({
                   onClick={() => setIsConfirmDeleteOpen(true)}
                   disabled={isLocked || isDeleting}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition-colors',
+                    'flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors',
                     isLocked
                       ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
                       : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 cursor-pointer'
