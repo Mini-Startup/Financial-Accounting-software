@@ -15,6 +15,7 @@ import {
 } from '@/utils/tableFilter';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Trash2, Edit } from 'lucide-react';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { cn } from '@/utils/cn';
 import { BrokerageFormModal } from './BrokerageFormModal';
 
 const BROKERAGE_COLUMNS = [
@@ -332,11 +333,13 @@ export function BrokerageDataTable({
                   return (
                     <tr
                       key={rule.id}
-                      className={`transition-colors ${
+                      onClick={() => setEditingRule(rule)}
+                      className={cn(
+                        'cursor-pointer transition-colors',
                         isSelected ? 'bg-emerald-50/50 hover:bg-emerald-50/70' : 'hover:bg-slate-50/70'
-                      }`}
+                      )}
                     >
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                         <CustomCheckbox
                           checked={isSelected}
                           onChange={() => handleToggleRow(rule.id)}
@@ -396,7 +399,7 @@ export function BrokerageDataTable({
                       <td className="px-6 py-3.5 whitespace-nowrap text-xs text-right font-mono text-blue-600 font-bold">
                         {currSym}{perUnit}
                       </td>
-                      <td className="px-6 py-3.5 whitespace-nowrap text-right text-xs font-medium space-x-2">
+                      <td className="px-6 py-3.5 whitespace-nowrap text-right text-xs font-medium space-x-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setEditingRule(rule)}
                           className="text-slate-500 hover:text-blue-600 p-1 hover:bg-slate-100 rounded transition inline-flex items-center"

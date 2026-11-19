@@ -907,7 +907,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-xs bg-emerald-400 animate-pulse"></span>
                 <span>
                   Validation checks complete: {isDubaiImport ? validDubaiRowsCount : validFuturesCount} valid,{' '}
                   {isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount} unmapped
@@ -1093,7 +1093,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         createPortal(
           <div className="fixed inset-0 z-200000 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
             <div className="card w-120 max-w-[92vw] p-6 bg-white shadow-2xl border border-slate-200 rounded-xl space-y-6 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 animate-pulse">
+              <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 animate-pulse">
                 <RefreshCw className="w-6 h-6 animate-spin" />
               </div>
 
@@ -1104,9 +1104,9 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
               {/* Progress Bar Container */}
               <div className="space-y-2">
-                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 p-0.5">
+                <div className="w-full h-3 bg-slate-100 rounded-md overflow-hidden border border-slate-200/80 p-0.5">
                   <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out"
+                    className="h-full bg-emerald-500 rounded-md transition-all duration-300 ease-out"
                     style={{ width: `${importProgress.percentage}%` }}
                   />
                 </div>

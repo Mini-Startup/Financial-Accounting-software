@@ -28,6 +28,8 @@ import {
 } from '../../lib/tradeParser/openPositionParser';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { useTopBar } from '@/context/TopBarContext';
+import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
 
 
 export function ClosingRatePageManager({ 
@@ -47,7 +49,7 @@ export function ClosingRatePageManager({
   const searchParams = useSearchParams();
   const isImportParam = searchParams.get('import') === 'true';
 
-  const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
   const [isAdding, setIsAdding] = useState(false);
 
   // Dynamic reference master data
@@ -63,9 +65,51 @@ export function ClosingRatePageManager({
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
 
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Closing Rates',
+      actions: (
+        <div className="flex items-center gap-2">
+          <UniversalTooltip content="Add a new daily closing rate">
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Closing Rate</span>
+            </button>
+          </UniversalTooltip>
+          <UniversalTooltip content="Import closing rates & verify positions from CSV">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('import', 'true');
+                window.history.pushState({}, '', url.toString());
+                setIsImportModalOpen(true);
+              }}
+              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+              <span>Import Position File</span>
+            </button>
+          </UniversalTooltip>
+        </div>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
+
   // Sync state with query parameters
   useEffect(() => {
-    setViewMode(isImportParam ? 'import' : 'list');
+    if (isImportParam) {
+      setIsImportModalOpen(true);
+    }
   }, [isImportParam]);
 
   // Open Position Import states
@@ -146,17 +190,16 @@ export function ClosingRatePageManager({
   };
 
   useEffect(() => {
-    if (viewMode === 'import' && importDate) {
+    if (isImportModalOpen && importDate) {
       fetchSettlementForDate(importDate);
     }
-  }, [viewMode, importDate]);
+  }, [isImportModalOpen, importDate]);
 
   const handleImportBack = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('import');
     window.history.pushState({}, '', url.toString());
-    setViewMode('list');
-    router.refresh();
+    setIsImportModalOpen(false);
   };
 
   // Fetch currencies if not loaded
@@ -570,7 +613,9 @@ export function ClosingRatePageManager({
     }
   };
 
-  if (viewMode === 'import') {
+  const renderImportModal = () => {
+    if (!isImportModalOpen) return null;
+
     const validCount = parsedItems.filter((i) => i.status === 'Valid').length;
     const selectedValidCount = parsedItems.filter((i, idx) => selectedRateIndices.has(idx) && i.status === 'Valid').length;
     const unmappedCount = parsedItems.filter((i) => i.status === 'Unmapped').length;
@@ -679,79 +724,89 @@ export function ClosingRatePageManager({
       });
     };
 
-    return (
-      <div className="space-y-6">
-        {/* Import Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={handleImportBack}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-800"
-              title="Back to Closing Rates"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-h2 font-display">Open Position Import (Closing Rates)</h1>
-              <p className="text-sm text-slate mt-1">
-                Upload your daily Open Position CSV file to extract closing rates and verify position settlement.
-              </p>
-            </div>
-          </div>
+    return typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center border border-blue-200">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">Open Position Import (Closing Rates)</h2>
+                  <p className="text-xs text-slate-500">Upload daily Open Position CSV file to extract closing rates & verify positions.</p>
+                </div>
+              </div>
 
-          {parsedItems.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3">
-              <button 
-                onClick={() => {
-                  setParsedItems([]);
-                  setRawOpenPositionRows([]);
-                  setFileName('');
-                  if (inputRef.current) inputRef.current.value = '';
-                }}
-                className="btn btn--secondary py-2 text-xs"
-              >
-                Reset File
-              </button>
-
-              {/* Add / Adjust Trades Button */}
-              <button
-                onClick={handleAddAdjustTrades}
-                disabled={!isValidated || isAdjusting}
-                className={`btn flex items-center gap-2 py-2 px-4 text-xs font-bold transition-all ${
-                  isValidated && !isAdjusting
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                }`}
-                title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
-              >
-                {isAdjusting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Adjusting Trades…
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4" /> Add / Adjust Trades
-                  </>
+              <div className="flex items-center gap-2">
+                {parsedItems.length > 0 && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setParsedItems([]);
+                      setRawOpenPositionRows([]);
+                      setFileName('');
+                      if (inputRef.current) inputRef.current.value = '';
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel Import / Reset
+                  </button>
                 )}
-              </button>
-
-              {/* Import Closing Rates Button */}
-              <button
-                onClick={handleConfirmImport}
-                disabled={isProcessing || selectedValidCount === 0}
-                className="btn btn--primary flex items-center gap-2 py-2 text-xs font-bold"
-              >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Saving…
-                  </>
-                ) : (
-                  <>Import {selectedValidCount} Selected Rates</>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleImportBack}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Close dialog (retains uploaded data)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {parsedItems.length > 0 && (
+                <div className="flex flex-wrap items-center justify-end gap-3 pb-2 border-b border-slate-100">
+                  {/* Add / Adjust Trades Button */}
+                  <button
+                    onClick={handleAddAdjustTrades}
+                    disabled={!isValidated || isAdjusting}
+                    className={`btn flex items-center gap-2 py-2 px-4 text-xs font-bold transition-all ${
+                      isValidated && !isAdjusting
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                    }`}
+                    title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
+                  >
+                    {isAdjusting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Adjusting Trades…
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle className="w-4 h-4" /> Add / Adjust Trades
+                      </>
+                    )}
+                  </button>
+
+                  {/* Import Closing Rates Button */}
+                  <button
+                    onClick={handleConfirmImport}
+                    disabled={isProcessing || selectedValidCount === 0}
+                    className="btn btn--primary flex items-center gap-2 py-2 text-xs font-bold"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Saving…
+                      </>
+                    ) : (
+                      <>Import {selectedValidCount} Selected Rates</>
+                    )}
+                  </button>
+                </div>
+              )}
 
         {/* Configuration Card */}
         <div className="card p-6 bg-white border border-border-light shadow-sm space-y-6">
@@ -790,17 +845,17 @@ export function ClosingRatePageManager({
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Validation Status:</span>
                 {verification.status === 'VALIDATED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     Open Position Verified
                   </span>
                 ) : verification.status === 'FAILED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                     Open Position Not Validated ({verification.discrepancies.length} mismatches)
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
                     <AlertTriangle className="w-4 h-4 text-amber-600" />
                     No Trades Found for {importDate}
                   </span>
@@ -1005,7 +1060,7 @@ export function ClosingRatePageManager({
                             </td>
                             <td className="py-3 px-4 text-center">
                               {item.status === 'Valid' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                   <span>Valid</span>
                                 </span>
@@ -1013,7 +1068,7 @@ export function ClosingRatePageManager({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
                                   title={item.errors.join(', ') + ' - Click to add this script'}
                                 >
                                   <Plus className="w-3 h-3 text-rose-600" />
@@ -1070,55 +1125,15 @@ export function ClosingRatePageManager({
             )}
           </div>
         )}
-
-        {showScriptModal &&
-          typeof document !== 'undefined' &&
-          createPortal(
-            <ScriptFormModal
-              initialData={scriptModalInitialData}
-              exchanges={exchanges}
-              currencies={localCurrencies}
-              onClose={() => setShowScriptModal(false)}
-              onSuccess={handleScriptCreated}
-            />,
-            document.body
-          )}
-      </div>
-    );
-  }
+            </div>
+          </div>
+        </div>,
+        document.body
+      );
+    };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-6">
-        <div>
-          <h1 className="text-h2 font-display">Closing Rates</h1>
-          <p className="text-sm text-slate mt-1">
-            Manage daily closing rates used for calculating portfolios, profit/loss, and account balances.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Closing Rate
-          </button>
-          <button
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set('import', 'true');
-              window.history.pushState({}, '', url.toString());
-              setViewMode('import');
-            }}
-            className="btn btn--secondary flex items-center gap-2"
-          >
-            <UploadCloud className="w-4 h-4 text-(--color-primary)" /> Open Position Import
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <ClosingRateDataTable 
         closingRates={initialClosingRates} 
         exchanges={exchanges} 
@@ -1132,6 +1147,8 @@ export function ClosingRatePageManager({
           onClose={() => setIsAdding(false)} 
         />
       )}
+
+      {renderImportModal()}
 
       {showScriptModal &&
         typeof document !== 'undefined' &&

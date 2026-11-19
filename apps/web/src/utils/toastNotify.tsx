@@ -90,10 +90,10 @@ export function showExecutiveToast(
 
   return toast.custom((t) => {
     return (
-      <div className="w-fit max-w-[360px] min-w-[260px] select-none">
+      <div className="w-fit max-w-[360px] min-w-[240px] select-none">
         <div
           className={cn(
-            'relative overflow-hidden rounded-xl border p-3.5 sm:p-4 transition-all duration-200 animate-in fade-in zoom-in-95',
+            'relative overflow-hidden rounded-xl border p-3 sm:p-3.5 transition-all duration-200 animate-in fade-in zoom-in-95',
             statusConfig.cardClass,
             customClassName
           )}
@@ -134,9 +134,9 @@ export function showExecutiveToast(
               {/* Progress Bar Display */}
               {typeof progress === 'number' && (
                 <div className="mt-2.5 space-y-1">
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-slate-100 rounded-md overflow-hidden">
                     <div
-                      className={cn('h-full transition-all duration-300 rounded-full', statusConfig.progressBarClass)}
+                      className={cn('h-full transition-all duration-300 rounded-md', statusConfig.progressBarClass)}
                       style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                   </div>
@@ -153,7 +153,7 @@ export function showExecutiveToast(
                   <ul className="space-y-1 text-slate-600">
                     {errors.map((err, idx) => (
                       <li key={idx} className="flex items-start gap-1.5 leading-tight">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1" />
+                        <span className="w-1.5 h-1.5 rounded-xs bg-rose-500 shrink-0 mt-1" />
                         <span>{err}</span>
                       </li>
                     ))}

@@ -69,7 +69,7 @@ export function ColumnSettingsPopover({
       >
         <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
         <span>Columns</span>
-        <span className="ml-0.5 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-full text-[10px] font-mono">
+        <span className="ml-0.5 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-md text-[10px] font-mono">
           {visibleColumns.length}/{columns.length}
         </span>
       </button>

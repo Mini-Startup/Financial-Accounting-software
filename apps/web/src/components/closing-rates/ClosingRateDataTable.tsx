@@ -18,6 +18,7 @@ import {
 import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { cn } from '@/utils/cn';
 
 const CLOSING_RATE_COLUMNS = [
   { key: 'rateDate', label: 'Date' },
@@ -360,9 +361,13 @@ export function ClosingRateDataTable({
                   return (
                     <tr
                       key={item.id}
-                      className={isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/50'}
+                      onClick={() => setEditingItem(item)}
+                      className={cn(
+                        'cursor-pointer transition-colors',
+                        isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/70'
+                      )}
                     >
-                      <td className="text-center">
+                      <td className="text-center" onClick={(e) => e.stopPropagation()}>
                         <CustomCheckbox
                           checked={isSelected}
                           onChange={() => handleToggleRow(item.id)}
@@ -387,7 +392,7 @@ export function ClosingRateDataTable({
                           maximumFractionDigits: 2,
                         })}
                       </td>
-                      <td className="text-right">
+                      <td className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setEditingItem(item)}

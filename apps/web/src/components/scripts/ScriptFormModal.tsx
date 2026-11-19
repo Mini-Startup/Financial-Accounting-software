@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, AlertTriangle, Coins, Plus } from 'lucide-react';
+import { X, AlertTriangle, Coins, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
@@ -580,7 +580,7 @@ export function ScriptFormModal({
               >
                 {isSubmitting ? (
                   <>
-                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Saving...</span>
                   </>
                 ) : isDuplicate ? (

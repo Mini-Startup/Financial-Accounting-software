@@ -303,7 +303,7 @@ export function TableToolbar({
                         >
                           <SlidersHorizontal className="w-3.5 h-3.5" />
                           {activeAdvancedCount > 0 && (
-                            <span className="w-4 h-4 bg-blue-600 text-white text-[9px] rounded-full flex items-center justify-center font-mono">
+                            <span className="w-4 h-4 bg-blue-600 text-white text-[9px] rounded-md flex items-center justify-center font-mono">
                               {activeAdvancedCount}
                             </span>
                           )}
@@ -339,7 +339,7 @@ export function TableToolbar({
         {selectedCount > 0 && typeof document !== 'undefined' && createPortal(
           <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-99999 bg-[#2652C8] text-white rounded-2xl shadow-[0_16px_36px_rgba(38,82,200,0.35)] px-5 py-2.5 flex items-center gap-4 border border-[#3B66DF] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5 duration-250 ease-out">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="w-2 h-2 rounded-xs bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               <span className="text-xs font-bold text-white tracking-wide">
                 {selectedCount} selected
               </span>

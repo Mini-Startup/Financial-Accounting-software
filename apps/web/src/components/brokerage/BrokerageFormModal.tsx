@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { X, Calculator, Building2, User, Layers, ArrowRight, Plus } from 'lucide-react';
+import { X, Calculator, Building2, User, Layers, ArrowRight, Plus, Loader2 } from 'lucide-react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
@@ -881,7 +881,7 @@ export function BrokerageFormModal({
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : scope === 'ALL' ? (

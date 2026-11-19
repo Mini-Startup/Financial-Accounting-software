@@ -380,40 +380,40 @@ export function UniversalDateRangePicker({
             }}
             className="bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-4 w-[330px] animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-3 select-none"
           >
-            {/* Quick Preset Pills */}
+            {/* Quick Preset Buttons */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               <button
                 type="button"
                 onClick={() => handlePreset('today')}
-                className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-md border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-lg border border-slate-200/80 transition-colors cursor-pointer shrink-0"
               >
                 Today
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset('yesterday')}
-                className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-md border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-lg border border-slate-200/80 transition-colors cursor-pointer shrink-0"
               >
                 Yesterday
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset('week')}
-                className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-md border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-lg border border-slate-200/80 transition-colors cursor-pointer shrink-0"
               >
                 This Week
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset('month')}
-                className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-md border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-lg border border-slate-200/80 transition-colors cursor-pointer shrink-0"
               >
                 This Month
               </button>
               <button
                 type="button"
                 onClick={() => handlePreset('last30')}
-                className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-md border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-[#2652C8] text-slate-600 rounded-lg border border-slate-200/80 transition-colors cursor-pointer shrink-0"
               >
                 30 Days
               </button>
@@ -477,10 +477,10 @@ export function UniversalDateRangePicker({
                     className={cn(
                       'h-8 w-full flex items-center justify-center font-medium transition-all cursor-pointer relative',
                       !isCurrentMonth && 'text-slate-300',
-                      isCurrentMonth && !isStart && !isEnd && !isInRange && 'text-slate-700 hover:bg-slate-100 rounded-lg',
-                      isStart && 'bg-[#2652C8] text-white font-bold rounded-l-lg shadow-2xs z-1',
-                      isEnd && 'bg-[#2652C8] text-white font-bold rounded-r-lg shadow-2xs z-1',
-                      isStart && isEnd && 'rounded-lg',
+                      isCurrentMonth && !isStart && !isEnd && !isInRange && 'text-slate-700 hover:bg-slate-100 rounded-md',
+                      isStart && 'bg-[#2652C8] text-white font-bold rounded-l-md shadow-2xs z-1',
+                      isEnd && 'bg-[#2652C8] text-white font-bold rounded-r-md shadow-2xs z-1',
+                      isStart && isEnd && 'rounded-md',
                       isInRange && 'bg-blue-50 text-blue-900 font-semibold',
                       isToday && !isStart && !isEnd && 'underline decoration-[#2652C8] decoration-2 underline-offset-2 font-bold'
                     )}

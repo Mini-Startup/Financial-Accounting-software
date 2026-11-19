@@ -399,15 +399,16 @@ export function DataTable({
                         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                       }
                     }}
+                    onClick={() => canEdit && setEditingAccount(acc)}
                     className={cn(
-                      'transition-colors',
+                      'cursor-pointer transition-colors',
                       isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60',
                       !isSelected && isMatched && !isActiveMatch && 'bg-amber-50/60 hover:bg-amber-100/60',
                       isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
-                      !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50/50'
+                      !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50/70'
                     )}
                   >
-                    <td className="text-center">
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <CustomCheckbox
                         checked={isSelected}
                         onChange={() => handleToggleRow(acc.id)}
@@ -435,7 +436,7 @@ export function DataTable({
                     <td className="text-slate-500 text-xs">
                       {renderWithDiff('mobileNumber', acc.mobileNumber || acc.whatsappNumber || acc.email || '—', isActiveMatch)}
                     </td>
-                    <td className="text-right">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {canEdit && (
                           <button

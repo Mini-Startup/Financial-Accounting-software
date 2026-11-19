@@ -50,7 +50,7 @@ export function AllScriptsBrokerageTable({
         <span className="text-slate">
           All <strong>{rows.length}</strong> scripts loaded from database
         </span>
-        <span className="font-semibold text-(--color-forest) bg-mist/60 px-2.5 py-0.5 rounded-full">
+        <span className="font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
           {configuredCount} scripts configured
         </span>
       </div>

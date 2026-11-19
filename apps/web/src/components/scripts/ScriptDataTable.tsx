@@ -9,6 +9,7 @@ import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-re
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace } from '../ui/FindAndReplace';
+import { cn } from '@/utils/cn';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -326,9 +327,13 @@ export function ScriptDataTable({
                 return (
                   <tr
                     key={script.id}
-                    className={isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/50'}
+                    onClick={() => setEditingScript(script)}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/70'
+                    )}
                   >
-                    <td className="text-center">
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <CustomCheckbox
                         checked={isSelected}
                         onChange={() => handleToggleRow(script.id)}
@@ -353,7 +358,7 @@ export function ScriptDataTable({
                         {currCode}
                       </span>
                     </td>
-                    <td className="text-right">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setEditingScript(script)}

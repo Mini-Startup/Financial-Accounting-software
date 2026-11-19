@@ -7,7 +7,7 @@ import { generateSecurityName, formatExpiryToDDMMMYY } from '@/utils/securityNam
 import { validateTradeForm } from '@/utils/validators';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { notify } from '@/utils/toastNotify';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
@@ -918,7 +918,7 @@ export function TradeFormModal({
                   >
                     {isSaving ? (
                       <>
-                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         <span>Adding…</span>
                       </>
                     ) : (
@@ -944,7 +944,7 @@ export function TradeFormModal({
                   >
                     {isSaving ? (
                       <>
-                        <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         <span>Saving…</span>
                       </>
                     ) : (

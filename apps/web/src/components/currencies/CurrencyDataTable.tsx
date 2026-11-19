@@ -228,27 +228,35 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
                 </tr>
               ) : null}
               {paginatedCurrencies.map((cur) => (
-                <tr key={cur.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="font-mono font-bold text-charcoal py-2.5 px-4">{cur.code}</td>
-                  <td className="text-slate py-2.5 px-4">{cur.name || '-'}</td>
-                  <td className="text-charcoal font-semibold text-base py-2.5 px-4">{cur.symbol || '-'}</td>
+                <tr
+                  key={cur.id}
+                  onClick={() => setEditingCurrency(cur)}
+                  className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                >
+                  <td className="font-mono font-bold text-slate-800 py-2.5 px-4">{cur.code}</td>
+                  <td className="text-slate-700 font-medium py-2.5 px-4">{cur.name || '-'}</td>
+                  <td className="text-slate-900 font-semibold text-base py-2.5 px-4">{cur.symbol || '-'}</td>
                   <td className="py-2.5 px-4">
                     {cur.isActive ? (
-                      <span className="badge badge--dot badge--success">Active</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Active
+                      </span>
                     ) : (
-                      <span className="badge badge--dot badge--error">Inactive</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                        Inactive
+                      </span>
                     )}
                   </td>
-                  <td className="text-right py-2.5 px-4">
+                  <td className="text-right py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
                     <button 
                       onClick={() => setEditingCurrency(cur)}
-                      className="text-(--color-forest) hover:text-emerald mr-4 font-semibold transition text-xs cursor-pointer"
+                      className="text-[#2652C8] hover:text-[#1F42A3] mr-4 font-semibold transition text-xs cursor-pointer"
                     >
                       Edit
                     </button>
                     <button 
                       onClick={() => setDeleteTargetId(cur.id)}
-                      className="text-negative hover:opacity-80 font-semibold transition text-xs cursor-pointer"
+                      className="text-rose-600 hover:text-rose-700 font-semibold transition text-xs cursor-pointer"
                     >
                       Delete
                     </button>

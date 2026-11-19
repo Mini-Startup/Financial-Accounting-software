@@ -610,20 +610,21 @@ select option {
 
 /* Sonner Toaster Container & Reset for HeroUI Executive Alerts */
 [data-sonner-toaster] {
-  --width: 520px !important;
+  --width: 360px !important;
   max-width: calc(100vw - 32px) !important;
   z-index: 99999 !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
   overflow: visible !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: auto !important;
+  max-width: 360px !important;
   display: block !important;
 }
 
@@ -631,13 +632,23 @@ select option {
   display: none !important;
 }
 
-/* HeroUI Tooltip Arrow Color Alignment with Dark Brand Tooltip */
+/* Tooltip Radius & Color Alignment */
+.tooltip,
+[data-slot="tooltip-content"],
+div[data-slot="tooltip-content"] {
+  border-radius: 8px !important;
+  background-color: #0A1B4D !important;
+  color: #ffffff !important;
+}
+
 .tooltip [data-slot="overlay-arrow"],
 .tooltip [data-slot="overlay-arrow"] path,
+[data-slot="tooltip-content"] [data-slot="overlay-arrow"],
+[data-slot="tooltip-content"] [data-slot="overlay-arrow"] path,
 [data-slot="tooltip-arrow"] svg,
 [data-slot="tooltip-arrow"] path {
   fill: #0A1B4D !important;
-  stroke: transparent !important;
+  stroke: #0A1B4D !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

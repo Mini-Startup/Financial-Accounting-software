@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, Building2, Phone, CreditCard, Users2, AlertCircle } from 'lucide-react';
+import { X, Building2, Phone, CreditCard, Users2, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { notify } from '@/utils/toastNotify';
@@ -759,7 +759,7 @@ export function FormModal({
               >
                 {isSubmitting ? (
                   <>
-                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Saving...</span>
                   </>
                 ) : isDuplicate ? (

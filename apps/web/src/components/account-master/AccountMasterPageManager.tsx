@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation';
 import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
-import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace } from '../ui/FindAndReplace';
+import { useTopBar } from '@/context/TopBarContext';
+import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { cn } from '@/utils/cn';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -50,6 +53,28 @@ export function AccountMasterPageManager({
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('code');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Accounts',
+      actions: (
+        <UniversalTooltip content="Add a new general or bank account master">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Account</span>
+          </button>
+        </UniversalTooltip>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -215,17 +240,6 @@ export function AccountMasterPageManager({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
-        <div>
-          <h1 className="text-h2 font-display">Account Master</h1>
-          <p className="text-sm text-slate mt-1">Manage standard and banking account masters.</p>
-        </div>
-        <button onClick={() => setIsAdding(true)} className="btn btn--primary">
-          + Add Account Master
-        </button>
-      </div>
-
       {/* Top Controls Toolbar */}
       <TableToolbar
         searchQuery={searchQuery}
@@ -356,9 +370,13 @@ export function AccountMasterPageManager({
                 return (
                   <tr
                     key={acc.id}
-                    className={isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/50'}
+                    onClick={() => setEditingAccount(acc)}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/70'
+                    )}
                   >
-                    <td className="text-center">
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <CustomCheckbox
                         checked={isSelected}
                         onChange={() => handleToggleRow(acc.id)}
@@ -403,7 +421,7 @@ export function AccountMasterPageManager({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="text-right">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setEditingAccount(acc)}

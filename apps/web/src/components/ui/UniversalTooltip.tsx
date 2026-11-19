@@ -18,7 +18,7 @@ export function UniversalTooltip({
   content,
   children,
   side = 'top',
-  delayMs = 450,
+  delayMs = 600,
   closeDelayMs = 0,
   className,
   disabled = false,
@@ -28,31 +28,19 @@ export function UniversalTooltip({
   }
 
   return (
-    <Tooltip delay={delayMs} closeDelay={closeDelayMs}>
+    <Tooltip delay={delayMs} closeDelay={closeDelayMs} shouldSkipAnimation={true}>
       <TooltipTrigger className="inline-flex items-center">
         {children}
       </TooltipTrigger>
       <TooltipContent
-        showArrow
+        showArrow={false}
         placement={side}
-        style={{ '--tooltip-arrow-fill': '#0A1B4D' } as React.CSSProperties}
+        style={{ '--overlay': '#0A1B4D' } as React.CSSProperties}
         className={cn(
-          'text-xs font-medium py-1 px-2.5 rounded-lg bg-[#0A1B4D] text-white shadow-xl border border-white/10 select-none z-50',
+          'text-xs font-medium py-1 px-2.5 rounded-lg! bg-[#0A1B4D]! text-white! shadow-xl border border-white/10 select-none z-50 relative pointer-events-none',
           className
         )}
       >
-        <TooltipArrow className="text-[#0A1B4D] fill-[#0A1B4D] [&_svg]:fill-[#0A1B4D]! [&_svg]:stroke-transparent! [&_path]:fill-[#0A1B4D]!">
-          <svg
-            data-slot="overlay-arrow"
-            fill="#0A1B4D"
-            height="12"
-            viewBox="0 0 12 12"
-            width="12"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path fill="#0A1B4D" d="M0 0C5.48483 8 6.5 8 12 0Z" />
-          </svg>
-        </TooltipArrow>
         {content}
       </TooltipContent>
     </Tooltip>

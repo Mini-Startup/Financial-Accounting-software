@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ScriptDataTable } from './ScriptDataTable';
 import { ScriptFormModal } from './ScriptFormModal';
+import { useTopBar } from '@/context/TopBarContext';
+import { Plus } from 'lucide-react';
+import { UniversalTooltip } from '../ui/UniversalTooltip';
 
 export function ScriptPageManager({
   scripts,
@@ -12,25 +15,31 @@ export function ScriptPageManager({
   exchanges: any[];
 }) {
   const [isAdding, setIsAdding] = useState(false);
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Scripts',
+      actions: (
+        <UniversalTooltip content="Add a new script or security mapping">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Script</span>
+          </button>
+        </UniversalTooltip>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-h2 font-display">Scripts</h1>
-          <p className="text-sm text-slate mt-1">Manage scripts and code mappings across different exchanges.</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary"
-          >
-            + Add Script
-          </button>
-        </div>
-      </div>
-
+    <div className="w-full space-y-4">
       <ScriptDataTable scripts={scripts} exchanges={exchanges} />
 
       {isAdding && (

@@ -10,6 +10,9 @@ import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
+import { useTopBar } from '@/context/TopBarContext';
+import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
+import { useEffect } from 'react';
 
 export interface ExpiryDateRecord {
   id: string;
@@ -44,6 +47,29 @@ export function ExpiryDatePageManager({
   // Deletion modal state
   const [deleteTarget, setDeleteTarget] = useState<ExpiryDateRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Expiry Dates',
+      actions: (
+        <UniversalTooltip content="Add a new contract expiry date">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Expiry Date</span>
+          </button>
+        </UniversalTooltip>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
 
   // Filtered & Sorted list
   const filteredExpiries = useMemo(() => {
@@ -170,25 +196,6 @@ export function ExpiryDatePageManager({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
-        <div>
-          <h1 className="text-h2 font-display">Expiry Dates</h1>
-          <p className="text-sm text-slate mt-1">
-            Manage contract expiry dates used for derivatives, futures, and settlement filters.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Expiry Date
-          </button>
-        </div>
-      </div>
-
       {/* Toolbar */}
       <div className="border border-border-light rounded-xl shadow-xs bg-white p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-wrap">
@@ -283,7 +290,7 @@ export function ExpiryDatePageManager({
                           type="button"
                           onClick={() => handleToggleActive(exp)}
                           className={cn(
-                            'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition cursor-pointer',
+                            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold border transition cursor-pointer',
                             exp.isActive
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                               : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
@@ -292,7 +299,7 @@ export function ExpiryDatePageManager({
                         >
                           <span
                             className={cn(
-                              'w-1.5 h-1.5 rounded-full',
+                              'w-1.5 h-1.5 rounded-xs',
                               exp.isActive ? 'bg-emerald-500' : 'bg-slate-400'
                             )}
                           />
@@ -363,13 +370,13 @@ export function ExpiryDatePageManager({
                   type="button"
                   onClick={() => setNewIsActive(!newIsActive)}
                   className={cn(
-                    'w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors',
+                    'w-10 h-6 flex items-center rounded-lg p-1 cursor-pointer transition-colors',
                     newIsActive ? 'bg-emerald-600' : 'bg-slate-300'
                   )}
                 >
                   <div
                     className={cn(
-                      'bg-white w-4 h-4 rounded-full shadow-md transform transition-transform',
+                      'bg-white w-4 h-4 rounded-md shadow-md transform transition-transform',
                       newIsActive ? 'translate-x-4' : 'translate-x-0'
                     )}
                   />

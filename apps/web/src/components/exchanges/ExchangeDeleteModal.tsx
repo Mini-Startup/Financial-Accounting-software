@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Trash2, X, AlertOctagon, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Trash2, X, AlertOctagon, ShieldAlert, Loader2 } from 'lucide-react';
 
 interface ExchangeDeleteModalProps {
   isOpen: boolean;
@@ -116,7 +116,7 @@ export function ExchangeDeleteModal({
         <div className="p-6 space-y-5">
           {isLoadingImpact ? (
             <div className="py-8 flex flex-col items-center justify-center space-y-3">
-              <div className="w-7 h-7 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="w-7 h-7 text-rose-600 animate-spin" />
               <p className="text-xs text-slate-500 font-medium">Analyzing linked scripts, trades, and import rules...</p>
             </div>
           ) : (
@@ -206,7 +206,7 @@ export function ExchangeDeleteModal({
           >
             {isDeleting ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Soft Deleting...</span>
               </>
             ) : (
