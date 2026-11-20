@@ -42,6 +42,7 @@ export function ClosingRateDataTable({
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['ALL']);
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -101,8 +102,8 @@ export function ClosingRateDataTable({
 
   // Search filter with column targeting + advanced conditions
   const filteredRates = useMemo(() => {
-    return filterRecordsWithAdvanced(ratesList, searchQuery, searchColumn, advancedConditions);
-  }, [ratesList, searchQuery, searchColumn, advancedConditions]);
+    return filterRecordsWithAdvanced(ratesList, searchQuery, searchColumn, advancedConditions, selectedColumns);
+  }, [ratesList, searchQuery, searchColumn, advancedConditions, selectedColumns]);
 
   // Sorted and Paginated items
   const sortedRates = useMemo(() => {
@@ -222,6 +223,8 @@ export function ClosingRateDataTable({
     <div className="space-y-2">
       {/* Top Controls Toolbar */}
       <TableToolbar
+        tableName="Closing Rates"
+        records={ratesList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);
@@ -232,6 +235,11 @@ export function ClosingRateDataTable({
         searchColumn={searchColumn}
         onSearchColumnChange={(col) => {
           setSearchColumn(col);
+          setCurrentPage(1);
+        }}
+        selectedColumns={selectedColumns}
+        onSelectedColumnsChange={(cols) => {
+          setSelectedColumns(cols);
           setCurrentPage(1);
         }}
         advancedConditions={advancedConditions}

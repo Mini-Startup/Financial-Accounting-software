@@ -121,6 +121,8 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
     <>
     <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       <TableToolbar
+        tableName="Currencies"
+        records={currenciesList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

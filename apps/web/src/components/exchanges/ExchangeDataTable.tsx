@@ -103,6 +103,8 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
     <>
     <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       <TableToolbar
+        tableName="Exchanges"
+        records={exchangesList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);

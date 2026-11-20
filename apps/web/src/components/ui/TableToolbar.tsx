@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Search,
@@ -19,6 +19,7 @@ import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { ColumnSettingsPopover, ColumnDefinition } from '@/components/ui/ColumnSettingsPopover';
 import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
+import { useTableSearch } from '@/context/TableSearchContext';
 
 export interface ColumnOption {
   key: string;
@@ -26,6 +27,8 @@ export interface ColumnOption {
 }
 
 export interface TableToolbarProps {
+  tableName?: string;
+  records?: any[];
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   searchPlaceholder?: string;
@@ -34,6 +37,9 @@ export interface TableToolbarProps {
   columns?: ColumnOption[];
   searchColumn?: string;
   onSearchColumnChange?: (col: string) => void;
+  selectedColumns?: string[];
+  onSelectedColumnsChange?: (cols: string[]) => void;
+  onSelectRow?: (row: any) => void;
 
   // Advanced search conditions
   advancedConditions?: AdvancedCondition[];
@@ -72,12 +78,17 @@ export interface TableToolbarProps {
 }
 
 export function TableToolbar({
+  tableName,
+  records,
   searchQuery = '',
   onSearchChange,
   searchPlaceholder = 'Type to search...',
   columns,
   searchColumn = 'ALL',
   onSearchColumnChange,
+  selectedColumns,
+  onSelectedColumnsChange,
+  onSelectRow,
   advancedConditions,
   onAdvancedConditionsChange,
   showFindReplaceButton = false,
@@ -99,6 +110,48 @@ export function TableToolbar({
   columnSettings,
   className,
 }: TableToolbarProps) {
+  const { registerTable, openModal } = useTableSearch();
+  const toolbarId = useId();
+
+  // Register active table with universal search palette
+  useEffect(() => {
+    if (!onSearchChange) return;
+
+    return registerTable({
+      id: toolbarId,
+      tableName: tableName || 'Table',
+      columns: columns || [],
+      records,
+      searchQuery: searchQuery || '',
+      onSearchChange,
+      searchColumn,
+      onSearchColumnChange,
+      selectedColumns,
+      onSelectedColumnsChange,
+      advancedConditions,
+      onAdvancedConditionsChange,
+      onSelectRow,
+      totalItems,
+      filteredItems: totalItems,
+    });
+  }, [
+    registerTable,
+    toolbarId,
+    tableName,
+    columns,
+    records,
+    searchQuery,
+    onSearchChange,
+    searchColumn,
+    onSearchColumnChange,
+    selectedColumns,
+    onSelectedColumnsChange,
+    advancedConditions,
+    onAdvancedConditionsChange,
+    onSelectRow,
+    totalItems,
+  ]);
+
   const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(searchQuery));
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [conditions, setConditions] = useState<AdvancedCondition[]>(advancedConditions || []);
@@ -170,73 +223,56 @@ export function TableToolbar({
           className
         )}
       >
-        {/* Left side: Search & Filters */}
+        {/* Left side: Search Trigger & Filter Controls */}
         <div className="flex items-center gap-2.5 flex-1 flex-wrap">
           {onSearchChange && (
-            <div className={cn(
-              "flex items-center bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 focus-within:border-[#2652C8] focus-within:ring-2 focus-within:ring-[#2652C8]/15 transition-all",
-              compactSearch ? "w-56 sm:w-64" : "min-w-65 max-w-md flex-1"
-            )}>
-              {/* Column targeting dropdown in front of search */}
-              {columns && columns.length > 0 && onSearchColumnChange && !compactSearch && (
-                <div className="w-31.25 shrink-0 border-r border-slate-200">
-                  <UniversalDropdown
-                    value={searchColumn}
-                    onChange={onSearchColumnChange}
-                    searchable={false}
-                    options={[
-                      { value: 'ALL', label: 'All Columns' },
-                      ...columns.map((c) => ({ value: c.key, label: c.label })),
-                    ]}
-                    triggerClassName="min-h-9 h-9 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2.5 text-xs font-semibold text-slate-700"
-                  />
-                </div>
-              )}
-
-              {/* Search text input */}
-              <div className="relative flex-1 flex items-center">
-                <Search className="w-4 h-4 text-slate-400 ml-2.5 shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="w-full h-9 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => onSearchChange('')}
-                    className="p-1 mr-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 cursor-pointer transition-colors"
-                    title="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Advanced Filter condition trigger button */}
-              {onAdvancedConditionsChange && columns && columns.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setIsAdvancedOpen(true)}
-                  className={cn(
-                    'h-9 px-2.5 flex items-center gap-1.5 text-xs font-semibold border-l border-slate-200 rounded-r-lg transition-colors cursor-pointer select-none',
-                    activeAdvancedCount > 0
-                      ? 'bg-blue-50 text-[#2652C8]'
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                  )}
-                  title="Advanced Filter (AND / OR conditions)"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  {activeAdvancedCount > 0 && (
-                    <span className="w-4 h-4 bg-[#2652C8] text-white text-[10px] rounded-md flex items-center justify-center font-bold">
-                      {activeAdvancedCount}
+            !searchQuery ? (
+              <button
+                type="button"
+                onClick={() => openModal('table')}
+                className="h-9 px-3.5 bg-slate-50 hover:bg-slate-100/90 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200/90 shadow-2xs flex items-center gap-2.5 transition-all cursor-pointer group hover:border-[#2652C8]/50 active:scale-98 select-none"
+                title={`Filter ${tableName || 'table'} records (Ctrl+F)`}
+              >
+                <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#2652C8] transition-colors" />
+                <span className="text-xs font-medium">
+                  Search {tableName || 'Table'}...
+                </span>
+                <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-500 font-semibold shadow-2xs">
+                  Ctrl+F
+                </kbd>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 bg-blue-50/90 border border-blue-200 text-[#2652C8] px-3 py-1.5 rounded-lg shadow-2xs text-xs animate-in fade-in duration-150 select-none">
+                <Search className="w-3.5 h-3.5 text-[#2652C8] shrink-0" />
+                <span className="font-medium truncate max-w-56">
+                  "{searchQuery}"
+                  {searchColumn && searchColumn !== 'ALL' && (
+                    <span className="text-blue-600/80 font-normal">
+                      {' '}in {columns?.find((c) => c.key === searchColumn)?.label || searchColumn}
                     </span>
                   )}
+                </span>
+                <span className="text-[11px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded">
+                  {totalItems} results
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openModal('table')}
+                  className="text-xs text-blue-700 hover:text-blue-900 font-semibold underline cursor-pointer ml-1"
+                  title="Modify Filter (Ctrl+F)"
+                >
+                  Edit
                 </button>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="p-1 hover:bg-blue-100 rounded-md text-blue-600 hover:text-blue-900 transition-colors cursor-pointer"
+                  title="Clear filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )
           )}
 
           {/* Find & Replace Trigger Button */}
