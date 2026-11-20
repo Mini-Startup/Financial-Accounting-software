@@ -135,14 +135,15 @@
   --spacing-12: 48px;
   --spacing-16: 64px;
 
-  /* Unified Primary Roundness Token System (Crisp executive geometry — strictly NO pill shapes) */
-  --app-radius: 6px;
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 6px;
-  --radius-xl: 10px;
-  --radius-2xl: 12px;
+  /* Unified Primary Roundness Token System (+10% scaled as requested: 10px -> 11px, 20px -> 22px) */
+  --app-radius: 6.6px;
+  --radius-xs: 2.2px;
+  --radius-sm: 4.4px;
+  --radius-md: 6.6px;
+  --radius-lg: 8.8px;
+  --radius-xl: 11px;
+  --radius-2xl: 17.6px;
+  --radius-3xl: 22px;
   --radius-full: 9999px;
 
   /* Shadows (DESIGN.md §1.5) */
@@ -260,6 +261,15 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     text-align: right;
+  }
+
+  /* Hide scrollbar utility */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   /* Custom subtle scrollbar */
@@ -582,7 +592,7 @@
     border-bottom: none;
   }
 
-  /* High-density financial blotter data table */
+  /* High-density financial data table */
   .data-table-dense th {
     padding: 0.65rem 0.85rem;
     font-size: 11px;
