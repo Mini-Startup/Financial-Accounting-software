@@ -165,12 +165,16 @@ export class ReportsService {
     let missingClosingRatesCount = 0;
     const resultGroups: NetPositionGroup[] = [];
 
-    // 3. For each group, aggregate positions by securityName
+    // 3. For each group, aggregate positions
     for (const grp of Array.from(groupMap.values())) {
       const positionMap = new Map<string, typeof trades>();
 
       for (const t of grp.trades) {
-        const secKey = (t.securityName || `${t.script?.shortName || 'SEC'}_${t.expiry || ''}`).trim();
+        // When grouped by SCRIPT, separate rows by client and expiry so each client is a row
+        const secKey = groupBy === 'SCRIPT'
+          ? `${t.accountId}_${t.expiry || ''}_${t.securityName || t.script?.shortName || ''}`.trim()
+          : (t.securityName || `${t.script?.shortName || 'SEC'}_${t.expiry || ''}`).trim();
+
         let posTrades = positionMap.get(secKey);
         if (!posTrades) {
           posTrades = [];
@@ -187,10 +191,11 @@ export class ReportsService {
       let grpMarketValue = 0;
       let grpUnrealizedPnL = 0;
 
-      for (const [secName, pTrades] of Array.from(positionMap.entries())) {
+      for (const [secKeyStr, pTrades] of Array.from(positionMap.entries())) {
         const sampleTrade = pTrades[0];
         const script = sampleTrade.script;
         const exchange = sampleTrade.exchange;
+        const sampleAccount = sampleTrade.account;
         const marketLot = getEffectiveMarketLot(sampleTrade.marketLot, script?.lotSize);
 
         let buyQty = 0;
@@ -222,21 +227,20 @@ export class ReportsService {
         // Net Average Rate calculation: cost basis of remaining net position
         let netAvgRate = 0;
         if (netQty > 0) {
-          // Long position
           const netCostBasis = buyValue - sellValue;
           netAvgRate = netCostBasis > 0 && totalUnits > 0
             ? roundTo(netCostBasis / totalUnits, 4)
             : buyAvgRate;
         } else if (netQty < 0) {
-          // Short position
           const netCostBasis = sellValue - buyValue;
           netAvgRate = netCostBasis > 0 && totalUnits > 0
             ? roundTo(netCostBasis / totalUnits, 4)
             : sellAvgRate;
         }
 
-        // Closing Rate lookup
-        const secUpper = secName.trim().toUpperCase();
+        // Closing Rate lookup based on canonical security name
+        const rawSecName = (sampleTrade.securityName || `${script?.shortName || 'SEC'}_${sampleTrade.expiry || ''}`).trim();
+        const secUpper = rawSecName.toUpperCase();
         const exKey = `${sampleTrade.exchangeId}_${secUpper}`;
         let closingRate: number | null = null;
 
@@ -264,18 +268,22 @@ export class ReportsService {
           }
         }
 
+        const mtmDiff = closingRate !== null ? roundTo(closingRate - netAvgRate, 4) : 0;
+
         positions.push({
-          securityName: secName,
+          securityName: rawSecName,
           scriptId: sampleTrade.scriptId,
           scriptShortName: script?.shortName || '',
           scriptFullName: script?.fullName || script?.shortName || '',
           exchangeId: sampleTrade.exchangeId,
-          exchangeCode: exchange?.code || '',
+          exchangeCode: exchange?.name || exchange?.code || '',
           currencyCode: script?.currency?.code || 'USD',
           currencySymbol: script?.currency?.symbol || '$',
           expiry: sampleTrade.expiry || null,
           expiryFormatted: formatDateToDDMMYY(sampleTrade.expiry),
           marketLot,
+          lotSize: script?.lotSize || marketLot,
+          netLot: netQty,
           buyQty: roundTo(buyQty, 2),
           buyAvgRate,
           sellQty: roundTo(sellQty, 2),
@@ -284,9 +292,13 @@ export class ReportsService {
           totalUnits,
           netAvgRate,
           closingRate: isMissingRate ? null : roundTo(closingRate!, 4),
+          mtmDiff,
           marketValue,
           unrealizedPnL,
           isMissingRate,
+          clientId: sampleTrade.accountId,
+          clientCode: sampleAccount?.code || 'N/A',
+          clientName: sampleAccount?.name || 'Unnamed Client',
         });
 
         grpBuyQty += buyQty;
@@ -297,20 +309,40 @@ export class ReportsService {
         grpUnrealizedPnL += unrealizedPnL;
       }
 
+      // Compute client-level financial summary
+      const sampleAcc = grp.trades[0]?.account;
+      const accountBal = sampleAcc?.openingBalance || 0;
+      const positiveExposure = positions.filter((p) => p.netQty > 0).reduce((sum, p) => sum + p.marketValue, 0);
+      const negativeExposure = positions.filter((p) => p.netQty < 0).reduce((sum, p) => sum + p.marketValue, 0);
+
+      const groupLotSize = grp.category === 'SCRIPT' ? (grp.trades[0]?.script?.lotSize || 1) : undefined;
+
       resultGroups.push({
         id: grp.id,
         code: grp.code,
         name: grp.name,
         category: grp.category,
+        lotSize: groupLotSize,
         totals: {
           buyQty: roundTo(grpBuyQty, 2),
           sellQty: roundTo(grpSellQty, 2),
           netQty: roundTo(grpNetQty, 2),
+          netLot: roundTo(grpNetQty, 2),
           totalUnits: roundTo(grpTotalUnits, 2),
           marketValue: roundTo(grpMarketValue, 2),
           unrealizedPnL: roundTo(grpUnrealizedPnL, 2),
         },
         positions,
+        financialSummary: {
+          exposure: roundTo(grpMarketValue, 2),
+          positiveExposure: roundTo(positiveExposure, 2),
+          negativeExposure: roundTo(negativeExposure, 2),
+          netQ: roundTo(grpNetQty, 2),
+          totalMtm: roundTo(grpUnrealizedPnL, 2),
+          totalMargin: roundTo(grpMarketValue * 0.1, 2),
+          accountBalance: roundTo(accountBal, 2),
+          outstanding: roundTo(accountBal + grpUnrealizedPnL, 2),
+        },
       });
     }
 

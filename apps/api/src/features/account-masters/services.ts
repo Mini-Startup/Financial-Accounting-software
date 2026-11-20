@@ -85,6 +85,8 @@ async function sanitizeAndPrepareAccountData(rawData: any, isUpdate = false) {
   return clean;
 }
 
+const groupCache = new Map<string, number>();
+
 export class AccountMastersService {
   async create(data: any) {
     const cleanData = await sanitizeAndPrepareAccountData(data, false);
@@ -132,12 +134,26 @@ export class AccountMastersService {
     };
 
     if (groupName) {
-      where.group = {
-        name: {
-          equals: groupName,
-          mode: 'insensitive',
-        },
-      };
+      const lower = groupName.trim().toLowerCase();
+      let gId = groupCache.get(lower);
+      if (gId === undefined) {
+        const grp = await prisma.group.findFirst({
+          where: { name: { equals: groupName.trim(), mode: 'insensitive' } },
+          select: { id: true },
+        });
+        if (grp) {
+          gId = grp.id;
+          groupCache.set(lower, gId);
+        } else {
+          groupCache.set(lower, -1);
+          gId = -1;
+        }
+      }
+      if (gId > 0) {
+        where.groupId = gId;
+      } else {
+        where.groupId = -1;
+      }
     }
 
     if (excludeGroups) {

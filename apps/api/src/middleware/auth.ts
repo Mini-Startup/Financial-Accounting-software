@@ -26,7 +26,8 @@ interface CacheEntry {
   expiresAt: number;
 }
 const userCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 60_000;
+let cachedDefaultOwnerId: string | null = null;
 
 export function clearUserPermissionCache(userId?: string) {
   if (userId) {
@@ -107,12 +108,17 @@ export async function authenticateUser(req: Request, _res: Response, next: NextF
       }
     } else if (process.env.NODE_ENV !== 'production') {
       // Dev fallback: when calling from Next.js server components or local dev without headers, default to Owner
-      const defaultOwner = await prisma.user.findFirst({
-        where: { role: { name: 'Owner' } },
-        select: { id: true },
-      });
-      if (defaultOwner) {
-        const user = await resolveUser(defaultOwner.id);
+      if (!cachedDefaultOwnerId) {
+        const defaultOwner = await prisma.user.findFirst({
+          where: { role: { name: 'Owner' } },
+          select: { id: true },
+        });
+        if (defaultOwner) {
+          cachedDefaultOwnerId = defaultOwner.id;
+        }
+      }
+      if (cachedDefaultOwnerId) {
+        const user = await resolveUser(cachedDefaultOwnerId);
         if (user) {
           req.user = user;
         }
