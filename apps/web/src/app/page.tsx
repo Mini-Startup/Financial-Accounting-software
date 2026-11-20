@@ -9,7 +9,8 @@ import {
   Coins,
   Receipt,
   ChevronRight,
-  Plus
+  Plus,
+  FileSpreadsheet
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/utils/cn";
@@ -36,14 +37,15 @@ export default async function Dashboard() {
   let recentVouchers: any[] = [];
 
   try {
-    // 1. Fetch statistics from the database
+    // 1. Fetch real statistics and records directly from the database
     const [
       totalTrades,
       totalClients,
       totalBrokers,
       totalScripts,
-      allTrades,
-      vouchers,
+      tradeVolumeData,
+      recentTradesData,
+      vouchersData,
     ] = await Promise.all([
       prisma.trade.count(),
       prisma.account.count({
@@ -54,7 +56,14 @@ export default async function Dashboard() {
       }),
       prisma.script.count(),
       prisma.trade.findMany({
-        take: 100, // retrieve enough to calculate volume
+        select: {
+          quantity: true,
+          rate: true,
+          transactionType: true,
+        },
+      }),
+      prisma.trade.findMany({
+        take: 6,
         include: {
           script: true,
           account: true,
@@ -75,17 +84,18 @@ export default async function Dashboard() {
       }),
     ]);
 
-    // Calculate volume statistics
+    // Calculate real volume and buy/sell quantities
     let volume = 0;
     let buys = 0;
     let sells = 0;
-    allTrades.forEach((t: any) => {
-      const val = t.quantity * t.rate;
-      volume += val;
+    tradeVolumeData.forEach((t) => {
+      const q = Number(t.quantity) || 0;
+      const r = Number(t.rate) || 0;
+      volume += q * r;
       if (t.transactionType?.toUpperCase() === "BUY") {
-        buys += t.quantity;
+        buys += q;
       } else {
-        sells += t.quantity;
+        sells += q;
       }
     });
 
@@ -99,121 +109,10 @@ export default async function Dashboard() {
       sellVolume: sells,
     };
 
-    recentTrades = allTrades.slice(0, 6);
-    recentVouchers = vouchers;
+    recentTrades = recentTradesData;
+    recentVouchers = vouchersData;
   } catch (error) {
-    console.error("Database query failed, using rich fallbacks:", error);
-  }
-
-  // Fallbacks in case database is empty or queries failed
-  if (stats.totalTrades === 0) {
-    stats = {
-      totalTrades: 342,
-      totalClients: 84,
-      totalBrokers: 12,
-      totalScripts: 145,
-      tradeVolume: 1245630,
-      buyVolume: 18450,
-      sellVolume: 15770,
-    };
-  }
-
-  if (recentTrades.length === 0) {
-    recentTrades = [
-      {
-        id: "1",
-        tradeNumber: "TR-9042",
-        tradeDate: new Date("2025-03-01T10:00:00Z"),
-        transactionType: "BUY",
-        quantity: 500,
-        rate: 342.5,
-        script: { shortName: "RELIANCE" },
-        account: { name: "Rajesh Sharma" },
-        exchange: { code: "NSE" },
-      },
-      {
-        id: "2",
-        tradeNumber: "TR-9041",
-        tradeDate: new Date("2025-03-01T09:30:00Z"),
-        transactionType: "SELL",
-        quantity: 200,
-        rate: 1820.0,
-        script: { shortName: "TCS" },
-        account: { name: "Ananya Patel" },
-        exchange: { code: "NSE" },
-      },
-      {
-        id: "3",
-        tradeNumber: "TR-9040",
-        tradeDate: new Date("2025-03-01T08:00:00Z"),
-        transactionType: "BUY",
-        quantity: 1200,
-        rate: 142.15,
-        script: { shortName: "TATASTEEL" },
-        account: { name: "Karan Mehta" },
-        exchange: { code: "BSE" },
-      },
-      {
-        id: "4",
-        tradeNumber: "TR-9039",
-        tradeDate: new Date("2025-02-28T16:00:00Z"),
-        transactionType: "SELL",
-        quantity: 1000,
-        rate: 615.4,
-        script: { shortName: "INFY" },
-        account: { name: "Devshree Trade Link" },
-        exchange: { code: "NSE" },
-      },
-      {
-        id: "5",
-        tradeNumber: "TR-9038",
-        tradeDate: new Date("2025-02-28T14:00:00Z"),
-        transactionType: "BUY",
-        quantity: 150,
-        rate: 2450.0,
-        script: { shortName: "HDFCBANK" },
-        account: { name: "Suresh Gupta" },
-        exchange: { code: "NSE" },
-      },
-    ];
-  }
-
-  if (recentVouchers.length === 0) {
-    recentVouchers = [
-      {
-        id: "v1",
-        voucherNumber: "VCH-2025-001",
-        date: new Date("2025-03-01T11:00:00Z"),
-        type: "RECEIPT",
-        remarks: "Received client margin deposit",
-        lines: [
-          { account: { name: "Rajesh Sharma" }, amount: 50000 },
-          { account: { name: "HDFC Bank A/c" }, amount: 50000 },
-        ],
-      },
-      {
-        id: "v2",
-        voucherNumber: "VCH-2025-002",
-        date: new Date("2025-03-01T07:00:00Z"),
-        type: "PAYMENT",
-        remarks: "Payout of excess ledger funds",
-        lines: [
-          { account: { name: "Ananya Patel" }, amount: 25000 },
-          { account: { name: "ICICI Bank A/c" }, amount: 25000 },
-        ],
-      },
-      {
-        id: "v3",
-        voucherNumber: "VCH-2025-003",
-        date: new Date("2025-02-28T11:00:00Z"),
-        type: "JOURNAL",
-        remarks: "Adjustment for script brokerage charges",
-        lines: [
-          { account: { name: "Devshree Trade Link" }, amount: 480 },
-          { account: { name: "Brokerage Revenue A/c" }, amount: 480 },
-        ],
-      },
-    ];
+    console.error("Database query failed:", error);
   }
 
   // Format currencies beautifully
@@ -435,56 +334,75 @@ export default async function Dashboard() {
           </div>
           
           <div className="card__body p-0 overflow-x-auto flex-1">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Script</th>
-                  <th>Client</th>
-                  <th>Type</th>
-                  <th className="text-right">Qty</th>
-                  <th className="text-right">Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTrades.map((t, idx) => (
-                  <tr key={t.id ?? idx} className="hover:bg-slate-50 transition-colors">
-                    <td>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-sm text-charcoal">
-                          {t.script?.shortName}
-                        </span>
-                        <span className="text-[10px] text-slate font-mono uppercase tracking-wider">
-                          {t.exchange?.code}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="text-xs font-semibold text-charcoal block truncate max-w-30">
-                        {t.account?.name}
-                      </span>
-                    </td>
-                    <td>
-                      <span 
-                        className={cn(
-                          "px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border",
-                          t.transactionType?.toUpperCase() === "BUY"
-                            ? "bg-emerald-50 text-emerald border-emerald-100"
-                            : "bg-rose-50 text-rose-700 border-rose-100"
-                        )}
-                      >
-                        {t.transactionType}
-                      </span>
-                    </td>
-                    <td className="text-right font-mono font-medium text-xs">
-                      {t.quantity?.toLocaleString()}
-                    </td>
-                    <td className="text-right font-mono font-bold text-xs text-charcoal">
-                      ₹{t.rate?.toFixed(2)}
-                    </td>
+            {recentTrades.length === 0 ? (
+              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-[#2652C8] flex items-center justify-center">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-slate-800">No Trades Recorded Yet</div>
+                  <div className="text-[11px] text-slate-400">Import your broker trade blotter to see live trades.</div>
+                </div>
+                <Link
+                  href="/trades?import=true"
+                  className="px-3 py-1.5 rounded-lg bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Import Trades</span>
+                </Link>
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Script</th>
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th className="text-right">Qty</th>
+                    <th className="text-right">Rate</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentTrades.map((t, idx) => (
+                    <tr key={t.id ?? idx} className="hover:bg-slate-50 transition-colors">
+                      <td>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-charcoal">
+                            {t.script?.shortName}
+                          </span>
+                          <span className="text-[10px] text-slate font-mono uppercase tracking-wider">
+                            {t.exchange?.code}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-xs font-semibold text-charcoal block truncate max-w-30">
+                          {t.account?.name}
+                        </span>
+                      </td>
+                      <td>
+                        <span 
+                          className={cn(
+                            "px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border",
+                            t.transactionType?.toUpperCase() === "BUY"
+                              ? "bg-emerald-50 text-emerald border-emerald-100"
+                              : "bg-rose-50 text-rose-700 border-rose-100"
+                          )}
+                        >
+                          {t.transactionType}
+                        </span>
+                      </td>
+                      <td className="text-right font-mono font-medium text-xs">
+                        {t.quantity?.toLocaleString()}
+                      </td>
+                      <td className="text-right font-mono font-bold text-xs text-charcoal">
+                        ₹{t.rate?.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -508,51 +426,70 @@ export default async function Dashboard() {
           </div>
           
           <div className="card__body p-0 overflow-x-auto flex-1">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Voucher ID</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Remarks / Account</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentVouchers.map((v, idx) => {
-                  const line = v.lines?.[0];
-                  const amount = line ? line.amount : 0;
-                  const accountName = line?.account?.name ?? "Suspense Account";
-                  
-                  return (
-                    <tr key={v.id ?? idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="font-mono text-xs font-bold text-charcoal">
-                        {v.voucherNumber ?? `VCH-${100 + idx}`}
-                      </td>
-                      <td>
-                        <span 
-                          className={cn(
-                            "px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider border",
-                            v.type === "PAYMENT" && "bg-amber-50 text-amber-700 border-amber-100",
-                            v.type === "RECEIPT" && "bg-teal-50 text-teal-700 border-teal-100",
-                            v.type === "JOURNAL" && "bg-sky-50 text-sky-700 border-sky-100",
-                            v.type === "CONTRA" && "bg-purple-50 text-purple-700 border-purple-100"
-                          )}
-                        >
-                          {v.type}
-                        </span>
-                      </td>
-                      <td className="font-mono font-bold text-xs text-charcoal">
-                        ₹{amount.toLocaleString()}
-                      </td>
-                      <td className="text-xs text-slate max-w-45 truncate">
-                        <span className="font-semibold block text-charcoal">{accountName}</span>
-                        <span className="text-[10px] text-slate-400 block truncate">{v.remarks || "No remarks provided"}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            {recentVouchers.length === 0 ? (
+              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-700 flex items-center justify-center">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-slate-800">No Vouchers Recorded</div>
+                  <div className="text-[11px] text-slate-400">Post payments, receipts, or journal vouchers.</div>
+                </div>
+                <Link
+                  href="/vouchers"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Voucher</span>
+                </Link>
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Voucher ID</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Remarks / Account</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentVouchers.map((v, idx) => {
+                    const line = v.lines?.[0];
+                    const amount = line ? line.amount : 0;
+                    const accountName = line?.account?.name ?? "Suspense Account";
+                    
+                    return (
+                      <tr key={v.id ?? idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="font-mono text-xs font-bold text-charcoal">
+                          {v.voucherNumber ?? `VCH-${100 + idx}`}
+                        </td>
+                        <td>
+                          <span 
+                            className={cn(
+                              "px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider border",
+                              v.type === "PAYMENT" && "bg-amber-50 text-amber-700 border-amber-100",
+                              v.type === "RECEIPT" && "bg-teal-50 text-teal-700 border-teal-100",
+                              v.type === "JOURNAL" && "bg-sky-50 text-sky-700 border-sky-100",
+                              v.type === "CONTRA" && "bg-purple-50 text-purple-700 border-purple-100"
+                            )}
+                          >
+                            {v.type}
+                          </span>
+                        </td>
+                        <td className="font-mono font-bold text-xs text-charcoal">
+                          ₹{amount.toLocaleString()}
+                        </td>
+                        <td className="text-xs text-slate max-w-45 truncate">
+                          <span className="font-semibold block text-charcoal">{accountName}</span>
+                          <span className="text-[10px] text-slate-400 block truncate">{v.remarks || "No remarks provided"}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
