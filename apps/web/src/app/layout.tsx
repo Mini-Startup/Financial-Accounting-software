@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider, SignIn, SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
@@ -40,23 +39,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
-  const isDevBypass =
-    process.env.NODE_ENV === "development" &&
-    (cookieStore.get("__dev_bypass")?.value === "true" || headerStore.get("x-dev-bypass") === "true");
-
   let clerkUserId: string | null = null;
-  if (!isDevBypass) {
-    try {
-      const session = await auth();
-      clerkUserId = session?.userId || null;
-    } catch {}
-  }
-  const userId = clerkUserId || (isDevBypass ? "dev_admin_user" : null);
-  const syncResult = isDevBypass
-    ? { isWhitelisted: true, email: "admin@bizzmate.com", user: { id: "dev_admin_user", name: "Dev Administrator", role: { name: "Owner", isOwner: true } } }
-    : await syncUser();
+  try {
+    const session = await auth();
+    clerkUserId = session?.userId || null;
+  } catch {}
+
+  const userId = clerkUserId;
+  const syncResult = await syncUser();
 
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
@@ -122,7 +112,7 @@ export default async function RootLayout({
                 </div>
               </div>
             ) : (
-              <AuthPermissionsProvider isDevBypass={isDevBypass}>
+              <AuthPermissionsProvider>
                 <TopBarProvider>
                   {/* Floating Island Layout Shell: Background is Brand Gradient, Sidebar is 0-margin flush, Right Section is Floating Island */}
                   <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-b from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] pl-0 p-3 sm:p-3.5">
