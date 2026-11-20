@@ -5,7 +5,7 @@ import { safeServerFetch } from '@/utils/serverApi';
 
 export const metadata: Metadata = {
   title: 'Trades | BizzMate Accounting',
-  description: 'Track, filter, and manage trade blotters, manual trades, and imports.',
+  description: 'Track, filter, and manage trades, manual trade entry, and imports.',
 };
 
 export const dynamic = 'force-dynamic';

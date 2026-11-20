@@ -88,10 +88,10 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
       fileType: 'CLOSING_RATE_POSITION',
       totalLines: lines.length,
       detectedHeaders: rawHeaders,
-      missingHeaders: ['Trade Blotter Columns'],
+      missingHeaders: ['Trade Columns'],
       isCrossFileMismatch: true,
       errors: [
-        'Wrong File Type Detected: This appears to be an Open Positions / Closing Rate file, not a Trade Blotter.',
+        'Wrong File Type Detected: This appears to be an Open Positions / Closing Rate file, not a Trade file.',
         'Columns like NET_LOTS, VARIANCE_MARGIN, or CLOSING_PRICE belong to Closing Rates.',
       ],
       warnings: [],
@@ -165,7 +165,7 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
     detectedHeaders: rawHeaders,
     missingHeaders: missingDubai,
     errors: [
-      `File format does not match recognized Trade Blotter schemas.`,
+      `File format does not match recognized Trade schemas.`,
       `Missing required columns: ${missingDubai.join(', ')}.`,
       `Found ${rawHeaders.length} columns: ${rawHeaders.slice(0, 8).join(', ')}${rawHeaders.length > 8 ? '...' : ''}.`,
     ],
@@ -207,7 +207,7 @@ export function validateClosingRateImportFile(rawContent: string): FileValidatio
   const rawHeaders = headerLine.split(',').map((h) => h.replace(/^["']|["']$/g, '').trim());
   const normalizedHeaders = rawHeaders.map(normalizeHeader);
 
-  // ── 1. Check Cross-File Mismatch: Is this a Trade Blotter file? ──
+  // ── 1. Check Cross-File Mismatch: Is this a Trade file? ──
   const isTradeFile =
     normalizedHeaders.includes('tradetime') ||
     normalizedHeaders.includes('exchorderid') ||
@@ -224,7 +224,7 @@ export function validateClosingRateImportFile(rawContent: string): FileValidatio
       missingHeaders: ['Closing Rate Columns'],
       isCrossFileMismatch: true,
       errors: [
-        'Wrong File Type Detected: This appears to be a Trade Blotter file, not an Open Positions file.',
+        'Wrong File Type Detected: This appears to be a Trade file, not an Open Positions file.',
         'Columns like TRADETIME, EXCHORDERID, or CLNCOMMISSION belong to Trades.',
       ],
       warnings: [],

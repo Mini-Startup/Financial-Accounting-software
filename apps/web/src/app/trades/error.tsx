@@ -22,7 +22,7 @@ export default function TradesError({
       </div>
 
       <div className="space-y-1.5">
-        <h3 className="text-lg font-bold text-slate-900">Unable to Load Trades Blotter</h3>
+        <h3 className="text-lg font-bold text-slate-900">Unable to Load Trades</h3>
         <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
           The trade data service failed to return transactions. Please check your connectivity and retry.
         </p>
@@ -45,7 +45,7 @@ export default function TradesError({
           onClick={() => reset()}
           icon={<RefreshCw className="w-3.5 h-3.5" />}
         >
-          Retry Blotter
+          Retry Trades
         </ActionButton>
       </div>
     </div>

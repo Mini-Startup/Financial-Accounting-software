@@ -16,6 +16,8 @@ export interface UniversalFileUploaderProps {
   title?: string;
   description?: string;
   className?: string;
+  isInvalid?: boolean;
+  statusText?: string;
 }
 
 export function UniversalFileUploader({
@@ -27,9 +29,11 @@ export function UniversalFileUploader({
   progress,
   progressPhase,
   onClear,
-  title = 'Drag & Drop your file here',
+  title = 'Select or drop file',
   description = 'Supports CSV, XLSX, XLS, TXT (up to 20MB). You can also paste (Ctrl+V).',
   className,
+  isInvalid = false,
+  statusText,
 }: UniversalFileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -98,63 +102,42 @@ export function UniversalFileUploader({
 
   return (
     <div className={cn('flex flex-col gap-2 w-full', className)}>
-      <div
-        ref={dropZoneRef}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={() => !isProcessing && fileInputRef.current?.click()}
-        className={cn(
-          'relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl bg-snow transition-all duration-200 cursor-pointer select-none text-center',
-          isDragging
-            ? 'border-(--color-leaf) bg-mist/40 scale-[1.01]'
-            : 'border-border-medium hover:border-(--color-leaf) hover:bg-white',
-          isProcessing && 'pointer-events-none opacity-80'
-        )}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={accept}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) validateAndSelect(f);
-          }}
-          className="hidden"
-        />
-
-        <div className="w-12 h-12 rounded-xl bg-mist flex items-center justify-center text-(--color-forest) mb-3 shadow-xs">
-          <UploadCloud className="w-6 h-6 stroke-2" />
-        </div>
-
-        <h4 className="text-sm font-semibold text-charcoal font-display">
-          {title}
-        </h4>
-        <p className="text-xs text-slate mt-1 max-w-sm">
-          {description}
-        </p>
-
-        <button
-          type="button"
-          className="btn btn--secondary mt-4 text-xs font-semibold py-1.5 px-4 shadow-xs"
+      {/* When a file is already selected, replace the dropzone with a clean file card */}
+      {fileName ? (
+        <div
+          className={cn(
+            'flex items-center justify-between p-3.5 rounded-xl border transition-all animate-in fade-in duration-150',
+            isInvalid
+              ? 'bg-rose-50/70 border-rose-200'
+              : 'bg-white border-slate-200/90 shadow-2xs'
+          )}
         >
-          Browse Local Files
-        </button>
-      </div>
-
-      {/* Selected File Details */}
-      {fileName && (
-        <div className="flex items-center justify-between p-3 bg-white border border-border-light rounded-md shadow-xs animate-in fade-in duration-150">
-          <div className="flex items-center gap-2.5 overflow-hidden mr-2">
-            <div className="p-2 bg-emerald-50 text-(--color-forest) rounded">
-              <FileSpreadsheet className="w-4 h-4" />
+          <div className="flex items-center gap-3 min-w-0 mr-3">
+            <div
+              className={cn(
+                'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border',
+                isInvalid
+                  ? 'bg-rose-100 text-rose-700 border-rose-200'
+                  : 'bg-blue-50 text-blue-600 border-blue-200'
+              )}
+            >
+              <FileSpreadsheet className="w-4.5 h-4.5" />
             </div>
-            <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-charcoal truncate">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold font-mono text-slate-900 truncate">
                 {fileName}
               </span>
-              <span className="text-[10px] text-slate">Ready for processing</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                {isInvalid ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-100/70 px-2 py-0.2 rounded border border-rose-200/80">
+                    Invalid file
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-emerald-600 font-medium">
+                    {statusText || 'Ready for processing'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -162,11 +145,59 @@ export function UniversalFileUploader({
             <button
               type="button"
               onClick={onClear}
-              className="p-1.5 text-slate hover:text-negative transition-colors rounded-lg"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg shadow-2xs transition-colors cursor-pointer shrink-0"
+              title="Remove file"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 text-slate-500 hover:text-rose-600" />
+              <span>Remove file</span>
             </button>
           )}
+        </div>
+      ) : (
+        /* Dropzone visible only when NO file is selected */
+        <div
+          ref={dropZoneRef}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={() => !isProcessing && fileInputRef.current?.click()}
+          className={cn(
+            'relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl bg-snow transition-all duration-200 cursor-pointer select-none text-center',
+            isDragging
+              ? 'border-blue-500 bg-blue-50/40 scale-[1.01]'
+              : 'border-slate-200 hover:border-blue-400 hover:bg-white',
+            isProcessing && 'pointer-events-none opacity-80'
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={accept}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) validateAndSelect(f);
+            }}
+            className="hidden"
+          />
+
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-3 shadow-xs border border-blue-100">
+            <UploadCloud className="w-6 h-6 stroke-2" />
+          </div>
+
+          <h4 className="text-sm font-semibold text-slate-900 font-display">
+            {title}
+          </h4>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm">
+            {description}
+          </p>
+
+          <button
+            type="button"
+            className="btn btn--secondary mt-4 text-xs font-semibold py-1.5 px-4 shadow-xs"
+          >
+            Browse Local Files
+          </button>
         </div>
       )}
 

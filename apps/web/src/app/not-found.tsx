@@ -19,7 +19,7 @@ export default function NotFound() {
             Page or Transaction Not Found
           </h1>
           <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-            The ledger route, master record, or blotter report you requested does not exist or has been archived.
+            The ledger route, master record, or financial report you requested does not exist or has been archived.
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default function NotFound() {
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-800">Executive Dashboard</div>
-                <div className="text-[11px] text-slate-400">Main overview blotter</div>
+                <div className="text-[11px] text-slate-400">Main overview & metrics</div>
               </div>
             </Link>
 
@@ -50,7 +50,7 @@ export default function NotFound() {
                 <FileSpreadsheet className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-800">Trades Blotter</div>
+                <div className="text-xs font-bold text-slate-800">Trades</div>
                 <div className="text-[11px] text-slate-400">View & import trades</div>
               </div>
             </Link>

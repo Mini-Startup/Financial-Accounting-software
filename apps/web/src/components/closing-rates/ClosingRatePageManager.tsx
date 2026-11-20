@@ -32,6 +32,7 @@ import { formatCurrencySymbol } from '@/utils/currency';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { useTopBar } from '@/context/TopBarContext';
 import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
+import { cn } from '@/utils/cn';
 
 
 export function ClosingRatePageManager({ 
@@ -306,6 +307,8 @@ export function ClosingRatePageManager({
         const validation = validateClosingRateImportFile(text);
         if (!validation.isValid) {
           setFileValidationError(validation);
+          setRawOpenPositionRows([]);
+          setParsedItems([]);
           notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Closing Rate File Format', {
             description: validation.errors[0] || 'File format does not match Open Position schema.',
             duration: 8000,
@@ -774,39 +777,43 @@ export function ClosingRatePageManager({
     };
 
     return typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+          <div
+            className={cn(
+              "flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transition-all duration-200",
+              parsedItems.length > 0
+                ? "w-[98vw] max-w-7xl h-[92vh] max-h-[92vh]"
+                : "w-full max-w-xl max-h-[85vh]"
+            )}
+          >
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+            <div className="px-6 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center border border-blue-200">
-                  <FileSpreadsheet className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8] shadow-2xs">
+                  <FileSpreadsheet className="w-4 h-4 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 leading-tight">Open Position Import (Closing Rates)</h2>
-                  <p className="text-xs text-slate-500">Upload daily Open Position CSV file to extract closing rates & verify positions.</p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900">Open Position Import (Closing Rates)</h2>
+                    {parsedItems.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5">
+                        Data Preserved
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-normal">
+                    {parsedItems.length > 0
+                      ? 'Review extracted closing rates, verify against settlement, and commit to ledger.'
+                      : 'Upload daily Open Position CSV file to extract closing rates & verify positions.'}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                {parsedItems.length > 0 && (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setParsedItems([]);
-                      setRawOpenPositionRows([]);
-                      setFileName('');
-                      if (inputRef.current) inputRef.current.value = '';
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Cancel Import / Reset
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={handleImportBack}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
                   title="Close dialog (retains uploaded data)"
                 >
                   <X className="w-5 h-5" />
@@ -814,433 +821,384 @@ export function ClosingRatePageManager({
               </div>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              {parsedItems.length > 0 && (
-                <div className="flex flex-wrap items-center justify-end gap-3 pb-2 border-b border-slate-100">
-                  {/* Add / Adjust Trades Button */}
-                  <button
-                    onClick={handleAddAdjustTrades}
-                    disabled={!isValidated || isAdjusting}
-                    className={`btn flex items-center gap-2 py-2 px-4 text-xs font-bold transition-all ${
-                      isValidated && !isAdjusting
-                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                    }`}
-                    title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
-                  >
-                    {isAdjusting ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Adjusting Trades…
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="w-4 h-4" /> Add / Adjust Trades
-                      </>
-                    )}
-                  </button>
-
-                  {/* Import Closing Rates Button */}
-                  <button
-                    onClick={handleConfirmImport}
-                    disabled={isProcessing || selectedValidCount === 0}
-                    className="btn btn--primary flex items-center gap-2 py-2 text-xs font-bold"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Saving…
-                      </>
-                    ) : (
-                      <>Import {selectedValidCount} Selected Rates</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-        {/* Configuration Card */}
-        <div className="card p-6 bg-white border border-border-light shadow-sm space-y-6">
-          {/* Top Section: Date Selection */}
-          <div className="max-w-md space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Import Rate Date <span className="text-rose-500">*</span>
-            </label>
-            <UniversalDatePicker
-              value={importDate}
-              onChange={(d) => setImportDate(d)}
-              placeholder="DD-MM-YY"
-            />
-            <p className="text-xs text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
-          </div>
-
-          {/* Bottom Section: File Upload Component */}
-          <div className="pt-5 border-t border-border-light space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Open Position CSV File <span className="text-rose-500">*</span>
-            </label>
-            <UniversalFileUploader
-              onFileSelect={handleFileSelect}
-              onClear={handleClearFile}
-              fileName={fileName}
-              isProcessing={isProcessing}
-              accept=".csv, .txt"
-              title="Select or drop Open Position CSV"
-              description="Supports CSV, TXT files (drag & drop or click to browse)"
-            />
-
-            {fileValidationError && (
-              <div className="mt-4 p-4 rounded-xl border-2 border-rose-200 bg-rose-50/80 text-slate-800 shadow-xs animate-in fade-in duration-200">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0 text-rose-600">
-                    <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+            {/* Modal Body: Switch between Initial Upload State and Preview State */}
+            {parsedItems.length === 0 ? (
+              /* ── 1. Initial Upload State (Clean, Compact, No Dropzone after file selected) ── */
+              <div className="p-6 overflow-y-auto space-y-5 bg-slate-50/30 flex-1">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                  {/* Top Section: Date Selection */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Import Rate Date <span className="text-rose-500">*</span>
+                    </label>
+                    <UniversalDatePicker
+                      value={importDate}
+                      onChange={(d) => setImportDate(d)}
+                      placeholder="DD-MM-YY"
+                    />
+                    <p className="text-[11px] text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
                   </div>
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-rose-950">
-                        {fileValidationError.isCrossFileMismatch ? 'Wrong File Format Detected' : 'Invalid File Format'}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => setFileValidationError(null)}
-                        className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                    <div className="text-xs text-rose-900/90 space-y-1">
-                      {fileValidationError.errors.map((err, idx) => (
-                        <p key={idx} className="flex items-start gap-1.5">
-                          <span className="text-rose-500 font-bold shrink-0">•</span>
-                          <span>{err}</span>
-                        </p>
-                      ))}
-                    </div>
-                    {fileValidationError.missingHeaders.length > 0 && !fileValidationError.isCrossFileMismatch && (
-                      <div className="pt-1 text-[11px] text-rose-700">
-                        <span className="font-semibold">Required: </span>
-                        <span>{fileValidationError.missingHeaders.join(', ')}</span>
-                      </div>
-                    )}
-                    {fileValidationError.suggestedAction && (
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => router.push(fileValidationError.suggestedAction!.targetRoute)}
-                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
-                        >
-                          {fileValidationError.suggestedAction.message}
-                        </button>
-                      </div>
-                    )}
+
+                  {/* Bottom Section: File Upload Component */}
+                  <div className="pt-4 border-t border-slate-100 space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Open Position CSV File <span className="text-rose-500">*</span>
+                    </label>
+                    <UniversalFileUploader
+                      onFileSelect={handleFileSelect}
+                      onClear={handleClearFile}
+                      fileName={fileName}
+                      isProcessing={isProcessing}
+                      isInvalid={Boolean(fileValidationError)}
+                      accept=".csv, .txt"
+                      title="Select or drop Open Position CSV"
+                      description="Supports CSV, TXT files (drag & drop or click to browse)"
+                    />
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            ) : (
+              /* ── 2. Preview State (Full-Width, Directly Visible Table, Dropzone Hidden) ── */
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/30">
+                {/* Control Strip: Active File Pill, Verification Status, and Action Buttons */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                      <FileSpreadsheet className="w-4 h-4 text-[#2652C8]" />
+                      <span className="font-mono font-bold text-slate-900">{fileName}</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-slate-600 font-medium">Date: {formatDateToDDMMYY(importDate) || importDate}</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-slate-500">{rawOpenPositionRows.length} rows</span>
+                    </div>
 
-          {/* Validation Status Bar */}
-          {parsedItems.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 p-4 rounded-xl">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Validation Status:</span>
-                {verification.status === 'VALIDATED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Open Position Verified
-                  </span>
-                ) : verification.status === 'FAILED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
-                    <AlertTriangle className="w-4 h-4 text-rose-600" />
-                    Open Position Not Validated ({verification.discrepancies.length} mismatches)
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    No Trades Found for {importDate}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+                    {/* Clean single-line Remove file button (cancels import & resets) */}
+                    <button
+                      type="button"
+                      onClick={handleClearFile}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                      title="Remove file"
+                    >
+                      <X className="w-3.5 h-3.5 text-slate-400 hover:text-rose-600" />
+                      <span>Remove file</span>
+                    </button>
 
-          {/* Open Position Verification Panel with Search & Filters */}
-          {verification.items && verification.items.length > 0 && (
-            <OpenPositionVerificationPanel
-              items={verification.items}
-              isValidated={isValidated}
-              onAddScript={handleOpenScriptModal}
-              onAddClient={handleOpenClientModal}
-            />
-          )}
+                    {/* Verification Status Badge */}
+                    {verification.status === 'VALIDATED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Open Position Verified
+                      </span>
+                    ) : verification.status === 'FAILED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        Mismatch ({verification.discrepancies.length})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        No Settlement Trades
+                      </span>
+                    )}
+                  </div>
 
-          {/* Parsed Metrics Executive KPI Strip */}
-          {parsedItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-4 border-t border-slate-100">
-              <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Unique Rates</div>
-                  <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{parsedItems.length}</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
+                  {/* Top Action Buttons */}
+                  <div className="flex items-center gap-2 self-end lg:self-auto shrink-0">
+                    <button
+                      onClick={handleAddAdjustTrades}
+                      disabled={!isValidated || isAdjusting}
+                      className={`btn flex items-center gap-1.5 py-2 px-3.5 text-xs font-bold transition-all shadow-xs ${
+                        isValidated && !isAdjusting
+                          ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                      }`}
+                      title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
+                    >
+                      {isAdjusting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Adjusting…
+                        </>
+                      ) : (
+                        <>
+                          <PlusCircle className="w-3.5 h-3.5" /> Add / Adjust Trades
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleConfirmImport}
+                      disabled={isProcessing || selectedValidCount === 0}
+                      className="btn btn--primary flex items-center gap-1.5 py-2 px-4 text-xs font-bold shadow-xs"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…
+                        </>
+                      ) : (
+                        <>Import {selectedValidCount} Selected Rates</>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-              </div>
 
-              <div className="p-4 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
-                  <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">{validCount}</div>
-                  <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for database import</div>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                  <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
-                </div>
-              </div>
+                {/* KPI Executive Summary Strip */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Unique Rates</div>
+                      <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">{parsedItems.length}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
+                    </div>
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
+                      <FileSpreadsheet className="w-4.5 h-4.5" />
+                    </div>
+                  </div>
 
-              <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
-                  <div className="text-xl font-bold font-mono text-amber-700 mt-0.5">{unmappedCount}</div>
-                  <div className="text-[11px] text-amber-700/80 mt-0.5">Require script mapping</div>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-                  <AlertCircle className="w-5 h-5 stroke-[2.2]" />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
+                      <div className="text-lg font-bold font-mono text-emerald-700 mt-0.5">{validCount}</div>
+                      <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for database import</div>
+                    </div>
+                    <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                      <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.2]" />
+                    </div>
+                  </div>
 
-        {/* Collapsible Accordion Preview Table (Closed by Default) */}
-        {parsedItems.length > 0 && (
-          <div className="card shadow-sm border border-slate-200 overflow-hidden">
-            {/* Accordion Toggle Header */}
-            <button
-              onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-              className="w-full p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-(--color-primary)" />
-                <span>Closing Rates Extracted from File ({fileName}) — {parsedItems.length} unique security closing rates</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-500">
-                <span>{isAccordionOpen ? 'Hide File Preview' : 'View File Preview'}</span>
-                {isAccordionOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
+                  <div className="p-3.5 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
+                      <div className="text-lg font-bold font-mono text-amber-700 mt-0.5">{unmappedCount}</div>
+                      <div className="text-[11px] text-amber-700/80 mt-0.5">Require script mapping</div>
+                    </div>
+                    <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                      <AlertCircle className="w-4.5 h-4.5 stroke-[2.2]" />
+                    </div>
+                  </div>
+                </div>
 
-            {/* Accordion Body */}
-            {isAccordionOpen && (
-              <div className="space-y-3 p-4">
-                {/* Preview Toolbar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="flex items-center gap-3 flex-wrap flex-1">
-                    {/* Column-targeted Search */}
-                    <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all max-w-md w-full">
-                      <div className="w-35 shrink-0 border-r border-border-light">
-                        <UniversalDropdown
-                          value={previewSearchColumn}
-                          onChange={(val) => setPreviewSearchColumn(val)}
-                          searchable={false}
-                          options={[
-                            { value: 'ALL', label: 'All Columns' },
-                            { value: 'exchangeCode', label: 'Exchange' },
-                            { value: 'commodityCode', label: 'Commodity Code' },
-                            { value: 'scriptFullName', label: 'Script Name' },
-                            { value: 'securityName', label: 'Security Name' },
-                            { value: 'delMonth', label: 'Del Month' },
-                          ]}
-                          triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-charcoal"
-                        />
-                      </div>
-                      <div className="relative flex-1 flex items-center">
-                        <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
-                        <input
-                          type="text"
-                          value={previewSearchQuery}
-                          onChange={(e) => {
-                            setPreviewSearchQuery(e.target.value);
-                            setTablePage(1);
-                          }}
-                          placeholder="Search in preview..."
-                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
-                        />
-                        {previewSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewSearchQuery('');
+                {/* Closing Rates Table (Directly Visible, not collapsed in an accordion) */}
+                <div className="card shadow-2xs border border-slate-200/90 overflow-hidden bg-white p-4 space-y-3 rounded-xl">
+                  {/* Preview Toolbar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3 flex-wrap flex-1">
+                      {/* Column-targeted Search */}
+                      <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all max-w-md w-full">
+                        <div className="w-35 shrink-0 border-r border-slate-200">
+                          <UniversalDropdown
+                            value={previewSearchColumn}
+                            onChange={(val) => setPreviewSearchColumn(val)}
+                            searchable={false}
+                            options={[
+                              { value: 'ALL', label: 'All Columns' },
+                              { value: 'exchangeCode', label: 'Exchange' },
+                              { value: 'commodityCode', label: 'Commodity Code' },
+                              { value: 'scriptFullName', label: 'Script Name' },
+                              { value: 'securityName', label: 'Security Name' },
+                              { value: 'delMonth', label: 'Del Month' },
+                            ]}
+                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-slate-800"
+                          />
+                        </div>
+                        <div className="relative flex-1 flex items-center">
+                          <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
+                          <input
+                            type="text"
+                            value={previewSearchQuery}
+                            onChange={(e) => {
+                              setPreviewSearchQuery(e.target.value);
                               setTablePage(1);
                             }}
-                            className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                            title="Clear search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                            placeholder="Search in preview..."
+                            className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
+                          />
+                          {previewSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewSearchQuery('');
+                                setTablePage(1);
+                              }}
+                              className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                              title="Clear search"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Batch Selection Counters */}
+                      <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
+                        <strong>{selectedValidCount}</strong> of {validCount} valid selected
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleSelectAllValidOverall}
+                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                      >
+                        Select All Valid
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDeselectAll}
+                        className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        Deselect All
+                      </button>
                     </div>
 
-                    {/* Batch Selection Counters */}
-                    <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
-                      <strong>{selectedValidCount}</strong> of {validCount} valid rates selected
-                    </span>
-
                     <button
                       type="button"
-                      onClick={handleSelectAllValidOverall}
-                      className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+                      onClick={() => setShowPreviewFindAndReplace(!showPreviewFindAndReplace)}
+                      className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
+                        showPreviewFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
+                      }`}
                     >
-                      Select All Valid
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleDeselectAll}
-                      className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
-                    >
-                      Deselect All
+                      <Replace className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Find & Replace</span>
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowPreviewFindAndReplace(!showPreviewFindAndReplace)}
-                    className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
-                      showPreviewFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
-                    }`}
-                  >
-                    <Replace className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Find & Replace</span>
-                  </button>
+                  {/* Find & Replace Drawer */}
+                  {showPreviewFindAndReplace && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <FindAndReplace<ParsedClosingRateItem>
+                        data={parsedItems}
+                        columns={findAndReplaceColumns}
+                        onReplaceOne={handleReplaceOne}
+                        onReplaceAll={handleReplaceAll}
+                        onClose={() => setShowPreviewFindAndReplace(false)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Data Table */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                          <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
+                            <CustomCheckbox
+                              checked={isAllFilteredValidSelected}
+                              onChange={handleToggleSelectAllValid}
+                            />
+                          </th>
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Exchange</th>
+                          <th className="py-3 px-4">Commodity Code</th>
+                          <th className="py-3 px-4">Script Full Name</th>
+                          <th className="py-3 px-4">Security Name</th>
+                          <th className="py-3 px-4">Expiry / DelMonth</th>
+                          <th className="py-3 px-4 text-right font-bold">Closing Rate</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedItems.map((item, idx) => {
+                          const globalIdx = parsedItems.indexOf(item);
+                          const isSelected = selectedRateIndices.has(globalIdx);
+
+                          return (
+                            <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
+                              <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <CustomCheckbox
+                                  checked={isSelected}
+                                  disabled={item.status !== 'Valid'}
+                                  onChange={() => handleToggleRow(globalIdx)}
+                                />
+                              </td>
+                              <td className="py-3 px-4 font-mono text-slate-500">
+                                {(safeTablePage - 1) * tablePageSize + idx + 1}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
+                              <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
+                              <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
+                              <td className="py-3 px-4 font-mono text-slate-600">{formatDateToDDMMYY(item.expiryDate) || item.delMonth || '—'}</td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                                {formatCurrencySymbol(item.currencySymbol, item.currencyCode)}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {item.status === 'Valid' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Valid</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
+                                    title={item.errors.join(', ') + ' - Click to add this script'}
+                                  >
+                                    <Plus className="w-3 h-3 text-rose-600" />
+                                    <span>Unmapped (Add)</span>
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Table Pagination Bar */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600 font-semibold">Rows per page:</span>
+                      <CustomSelect<number>
+                        value={tablePageSize}
+                        options={[20, 50, 100]}
+                        onChange={(val) => {
+                          setTablePageSize(Number(val));
+                          setTablePage(1);
+                        }}
+                        size="xs"
+                        menuWidth={75}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-600">
+                        Page {safeTablePage} of {totalTablePages} ({filteredParsedItems.length} items)
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          disabled={safeTablePage === 1}
+                          onClick={() => setTablePage((prev) => Math.max(prev - 1, 1))}
+                          className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          disabled={safeTablePage === totalTablePages}
+                          onClick={() => setTablePage((prev) => Math.min(prev + 1, totalTablePages))}
+                          className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Find & Replace Drawer */}
-                {showPreviewFindAndReplace && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                    <FindAndReplace<ParsedClosingRateItem>
-                      data={parsedItems}
-                      columns={findAndReplaceColumns}
-                      onReplaceOne={handleReplaceOne}
-                      onReplaceAll={handleReplaceAll}
-                      onClose={() => setShowPreviewFindAndReplace(false)}
+                {/* Open Position Verification Panel with Search & Filters */}
+                {verification.items && verification.items.length > 0 && (
+                  <div className="pt-2">
+                    <OpenPositionVerificationPanel
+                      items={verification.items}
+                      isValidated={isValidated}
+                      onAddScript={handleOpenScriptModal}
+                      onAddClient={handleOpenClientModal}
                     />
                   </div>
                 )}
-
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
-                          <CustomCheckbox
-                            checked={isAllFilteredValidSelected}
-                            onChange={handleToggleSelectAllValid}
-                          />
-                        </th>
-                        <th className="py-3 px-4">#</th>
-                        <th className="py-3 px-4">Exchange</th>
-                        <th className="py-3 px-4">Commodity Code</th>
-                        <th className="py-3 px-4">Script Full Name</th>
-                        <th className="py-3 px-4">Security Name</th>
-                        <th className="py-3 px-4">Expiry / DelMonth</th>
-                        <th className="py-3 px-4 text-right font-bold">Closing Rate</th>
-                        <th className="py-3 px-4 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {paginatedItems.map((item, idx) => {
-                        const globalIdx = parsedItems.indexOf(item);
-                        const isSelected = selectedRateIndices.has(globalIdx);
-
-                        return (
-                          <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
-                            <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <CustomCheckbox
-                                checked={isSelected}
-                                disabled={item.status !== 'Valid'}
-                                onChange={() => handleToggleRow(globalIdx)}
-                              />
-                            </td>
-                            <td className="py-3 px-4 font-mono text-slate-500">
-                              {(safeTablePage - 1) * tablePageSize + idx + 1}
-                            </td>
-                            <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
-                            <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
-                            <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
-                            <td className="py-3 px-4 font-mono text-slate-600">{formatDateToDDMMYY(item.expiryDate) || item.delMonth || '—'}</td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                              {formatCurrencySymbol(item.currencySymbol, item.currencyCode)}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              {item.status === 'Valid' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Valid</span>
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
-                                  title={item.errors.join(', ') + ' - Click to add this script'}
-                                >
-                                  <Plus className="w-3 h-3 text-rose-600" />
-                                  <span>Unmapped (Add)</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Table Pagination Bar */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-600 font-semibold">Rows per page:</span>
-                    <CustomSelect<number>
-                      value={tablePageSize}
-                      options={[20, 50, 100]}
-                      onChange={(val) => {
-                        setTablePageSize(Number(val));
-                        setTablePage(1);
-                      }}
-                      size="xs"
-                      menuWidth={75}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-600">
-                      Page {safeTablePage} of {totalTablePages} ({filteredParsedItems.length} items)
-                    </span>
-                    <div className="flex gap-1">
-                      <button
-                        disabled={safeTablePage === 1}
-                        onClick={() => setTablePage((prev) => Math.max(prev - 1, 1))}
-                        className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        disabled={safeTablePage === totalTablePages}
-                        onClick={() => setTablePage((prev) => Math.min(prev + 1, totalTablePages))}
-                        className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
-          </div>
-        )}
-            </div>
           </div>
         </div>,
         document.body

@@ -93,6 +93,11 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const [scriptModalInitialData, setScriptModalInitialData] = useState<any>(null);
   const [fileValidationError, setFileValidationError] = useState<FileValidationResult | null>(null);
 
+  const handleClearFile = () => {
+    setFileValidationError(null);
+    resetImportState();
+  };
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load exchanges, brokers, clients, scripts, currencies on mount
@@ -392,7 +397,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     if (!validation.isValid) {
       setFileValidationError(validation);
       notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Trade File Format', {
-        description: validation.errors[0] || 'File format does not match Trade Blotter schema.',
+        description: validation.errors[0] || 'File format does not match Trade file schema.',
         duration: 8000,
       });
       setIsProcessing(false);
@@ -838,7 +843,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
               <div className="form-field">
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5 block">
-                  Blotter Format
+                  Trade Format
                 </label>
                 <UniversalDropdown
                   value={selectedImportType}
@@ -851,65 +856,18 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
 
-            {/* Direct File Dropzone */}
+            {/* Direct File Dropzone / Selected File Card */}
             <div className="pt-2">
               <UniversalFileUploader
                 onFileSelect={processFile}
+                onClear={handleClearFile}
                 isProcessing={isProcessing}
                 fileName={fileName}
+                isInvalid={Boolean(fileValidationError)}
                 accept=".txt, .csv, .xlsx, .xls"
-                title="Select or Drop Trade Blotter File"
+                title="Select or drop trade file"
                 description="Supports CSV, TXT, Excel files (.xlsx, .xls) up to 25MB."
               />
-
-              {fileValidationError && (
-                <div className="mt-4 p-4 rounded-xl border-2 border-rose-200 bg-rose-50/80 text-slate-800 shadow-xs animate-in fade-in duration-200">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0 text-rose-600">
-                      <AlertCircle className="w-5 h-5 stroke-[2.2]" />
-                    </div>
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-bold text-rose-950">
-                          {fileValidationError.isCrossFileMismatch ? 'Wrong File Format Detected' : 'Invalid File Format'}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setFileValidationError(null)}
-                          className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                      <div className="text-xs text-rose-900/90 space-y-1">
-                        {fileValidationError.errors.map((err, idx) => (
-                          <p key={idx} className="flex items-start gap-1.5">
-                            <span className="text-rose-500 font-bold shrink-0">•</span>
-                            <span>{err}</span>
-                          </p>
-                        ))}
-                      </div>
-                      {fileValidationError.missingHeaders.length > 0 && !fileValidationError.isCrossFileMismatch && (
-                        <div className="pt-1 text-[11px] text-rose-700">
-                          <span className="font-semibold">Required: </span>
-                          <span>{fileValidationError.missingHeaders.join(', ')}</span>
-                        </div>
-                      )}
-                      {fileValidationError.suggestedAction && (
-                        <div className="pt-2">
-                          <button
-                            type="button"
-                            onClick={() => router.push(fileValidationError.suggestedAction!.targetRoute)}
-                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
-                          >
-                            {fileValidationError.suggestedAction.message}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

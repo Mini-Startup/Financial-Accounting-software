@@ -40,7 +40,7 @@ interface SearchItem {
   title: string;
   description: string;
   category: 'Pages' | 'Actions' | 'Shortcuts';
-  subCategory?: 'Blotter' | 'Report' | 'Master';
+  subCategory?: 'Trades' | 'Report' | 'Master';
   keywords: string[];
   icon: React.ComponentType<{ className?: string }>;
   href?: string;
@@ -50,61 +50,61 @@ interface SearchItem {
 }
 
 const REGISTRY: SearchItem[] = [
-  // ── Pages: Core Blotters ────────────────────────────────────────
+  // ── Pages: Core Trades ────────────────────────────────────────
   {
     id: 'page-dashboard',
     title: 'Dashboard Overview',
-    description: 'Financial KPI summary, active clients, and real-time blotter metrics',
+    description: 'Financial KPI summary, active clients, and real-time ledger metrics',
     category: 'Pages',
-    subCategory: 'Blotter',
+    subCategory: 'Trades',
     keywords: ['home', 'overview', 'summary', 'metrics', 'kpi', 'dashboard'],
     icon: LayoutDashboard,
     href: '/',
-    badge: 'Blotter',
+    badge: 'Trades',
   },
   {
     id: 'page-trades',
-    title: 'Trades Blotter',
+    title: 'Trades',
     description: 'Interactive trading ledger with click-to-edit row inspection and instant filters',
     category: 'Pages',
-    subCategory: 'Blotter',
-    keywords: ['trade', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate', 'blotter'],
+    subCategory: 'Trades',
+    keywords: ['trade', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate'],
     icon: ArrowUpDown,
     href: '/trades',
-    badge: 'Blotter',
+    badge: 'Trades',
   },
   {
     id: 'page-closing-rates',
     title: 'Closing Rates',
     description: 'End-of-day market settlement prices and mark-to-market rate management',
     category: 'Pages',
-    subCategory: 'Blotter',
+    subCategory: 'Trades',
     keywords: ['rates', 'eod', 'closing', 'daily prices', 'market rates', 'mtm'],
     icon: TrendingUp,
     href: '/closing-rates',
-    badge: 'Blotter',
+    badge: 'Trades',
   },
   {
     id: 'page-trade-import',
     title: 'Trade Import',
     description: 'Bulk CSV / Excel trade transaction import wizard with mapping validation',
     category: 'Pages',
-    subCategory: 'Blotter',
+    subCategory: 'Trades',
     keywords: ['import', 'upload', 'csv', 'excel', 'trades import', 'files'],
     icon: FileSpreadsheet,
     href: '/trades?import=true',
-    badge: 'Blotter',
+    badge: 'Trades',
   },
   {
     id: 'page-pos-import',
     title: 'Open Position Import',
     description: 'Carry forward, brought-forward (BF), and settlement position bulk import',
     category: 'Pages',
-    subCategory: 'Blotter',
+    subCategory: 'Trades',
     keywords: ['open position', 'import', 'upload', 'carry forward', 'bf', 'cf'],
     icon: TrendingUp,
     href: '/closing-rates?import=true',
-    badge: 'Blotter',
+    badge: 'Trades',
   },
 
   // ── Pages: Reports ──────────────────────────────────────────────
@@ -166,7 +166,7 @@ const REGISTRY: SearchItem[] = [
   {
     id: 'page-report-voucher',
     title: 'Voucher Entry',
-    description: 'Journal, payment, receipt, and adjustment voucher booking blotter',
+    description: 'Journal, payment, receipt, and adjustment voucher register',
     category: 'Pages',
     subCategory: 'Report',
     keywords: ['voucher', 'journal', 'payment', 'receipt', 'contra', 'entry', 'financial'],
@@ -398,7 +398,7 @@ export function UniversalSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<MainTab>('All');
-  const [subCategory, setSubCategory] = useState<'All' | 'Blotter' | 'Report' | 'Master'>('All');
+  const [subCategory, setSubCategory] = useState<'All' | 'Trades' | 'Report' | 'Master'>('All');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [keyboardIndex, setKeyboardIndex] = useState<number>(-1);
   const router = useRouter();
@@ -598,10 +598,10 @@ export function UniversalSearch() {
           </div>
         </div>
 
-        {/* Secondary Sub-Category Pills for Pages: Matching Reference Image (All | Blotter | Report | Master) */}
+        {/* Secondary Sub-Category Pills for Pages: Matching Reference Image (All | Trades | Report | Master) */}
         {activeTab === 'Pages' && (
           <div className="flex items-center gap-1.5 px-5 py-2 bg-slate-50/70 border-b border-slate-100 select-none">
-            {(['All', 'Blotter', 'Report', 'Master'] as const).map((sub) => {
+            {(['All', 'Trades', 'Report', 'Master'] as const).map((sub) => {
               const isSubActive = subCategory === sub;
               return (
                 <button
@@ -679,7 +679,7 @@ export function UniversalSearch() {
                           <span
                             className={cn(
                               'text-[10px] font-semibold px-2 py-0.2 rounded-md font-sans border',
-                              item.badge === 'Blotter' && 'bg-blue-50 text-[#2652C8] border-blue-200',
+                              item.badge === 'Trades' && 'bg-blue-50 text-[#2652C8] border-blue-200',
                               item.badge === 'Report' && 'bg-purple-50 text-purple-700 border-purple-200',
                               item.badge === 'Master' && 'bg-slate-100 text-slate-700 border-slate-200',
                               item.badge === 'Action' && 'bg-emerald-50 text-emerald-700 border-emerald-200',

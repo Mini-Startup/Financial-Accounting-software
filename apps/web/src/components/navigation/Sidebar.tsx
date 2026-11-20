@@ -392,8 +392,8 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Scrollable Navigation links */}
-        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-0.5 scrollbar-thin">
+        {/* Scrollable Navigation links (scrollbar hidden) */}
+        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-0.5 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           
           {/* Standalone Dashboard */}
           <Link
