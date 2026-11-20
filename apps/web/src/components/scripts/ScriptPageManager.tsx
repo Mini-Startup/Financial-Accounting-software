@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ScriptDataTable } from './ScriptDataTable';
 import { ScriptFormModal } from './ScriptFormModal';
 import { useTopBar } from '@/context/TopBarContext';
@@ -14,8 +15,28 @@ export function ScriptPageManager({
   scripts: any[];
   exchanges: any[];
 }) {
-  const [isAdding, setIsAdding] = useState(false);
+  const searchParams = useSearchParams();
+  const isAddParam = searchParams?.get('action') === 'add';
+  const [isAdding, setIsAdding] = useState(isAddParam);
   const { setTopBar, resetTopBar } = useTopBar();
+
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('action')) {
+        url.searchParams.delete('action');
+        const cleanUrl = url.pathname + (url.search ? url.search : '');
+        window.history.pushState({}, '', cleanUrl);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+  }, [isAddParam]);
 
   // Push unified page title & actions to TopBar
   useEffect(() => {
@@ -46,7 +67,7 @@ export function ScriptPageManager({
         <ScriptFormModal 
           exchanges={exchanges}
           scripts={scripts}
-          onClose={() => setIsAdding(false)} 
+          onClose={handleCloseAdd} 
         />
       )}
     </div>

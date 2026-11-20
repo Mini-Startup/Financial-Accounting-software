@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TradeFormModal } from './TradeFormModal';
 import { TradeImportModal } from './TradeImportModal';
@@ -108,6 +108,26 @@ export function TradesPageManager({
   const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [viewingTrade, setViewingTrade] = useState<any | null>(null);
+
+  const removeQueryParam = useCallback((paramKey: string) => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(paramKey)) {
+      url.searchParams.delete(paramKey);
+      const cleanUrl = url.pathname + (url.search ? url.search : '');
+      window.history.pushState({}, '', cleanUrl);
+    }
+  }, []);
+
+  const handleCloseAdd = useCallback(() => {
+    setIsAdding(false);
+    removeQueryParam('action');
+  }, [removeQueryParam]);
+
+  const handleCloseImport = useCallback(() => {
+    setIsImportModalOpen(false);
+    removeQueryParam('import');
+  }, [removeQueryParam]);
 
   // Synchronize when searchParams change or custom event is received
   useEffect(() => {
@@ -1312,8 +1332,11 @@ export function TradesPageManager({
           clients={clients}
           brokers={brokers}
           initialMode="edit"
-          onClose={() => setIsAdding(false)}
-          onSave={handleSave}
+          onClose={handleCloseAdd}
+          onSave={(saved) => {
+            handleSave(saved);
+            handleCloseAdd();
+          }}
         />
       )}
 
@@ -1352,17 +1375,9 @@ export function TradesPageManager({
       {/* Bulk Trade Import Modal (Preserves parsed state across open/close) */}
       <TradeImportModal
         isOpen={isImportModalOpen}
-        onClose={() => {
-          setIsImportModalOpen(false);
-          const url = new URL(window.location.href);
-          url.searchParams.delete('import');
-          window.history.pushState({}, '', url.toString());
-        }}
+        onClose={handleCloseImport}
         onComplete={() => {
-          setIsImportModalOpen(false);
-          const url = new URL(window.location.href);
-          url.searchParams.delete('import');
-          window.history.pushState({}, '', url.toString());
+          handleCloseImport();
           router.refresh();
         }}
       />

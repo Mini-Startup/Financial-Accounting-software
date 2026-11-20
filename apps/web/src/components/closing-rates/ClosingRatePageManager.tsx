@@ -49,9 +49,10 @@ export function ClosingRatePageManager({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isImportParam = searchParams.get('import') === 'true';
+  const isAddParam = searchParams.get('action') === 'add';
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding] = useState(isAddParam);
 
   // Dynamic reference master data
   const [localScripts, setLocalScripts] = useState<any[]>(scripts);
@@ -112,6 +113,12 @@ export function ClosingRatePageManager({
       setIsImportModalOpen(true);
     }
   }, [isImportParam]);
+
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+  }, [isAddParam]);
 
   // Open Position Import states
   const [importDate, setImportDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -196,11 +203,24 @@ export function ClosingRatePageManager({
     }
   }, [isImportModalOpen, importDate]);
 
-  const handleImportBack = () => {
+  const removeQueryParam = (paramKey: string) => {
+    if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
-    url.searchParams.delete('import');
-    window.history.pushState({}, '', url.toString());
+    if (url.searchParams.has(paramKey)) {
+      url.searchParams.delete(paramKey);
+      const cleanUrl = url.pathname + (url.search ? url.search : '');
+      window.history.pushState({}, '', cleanUrl);
+    }
+  };
+
+  const handleImportBack = () => {
+    removeQueryParam('import');
     setIsImportModalOpen(false);
+  };
+
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    removeQueryParam('action');
   };
 
   // Fetch currencies if not loaded
@@ -1155,7 +1175,7 @@ export function ClosingRatePageManager({
         <ClosingRateFormModal 
           exchanges={exchanges}
           scripts={localScripts}
-          onClose={() => setIsAdding(false)} 
+          onClose={handleCloseAdd} 
         />
       )}
 

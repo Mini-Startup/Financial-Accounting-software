@@ -24,6 +24,18 @@ export function EntityPageManager({
   const { hasPermission } = usePermissions();
   const { setTopBar, resetTopBar } = useTopBar();
 
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('action')) {
+        url.searchParams.delete('action');
+        const cleanUrl = url.pathname + (url.search ? url.search : '');
+        window.history.pushState({}, '', cleanUrl);
+      }
+    }
+  };
+
   useEffect(() => {
     if (isAddParam) {
       setIsAdding(true);
@@ -83,7 +95,7 @@ export function EntityPageManager({
           entityLabel={entityLabel}
           groupName={groupName}
           accounts={accounts}
-          onClose={() => setIsAdding(false)} 
+          onClose={handleCloseAdd} 
         />
       )}
     </div>

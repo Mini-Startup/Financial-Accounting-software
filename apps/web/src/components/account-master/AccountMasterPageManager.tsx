@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
@@ -38,9 +38,29 @@ export function AccountMasterPageManager({
   groups: any[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAddParam = searchParams?.get('action') === 'add';
   const [accounts, setAccounts] = useState<any[]>(initialAccounts);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
+
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('action')) {
+        url.searchParams.delete('action');
+        const cleanUrl = url.pathname + (url.search ? url.search : '');
+        window.history.pushState({}, '', cleanUrl);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+  }, [isAddParam]);
 
   // Search & Pagination & Selection
   const [searchQuery, setSearchQuery] = useState('');
@@ -473,8 +493,11 @@ export function AccountMasterPageManager({
         <AccountMasterFormModal
           groups={groups}
           accounts={accounts}
-          onClose={() => setIsAdding(false)}
-          onSave={handleSave}
+          onClose={handleCloseAdd}
+          onSave={() => {
+            handleSave();
+            handleCloseAdd();
+          }}
         />
       )}
 
