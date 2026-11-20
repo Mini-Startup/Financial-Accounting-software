@@ -564,19 +564,13 @@ export function Sidebar() {
         {/* Footer Area with User Profile info */}
         <div className="p-3.5 border-t border-white/10 mt-auto flex items-center gap-3 bg-transparent rounded-none m-0 shrink-0 overflow-hidden">
           <div className="shrink-0">
-            {userId === 'dev_admin_user' ? (
-              <div className="w-8 h-8 rounded-lg bg-[#2652C8] border border-white/30 flex items-center justify-center text-white text-xs font-bold shadow-xs">
-                A
-              </div>
-            ) : (
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "w-8 h-8 border border-white/20 shadow-xs",
-                  },
-                }}
-              />
-            )}
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8 border border-white/20 shadow-xs",
+                },
+              }}
+            />
           </div>
           {isExpanded && (
             <div className="flex flex-col min-w-0 transition-all duration-150">
