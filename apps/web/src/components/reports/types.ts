@@ -29,6 +29,23 @@ export interface NetPositionItem {
   marketValue: number;
   unrealizedPnL: number;
   isMissingRate: boolean;
+  clientId?: string;
+  clientCode?: string;
+  clientName?: string;
+  lotSize?: number;
+  netLot?: number;
+  mtmDiff?: number;
+}
+
+export interface NetPositionFinancialSummary {
+  exposure: number;
+  positiveExposure: number;
+  negativeExposure: number;
+  netQ: number;
+  totalMtm: number;
+  totalMargin: number;
+  accountBalance: number;
+  outstanding: number;
 }
 
 export interface NetPositionGroup {
@@ -36,6 +53,7 @@ export interface NetPositionGroup {
   code: string;
   name: string;
   category: GroupByDimension;
+  lotSize?: number;
   totals: {
     buyQty: number;
     sellQty: number;
@@ -43,8 +61,10 @@ export interface NetPositionGroup {
     totalUnits: number;
     marketValue: number;
     unrealizedPnL: number;
+    netLot?: number;
   };
   positions: NetPositionItem[];
+  financialSummary?: NetPositionFinancialSummary;
 }
 
 export interface NetPositionSummary {

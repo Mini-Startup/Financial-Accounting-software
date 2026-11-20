@@ -79,53 +79,53 @@ export function ReportControlsBar({
   onResetFilters,
 }: ReportControlsBarProps) {
   return (
-    <div className="print:hidden bg-card border border-border rounded-xl p-4 shadow-xs space-y-4">
+    <div className="print:hidden bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3.5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* ─── GROUP BY DIMENSION TOGGLE ────────────────────────────────────── */}
         {groupBy && onGroupByChange && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Group By:
             </span>
-            <div className="inline-flex rounded-lg border border-border p-1 bg-muted/40">
+            <div className="inline-flex rounded-xl border border-slate-200 p-1 bg-slate-50/80 shadow-2xs">
               <button
                 type="button"
                 onClick={() => onGroupByChange('CLIENT')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer flex items-center gap-1.5',
+                  'px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
                   groupBy === 'CLIENT'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <User className="w-3.5 h-3.5" />
-                Client
+                <span>Client</span>
               </button>
               <button
                 type="button"
                 onClick={() => onGroupByChange('BROKER')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer flex items-center gap-1.5',
+                  'px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
                   groupBy === 'BROKER'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <Briefcase className="w-3.5 h-3.5" />
-                Broker
+                <span>Broker</span>
               </button>
               <button
                 type="button"
                 onClick={() => onGroupByChange('SCRIPT')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer flex items-center gap-1.5',
+                  'px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
                   groupBy === 'SCRIPT'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
                 )}
               >
                 <FileCode className="w-3.5 h-3.5" />
-                Script
+                <span>Script</span>
               </button>
             </div>
           </div>
@@ -134,29 +134,30 @@ export function ReportControlsBar({
         {/* ─── SETTLEMENT CYCLE SELECTOR ─────────────────────────────────────── */}
         {settlementOptions && onSettlementChange && (
           <div className="flex items-center gap-2 min-w-[220px]">
-            <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
               Settlement:
             </span>
-            <UniversalDropdown
-              value={settlementId || ''}
-              options={settlementOptions}
-              onChange={onSettlementChange}
-              placeholder="Select Settlement Cycle"
-              className="w-full text-xs"
-            />
+            <div className="w-64">
+              <UniversalDropdown
+                value={settlementId || ''}
+                options={settlementOptions}
+                onChange={onSettlementChange}
+                placeholder="Select Settlement Cycle"
+              />
+            </div>
           </div>
         )}
 
         {/* ─── SEARCH INPUT ─────────────────────────────────────────────────── */}
         {onSearchChange && (
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchTerm || ''}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:bg-white focus:border-[#2652C8] transition-all"
             />
           </div>
         )}
@@ -166,21 +167,21 @@ export function ReportControlsBar({
           <button
             type="button"
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/70 rounded-lg border border-border/70 transition-colors cursor-pointer ml-auto"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer ml-auto shadow-2xs"
             title="Reset Filters to Default"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Reset
+            <span>Reset</span>
           </button>
         )}
       </div>
 
       {/* ─── SECONDARY ROW: DATE PICKERS & DROPDOWN FILTERS ─────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-border/50 text-xs">
+      <div className="flex flex-wrap items-center gap-3.5 pt-3 border-t border-slate-100 text-xs">
         {/* As Of Date Picker */}
         {asOfDate !== undefined && onAsOfDateChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">As of:</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">As of:</span>
             <div className="w-36">
               <UniversalDatePicker
                 value={asOfDate}
@@ -193,8 +194,8 @@ export function ReportControlsBar({
 
         {/* From Date Picker */}
         {fromDate !== undefined && onFromDateChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">From:</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">From:</span>
             <div className="w-36">
               <UniversalDatePicker
                 value={fromDate}
@@ -207,8 +208,8 @@ export function ReportControlsBar({
 
         {/* To Date Picker */}
         {toDate !== undefined && onToDateChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">To:</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">To:</span>
             <div className="w-36">
               <UniversalDatePicker
                 value={toDate}
@@ -221,71 +222,65 @@ export function ReportControlsBar({
 
         {/* Trade Type Filter */}
         {tradeType !== undefined && onTradeTypeChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">Type:</span>
-            <div className="w-40">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">Type:</span>
+            <div className="w-44">
               <UniversalDropdown
                 value={tradeType}
                 options={[
                   { value: 'ALL', label: 'All Trade Types' },
-                  { value: 'REGULAR', label: 'Regular' },
+                  { value: 'REGULAR', label: 'Regular / Manual' },
                   { value: 'CARRY_FORWARD', label: 'Carry Forward (CF)' },
                   { value: 'BACK_FORWARD', label: 'Back Forward (BF)' },
-                  { value: 'SETTLEMENT', label: 'Settlement' },
+                  { value: 'SETTLEMENT', label: 'Net Settlement' },
                 ]}
                 onChange={onTradeTypeChange}
-                className="w-full text-xs"
+                placeholder="Trade Type"
               />
             </div>
           </div>
         )}
 
-        {/* Client Filter Dropdown */}
+        {/* Counterparty Client Dropdown */}
         {clientOptions && onClientChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">Client:</span>
-            <div className="w-44">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">Client:</span>
+            <div className="w-48">
               <UniversalDropdown
                 value={clientId || ''}
-                options={clientOptions}
+                options={[{ value: '', label: 'All Clients' }, ...clientOptions]}
                 onChange={onClientChange}
-                placeholder="All Clients"
-                clearable
-                className="w-full text-xs"
+                placeholder="Filter Client"
               />
             </div>
           </div>
         )}
 
-        {/* Broker Filter Dropdown */}
+        {/* Counterparty Broker Dropdown */}
         {brokerOptions && onBrokerChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">Broker:</span>
-            <div className="w-44">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">Broker:</span>
+            <div className="w-48">
               <UniversalDropdown
                 value={brokerId || ''}
-                options={brokerOptions}
+                options={[{ value: '', label: 'All Brokers' }, ...brokerOptions]}
                 onChange={onBrokerChange}
-                placeholder="All Brokers"
-                clearable
-                className="w-full text-xs"
+                placeholder="Filter Broker"
               />
             </div>
           </div>
         )}
 
-        {/* Script Filter Dropdown */}
+        {/* Script Dropdown */}
         {scriptOptions && onScriptChange && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground whitespace-nowrap font-medium">Script:</span>
-            <div className="w-44">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 whitespace-nowrap font-semibold">Script:</span>
+            <div className="w-48">
               <UniversalDropdown
                 value={scriptId || ''}
-                options={scriptOptions}
+                options={[{ value: '', label: 'All Scripts' }, ...scriptOptions]}
                 onChange={onScriptChange}
-                placeholder="All Scripts"
-                clearable
-                className="w-full text-xs"
+                placeholder="Filter Script"
               />
             </div>
           </div>

@@ -143,17 +143,25 @@ export function TradeFormModal({
   const currSym = formatCurrencySymbol(script?.currency?.symbol, script?.currency?.code);
 
   const expiryOptions = useMemo(() => {
-    return (expiryList || []).map((exp: any) => {
-      const dateVal = exp.date || exp.expiryDate;
-      const formatted = formatDateToDDMMYY(dateVal);
-      const code = formatExpiryToDDMMMYY(dateVal);
-      return {
-        value: dateVal,
-        label: formatted,
-        sublabel: code ? `Exchange Code: ${code}` : undefined,
-      };
-    });
-  }, [expiryList]);
+    const tradeDateNorm = formatDateForInput(date);
+    return (expiryList || [])
+      .filter((exp: any) => {
+        if (!tradeDateNorm) return true;
+        const expDateVal = exp.normalizedDate || exp.date || exp.expiryDate;
+        const expNorm = formatDateForInput(expDateVal);
+        return Boolean(expNorm && expNorm >= tradeDateNorm);
+      })
+      .map((exp: any) => {
+        const dateVal = exp.date || exp.expiryDate;
+        const formatted = formatDateToDDMMYY(dateVal);
+        const code = formatExpiryToDDMMMYY(dateVal);
+        return {
+          value: dateVal,
+          label: formatted,
+          sublabel: code ? `Exchange Code: ${code}` : undefined,
+        };
+      });
+  }, [expiryList, date]);
 
   // Live Canonical Security Name Generator
   const liveSecurityName = useMemo(() => {

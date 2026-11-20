@@ -20,6 +20,7 @@ import { DubaiPreviewTable } from './DubaiPreviewTable';
 import { NormalPreviewTable } from './NormalPreviewTable';
 import { ImportResultPanel } from './ImportResultPanel';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { apiFetch } from '../../utils/apiClient';
 import './trades-import.css';
 
 export function TradeImportManager({ onBack }: { onBack?: () => void }) {
@@ -58,6 +59,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const [scripts, setScripts] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [brokerages, setBrokerages] = useState<any[]>([]);
+  const [isLoadingBrokers, setIsLoadingBrokers] = useState(true);
   const [isValidatingMasterData, setIsValidatingMasterData] = useState(false);
 
   const [showBrokerModal, setShowBrokerModal] = useState(false);
@@ -100,13 +102,40 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load exchanges, brokers, clients, scripts, currencies on mount
+  // Load exchanges, brokers, clients, scripts, currencies on mount concurrently
   useEffect(() => {
+    let isMounted = true;
     const fetchInitialData = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        
-        const exRes = await fetch(`${apiUrl}/exchanges`);
+        // Fast-path for brokers: fire immediately
+        apiFetch('/account-masters?group=Sundry Creditors')
+          .then(async (res) => {
+            if (res.ok && isMounted) {
+              const brData = await res.json();
+              if (Array.isArray(brData)) {
+                setBrokers(brData);
+                if (brData.length > 0) {
+                  setSelectedBrokerId((prev) => prev || brData[0].id);
+                }
+              }
+            }
+          })
+          .catch((err) => console.error('Failed to fetch brokers:', err))
+          .finally(() => {
+            if (isMounted) setIsLoadingBrokers(false);
+          });
+
+        // Parallel fetch for remaining master data
+        const [exRes, clRes, scRes, curRes, brkRes] = await Promise.all([
+          apiFetch('/exchanges'),
+          apiFetch('/account-masters?group=Sundry Debtors'),
+          apiFetch('/scripts'),
+          apiFetch('/currencies'),
+          apiFetch('/brokerages'),
+        ]);
+
+        if (!isMounted) return;
+
         if (exRes.ok) {
           const exData = await exRes.json();
           setExchanges(exData);
@@ -115,34 +144,21 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           }
         }
 
-        const brRes = await fetch(`${apiUrl}/account-masters?group=Sundry Creditors`);
-        if (brRes.ok) {
-          const brData = await brRes.json();
-          setBrokers(brData);
-          if (brData.length > 0) {
-            setSelectedBrokerId((prev) => prev || brData[0].id);
-          }
-        }
-
-        const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
         if (clRes.ok) {
           const clData = await clRes.json();
           setClients(clData);
         }
 
-        const scRes = await fetch(`${apiUrl}/scripts`);
         if (scRes.ok) {
           const scData = await scRes.json();
           setScripts(scData);
         }
 
-        const curRes = await fetch(`${apiUrl}/currencies`);
         if (curRes.ok) {
           const curData = await curRes.json();
           setCurrencies(curData);
         }
 
-        const brkRes = await fetch(`${apiUrl}/brokerages`);
         if (brkRes.ok) {
           const brkData = await brkRes.json();
           setBrokerages(brkData);
@@ -152,12 +168,14 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       }
     };
     fetchInitialData();
+    return () => {
+      isMounted = false;
+    };
   }, [setSelectedBrokerId, setSelectedExchangeId]);
 
   const fetchExchanges = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const exRes = await fetch(`${apiUrl}/exchanges`);
+      const exRes = await apiFetch('/exchanges');
       if (exRes.ok) {
         const exData = await exRes.json();
         setExchanges(exData);
@@ -169,8 +187,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   const fetchScripts = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const scRes = await fetch(`${apiUrl}/scripts`);
+      const scRes = await apiFetch('/scripts');
       if (scRes.ok) {
         const scData = await scRes.json();
         setScripts(scData);
@@ -182,8 +199,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   const fetchBrokers = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const brRes = await fetch(`${apiUrl}/account-masters?group=Sundry Creditors`);
+      setIsLoadingBrokers(true);
+      const brRes = await apiFetch('/account-masters?group=Sundry Creditors');
       if (brRes.ok) {
         const brData = await brRes.json();
         setBrokers(brData);
@@ -194,13 +211,14 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       }
     } catch (err) {
       console.error('Failed to fetch brokers:', err);
+    } finally {
+      setIsLoadingBrokers(false);
     }
   };
 
   const fetchClients = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const clRes = await fetch(`${apiUrl}/account-masters?group=Sundry Debtors`);
+      const clRes = await apiFetch('/account-masters?group=Sundry Debtors');
       if (clRes.ok) {
         const clData = await clRes.json();
         setClients(clData);
@@ -212,8 +230,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   const fetchCurrencies = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const curRes = await fetch(`${apiUrl}/currencies`);
+      const curRes = await apiFetch('/currencies');
       if (curRes.ok) {
         const curData = await curRes.json();
         setCurrencies(curData);
@@ -226,14 +243,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
   const handleRevalidateAll = async () => {
     setIsValidatingMasterData(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const [exRes, brRes, clRes, scRes, curRes, brkRes] = await Promise.all([
-        fetch(`${apiUrl}/exchanges`),
-        fetch(`${apiUrl}/account-masters?group=Sundry Creditors`),
-        fetch(`${apiUrl}/account-masters?group=Sundry Debtors`),
-        fetch(`${apiUrl}/scripts`),
-        fetch(`${apiUrl}/currencies`),
-        fetch(`${apiUrl}/brokerages`),
+        apiFetch('/exchanges'),
+        apiFetch('/account-masters?group=Sundry Creditors'),
+        apiFetch('/account-masters?group=Sundry Debtors'),
+        apiFetch('/scripts'),
+        apiFetch('/currencies'),
+        apiFetch('/brokerages'),
       ]);
 
       if (exRes.ok) setExchanges(await exRes.json());
@@ -822,8 +838,11 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="form-field">
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center justify-between mb-1.5">
-                  <span>Select Broker <span className="text-rose-500">*</span></span>
-                  {!selectedBrokerId && (
+                  <span className="flex items-center gap-1.5">
+                    Select Broker <span className="text-rose-500">*</span>
+                    {isLoadingBrokers && <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />}
+                  </span>
+                  {!selectedBrokerId && !isLoadingBrokers && (
                     <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">Required</span>
                   )}
                 </label>
@@ -834,8 +853,8 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
                     label: `${b.name} (${b.code})`,
                   }))}
                   onChange={(val) => setSelectedBrokerId(val)}
-                  placeholder="Select Broker for Settlement..."
-                  disabled={isProcessing}
+                  placeholder={isLoadingBrokers ? "Loading brokers..." : "Select Broker for Settlement..."}
+                  disabled={isProcessing || isLoadingBrokers}
                   onAddClick={() => setShowBrokerModal(true)}
                   addLabel="Add Broker"
                 />

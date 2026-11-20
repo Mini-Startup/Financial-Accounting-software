@@ -7,7 +7,7 @@ import {
   RotateCcw, ArrowUpDown, ChevronDown, CheckCircle2,
   Calendar, Layers, Download
 } from 'lucide-react';
-import { useTopBar } from '@/context/TopBarContext';
+import { ReportHeader } from './ReportHeader';
 import { UniversalDropdown, type DropdownOption } from '@/components/ui/UniversalDropdown';
 import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
 import { apiFetch } from '@/utils/apiClient';
@@ -22,8 +22,6 @@ import type {
 } from './types';
 
 export function InvoiceReportManager() {
-  const { setTopBar, resetTopBar } = useTopBar();
-
   // Filters & State (with smart pre-selected defaults)
   const [entityType, setEntityType] = useState<'CLIENT' | 'BROKER'>('CLIENT');
   const [selectedEntityId, setSelectedEntityId] = useState<string>('ALL');
@@ -144,34 +142,11 @@ export function InvoiceReportManager() {
   }, [fetchInvoiceReport]);
 
   // Handle "Generate Report" action (Phase 1 preview / Phase 2 redirection)
-  const handleGenerateReport = () => {
+  const handleGenerateReport = useCallback(() => {
     toast.success('Report Ready for Generation', {
       description: `Invoice report prepared for ${entityType === 'CLIENT' ? 'Clients' : 'Brokers'}. Dedicated viewer will open in Phase 2.`,
     });
-  };
-
-  // Push unified page title & actions to TopBar
-  useEffect(() => {
-    setTopBar({
-      title: 'Invoice Report (Futures Bill)',
-      actions: (
-        <div className="flex items-center gap-2">
-          <UniversalTooltip content="Generate pure printable report document">
-            <button
-              type="button"
-              onClick={handleGenerateReport}
-              className="h-9 px-4 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 shrink-0"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Generate Report</span>
-            </button>
-          </UniversalTooltip>
-        </div>
-      ),
-    });
-
-    return () => resetTopBar();
-  }, [setTopBar, resetTopBar, handleGenerateReport]);
+  }, [entityType]);
 
   // Filter invoices by search term
   const filteredInvoices = useMemo(() => {
@@ -215,6 +190,15 @@ export function InvoiceReportManager() {
 
   return (
     <div className="space-y-5">
+      <ReportHeader
+        title="Invoice Report (Futures Bill)"
+        subtitle="Bilateral settled trade invoices and futures bills grouped by client, broker, and script."
+        isLoading={isLoading}
+        onRefresh={fetchInvoiceReport}
+        onGenerateReport={handleGenerateReport}
+        onPrint={() => window.print()}
+      />
+
       {/* ── Control & Filter Toolbar ────────────────────────────────────────── */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -299,11 +283,13 @@ export function InvoiceReportManager() {
           </div>
         </div>
       ) : filteredInvoices.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
-          <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-          <div className="text-sm font-bold text-slate-700">No Settled Trades Found</div>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            No closed or settled trades matched the selected filters for this settlement period. Invoices exclusively reflect fully settled positions.
+        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8] mx-auto shadow-2xs">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div className="text-base font-bold text-slate-900">No Settled Trades Found</div>
+          <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+            No closed or settled trades matched the selected filters for this settlement period. Invoices exclusively reflect fully settled positions. Select another settlement cycle above or execute pending settlements to generate bilateral futures bills.
           </p>
         </div>
       ) : (
@@ -311,12 +297,12 @@ export function InvoiceReportManager() {
           {filteredInvoices.map((invoice) => (
             <div
               key={invoice.entityId}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden transition-all"
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden transition-all"
             >
               {/* Invoice Header (Client info & settlement period) */}
               <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8] font-bold text-xs font-mono shadow-2xs">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8] font-bold text-xs font-mono shadow-2xs">
                     {invoice.entityCode}
                   </div>
                   <div>
@@ -328,7 +314,7 @@ export function InvoiceReportManager() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
                   <Calendar className="w-3.5 h-3.5 text-[#2652C8]" />
                   <span>Futures Bill From : {invoice.settlementFromDate} to {invoice.settlementToDate}</span>
                 </div>
@@ -338,7 +324,7 @@ export function InvoiceReportManager() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px] tracking-wider select-none">
+                    <tr className="bg-slate-50/95 border-b border-slate-200 text-slate-700 font-bold uppercase text-[11px] tracking-wider select-none">
                       <th className="py-2.5 px-4 text-left">Exchange</th>
                       <th className="py-2.5 px-4 text-left">Exp. Date</th>
                       <th className="py-2.5 px-4 text-left">Scrip</th>

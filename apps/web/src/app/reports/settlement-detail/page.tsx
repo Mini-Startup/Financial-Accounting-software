@@ -210,7 +210,7 @@ export default function SettlementDetailPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
       {/* ─── HEADER ────────────────────────────────────────────────────────── */}
       <ReportHeader
         title="Settlement Report"
@@ -258,66 +258,66 @@ export default function SettlementDetailPage() {
       {/* ─── METRIC OVERVIEW CARDS ─────────────────────────────────────────── */}
       {auditData && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Total Trades
             </span>
-            <p className="text-xl font-bold font-mono text-foreground mt-1">
-              {auditData.metrics.totalTrades.toLocaleString()}
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {auditData.metrics.totalTrades.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700">
               Regular Trades
             </span>
-            <p className="text-xl font-bold font-mono text-foreground mt-1">
-              {auditData.metrics.regularCount.toLocaleString()}
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {auditData.metrics.regularCount.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
               Carry Forward (CF)
             </span>
-            <p className="text-xl font-bold font-mono text-foreground mt-1">
-              {auditData.metrics.cfCount.toLocaleString()}
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {auditData.metrics.cfCount.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
               Back Forward (BF)
             </span>
-            <p className="text-xl font-bold font-mono text-foreground mt-1">
-              {auditData.metrics.bfCount.toLocaleString()}
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {auditData.metrics.bfCount.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
               Settlement Trades
             </span>
-            <p className="text-xl font-bold font-mono text-foreground mt-1">
-              {auditData.metrics.settlementCount.toLocaleString()}
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+              {auditData.metrics.settlementCount.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Total Cycle PnL
             </span>
             <p
               className={`text-xl font-bold font-mono mt-1 ${
                 auditData.metrics.totalCyclePnL > 0
-                  ? 'text-emerald-600'
+                  ? 'text-emerald-700'
                   : auditData.metrics.totalCyclePnL < 0
-                  ? 'text-rose-600'
-                  : 'text-foreground'
+                  ? 'text-rose-700'
+                  : 'text-slate-900'
               }`}
             >
-              {auditData.metrics.totalCyclePnL > 0 ? '+' : ''}$
-              {auditData.metrics.totalCyclePnL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {auditData.metrics.totalCyclePnL > 0 ? '+' : ''}₹
+              {auditData.metrics.totalCyclePnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>

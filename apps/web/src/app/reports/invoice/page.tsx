@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function InvoiceReportPage() {
   return (
-    <div className="max-w-7xl mx-auto py-2">
+    <div className="max-w-[1600px] mx-auto">
       <InvoiceReportManager />
     </div>
   );

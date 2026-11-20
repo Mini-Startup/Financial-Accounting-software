@@ -20,6 +20,7 @@ const DEFAULT_TITLES: Record<string, string> = {
   '/reports/net-position': 'Net Position',
   '/reports/settlement-detail': 'Settlement Audit',
   '/reports/settlement-summary': 'Settlement Summary',
+  '/reports/invoice': 'Invoice Report',
   '/settlement': 'Settlement Operations',
   '/ledger': 'Ledger',
   '/vouchers': 'Vouchers',
