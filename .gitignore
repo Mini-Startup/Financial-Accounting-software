@@ -66,3 +66,7 @@ abc-26-06
 # Misc
 # -------------------------
 *.tsbuildinfo
+
+# Local Development & Debugging
+.dev-patches/
+apps/api/debug_samples/
