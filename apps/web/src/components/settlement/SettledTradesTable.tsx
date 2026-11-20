@@ -65,15 +65,15 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/90 shadow-2xs">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search trade #, party, broker, security..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-9 text-xs w-full py-1.5"
+            className="input pl-10 text-xs w-full py-2 rounded-xl border border-slate-200 focus:border-blue-500"
           />
         </div>
 
@@ -98,31 +98,31 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
             />
           </div>
 
-          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200">
+          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 font-mono shadow-2xs">
             {filteredTrades.length} trades
           </span>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="card shadow-xs border border-slate-200 rounded-xl bg-white p-0 overflow-hidden">
+      <div className="border border-slate-200/90 rounded-3xl bg-white p-0 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="data-table w-full text-xs" style={{ minWidth: '1100px' }}>
+          <table className="w-full text-xs text-left border-collapse" style={{ minWidth: '1100px' }}>
             <thead>
-              <tr className="whitespace-nowrap bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px] select-none">
-                <th className="py-3 px-3">Trade #</th>
-                <th className="py-3 px-3">Trade Date</th>
-                <th className="py-3 px-3">Type</th>
-                <th className="py-3 px-3">Party</th>
-                <th className="py-3 px-3">Broker</th>
-                <th className="py-3 px-3 min-w-50">Security Name</th>
-                <th className="py-3 px-3 text-center">Side</th>
-                <th className="py-3 px-3 text-right">Quantity</th>
-                <th className="py-3 px-3 text-right">Rate</th>
-                <th className="py-3 px-3 text-right font-bold">Total Amount</th>
+              <tr className="whitespace-nowrap bg-slate-50/95 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px] select-none sticky top-0 z-10 backdrop-blur-xs">
+                <th className="py-3.5 px-3.5">Trade #</th>
+                <th className="py-3.5 px-3">Trade Date</th>
+                <th className="py-3.5 px-3">Type</th>
+                <th className="py-3.5 px-3">Party</th>
+                <th className="py-3.5 px-3">Broker</th>
+                <th className="py-3.5 px-3 min-w-50">Security Name</th>
+                <th className="py-3.5 px-3 text-center">Side</th>
+                <th className="py-3.5 px-3 text-right">Quantity</th>
+                <th className="py-3.5 px-3 text-right">Rate</th>
+                <th className="py-3.5 px-3.5 text-right font-bold">Total Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {filteredTrades.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400 italic">
@@ -135,8 +135,8 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                   const amount = Number(t.quantity || 0) * Number(t.rate || 0);
 
                   return (
-                    <tr key={t.id || idx} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
+                    <tr key={t.id || idx} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="py-2.5 px-3.5 font-mono font-bold text-slate-900">
                         {t.tradeNumber}
                       </td>
                       <td className="py-2.5 px-3 font-mono text-slate-600">
@@ -145,7 +145,7 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border',
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border',
                             t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
                             t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
                             t.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -176,10 +176,10 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                       <td className="py-2.5 px-3 text-center">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold',
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border',
                             t.transactionType === 'BUY'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-100 text-rose-800'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
                           )}
                         >
                           {t.transactionType}
@@ -191,7 +191,7 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
                       <td className="py-2.5 px-3 text-right font-mono text-slate-700">
                         {currSym}{Number(t.rate || 0).toFixed(2)}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900">
                         {currSym}{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -202,16 +202,16 @@ export function SettledTradesTable({ trades }: SettledTradesTableProps) {
 
             {/* Sticky Total Row for visible rows */}
             {filteredTrades.length > 0 && (
-              <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-mono text-xs font-bold text-slate-900 sticky bottom-0 z-10 shadow-inner">
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50/95 font-mono text-xs font-bold text-slate-900 sticky bottom-0 z-10 shadow-xs">
                 <tr>
-                  <td colSpan={7} className="py-3 px-3 uppercase tracking-wider text-slate-700 font-sans">
+                  <td colSpan={7} className="py-3 px-3.5 uppercase tracking-wider text-slate-700 font-sans">
                     Total ({filteredTrades.length} settled trades)
                   </td>
                   <td className="py-3 px-3 text-right text-slate-900">
                     {totals.totalQty.toLocaleString('en-IN')}
                   </td>
                   <td className="py-3 px-3 text-right text-slate-500">—</td>
-                  <td className="py-3 px-3 text-right font-bold text-slate-900">
+                  <td className="py-3 px-3.5 text-right font-bold text-slate-900">
                     {totals.totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>

@@ -293,24 +293,72 @@ export default function SettlementPage() {
   };
 
   // KPI Calculations
-  const { totalVolume, openPositionsCount, netTotalPnL, pnlDisplayStr } = useMemo(() => {
+  const {
+    totalVolume,
+    buyOrdersCount,
+    sellOrdersCount,
+    openPositionsCount,
+    totalOpenLots,
+    longPositionsCount,
+    shortPositionsCount,
+    netTotalPnL,
+    pnlDisplayStr,
+    realizedPnLStr,
+    unrealizedPnLStr,
+    profitableLegsCount,
+    lossLegsCount,
+    ratesAvailableCount,
+    missingRatesCount,
+  } = useMemo(() => {
     let vol = 0;
+    let buyCount = 0;
+    let sellCount = 0;
     let openCount = 0;
+    let openLots = 0;
+    let longCount = 0;
+    let shortCount = 0;
     let netPnL = 0;
+    let realizedSum = 0;
+    let unrealizedSum = 0;
+    let profitLegs = 0;
+    let lossLegs = 0;
+    let availableRates = 0;
+    let missingRates = 0;
     const pnlByCurr: Record<string, number> = {};
 
     for (const item of summaryData) {
-      vol += item.buyQty + item.sellQty;
-      if (item.netQty !== 0) openCount++;
+      const lot = item.marketLot && Number(item.marketLot) > 0 ? Number(item.marketLot) : 1;
+      vol += Math.abs(item.buyQty + item.sellQty);
+      if (item.buyQty > 0) buyCount++;
+      if (item.sellQty > 0) sellCount++;
 
-      const finalPnL =
-        item.netQty === 0
-          ? item.realizedPnL
-          : item.closingRate !== null
+      if (item.netQty !== 0) {
+        openCount++;
+        openLots += Math.abs(item.netQty);
+        if (item.netQty > 0) longCount++;
+        else shortCount++;
+      }
+
+      if (item.closingRate !== null && item.closingRate !== undefined) {
+        availableRates++;
+      } else {
+        missingRates++;
+      }
+
+      const itemRealized = item.netQty === 0 ? (item.realizedPnL || 0) : 0;
+      const itemUnrealized =
+        item.netQty !== 0 && item.closingRate !== null
           ? item.netQty * (item.closingRate - item.netAvgRate)
           : 0;
 
+      const finalPnL = item.netQty === 0 ? itemRealized : itemUnrealized;
+      if (finalPnL > 0) profitLegs++;
+      else if (finalPnL < 0) lossLegs++;
+
+      realizedSum += itemRealized;
+      unrealizedSum += itemUnrealized;
       netPnL += finalPnL;
+
       const symbol = formatCurrencySymbol(item.currencySymbol, item.currencyCode);
       pnlByCurr[symbol] = (pnlByCurr[symbol] || 0) + finalPnL;
     }
@@ -328,11 +376,30 @@ export default function SettlementPage() {
             )
             .join(' / ');
 
+    const formatShortPnL = (amount: number) => {
+      const isPos = amount >= 0;
+      return `${isPos ? '+' : '-'}$${Math.abs(amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    };
+
     return {
       totalVolume: vol,
+      buyOrdersCount: buyCount,
+      sellOrdersCount: sellCount,
       openPositionsCount: openCount,
+      totalOpenLots: openLots,
+      longPositionsCount: longCount,
+      shortPositionsCount: shortCount,
       netTotalPnL: netPnL,
       pnlDisplayStr: pnlStr,
+      realizedPnLStr: formatShortPnL(realizedSum),
+      unrealizedPnLStr: formatShortPnL(unrealizedSum),
+      profitableLegsCount: profitLegs,
+      lossLegsCount: lossLegs,
+      ratesAvailableCount: availableRates,
+      missingRatesCount: missingRates,
     };
   }, [summaryData]);
 
@@ -343,12 +410,20 @@ export default function SettlementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-light pb-4">
+      {/* Executive Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
         <div>
-          <h1 className="text-h2 font-display text-charcoal">Settlement</h1>
-          <p className="text-sm text-slate mt-1">
-            Review position exposure, calculate mark-to-market settlements, and generate daily CF/BF accounting cycles.
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-[#2652C8] border border-blue-200 font-mono shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              Double-Entry Settlement Engine
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-display">
+            Settlement Operations
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
+            Position exposure auditing, automated mark-to-market valuations, bilateral client-broker rollovers (Carry Forward / Back Forward), and automated journal vouchers.
           </p>
         </div>
       </div>
@@ -362,13 +437,26 @@ export default function SettlementPage() {
         isLoading={loading || isLoadingSettlements}
       />
 
-      {/* KPI Cards */}
+      {/* KPI Cards (Brand Card Architecture matching Image) */}
       <PositionSummaryCards
+        tradeCount={settledTradesCount > 0 ? settledTradesCount : (buyOrdersCount + sellOrdersCount)}
+        totalVolume={totalVolume}
+        buyOrdersCount={buyOrdersCount}
+        sellOrdersCount={sellOrdersCount}
         pnlDisplayStr={pnlDisplayStr}
         netTotalPnL={netTotalPnL}
-        totalVolume={totalVolume}
+        realizedPnLStr={realizedPnLStr}
+        unrealizedPnLStr={unrealizedPnLStr}
+        profitableLegsCount={profitableLegsCount}
+        lossLegsCount={lossLegsCount}
         openPositionsCount={openPositionsCount}
+        totalOpenLots={totalOpenLots}
+        longPositionsCount={longPositionsCount}
+        shortPositionsCount={shortPositionsCount}
         totalLegsCount={summaryData.length}
+        ratesAvailableCount={ratesAvailableCount}
+        missingRatesCount={missingRatesCount}
+        cycleStatus={selectedSettlementId === 'LIVE' ? 'Live Session' : 'Cycle Closed'}
       />
 
       {/* Action Bar (Date input or historical status + tabs) */}

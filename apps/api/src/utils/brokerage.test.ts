@@ -15,8 +15,8 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
     assert.strictEqual(charges, 0.42);
   });
 
-  it('Tier 1.2: adds broker charges directly to BUY rate', () => {
-    // BUY 10 lots of 100 units at 50.00 with 0.42 charges
+  it('Tier 1.2: keeps broker rate equal to execution rate and stores total broker charges', () => {
+    // BUY 10 lots of 100 units at 50.00 with 0.42 total charges
     const result = calculateTradeRates({
       rate: 50.0,
       quantity: 10,
@@ -25,15 +25,14 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
       brokerBrokerage: 0.42,
     });
 
-    assert.strictEqual(result.brokerPerUnit, 0.42);
-    assert.strictEqual(result.brokerRate, 50.42); // Directly added to rate, NOT multiplied by marketLot!
+    assert.strictEqual(result.brokerRate, 50.0); // Clean execution rate (Option A)
     assert.strictEqual(result.totalUnits, 1000);
-    assert.strictEqual(result.brokerBrokerage, 420.0);
-    assert.strictEqual(result.brokerMarketValue, 50420.0);
+    assert.strictEqual(result.brokerBrokerage, 0.42); // Total dollar charges, not multiplied by totalUnits
+    assert.strictEqual(result.brokerMarketValue, 50000.0);
   });
 
-  it('Tier 1.3: subtracts broker charges directly from SELL rate', () => {
-    // SELL 5 lots of 50 units at 100.00 with 0.50 charges
+  it('Tier 1.3: keeps broker rate equal to execution rate on SELL as well', () => {
+    // SELL 5 lots of 50 units at 100.00 with 0.50 total charges
     const result = calculateTradeRates({
       rate: 100.0,
       quantity: 5,
@@ -42,11 +41,10 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
       brokerBrokerage: 0.50,
     });
 
-    assert.strictEqual(result.brokerPerUnit, 0.50);
-    assert.strictEqual(result.brokerRate, 99.50); // Directly subtracted from rate
+    assert.strictEqual(result.brokerRate, 100.0);
     assert.strictEqual(result.totalUnits, 250);
-    assert.strictEqual(result.brokerBrokerage, 125.0);
-    assert.strictEqual(result.brokerMarketValue, 24875.0);
+    assert.strictEqual(result.brokerBrokerage, 0.50);
+    assert.strictEqual(result.brokerMarketValue, 25000.0);
   });
 
   it('Tier 1.4: calculates client brokerage with rule-based per-share adjustment', () => {
@@ -70,20 +68,21 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
   });
 
   it('Tier 1.5: calculates correct net profit spread between client and broker', () => {
-    // BUY: Client rate 100.20, Broker rate 100.10 -> Profit per unit = 0.10, total = 0.10 * 100 = 10.00
+    // BUY: Client rate 100.20, Broker rate 100.00 -> Profit = clientBrokerage (20.00) - brokerBrokerage (5.00) = 15.00
     const result = calculateTradeRates({
       rate: 100.0,
       quantity: 1,
       marketLot: 100,
       side: 'BUY',
       clientRule: { quantity: 1, brokerage: 20, direction: 'BUY' },
-      brokerBrokerage: 0.10,
+      brokerBrokerage: 5.00,
     });
 
     assert.strictEqual(result.clientRate, 100.20);
-    assert.strictEqual(result.brokerRate, 100.10);
-    assert.strictEqual(result.profitPerUnit, 0.10);
-    assert.strictEqual(result.profitTotal, 10.0);
+    assert.strictEqual(result.brokerRate, 100.00);
+    assert.strictEqual(result.clientBrokerage, 20.0);
+    assert.strictEqual(result.brokerBrokerage, 5.0);
+    assert.strictEqual(result.profitTotal, 15.0);
   });
 
   // ── Tier 2: Boundary & Corner Cases ──
@@ -119,7 +118,8 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
 
     assert.strictEqual(result.quantity, 5);
     assert.strictEqual(result.totalUnits, 50);
-    assert.strictEqual(result.brokerRate, 49.9);
+    assert.strictEqual(result.brokerRate, 50.0);
+    assert.strictEqual(result.brokerBrokerage, 0.10);
   });
 
   it('Tier 2.4: zero-brokerage trade types bypass all charges', () => {
@@ -181,7 +181,7 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
   // ── Tier 4: Real-World Workload Scenarios ──
   it('Tier 4: Dubai FnO multi-lot high-value trade simulation', () => {
     // Dubai FnO trade: 250 lots of Gold (marketLot = 32) at rate 2650.75
-    // 4 charges: commission 0.50, exCharge 0.25, charge1 0.10, charge2 0.05 => 0.90 per unit
+    // 4 charges: commission 0.50, exCharge 0.25, charge1 0.10, charge2 0.05 => 0.90 total
     const charges = calculateBrokerBrokerage(0.50, 0.25, 0.10, 0.05);
     assert.strictEqual(charges, 0.90);
 
@@ -195,9 +195,10 @@ describe('brokerage.ts - Calculation Formula and Trade Rate Engine', () => {
     });
 
     assert.strictEqual(trade.totalUnits, 8000);
-    assert.strictEqual(trade.brokerRate, 2651.65); // 2650.75 + 0.90
+    assert.strictEqual(trade.brokerRate, 2650.75); // Clean execution rate (Option A)
+    assert.strictEqual(trade.brokerBrokerage, 0.90); // Total dollar charges
     assert.strictEqual(trade.clientRate, 2652.00); // 2650.75 + 1.25
-    assert.strictEqual(trade.profitPerUnit, 0.35); // 1.25 - 0.90
-    assert.strictEqual(trade.profitTotal, 2800.0); // 0.35 * 8000
+    assert.strictEqual(trade.clientBrokerage, 10000.0); // 40 * 250 lots
+    assert.strictEqual(trade.profitTotal, 9999.10); // 10000 - 0.90
   });
 });

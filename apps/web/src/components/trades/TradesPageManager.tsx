@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TradeFormModal } from './TradeFormModal';
 import { TradeImportModal } from './TradeImportModal';
+import { UniversalPageDropzone } from '../ui/UniversalPageDropzone';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
@@ -106,6 +107,7 @@ export function TradesPageManager({
   const isAddParam = searchParams.get('action') === 'add';
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
   const [viewingTrade, setViewingTrade] = useState<any | null>(null);
@@ -127,6 +129,7 @@ export function TradesPageManager({
 
   const handleCloseImport = useCallback(() => {
     setIsImportModalOpen(false);
+    setDroppedFile(null);
     removeQueryParam('import');
   }, [removeQueryParam]);
 
@@ -1394,10 +1397,21 @@ export function TradesPageManager({
         />
       )}
 
+      {/* Universal Drag & Drop File Listener (Activates when dragging trade files anywhere on the page) */}
+      <UniversalPageDropzone
+        onFileDrop={(file) => {
+          setDroppedFile(file);
+          setIsImportModalOpen(true);
+        }}
+        title="Drop Trade File to Import"
+        subtitle="Drop your CSV or Excel trades file anywhere to parse and validate automatically"
+      />
+
       {/* Bulk Trade Import Modal (Preserves parsed state across open/close) */}
       <TradeImportModal
         isOpen={isImportModalOpen}
         onClose={handleCloseImport}
+        initialFile={droppedFile}
         onComplete={() => {
           handleCloseImport();
           router.refresh();

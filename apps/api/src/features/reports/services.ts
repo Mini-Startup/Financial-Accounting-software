@@ -346,8 +346,8 @@ export class ReportsService {
       });
     }
 
-    // Sort groups alphabetically by code/name
-    resultGroups.sort((a, b) => a.code.localeCompare(b.code));
+    // Sort groups alphabetically by code/name safely
+    resultGroups.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
 
     // Summary calculation across all groups
     let totalOpenContracts = 0;

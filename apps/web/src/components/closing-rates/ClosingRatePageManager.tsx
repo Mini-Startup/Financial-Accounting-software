@@ -13,6 +13,7 @@ import { ClosingRateFormModal } from './ClosingRateFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { UniversalFileUploader } from '@/components/ui/UniversalFileUploader';
+import { UniversalPageDropzone } from '@/components/ui/UniversalPageDropzone';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { CustomCheckbox } from '@/components/ui/CustomCheckbox';
@@ -777,31 +778,34 @@ export function ClosingRatePageManager({
     };
 
     return typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-150 select-none">
           <div
             className={cn(
-              "flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transition-all duration-200",
+              "flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden transition-all duration-200",
               parsedItems.length > 0
-                ? "w-[98vw] max-w-7xl h-[92vh] max-h-[92vh]"
-                : "w-full max-w-xl max-h-[85vh]"
+                ? "w-[98vw] max-w-7xl h-[94vh] max-h-[94vh]"
+                : "w-full max-w-xl max-h-[88vh]"
             )}
           >
             {/* Modal Header */}
-            <div className="px-6 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8] shadow-2xs">
-                  <FileSpreadsheet className="w-4 h-4 stroke-[2.2]" />
+            <div className="px-6 py-4 border-b border-slate-200/90 bg-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-[#2652C8] shadow-2xs">
+                  <FileSpreadsheet className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-slate-900">Open Position Import (Closing Rates)</h2>
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-base font-extrabold tracking-tight text-slate-900 font-display">
+                      Open Position Import (Closing Rates)
+                    </h2>
                     {parsedItems.length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 rounded-full px-2.5 py-0.5 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Data Preserved
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 font-normal">
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {parsedItems.length > 0
                       ? 'Review extracted closing rates, verify against settlement, and commit to ledger.'
                       : 'Upload daily Open Position CSV file to extract closing rates & verify positions.'}
@@ -813,7 +817,7 @@ export function ClosingRatePageManager({
                 <button
                   type="button"
                   onClick={handleImportBack}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                   title="Close dialog (retains uploaded data)"
                 >
                   <X className="w-5 h-5" />
@@ -824,8 +828,8 @@ export function ClosingRatePageManager({
             {/* Modal Body: Switch between Initial Upload State and Preview State */}
             {parsedItems.length === 0 ? (
               /* ── 1. Initial Upload State (Clean, Compact, No Dropzone after file selected) ── */
-              <div className="p-6 overflow-y-auto space-y-5 bg-slate-50/30 flex-1">
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+              <div className="p-6 overflow-y-auto space-y-5 bg-slate-50/50 flex-1">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
                   {/* Top Section: Date Selection */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -859,43 +863,45 @@ export function ClosingRatePageManager({
               </div>
             ) : (
               /* ── 2. Preview State (Full-Width, Directly Visible Table, Dropzone Hidden) ── */
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/30">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/50">
                 {/* Control Strip: Active File Pill, Verification Status, and Action Buttons */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
-                      <FileSpreadsheet className="w-4 h-4 text-[#2652C8]" />
-                      <span className="font-mono font-bold text-slate-900">{fileName}</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs shadow-2xs">
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8]">
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-mono font-bold text-slate-900 truncate max-w-[200px]" title={fileName}>{fileName}</span>
                       <span className="text-slate-300">|</span>
                       <span className="text-slate-600 font-medium">Date: {formatDateToDDMMYY(importDate) || importDate}</span>
                       <span className="text-slate-300">|</span>
-                      <span className="text-slate-500">{rawOpenPositionRows.length} rows</span>
+                      <span className="text-slate-500 font-semibold">{rawOpenPositionRows.length.toLocaleString()} rows</span>
                     </div>
 
                     {/* Clean single-line Remove file button (cancels import & resets) */}
                     <button
                       type="button"
                       onClick={handleClearFile}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
                       title="Remove file"
                     >
-                      <X className="w-3.5 h-3.5 text-slate-400 hover:text-rose-600" />
+                      <X className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
                       <span>Remove file</span>
                     </button>
 
                     {/* Verification Status Badge */}
                     {verification.status === 'VALIDATED' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         Open Position Verified
                       </span>
                     ) : verification.status === 'FAILED' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                         Mismatch ({verification.discrepancies.length})
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                         No Settlement Trades
                       </span>
@@ -907,20 +913,22 @@ export function ClosingRatePageManager({
                     <button
                       onClick={handleAddAdjustTrades}
                       disabled={!isValidated || isAdjusting}
-                      className={`btn flex items-center gap-1.5 py-2 px-3.5 text-xs font-bold transition-all shadow-xs ${
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer ${
                         isValidated && !isAdjusting
-                          ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                          : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                       }`}
                       title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
                     >
                       {isAdjusting ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Adjusting…
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Adjusting…</span>
                         </>
                       ) : (
                         <>
-                          <PlusCircle className="w-3.5 h-3.5" /> Add / Adjust Trades
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>Add / Adjust Trades</span>
                         </>
                       )}
                     </button>
@@ -928,11 +936,12 @@ export function ClosingRatePageManager({
                     <button
                       onClick={handleConfirmImport}
                       disabled={isProcessing || selectedValidCount === 0}
-                      className="btn btn--primary flex items-center gap-1.5 py-2 px-4 text-xs font-bold shadow-xs"
+                      className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving…</span>
                         </>
                       ) : (
                         <>Import {selectedValidCount} Selected Rates</>
@@ -941,38 +950,44 @@ export function ClosingRatePageManager({
                   </div>
                 </div>
 
-                {/* KPI Executive Summary Strip */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Unique Rates</div>
-                      <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">{parsedItems.length}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
-                    </div>
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
-                      <FileSpreadsheet className="w-4.5 h-4.5" />
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
-                      <div className="text-lg font-bold font-mono text-emerald-700 mt-0.5">{validCount}</div>
-                      <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for database import</div>
-                    </div>
-                    <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                      <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.2]" />
+                {/* KPI Executive Summary Strip (Dashboard Double-Bezel Design) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Unique Rates</div>
+                        <div className="text-2xl font-extrabold font-mono text-slate-900 mt-1">{parsedItems.length.toLocaleString()}</div>
+                        <div className="text-[11px] text-slate-400 mt-1 font-medium">from {rawOpenPositionRows.length.toLocaleString()} open position rows</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#2652C8]">
+                        <FileSpreadsheet className="w-5 h-5 stroke-[2]" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
-                      <div className="text-lg font-bold font-mono text-amber-700 mt-0.5">{unmappedCount}</div>
-                      <div className="text-[11px] text-amber-700/80 mt-0.5">Require script mapping</div>
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
+                        <div className="text-2xl font-extrabold font-mono text-emerald-700 mt-1">{validCount.toLocaleString()}</div>
+                        <div className="text-[11px] text-emerald-600/90 mt-1 font-medium">Ready for database import</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
+                        <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
+                      </div>
                     </div>
-                    <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-                      <AlertCircle className="w-4.5 h-4.5 stroke-[2.2]" />
+                  </div>
+
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
+                        <div className="text-2xl font-extrabold font-mono text-amber-700 mt-1">{unmappedCount.toLocaleString()}</div>
+                        <div className="text-[11px] text-amber-700/80 mt-1 font-medium">Require script mapping</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
+                        <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1400,6 +1415,16 @@ export function ClosingRatePageManager({
         isLoading={isAdjusting}
         onConfirm={executeAdjustTrades}
         onCancel={() => setShowAdjustConfirm(false)}
+      />
+      {/* Universal Drag & Drop File Listener on Closing Rates page */}
+      <UniversalPageDropzone
+        onFileDrop={(file) => {
+          setIsImportModalOpen(true);
+          handleFileSelect(file);
+        }}
+        title="Drop Open Position File to Import Rates"
+        subtitle="Drop your daily Open Position CSV file anywhere to extract closing rates & verify positions"
+        acceptedExtensions={['.csv', '.txt']}
       />
     </div>
   );

@@ -136,9 +136,12 @@ export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
   }
 
   // Broker calculation:
-  // Charges from file are already a per-unit price adjustment — directly added/subtracted without dividing by qty or lot.
-  const brokerPerUnit = round(input.brokerBrokerage || 0);
-  const brokerBrokerage = round(brokerPerUnit * totalUnits);
+  // Charges from file or manual entry represent the total brokerage dollar amount on the trade.
+  // Broker Rate remains the clean exchange execution rate (Option A).
+  const brokerBrokerage = absQty > 0 ? round(input.brokerBrokerage || 0) : 0;
+  const brokerRate = input.rate;
+  const brokerPerUnit = 0;
+  const brokerMarketValue = round(brokerRate * totalUnits);
 
   // Client Rate & Market Value: Price ± Client Brokerage Per Unit
   let clientRate = input.rate;
@@ -149,20 +152,9 @@ export function calculateTradeRates(input: TradeRateInput): TradeRateResult {
   }
   const clientMarketValue = round(clientRate * totalUnits);
 
-  // Broker Rate & Market Value: Price ± Broker Brokerage Per Unit
-  let brokerRate = input.rate;
-  if (side === 'BUY') {
-    brokerRate = round(input.rate + brokerPerUnit);
-  } else {
-    brokerRate = round(input.rate - brokerPerUnit);
-  }
-  const brokerMarketValue = round(brokerRate * totalUnits);
-
-  // Profit: net profit per share
-  const profitPerUnit = side === 'BUY'
-    ? round(clientRate - brokerRate)
-    : round(brokerRate - clientRate);
-  const profitTotal = round(profitPerUnit * totalUnits);
+  // Profit: net profit from brokerage difference (Client Brokerage earned minus Broker Brokerage paid)
+  const profitTotal = round(clientBrokerage - brokerBrokerage);
+  const profitPerUnit = totalUnits > 0 ? round(profitTotal / totalUnits) : 0;
 
   return {
     side,

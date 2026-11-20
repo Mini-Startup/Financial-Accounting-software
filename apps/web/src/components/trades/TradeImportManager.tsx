@@ -23,7 +23,7 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { apiFetch } from '../../utils/apiClient';
 import './trades-import.css';
 
-export function TradeImportManager({ onBack }: { onBack?: () => void }) {
+export function TradeImportManager({ onBack, initialFile }: { onBack?: () => void; initialFile?: File | null }) {
   const router = useRouter();
   const {
     step,
@@ -99,6 +99,13 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     setFileValidationError(null);
     resetImportState();
   };
+
+  // Automatically start parsing if an initial file was dragged & dropped from the page
+  useEffect(() => {
+    if (initialFile && step === 'UPLOAD') {
+      processFile(initialFile);
+    }
+  }, [initialFile]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -440,8 +447,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
         if (dubaiResult.debugSampleCsv) {
           try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            fetch(`${apiUrl}/trade-import/save-debug-sample`, {
+            apiFetch('/trade-import/save-debug-sample', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileName: name, csvContent: dubaiResult.debugSampleCsv }),
@@ -489,8 +495,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       setStep('PREVIEW');
       notify.success('Trades Parsed', { description: `Parsed ${parseResult.trades.length} rows. Validating against database…` });
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
+      const previewRes = await apiFetch('/trade-import/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: parseResult.trades }),
@@ -520,7 +525,6 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
     if (previewRows.length === 0) return;
     setIsProcessing(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const parsed = previewRows.map((r) => ({
         tradeNo: r.tradeNumber,
         clientCode: r.clientCode,
@@ -539,7 +543,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         instrumentType: r.instrumentType || '',
       }));
 
-      const previewRes = await fetch(`${apiUrl}/trade-import/preview`, {
+      const previewRes = await apiFetch('/trade-import/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: parsed }),
@@ -583,8 +587,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/trade-import/confirm`, {
+      const res = await apiFetch('/trade-import/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -687,7 +690,6 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
       const totalRows = formattedRows.length;
       const CHUNK_SIZE = 500;
       let totalImported = 0;
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
       for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
         const chunk = formattedRows.slice(i, i + CHUNK_SIZE);
@@ -700,7 +702,7 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
           phase: `Inserting trades into database (${totalImported.toLocaleString()} / ${totalRows.toLocaleString()})...`,
         });
 
-        const res = await fetch(`${apiUrl}/trade-import/confirm`, {
+        const res = await apiFetch('/trade-import/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -784,46 +786,101 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="p-2 md:p-4 max-w-full mx-auto space-y-5">
-      {/* Action Bar for Preview Step (Header title and X close are handled by TradeImportModal) */}
+      {/* Action Bar for Preview Step: Executive Control Bar with File Pill, Inline Broker Switcher, and Actions */}
       {step === 'PREVIEW' && (
-        <div className="flex items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs">
-          <div className="text-xs font-semibold text-slate-700">
-            Previewing <span className="font-mono font-bold text-slate-900">{fileName}</span>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+          {/* Left: Active File Pill */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs shadow-2xs">
+              <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8]">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-mono font-bold text-slate-900 truncate max-w-[200px]" title={fileName}>
+                {fileName}
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-600 font-semibold">
+                {(isDubaiImport ? dubaiPreviewRows.length : parsedTrades.length).toLocaleString()} rows
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px]">
+                {isDubaiImport ? 'Dubai F&O' : 'Standard'}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5">
-            <button onClick={handleReset} className="btn btn--secondary text-xs px-3.5 py-1.5 flex items-center gap-1.5 cursor-pointer">
-              <ArrowLeft className="w-3.5 h-3.5" /> Cancel
+
+          {/* Center: Inline Broker Selector Dropdown for Processed Data */}
+          <div className="flex items-center gap-2 bg-slate-50/90 px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+              Broker:
+            </span>
+            <div className="w-48 sm:w-56">
+              <UniversalDropdown
+                value={selectedBrokerId}
+                options={brokers.map((b) => ({
+                  value: b.id,
+                  label: `${b.name} (${b.code})`,
+                }))}
+                onChange={(val) => {
+                  setSelectedBrokerId(val);
+                  notify.success('Broker Updated', { description: 'Target broker updated for this import.' });
+                }}
+                placeholder={isLoadingBrokers ? 'Loading brokers...' : 'Select Broker...'}
+                disabled={isProcessing || isLoadingBrokers}
+                onAddClick={() => setShowBrokerModal(true)}
+                addLabel="Add Broker"
+              />
+            </div>
+          </div>
+
+          {/* Right: Cancel & Import Action Buttons */}
+          <div className="flex items-center gap-2 self-end lg:self-auto shrink-0">
+            <button
+              onClick={handleReset}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors cursor-pointer shadow-2xs active:scale-95"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
+              <span>Cancel</span>
             </button>
             {isDubaiImport ? (
               <button
                 onClick={handleConfirmDubaiImport}
                 disabled={isProcessing || selectedValidDubaiCount === 0}
-                className="btn btn--primary text-xs px-4 py-1.5 flex items-center gap-2 cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Importing…
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Importing…</span>
                   </>
                 ) : (
-                  <>Import {selectedValidDubaiCount} Selected Trades</>
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Import {selectedValidDubaiCount.toLocaleString()} Selected Trades</span>
+                  </>
                 )}
               </button>
             ) : (
               <button
                 onClick={handleConfirmImport}
                 disabled={validRowsCount === 0 || isProcessing || isValidating}
-                className="btn btn--primary text-xs px-4 py-1.5 flex items-center gap-2 cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Importing…
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Importing…</span>
                   </>
                 ) : isValidating ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Validating…
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Validating…</span>
                   </>
                 ) : (
-                  <>Import {validRowsCount} Valid Trades</>
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Import {validRowsCount.toLocaleString()} Valid Trades</span>
+                  </>
                 )}
               </button>
             )}
@@ -892,73 +949,102 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         </div>
       )}
 
-      {/* Step = PREVIEW Executive KPI Stat Strip */}
+      {/* Step = PREVIEW Executive KPI Stat Strip (Dashboard Double-Bezel Architecture) */}
       {step === 'PREVIEW' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Trades in File */}
-          <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total File Trades</div>
-              <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-                {isDubaiImport ? dubaiPreviewRows.length : parsedTrades.length}
+          <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+            <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Total File Trades
+                </div>
+                <div className="text-2xl font-extrabold font-mono text-slate-900 mt-1">
+                  {(isDubaiImport ? dubaiPreviewRows.length : parsedTrades.length).toLocaleString()}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                  {isDubaiImport ? (
+                    <span>
+                      <strong className="text-slate-800 font-semibold">{activeDubaiRows.length}</strong> active •{' '}
+                      <strong className="text-rose-600 font-semibold">{dubaiPreviewRows.length - activeDubaiRows.length}</strong> excluded (X)
+                    </span>
+                  ) : (
+                    <span className="truncate max-w-[160px] inline-block font-mono">{fileName}</span>
+                  )}
+                </div>
               </div>
-              <div className="text-[11px] text-slate-500 truncate max-w-[140px] mt-0.5">{fileName}</div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
-              <FileSpreadsheet className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#2652C8]">
+                <FileSpreadsheet className="w-5 h-5 stroke-[2]" />
+              </div>
             </div>
           </div>
 
           {/* Card 2: Valid & Ready */}
-          <div className="p-4 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid & Ready</div>
-              <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
-                {isDubaiImport ? validDubaiRowsCount : validFuturesCount}
+          <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+            <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                  Valid &amp; Ready
+                </div>
+                <div className="text-2xl font-extrabold font-mono text-emerald-700 mt-1">
+                  {(isDubaiImport ? validDubaiRowsCount : validFuturesCount).toLocaleString()}
+                </div>
+                <div className="text-[11px] text-emerald-600/90 mt-1 font-medium">
+                  Ready for ledger commit
+                </div>
               </div>
-              <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for ledger commit</div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-              <CheckCircle className="w-5 h-5 stroke-[2.2]" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
+                <CheckCircle className="w-5 h-5 stroke-[2.2]" />
+              </div>
             </div>
           </div>
 
           {/* Card 3: Unmapped Entities */}
-          <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Entities</div>
-              <div className="text-xl font-bold font-mono text-amber-700 mt-0.5">
-                {isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount}
+          <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+            <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                  Unmapped Entities
+                </div>
+                <div className="text-2xl font-extrabold font-mono text-amber-700 mt-1">
+                  {(isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount).toLocaleString()}
+                </div>
+                <div className="text-[11px] text-amber-700/80 mt-1 font-medium">
+                  Requires client / script mapping
+                </div>
               </div>
-              <div className="text-[11px] text-amber-700/80 mt-0.5">Requires client / script mapping</div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-              <AlertTriangle className="w-5 h-5 stroke-[2.2]" />
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
+                <AlertTriangle className="w-5 h-5 stroke-[2.2]" />
+              </div>
             </div>
           </div>
 
           {/* Card 4: Database Validation Status */}
-          <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Database Check</div>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isValidatingMasterData ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
-                <span className="text-xs font-bold text-slate-800">
-                  {isValidatingMasterData ? 'Verifying DB...' : 'Up to Date'}
-                </span>
+          <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+            <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+              <div className="space-y-1">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Database Check
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`w-2 h-2 rounded-full ${isValidatingMasterData ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
+                  <span className="text-sm font-bold text-slate-900">
+                    {isValidatingMasterData ? 'Verifying DB...' : 'Up to Date'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRevalidateAll}
+                  disabled={isValidatingMasterData}
+                  className="text-[11px] font-semibold text-[#2652C8] hover:text-[#1F42A3] inline-flex items-center gap-1.5 cursor-pointer transition-colors mt-0.5"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isValidatingMasterData ? 'animate-spin' : ''}`} />
+                  <span>Rerun Checks</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleRevalidateAll}
-                disabled={isValidatingMasterData}
-                className="text-[11px] font-semibold text-[#2652C8] hover:text-[#1F42A3] inline-flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <RefreshCw className={`w-3 h-3 ${isValidatingMasterData ? 'animate-spin' : ''}`} />
-                <span>Rerun Checks</span>
-              </button>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
-              <RefreshCw className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
+                <RefreshCw className="w-5 h-5" />
+              </div>
             </div>
           </div>
         </div>

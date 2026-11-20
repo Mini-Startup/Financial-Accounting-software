@@ -16,8 +16,14 @@ import {
 } from '@/components/reports/ReportExportUtils';
 import { NetPositionReportResponse, GroupByDimension } from '@/components/reports/types';
 import { DropdownOption } from '@/components/ui/UniversalDropdown';
+import { UniversalPageDropzone } from '@/components/ui/UniversalPageDropzone';
+import { TradeImportModal } from '@/components/trades/TradeImportModal';
+import { useRouter } from 'next/navigation';
 
 export default function NetPositionReportPage() {
+  const router = useRouter();
+  const [isTradeImportOpen, setIsTradeImportOpen] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [groupBy, setGroupBy] = useState<GroupByDimension>('CLIENT');
   const [asOfDate, setAsOfDate] = useState<string>(() => {
     const today = new Date();
@@ -210,8 +216,28 @@ export default function NetPositionReportPage() {
     setAsOfDate(new Date().toISOString().split('T')[0]);
   };
 
+  const handlePageFileDrop = (file: File) => {
+    const lower = file.name.toLowerCase();
+    if (lower.includes('position') || lower.includes('closing') || lower.includes('open_pos')) {
+      toast.info('Redirecting to Closing Rates & Position Verification...', {
+        description: `Importing ${file.name} for position reconciliation.`,
+      });
+      router.push('/closing-rates?import=true');
+    } else {
+      setDroppedFile(file);
+      setIsTradeImportOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
+      {/* Universal Drag & Drop File Listener on Open Position page */}
+      <UniversalPageDropzone
+        onFileDrop={handlePageFileDrop}
+        title="Drop File to Import"
+        subtitle="Drop trade file or open position CSV anywhere to start import & validation"
+      />
+
       {/* ─── HEADER ────────────────────────────────────────────────────────── */}
       <ReportHeader
         title="Open Position Report (Net Position)"
@@ -255,6 +281,21 @@ export default function NetPositionReportPage() {
 
       {/* ─── POSITION TREE TABLE ───────────────────────────────────────────── */}
       <NetPositionTable groups={filteredGroups} />
+
+      {/* Trade Import Modal (Mounted if trades file dropped on open position report) */}
+      <TradeImportModal
+        isOpen={isTradeImportOpen}
+        onClose={() => {
+          setIsTradeImportOpen(false);
+          setDroppedFile(null);
+        }}
+        initialFile={droppedFile}
+        onComplete={() => {
+          setIsTradeImportOpen(false);
+          setDroppedFile(null);
+          fetchReport();
+        }}
+      />
     </div>
   );
 }
