@@ -4,6 +4,7 @@
   "description": "Financial Accounting API — Express.js",
   "private": true,
   "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "prisma generate && tsc",
