@@ -80,11 +80,8 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@internationalized/date@3.12.4)(@react-aria/ssr@3.10.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@react-aria/utils@3.34.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@react-spectrum/provider@3.11.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-aria-components@1.22.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-aria@3.53.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwind-merge@3.6.0)(tailwindcss@4.2.2)
       '@heroui/styles':
-        specifier: ^3.0.1
+        specifier: ^3.2.7
         version: 3.2.7(tailwind-merge@3.6.0)(tailwindcss@4.2.2)
-      '@internationalized/date':
-        specifier: ^3.12.4
-        version: 3.12.4
       '@prisma/adapter-pg':
         specifier: ^7.7.0
         version: 7.7.0
