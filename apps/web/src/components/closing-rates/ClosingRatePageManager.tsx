@@ -325,6 +325,7 @@ export function ClosingRatePageManager({
         setRawOpenPositionRows(rawRows);
         const items = processOpenPositionClosingRates(rawRows, exchanges, localScripts);
         setParsedItems(items);
+        setIsAccordionOpen(true);
         notify.success('Rates Extracted Successfully', {
           description: `Extracted ${items.length} unique closing rates from ${rawRows.length} open position rows.`,
         });
@@ -971,23 +972,40 @@ export function ClosingRatePageManager({
             />
           )}
 
-          {/* Parsed Metrics Summary */}
+          {/* Parsed Metrics Executive KPI Strip */}
           {parsedItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-              <div className="card bg-slate-50 p-4 border border-slate-200">
-                <div className="text-xs text-slate-500 font-semibold uppercase">Total Unique Closing Rates</div>
-                <div className="text-xl font-bold text-slate-800 mt-1">{parsedItems.length}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-4 border-t border-slate-100">
+              <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Unique Rates</div>
+                  <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{parsedItems.length}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
               </div>
-              <div className="card bg-emerald-50/60 p-4 border border-emerald-200">
-                <div className="text-xs text-emerald-700 font-semibold uppercase">Valid Unique Rates</div>
-                <div className="text-xl font-bold text-emerald-800 mt-1">{validCount}</div>
-                <div className="text-[11px] text-emerald-600 mt-0.5">ready for database import</div>
+
+              <div className="p-4 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
+                  <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">{validCount}</div>
+                  <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for database import</div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
+                </div>
               </div>
-              <div className="card bg-rose-50/60 p-4 border border-rose-200">
-                <div className="text-xs text-rose-700 font-semibold uppercase">Unmapped Securities</div>
-                <div className="text-xl font-bold text-rose-800 mt-1">{unmappedCount}</div>
-                <div className="text-[11px] text-rose-600 mt-0.5">require script creation</div>
+
+              <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
+                  <div className="text-xl font-bold font-mono text-amber-700 mt-0.5">{unmappedCount}</div>
+                  <div className="text-[11px] text-amber-700/80 mt-0.5">Require script mapping</div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+                </div>
               </div>
             </div>
           )}

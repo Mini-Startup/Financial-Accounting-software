@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { notify } from '../../utils/toastNotify';
-import { ArrowLeft, RefreshCw, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileSpreadsheet, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { parseTradeFile, parseDubaiTradeFile, validateTradeImportFile, type FileValidationResult } from '../../lib/tradeParser';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
 import * as XLSX from 'xlsx';
@@ -915,34 +915,75 @@ export function TradeImportManager({ onBack }: { onBack?: () => void }) {
         </div>
       )}
 
-      {/* Step = PREVIEW Validation Status Bar */}
+      {/* Step = PREVIEW Executive KPI Stat Strip */}
       {step === 'PREVIEW' && (
-        <div className="card p-3.5 bg-slate-900 text-white rounded-lg shadow-sm flex items-center justify-between gap-4 border border-slate-800">
-          <div className="flex items-center gap-3">
-            {isValidatingMasterData ? (
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
-                <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
-                <span>Running database checks & master data validation...</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: Total Trades in File */}
+          <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total File Trades</div>
+              <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">
+                {isDubaiImport ? dubaiPreviewRows.length : parsedTrades.length}
               </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
-                <span className="w-2 h-2 rounded-xs bg-emerald-400 animate-pulse"></span>
-                <span>
-                  Validation checks complete: {isDubaiImport ? validDubaiRowsCount : validFuturesCount} valid,{' '}
-                  {isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount} unmapped
-                </span>
-              </div>
-            )}
+              <div className="text-[11px] text-slate-500 truncate max-w-[140px] mt-0.5">{fileName}</div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2652C8]">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
           </div>
 
-          <button
-            onClick={handleRevalidateAll}
-            disabled={isValidatingMasterData}
-            className="btn btn--secondary text-xs py-1.5 px-3 flex items-center gap-1.5 hover:bg-slate-800 border-slate-700 text-slate-200 font-medium"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isValidatingMasterData ? 'animate-spin' : ''}`} />
-            <span>Rerun Checks</span>
-          </button>
+          {/* Card 2: Valid & Ready */}
+          <div className="p-4 rounded-xl bg-white border border-emerald-200/90 shadow-2xs flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid & Ready</div>
+              <div className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
+                {isDubaiImport ? validDubaiRowsCount : validFuturesCount}
+              </div>
+              <div className="text-[11px] text-emerald-600/90 mt-0.5">Ready for ledger commit</div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+              <CheckCircle className="w-5 h-5 stroke-[2.2]" />
+            </div>
+          </div>
+
+          {/* Card 3: Unmapped Entities */}
+          <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-2xs flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Entities</div>
+              <div className="text-xl font-bold font-mono text-amber-700 mt-0.5">
+                {isDubaiImport ? invalidDubaiRowsCount : invalidFuturesCount}
+              </div>
+              <div className="text-[11px] text-amber-700/80 mt-0.5">Requires client / script mapping</div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+              <AlertTriangle className="w-5 h-5 stroke-[2.2]" />
+            </div>
+          </div>
+
+          {/* Card 4: Database Validation Status */}
+          <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Database Check</div>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isValidatingMasterData ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
+                <span className="text-xs font-bold text-slate-800">
+                  {isValidatingMasterData ? 'Verifying DB...' : 'Up to Date'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRevalidateAll}
+                disabled={isValidatingMasterData}
+                className="text-[11px] font-semibold text-[#2652C8] hover:text-[#1F42A3] inline-flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <RefreshCw className={`w-3 h-3 ${isValidatingMasterData ? 'animate-spin' : ''}`} />
+                <span>Rerun Checks</span>
+              </button>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+          </div>
         </div>
       )}
 
