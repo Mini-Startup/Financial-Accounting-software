@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Trash2, AlertCircle, CheckCircle, Scale, FileText, Plus, Sparkles } from 'lucide-react';
+import { Trash2, AlertCircle, CheckCircle, Scale, FileText, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
@@ -504,9 +504,16 @@ export function VoucherForm({
                   <button
                     type="submit"
                     disabled={saving || !isBalanced}
-                    className="btn btn--primary py-2 px-6 font-bold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn btn--primary py-2 px-6 font-bold shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {saving ? 'Posting...' : 'Save & Post Voucher'}
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        <span>Posting Voucher...</span>
+                      </>
+                    ) : (
+                      'Save & Post Voucher'
+                    )}
                   </button>
                 </div>
               </div>

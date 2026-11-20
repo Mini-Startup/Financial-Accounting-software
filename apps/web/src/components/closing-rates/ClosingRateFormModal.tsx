@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, TrendingUp } from 'lucide-react';
+import { X, TrendingUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
@@ -387,13 +387,13 @@ export function ClosingRateFormModal({
               </div>
             </div>
 
-            {/* Unified Modal Footer */}
+            {/* Unified Modal Footer with Spin Loader & Debounce Micro-interactions */}
             <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
               >
                 Cancel
               </button>
@@ -401,9 +401,18 @@ export function ClosingRateFormModal({
                 type="submit"
                 form="closingRateForm"
                 disabled={isSubmitting || !rateDate || !scriptId || !rate}
-                className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm transition-all duration-150 shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
               >
-                {isSubmitting ? 'Saving...' : initialData ? 'Update Rate' : 'Save Rate'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Saving...</span>
+                  </>
+                ) : initialData ? (
+                  'Update Rate'
+                ) : (
+                  'Save Rate'
+                )}
               </button>
             </div>
           </form>

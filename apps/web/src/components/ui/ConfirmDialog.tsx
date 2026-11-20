@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2, Info, X, RefreshCw, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useDebouncedAction } from '@/hooks/useDebouncedAction';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -70,6 +71,12 @@ export function ConfirmDialog({
   const config = variantConfig[variant] || variantConfig.danger;
   const IconComponent = config.icon;
 
+  const [debouncedConfirm, isConfirming] = useDebouncedAction(async () => {
+    await onConfirm();
+  }, 400);
+
+  const isBusy = isLoading || isConfirming;
+
   useEffect(() => {
     if (isOpen) {
       cancelRef.current?.focus();
@@ -134,28 +141,28 @@ export function ConfirmDialog({
             {message}
           </div>
 
-          {/* Action Buttons: Clean Rounded Pills (Matching Image 3) */}
+          {/* Action Buttons: Clean Rounded Pills with Debounce and Spin Feedback */}
           <div className="mt-7 flex items-center justify-center gap-3">
             <button
               ref={cancelRef}
               onClick={onCancel}
-              disabled={isLoading}
-              className="px-5 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              disabled={isBusy}
+              className="px-5 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-[0.98] disabled:opacity-50"
             >
               {cancelLabel}
             </button>
             <button
-              onClick={onConfirm}
-              disabled={isLoading}
+              onClick={debouncedConfirm}
+              disabled={isBusy}
               className={cn(
-                'px-6 py-2.5 rounded-lg font-semibold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed',
+                'px-6 py-2.5 rounded-lg font-semibold text-xs transition-all duration-150 shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed',
                 config.confirmBtn
               )}
             >
-              {isLoading ? (
+              {isBusy ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Processing…
+                  <span>Processing…</span>
                 </>
               ) : (
                 confirmLabel

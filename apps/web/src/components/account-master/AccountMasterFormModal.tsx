@@ -468,24 +468,24 @@ export function AccountMasterFormModal({
             </div>
           </div>
 
-          {/* Unified Modal Footer */}
+          {/* Unified Modal Footer with Debounced Feedback */}
           <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+              className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
-              className="h-9 px-5 text-xs font-semibold text-white bg-[#2652C8] hover:bg-[#1E42A8] rounded-lg transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-9 px-5 text-xs font-semibold text-white bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm rounded-lg transition-all duration-150 shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                   <span>Saving…</span>
                 </>
               ) : isDuplicate ? (

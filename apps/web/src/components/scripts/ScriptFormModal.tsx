@@ -566,7 +566,7 @@ export function ScriptFormModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
               >
                 Cancel
               </button>
@@ -575,15 +575,15 @@ export function ScriptFormModal({
                 form="scriptForm"
                 disabled={isSubmitting || isDuplicate || !formData.exchangeId || !formData.currencyId || !formData.shortName.trim()}
                 className={cn(
-                  "h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer",
+                  "h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.98]",
                   (isDuplicate || !formData.exchangeId)
                     ? "bg-slate-400 cursor-not-allowed opacity-60"
-                    : "bg-[#2652C8] hover:bg-[#1E42A8]"
+                    : "bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm"
                 )}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                     <span>Saving...</span>
                   </>
                 ) : isDuplicate ? (
