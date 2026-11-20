@@ -96,21 +96,28 @@ const sections: NavSection[] = [
     icon: FileSpreadsheet,
     children: [
       {
-        name: "Net Position Report",
-        path: "/reports/net-position",
+        name: "Invoice Report",
+        path: "/reports/invoice",
+        icon: FileSpreadsheet,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Open Position Report",
+        path: "/reports/open-position",
         icon: TrendingUp,
         feature: "REPORTS",
         permission: { feature: "REPORTS", action: "VIEW" },
       },
       {
-        name: "Settlement Audit Report",
-        path: "/reports/settlement-detail",
+        name: "Settlement Report",
+        path: "/reports/settlement",
         icon: ScrollText,
         feature: "REPORTS",
         permission: { feature: "REPORTS", action: "VIEW" },
       },
       {
-        name: "Financial Settlement Sheet",
+        name: "Settlement Summary",
         path: "/reports/settlement-summary",
         icon: BookText,
         feature: "REPORTS",

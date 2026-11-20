@@ -15,6 +15,11 @@ import {
   SettlementSummaryBrokerRow,
   SettlementSummaryReconciliation,
   TradeClassification,
+  InvoiceReportQuery,
+  InvoiceReportResponse,
+  InvoiceEntityGroup,
+  InvoiceScriptGroup,
+  InvoiceTradeLeg,
 } from './types';
 import {
   formatDateToDDMMYY,
@@ -23,6 +28,7 @@ import {
   roundTo,
   determineBalanceType,
 } from './utils';
+import { deriveSecurityName } from '../settlement/utils';
 
 /**
  * Ensures 'REPORTS:VIEW' and 'REPORTS:EXPORT' permissions exist in the permissions table.
@@ -881,6 +887,234 @@ export class ReportsService {
         imbalanceDelta,
         isBalanced,
       },
+    };
+  }
+
+  /**
+   * REPORT 4: Invoice Report (Futures Bill)
+   * Bilateral settlement invoice strictly for settled trades (Net = 0 per security).
+   * Grouped by Entity (Client or Broker) and sub-grouped by Script (Security Name).
+   */
+  static async getInvoice(query: InvoiceReportQuery): Promise<InvoiceReportResponse> {
+    const entityType: 'CLIENT' | 'BROKER' = query.entityType === 'BROKER' ? 'BROKER' : 'CLIENT';
+
+    // 1. Resolve Target Settlement
+    let settlement: any = null;
+    if (query.settlementId && query.settlementId !== 'LATEST' && query.settlementId !== 'LIVE') {
+      settlement = await prisma.settlement.findUnique({
+        where: { id: query.settlementId },
+      });
+    } else if (query.settlementId === 'LIVE') {
+      settlement = null;
+    } else {
+      // Latest completed settlement by default
+      settlement = await prisma.settlement.findFirst({
+        orderBy: { toDate: 'desc' },
+      });
+    }
+
+    // Determine query date range or settlement ID
+    const whereClause: any = {
+      isDeleted: false,
+    };
+
+    if (settlement) {
+      whereClause.settlementId = settlement.id;
+    } else if (query.fromDate && query.toDate) {
+      const start = new Date(query.fromDate);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(query.toDate);
+      end.setUTCHours(23, 59, 59, 999);
+      whereClause.tradeDate = { gte: start, lte: end };
+      whereClause.settlementId = null;
+    } else {
+      whereClause.settlementId = null; // Live
+    }
+
+    // Filter by specific entity if requested
+    if (query.entityId && query.entityId !== 'ALL') {
+      if (entityType === 'CLIENT') {
+        whereClause.accountId = query.entityId;
+      } else {
+        whereClause.brokerId = query.entityId;
+      }
+    } else {
+      if (entityType === 'BROKER') {
+        whereClause.brokerId = { not: null };
+      }
+    }
+
+    // Fetch trades
+    const trades = await prisma.trade.findMany({
+      where: whereClause,
+      include: {
+        account: true,
+        broker: true,
+        script: { include: { currency: true } },
+        exchange: true,
+      },
+      orderBy: [
+        { tradeDate: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    // 2. Group trades by Entity (Client or Broker)
+    const entityTradesMap = new Map<string, {
+      entityId: string;
+      entityCode: string;
+      entityName: string;
+      trades: typeof trades;
+    }>();
+
+    for (const trade of trades) {
+      const entityId = entityType === 'CLIENT' ? trade.accountId : trade.brokerId;
+      if (!entityId) continue;
+
+      const entityCode = entityType === 'CLIENT' ? trade.account.code : (trade.broker?.code || 'UNKNOWN');
+      const entityName = entityType === 'CLIENT' ? trade.account.name : (trade.broker?.name || 'Unknown Broker');
+
+      if (!entityTradesMap.has(entityId)) {
+        entityTradesMap.set(entityId, {
+          entityId,
+          entityCode,
+          entityName,
+          trades: [],
+        });
+      }
+      entityTradesMap.get(entityId)!.trades.push(trade);
+    }
+
+    // 3. For each entity, group trades by Security Name
+    const invoiceEntities: InvoiceEntityGroup[] = [];
+
+    const settlementName = settlement?.name || (whereClause.settlementId ? 'Settlement' : 'Live Cycle');
+    const settlementFromDate = settlement?.fromDate
+      ? formatDateToDDMMYY(settlement.fromDate)
+      : query.fromDate
+      ? formatDateToDDMMYY(query.fromDate)
+      : formatDateToDDMMYY(new Date());
+    const settlementToDate = settlement?.toDate
+      ? formatDateToDDMMYY(settlement.toDate)
+      : query.toDate
+      ? formatDateToDDMMYY(query.toDate)
+      : formatDateToDDMMYY(new Date());
+
+    for (const entity of Array.from(entityTradesMap.values())) {
+      // Group by Security Name
+      const securityMap = new Map<string, typeof trades>();
+
+      for (const t of entity.trades) {
+        const secName = deriveSecurityName(
+          t.securityName,
+          t.script.shortName,
+          t.script.fullName,
+          t.expiry,
+          t.callPut,
+          t.strikePrice
+        );
+        if (!securityMap.has(secName)) {
+          securityMap.set(secName, []);
+        }
+        securityMap.get(secName)!.push(t);
+      }
+
+      const scriptGroups: InvoiceScriptGroup[] = [];
+      let entityTotalBuyQty = 0;
+      let entityTotalSellQty = 0;
+      let entityTotalNetAmount = 0;
+
+      for (const [secName, secTrades] of Array.from(securityMap.entries())) {
+        let secBuyQty = 0;
+        let secSellQty = 0;
+        const tradeLegs: InvoiceTradeLeg[] = [];
+
+        for (const t of secTrades) {
+          const isBuy = t.transactionType === 'BUY';
+          const qty = t.quantity;
+          const rate = entityType === 'CLIENT' ? (t.clientRate ?? t.rate) : (t.brokerRate ?? t.rate);
+          const tradeAmt = isBuy ? (qty * rate) : -(qty * rate);
+
+          if (isBuy) secBuyQty += qty;
+          else secSellQty += qty;
+
+          // Trade classification flag
+          let flag: 'B' | 'C' | '' = '';
+          if (t.tradeType === 'BACK_FORWARD') flag = 'B';
+          else if (t.tradeType === 'CARRY_FORWARD') flag = 'C';
+
+          tradeLegs.push({
+            id: t.id,
+            exchangeCode: t.exchange.code,
+            expiryFormatted: formatDateToDDMMYY(t.expiry) || t.expiry || '',
+            scripName: t.script.shortName,
+            securityName: secName,
+            tradeDateFormatted: formatDateToDDMMYY(t.tradeDate),
+            tradeType: t.tradeType as TradeClassification,
+            tradeTypeFlag: flag,
+            buyQty: isBuy ? qty : null,
+            sellQty: !isBuy ? qty : null,
+            netRate: rate,
+            amount: roundTo(tradeAmt, 4),
+          });
+        }
+
+        const netQty = roundTo(secBuyQty - secSellQty, 4);
+        const isNetZero = Math.abs(netQty) < 0.001;
+
+        // In an invoice, we only show scripts that were settled (Net = 0)
+        if (isNetZero || whereClause.settlementId !== null) {
+          const scriptNetAmount = roundTo(
+            tradeLegs.reduce((sum, leg) => sum + leg.amount, 0),
+            4
+          );
+
+          scriptGroups.push({
+            securityName: secName,
+            exchangeCode: secTrades[0]?.exchange.code || 'NSE',
+            trades: tradeLegs,
+            totalBuyQty: secBuyQty,
+            totalSellQty: secSellQty,
+            netAmount: scriptNetAmount,
+            isNetZero,
+          });
+
+          entityTotalBuyQty += secBuyQty;
+          entityTotalSellQty += secSellQty;
+          entityTotalNetAmount = roundTo(entityTotalNetAmount + scriptNetAmount, 4);
+        }
+      }
+
+      if (scriptGroups.length > 0) {
+        invoiceEntities.push({
+          entityId: entity.entityId,
+          entityCode: entity.entityCode,
+          entityName: entity.entityName,
+          entityRole: entityType,
+          settlementName,
+          settlementFromDate,
+          settlementToDate,
+          scripts: scriptGroups,
+          totalBuyQty: entityTotalBuyQty,
+          totalSellQty: entityTotalSellQty,
+          totalNetAmount: entityTotalNetAmount,
+          netPayableOrReceivable: Math.abs(entityTotalNetAmount),
+          balanceType: entityTotalNetAmount >= 0 ? 'Dr' : 'Cr',
+        });
+      }
+    }
+
+    // Sort entities alphabetically by code
+    invoiceEntities.sort((a, b) => a.entityCode.localeCompare(b.entityCode));
+
+    return {
+      settlementId: settlement?.id || 'LIVE',
+      settlementName,
+      settlementFromDate,
+      settlementToDate,
+      entityType,
+      selectedEntityId: query.entityId,
+      invoices: invoiceEntities,
     };
   }
 }

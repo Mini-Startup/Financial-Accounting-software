@@ -214,7 +214,7 @@ export default function NetPositionReportPage() {
     <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* ─── HEADER ────────────────────────────────────────────────────────── */}
       <ReportHeader
-        title="Net Position Report"
+        title="Open Position Report (Net Position)"
         subtitle="Live open positions, contract exposures, and mark-to-market valuations"
         periodLabel="As of Date"
         asOfDate={reportData?.asOfDate || asOfDate}
@@ -222,6 +222,11 @@ export default function NetPositionReportPage() {
         onRefresh={fetchReport}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
+        onGenerateReport={() => {
+          toast.success('Report Ready for Generation', {
+            description: `Open Position report prepared for ${groupBy.toLowerCase()}. Dedicated viewer will open in Phase 2.`,
+          });
+        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}

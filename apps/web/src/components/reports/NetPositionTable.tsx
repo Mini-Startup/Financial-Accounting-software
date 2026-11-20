@@ -193,7 +193,8 @@ export function NetPositionTable({ groups }: NetPositionTableProps) {
                         <th className="py-2 px-3 font-semibold text-right">Sell Qty</th>
                         <th className="py-2 px-3 font-semibold text-right">Sell Avg</th>
                         <th className="py-2 px-3 font-semibold text-center">Net Qty</th>
-                        <th className="py-2 px-3 font-semibold text-right">Lot</th>
+                        <th className="py-2 px-3 font-semibold text-right">Net Lot</th>
+                        <th className="py-2 px-3 font-semibold text-right">Lot Size</th>
                         <th className="py-2 px-3 font-semibold text-right">Units</th>
                         <th className="py-2 px-3 font-semibold text-right">Net Avg</th>
                         <th className="py-2 px-3 font-semibold text-right">Closing Rate</th>
@@ -232,14 +233,17 @@ export function NetPositionTable({ groups }: NetPositionTableProps) {
                             <td className="py-2 px-3 text-center">
                               <span
                                 className={cn(
-                                  'inline-block px-2 py-0.5 rounded font-mono text-[11px] font-semibold',
-                                  pos.netQty > 0 && 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
-                                  pos.netQty < 0 && 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
-                                  pos.netQty === 0 && 'bg-muted text-muted-foreground'
+                                  'inline-block px-2 py-0.5 rounded font-mono text-[11px] font-bold',
+                                  pos.netQty > 0 && 'bg-blue-50 text-blue-700 border border-blue-200',
+                                  pos.netQty < 0 && 'bg-rose-50 text-rose-700 border border-rose-200',
+                                  pos.netQty === 0 && 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 )}
                               >
-                                {pos.netQty > 0 ? `+${pos.netQty}` : pos.netQty}
+                                {pos.netQty > 0 ? `+${pos.netQty} FF` : pos.netQty < 0 ? `${pos.netQty} FF` : `0 FF`}
                               </span>
+                            </td>
+                            <td className="py-2 px-3 font-mono text-right font-semibold text-foreground">
+                              {(pos.netQty / (pos.marketLot || 1)).toFixed(2)}
                             </td>
                             <td className="py-2 px-3 font-mono text-right text-muted-foreground">
                               {pos.marketLot}

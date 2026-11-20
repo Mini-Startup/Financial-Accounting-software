@@ -7,6 +7,7 @@ import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { ReportHeader } from '@/components/reports/ReportHeader';
 import { ReportControlsBar } from '@/components/reports/ReportControlsBar';
 import { SettlementSummaryCards } from '@/components/reports/SettlementSummaryCards';
+import { SettlementBalanceSheetTable } from '@/components/reports/SettlementBalanceSheetTable';
 import { ClientSummarySection } from '@/components/reports/ClientSummarySection';
 import { BrokerSummarySection } from '@/components/reports/BrokerSummarySection';
 import { ReconciliationSection } from '@/components/reports/ReconciliationSection';
@@ -23,6 +24,7 @@ export default function SettlementSummaryPage() {
   const [settlementId, setSettlementId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [balanceSheetMode, setBalanceSheetMode] = useState<'CLIENT' | 'BROKER'>('CLIENT');
 
   const [summaryData, setSummaryData] = useState<SettlementSummaryReportResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -169,7 +171,7 @@ export default function SettlementSummaryPage() {
     <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* ─── HEADER ────────────────────────────────────────────────────────── */}
       <ReportHeader
-        title="Financial Settlement Sheet"
+        title="Settlement Summary (Reconciliation)"
         subtitle="Executive double-entry clearing statement with client net, broker net, and equilibrium verification"
         periodLabel="Cycle Period"
         asOfDate={
@@ -181,6 +183,11 @@ export default function SettlementSummaryPage() {
         onRefresh={fetchSummaryReport}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
+        onGenerateReport={() => {
+          toast.success('Report Ready for Generation', {
+            description: 'Settlement summary report prepared. Dedicated viewer will open in Phase 2.',
+          });
+        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}
@@ -194,6 +201,50 @@ export default function SettlementSummaryPage() {
         onToDateChange={setToDate}
         onResetFilters={handleResetFilters}
       />
+
+      {/* ─── DOUBLE-ENTRY SETTLEMENT TRIAL BALANCE (EXACT AS SCREENSHOT) ── */}
+      {summaryData && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Reconciliation Sheet View:
+            </span>
+            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setBalanceSheetMode('CLIENT')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  balanceSheetMode === 'CLIENT'
+                    ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Client Trial Balance
+              </button>
+              <button
+                type="button"
+                onClick={() => setBalanceSheetMode('BROKER')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  balanceSheetMode === 'BROKER'
+                    ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Broker Trial Balance
+              </button>
+            </div>
+          </div>
+
+          <SettlementBalanceSheetTable
+            settlementName={summaryData.settlement.name}
+            fromDate={summaryData.settlement.fromDate}
+            toDate={summaryData.settlement.toDate}
+            clientRows={summaryData.clientSummary.rows}
+            brokerRows={summaryData.brokerSummary.rows}
+            viewMode={balanceSheetMode}
+          />
+        </div>
+      )}
 
       {/* ─── EXECUTIVE METRIC CARDS ────────────────────────────────────────── */}
       {summaryData && (

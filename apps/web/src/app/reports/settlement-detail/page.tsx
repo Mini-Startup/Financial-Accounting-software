@@ -213,7 +213,7 @@ export default function SettlementDetailPage() {
     <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* ─── HEADER ────────────────────────────────────────────────────────── */}
       <ReportHeader
-        title="Settlement Audit Report"
+        title="Settlement Report"
         subtitle="Complete trade provenance categorized into Regular, Carry Forward, Back Forward, and Settlement entries"
         periodLabel="Settlement Period"
         asOfDate={
@@ -225,6 +225,11 @@ export default function SettlementDetailPage() {
         onRefresh={fetchAuditReport}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
+        onGenerateReport={() => {
+          toast.success('Report Ready for Generation', {
+            description: 'Settlement report prepared. Dedicated viewer will open in Phase 2.',
+          });
+        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}

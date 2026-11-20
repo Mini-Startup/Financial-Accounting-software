@@ -90,4 +90,32 @@ router.get(
   }
 );
 
+/**
+ * GET /reports/invoice
+ * Bilateral settlement invoice (Futures Bill) grouped by client/broker and script.
+ */
+router.get(
+  '/invoice',
+  requirePermission('REPORTS', 'VIEW'),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { entityType, entityId, settlementId, fromDate, toDate } = req.query;
+
+      const validEntityType = entityType === 'BROKER' ? 'BROKER' : 'CLIENT';
+
+      const result = await ReportsService.getInvoice({
+        entityType: validEntityType,
+        entityId: typeof entityId === 'string' ? entityId : undefined,
+        settlementId: typeof settlementId === 'string' ? settlementId : undefined,
+        fromDate: typeof fromDate === 'string' ? fromDate : undefined,
+        toDate: typeof toDate === 'string' ? toDate : undefined,
+      });
+
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

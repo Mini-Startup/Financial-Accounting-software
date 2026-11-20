@@ -199,6 +199,67 @@ export interface SettlementSummaryReconciliation {
   isBalanced: boolean;
 }
 
+// ─── REPORT 4: INVOICE REPORT (FUTURES BILL) ──────────────────────────────
+
+export interface InvoiceReportQuery {
+  entityType?: 'CLIENT' | 'BROKER';
+  entityId?: string; // specific client/broker ID or undefined for ALL
+  settlementId?: string; // settlement ID or 'LATEST'
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface InvoiceTradeLeg {
+  id: string;
+  exchangeCode: string;
+  expiryFormatted: string;
+  scripName: string;
+  securityName: string;
+  tradeDateFormatted: string;
+  tradeType: TradeClassification;
+  tradeTypeFlag: 'B' | 'C' | '';
+  buyQty: number | null;
+  sellQty: number | null;
+  netRate: number;
+  amount: number;
+}
+
+export interface InvoiceScriptGroup {
+  securityName: string;
+  exchangeCode: string;
+  trades: InvoiceTradeLeg[];
+  totalBuyQty: number;
+  totalSellQty: number;
+  netAmount: number;
+  isNetZero: boolean;
+}
+
+export interface InvoiceEntityGroup {
+  entityId: string;
+  entityCode: string;
+  entityName: string;
+  entityRole: 'CLIENT' | 'BROKER';
+  settlementName: string;
+  settlementFromDate: string;
+  settlementToDate: string;
+  scripts: InvoiceScriptGroup[];
+  totalBuyQty: number;
+  totalSellQty: number;
+  totalNetAmount: number;
+  netPayableOrReceivable: number;
+  balanceType: BalanceType;
+}
+
+export interface InvoiceReportResponse {
+  settlementId: string;
+  settlementName: string;
+  settlementFromDate: string;
+  settlementToDate: string;
+  entityType: 'CLIENT' | 'BROKER';
+  selectedEntityId?: string;
+  invoices: InvoiceEntityGroup[];
+}
+
 export interface SettlementSummaryReportResponse {
   settlement: {
     id: string | null;
