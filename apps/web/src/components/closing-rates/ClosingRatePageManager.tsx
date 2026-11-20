@@ -27,6 +27,7 @@ import {
   type ParsedClosingRateItem, 
   type OpenPositionParsedRow 
 } from '../../lib/tradeParser/openPositionParser';
+import { validateClosingRateImportFile, type FileValidationResult } from '../../lib/tradeParser';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { useTopBar } from '@/context/TopBarContext';
@@ -128,6 +129,7 @@ export function ClosingRatePageManager({
   const [showAdjustConfirm, setShowAdjustConfirm] = useState<boolean>(false);
   const [rawOpenPositionRows, setRawOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
   const [parsedItems, setParsedItems] = useState<ParsedClosingRateItem[]>([]);
+  const [fileValidationError, setFileValidationError] = useState<FileValidationResult | null>(null);
   
   // Preview Selection & Search States
   const [selectedRateIndices, setSelectedRateIndices] = useState<Set<number>>(new Set());
@@ -299,6 +301,20 @@ export function ClosingRatePageManager({
     reader.onload = (evt) => {
       try {
         const text = evt.target?.result as string;
+
+        // ── Pre-Parse File Validation Layer ──
+        const validation = validateClosingRateImportFile(text);
+        if (!validation.isValid) {
+          setFileValidationError(validation);
+          notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Closing Rate File Format', {
+            description: validation.errors[0] || 'File format does not match Open Position schema.',
+            duration: 8000,
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        setFileValidationError(null);
         const rawRows = parseOpenPositionCSV(text);
         if (rawRows.length === 0) {
           toast.error('No valid rows found in CSV file.');
@@ -326,6 +342,7 @@ export function ClosingRatePageManager({
 
   const handleClearFile = () => {
     setFileName('');
+    setFileValidationError(null);
     setRawOpenPositionRows([]);
     setParsedItems([]);
     if (inputRef.current) inputRef.current.value = '';
@@ -868,6 +885,55 @@ export function ClosingRatePageManager({
               title="Select or drop Open Position CSV"
               description="Supports CSV, TXT files (drag & drop or click to browse)"
             />
+
+            {fileValidationError && (
+              <div className="mt-4 p-4 rounded-xl border-2 border-rose-200 bg-rose-50/80 text-slate-800 shadow-xs animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0 text-rose-600">
+                    <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-rose-950">
+                        {fileValidationError.isCrossFileMismatch ? 'Wrong File Format Detected' : 'Invalid File Format'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setFileValidationError(null)}
+                        className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <div className="text-xs text-rose-900/90 space-y-1">
+                      {fileValidationError.errors.map((err, idx) => (
+                        <p key={idx} className="flex items-start gap-1.5">
+                          <span className="text-rose-500 font-bold shrink-0">•</span>
+                          <span>{err}</span>
+                        </p>
+                      ))}
+                    </div>
+                    {fileValidationError.missingHeaders.length > 0 && !fileValidationError.isCrossFileMismatch && (
+                      <div className="pt-1 text-[11px] text-rose-700">
+                        <span className="font-semibold">Required: </span>
+                        <span>{fileValidationError.missingHeaders.join(', ')}</span>
+                      </div>
+                    )}
+                    {fileValidationError.suggestedAction && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => router.push(fileValidationError.suggestedAction!.targetRoute)}
+                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
+                        >
+                          {fileValidationError.suggestedAction.message}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Validation Status Bar */}
