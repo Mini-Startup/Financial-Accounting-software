@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace } from '../ui/FindAndReplace';
 import { useTopBar } from '@/context/TopBarContext';
 import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { apiFetch } from '@/utils/apiClient';
 import { cn } from '@/utils/cn';
 import {
   sortRecords,
@@ -207,17 +208,18 @@ export function AccountMasterPageManager({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+          const res = await apiFetch(`/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
             setAccounts((prev) => prev.filter((acc) => acc.id !== id));
             toast.success('Account master deleted successfully');
           } else {
-            toast.error('Failed to delete account master');
+            const err = await res.json().catch(() => ({}));
+            toast.error(err.message || 'Failed to delete account master');
           }
-        } catch {
-          toast.error('Failed to delete account master');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete account master');
         }
       },
     });
@@ -235,18 +237,31 @@ export function AccountMasterPageManager({
         setIsDeleting(true);
         try {
           const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          setAccounts((prev) => prev.filter((acc) => !selectedIds.has(acc.id)));
+          let successCount = 0;
+          let failedCount = 0;
+          let lastErrorMessage = '';
+          for (const id of ids) {
+            const res = await apiFetch(`/account-masters/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+              successCount++;
+            } else {
+              failedCount++;
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            toast.success(`${successCount} account master(s) deleted successfully`);
+          }
+          if (failedCount > 0) {
+            toast.error(lastErrorMessage || `Could not delete ${failedCount} account(s) due to active trades or dependencies.`);
+          }
           setSelectedIds(new Set());
-          toast.success(`${count} account masters deleted successfully`);
-        } catch {
-          toast.error('Failed to delete some accounts');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete some accounts');
         } finally {
           setIsDeleting(false);
         }

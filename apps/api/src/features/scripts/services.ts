@@ -53,7 +53,9 @@ export class ScriptsService {
   }
 
   async findAll(search?: string) {
-    const where: Prisma.ScriptWhereInput = {};
+    const where: Prisma.ScriptWhereInput = {
+      isDeleted: false,
+    };
 
     if (search) {
       where.fullName = {
@@ -80,7 +82,7 @@ export class ScriptsService {
         currency: true,
       },
     });
-    if (!script) throw new NotFoundException(`Script ${id} not found`);
+    if (!script || script.isDeleted) throw new NotFoundException(`Script ${id} not found`);
     return script;
   }
 
@@ -143,8 +145,27 @@ export class ScriptsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return prisma.script.delete({
+
+    const activeTradesCount = await prisma.trade.count({
+      where: {
+        scriptId: id,
+        isDeleted: false,
+      },
+    });
+
+    if (activeTradesCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete Script: ${activeTradesCount} active trades are currently linked to this script.`
+      );
+    }
+
+    return prisma.script.update({
       where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        isActive: false,
+      },
     });
   }
 }

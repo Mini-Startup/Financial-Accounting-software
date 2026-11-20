@@ -10,6 +10,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { notify } from '@/utils/toastNotify';
+import { apiFetch } from '@/utils/apiClient';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { formatCurrencySymbol } from '@/utils/currency';
@@ -112,7 +113,7 @@ export function TradeFormModal({
   useEffect(() => {
     const fetchExpiries = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates?activeOnly=true`);
+        const res = await apiFetch('/expiry-dates?activeOnly=true');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -207,11 +208,11 @@ export function TradeFormModal({
     const fetchRules = async () => {
       try {
         const clientPromise = clientId
-          ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/account/${clientId}`).then((r) => r.ok ? r.json() : null)
+          ? apiFetch(`/brokerages/account/${clientId}`).then((r) => r.ok ? r.json() : null)
           : Promise.resolve(null);
 
         const brokerPromise = brokerId
-          ? fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/account/${brokerId}`).then((r) => r.ok ? r.json() : null)
+          ? apiFetch(`/brokerages/account/${brokerId}`).then((r) => r.ok ? r.json() : null)
           : Promise.resolve(null);
 
         const [cRule, bRule] = await Promise.all([clientPromise, brokerPromise]);
@@ -378,12 +379,12 @@ export function TradeFormModal({
     setIsSaving(true);
     try {
       const isEdit = Boolean(initialTrade?.id);
-      const url = isEdit
-        ? `${process.env.NEXT_PUBLIC_API_URL}/trades/${initialTrade.id}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/trades`;
+      const endpoint = isEdit
+        ? `/trades/${initialTrade.id}`
+        : `/trades`;
       const method = isEdit ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

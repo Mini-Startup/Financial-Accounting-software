@@ -9,6 +9,7 @@ import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-re
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace } from '../ui/FindAndReplace';
+import { apiFetch } from '@/utils/apiClient';
 import { cn } from '@/utils/cn';
 import {
   sortRecords,
@@ -158,17 +159,18 @@ export function ScriptDataTable({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts/${id}`, {
+          const res = await apiFetch(`/scripts/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
             toast.success('Script deleted successfully');
             router.refresh();
           } else {
-            toast.error('Failed to delete script');
+            const err = await res.json().catch(() => ({}));
+            toast.error(err.message || 'Failed to delete script');
           }
-        } catch {
-          toast.error('Failed to delete script');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete script');
         }
       },
     });
@@ -186,18 +188,31 @@ export function ScriptDataTable({
         setIsDeleting(true);
         try {
           const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/scripts/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          toast.success(`${count} scripts deleted successfully`);
+          let successCount = 0;
+          let failedCount = 0;
+          let lastErrorMessage = '';
+          for (const id of ids) {
+            const res = await apiFetch(`/scripts/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              successCount++;
+            } else {
+              failedCount++;
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            toast.success(`${successCount} script(s) deleted successfully`);
+          }
+          if (failedCount > 0) {
+            toast.error(lastErrorMessage || `Could not delete ${failedCount} script(s) because active trades are linked.`);
+          }
           setSelectedIds(new Set());
           router.refresh();
-        } catch {
-          toast.error('Failed to delete some scripts');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete some scripts');
         } finally {
           setIsDeleting(false);
         }

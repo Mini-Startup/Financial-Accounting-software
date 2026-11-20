@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, Trash2, X, AlertOctagon, ShieldAlert, Loader2 } from 'lucide-react';
+import { apiFetch } from '@/utils/apiClient';
 
 interface ExchangeDeleteModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export function ExchangeDeleteModal({
     if (isOpen && exchange?.id) {
       setConfirmCodeInput('');
       setIsLoadingImpact(true);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/exchanges/${exchange.id}/impact`)
+      apiFetch(`/exchanges/${exchange.id}/impact`)
         .then((res) => {
           if (!res.ok) throw new Error('Could not load impact analysis');
           return res.json();
@@ -70,10 +71,7 @@ export function ExchangeDeleteModal({
     setIsDeleting(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/exchanges/${exchange.id}`,
-        { method: 'DELETE' }
-      );
+      const res = await apiFetch(`/exchanges/${exchange.id}`, { method: 'DELETE' });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));

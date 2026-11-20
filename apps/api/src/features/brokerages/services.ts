@@ -81,7 +81,9 @@ export class BrokeragesService {
     appliesTo?: string;
     scriptId?: string;
   }) {
-    const where: Prisma.BrokerageWhereInput = {};
+    const where: Prisma.BrokerageWhereInput = {
+      isDeleted: false,
+    };
 
     if (filters.accountId) where.accountId = filters.accountId;
     if (filters.appliesTo) where.appliesTo = filters.appliesTo as any;
@@ -112,7 +114,7 @@ export class BrokeragesService {
         },
       },
     });
-    if (!rule) throw new NotFoundException(`Brokerage rule ${id} not found`);
+    if (!rule || rule.isDeleted) throw new NotFoundException(`Brokerage rule ${id} not found`);
     return rule;
   }
 
@@ -185,7 +187,13 @@ export class BrokeragesService {
    */
   async remove(id: string) {
     await this.findOne(id);
-    return prisma.brokerage.delete({ where: { id } });
+    return prisma.brokerage.update({
+      where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
   }
 
   /**
@@ -206,6 +214,7 @@ export class BrokeragesService {
       where: {
         accountId,
         appliesTo,
+        isDeleted: false,
         OR: [
           ...(scriptId ? [{ scriptId }] : []),
           { scriptId: null },

@@ -12,6 +12,7 @@ import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
 import { UniversalDateRangePicker } from '../ui/UniversalDateRangePicker';
 import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { apiFetch } from '@/utils/apiClient';
 import { useTopBar } from '@/context/TopBarContext';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
 import {
@@ -275,7 +276,7 @@ export function TradesPageManager({
   useEffect(() => {
     const fetchExpiries = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/expiry-dates?activeOnly=true`);
+        const res = await apiFetch('/expiry-dates?activeOnly=true');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -585,19 +586,19 @@ export function TradesPageManager({
       message: 'Are you sure you want to delete this trade?',
       confirmLabel: 'Delete',
       onConfirm: async () => {
-        // Sub-16ms spontaneous optimistic removal
-        removeEntity(id);
-        notify.success('Trade deleted successfully');
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
+          const res = await apiFetch(`/trades/${id}`, {
             method: 'DELETE',
           });
-          if (!res.ok) {
+          if (res.ok) {
+            removeEntity(id);
+            notify.success('Trade deleted successfully');
+          } else {
             const err = await res.json().catch(() => ({}));
             notify.error(err.message || 'Server failed to delete trade');
           }
-        } catch {
-          notify.error('Failed to sync deletion with server');
+        } catch (e: any) {
+          notify.error(e.message || 'Failed to sync deletion with server');
         }
       },
     });
@@ -629,17 +630,28 @@ export function TradesPageManager({
       onConfirm: async () => {
         setIsDeleting(true);
         const ids = Array.from(selectedIds);
-        setTrades((prev) => prev.filter((t) => !selectedIds.has(t.id)));
-        setSelectedIds(new Set());
-        notify.success(`${count} trades deleted successfully`);
+        let successCount = 0;
+        let lastErrorMessage = '';
         try {
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
+          for (const id of ids) {
+            const res = await apiFetch(`/trades/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              removeEntity(id);
+              successCount++;
+            } else {
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            notify.success(`${successCount} trades deleted successfully`);
+          }
+          if (lastErrorMessage) {
+            notify.error(lastErrorMessage);
+          }
+          setSelectedIds(new Set());
         } catch {
           notify.error('Failed to delete some trades on server');
         } finally {
@@ -1368,11 +1380,12 @@ export function TradesPageManager({
             setViewingTrade(null);
             notify.success('Trade deleted successfully');
             try {
-              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
+              const res = await apiFetch(`/trades/${id}`, {
                 method: 'DELETE',
               });
               if (!res.ok) {
-                notify.error('Failed to sync deletion with server');
+                const err = await res.json().catch(() => ({}));
+                notify.error(err.message || 'Failed to sync deletion with server');
               }
             } catch {
               notify.error('Failed to sync deletion with server');

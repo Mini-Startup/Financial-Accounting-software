@@ -194,7 +194,7 @@ export function DataTable({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters/${id}`, {
+          const res = await apiFetch(`/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
@@ -202,10 +202,10 @@ export function DataTable({
             notify.success(`${entityLabel} deleted successfully`);
           } else {
             const err = await res.json().catch(() => ({}));
-            notify.error(err.message || 'Failed to delete account');
+            notify.error(err.message || `Failed to delete ${entityLabel.toLowerCase()}`);
           }
         } catch (e: any) {
-          notify.error(e.message || 'Failed to delete record');
+          notify.error(e.message || `Failed to delete ${entityLabel.toLowerCase()}`);
         }
       },
     });
@@ -230,21 +230,32 @@ export function DataTable({
         try {
           const ids = Array.from(selectedIds);
           let successCount = 0;
+          let failedCount = 0;
+          let lastErrorMessage = '';
           for (const id of ids) {
-            const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters/${id}`, {
+            const res = await apiFetch(`/account-masters/${id}`, {
               method: 'DELETE',
             });
             if (res.ok) {
               removeEntity(id);
               successCount++;
+            } else {
+              failedCount++;
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
             }
           }
           if (successCount > 0) {
-            notify.success(`${successCount} records deleted successfully`);
+            notify.success(`${successCount} ${entityLabel.toLowerCase()}(s) deleted successfully`);
+          }
+          if (failedCount > 0) {
+            notify.error(
+              lastErrorMessage || `Could not delete ${failedCount} record(s) because active trades or dependencies are linked.`
+            );
           }
           setSelectedIds(new Set());
-        } catch {
-          notify.error('Failed to delete some records');
+        } catch (e: any) {
+          notify.error(e.message || 'Failed to delete some records');
         } finally {
           setIsDeleting(false);
         }

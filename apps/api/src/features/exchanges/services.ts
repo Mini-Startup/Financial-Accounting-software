@@ -1,4 +1,4 @@
-import { NotFoundException } from '../../errors';
+import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 
 export class ExchangesService {
@@ -68,7 +68,32 @@ export class ExchangesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id); // ensure exists
+    const exchange = await this.findOne(id); // ensure exists
+
+    const activeTradesCount = await prisma.trade.count({
+      where: {
+        exchangeId: id,
+        isDeleted: false,
+      },
+    });
+    if (activeTradesCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete Exchange: ${activeTradesCount} active trades are currently linked to exchange '${exchange.code}'.`
+      );
+    }
+
+    const activeScriptsCount = await prisma.script.count({
+      where: {
+        exchangeId: id,
+        isDeleted: false,
+      },
+    });
+    if (activeScriptsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete Exchange: ${activeScriptsCount} active scripts are currently configured under exchange '${exchange.code}'. Delete or reassign the scripts first.`
+      );
+    }
+
     return prisma.exchange.update({
       where: { id },
       data: {
