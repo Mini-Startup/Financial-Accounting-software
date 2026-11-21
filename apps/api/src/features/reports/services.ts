@@ -73,6 +73,7 @@ export class ReportsService {
 
     const whereClause: any = {
       settlementId: null,
+      isDeleted: false,
       tradeDate: { lte: asOfBoundary },
     };
 
@@ -97,7 +98,7 @@ export class ReportsService {
         orderBy: { tradeDate: 'asc' },
       }),
       prisma.closingRate.findMany({
-        where: { rateDate: { lte: asOfBoundary } },
+        where: { rateDate: { lte: asOfBoundary }, isDeleted: false },
         orderBy: { rateDate: 'desc' },
       }),
     ]);
@@ -390,7 +391,9 @@ export class ReportsService {
     query: SettlementDetailAuditQuery
   ): Promise<SettlementDetailAuditResponse> {
     let settlement: any = null;
-    const whereClause: any = {};
+    const whereClause: any = {
+      isDeleted: false,
+    };
 
     if (query.settlementId && query.settlementId !== 'LIVE') {
       settlement = await prisma.settlement.findUnique({
@@ -575,7 +578,9 @@ export class ReportsService {
     query: SettlementSummaryReportQuery
   ): Promise<SettlementSummaryReportResponse> {
     let settlement: any = null;
-    const whereClause: any = {};
+    const whereClause: any = {
+      isDeleted: false,
+    };
 
     if (query.settlementId && query.settlementId !== 'LIVE') {
       settlement = await prisma.settlement.findUnique({
@@ -612,7 +617,7 @@ export class ReportsService {
       }),
       settlement?.id
         ? prisma.ledger.findMany({
-            where: { settlementId: settlement.id },
+            where: { settlementId: settlement.id, isDeleted: false },
           })
         : Promise.resolve([]),
     ]);

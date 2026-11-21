@@ -5,6 +5,7 @@ import { clearUserPermissionCache, type AuthUser } from '../../middleware/auth';
 export class UserService {
   async listUsers() {
     return prisma.user.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -26,8 +27,8 @@ export class UserService {
   }
 
   async getCurrentUserProfile(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const user = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
       include: {
         role: {
           include: {

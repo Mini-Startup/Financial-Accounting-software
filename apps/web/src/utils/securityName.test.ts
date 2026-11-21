@@ -10,7 +10,7 @@ describe('securityName.ts - Web Frontend Security Name Generator', () => {
       callPut: 'CALL',
       strikePrice: 2400,
     });
-    assert.strictEqual(name, 'GOLD 1KG 28MAY26 CALL 2400');
+    assert.strictEqual(name, 'GOLD 1KG 28-MAY-26 CALL 2400');
   });
 
   it('generates futures security name without call/put and strike', () => {
@@ -18,13 +18,13 @@ describe('securityName.ts - Web Frontend Security Name Generator', () => {
       scriptFullName: 'SILVER 30KG',
       expiry: '28MAY26',
     });
-    assert.strictEqual(name, 'SILVER 30KG 28MAY26');
+    assert.strictEqual(name, 'SILVER 30KG 28-MAY-26');
   });
 
-  it('normalizes various date inputs into DDMMMYY format', () => {
-    assert.strictEqual(formatExpiryToDDMMMYY('28MAY26'), '28MAY26');
-    assert.strictEqual(formatExpiryToDDMMMYY('2026-05-28'), '28MAY26');
-    assert.strictEqual(formatExpiryToDDMMMYY(new Date(Date.UTC(2026, 4, 28))), '28MAY26');
+  it('normalizes various date inputs into DD-MMM-YY format', () => {
+    assert.strictEqual(formatExpiryToDDMMMYY('28MAY26'), '28-MAY-26');
+    assert.strictEqual(formatExpiryToDDMMMYY('2026-05-28'), '28-MAY-26');
+    assert.strictEqual(formatExpiryToDDMMMYY(new Date(Date.UTC(2026, 4, 28))), '28-MAY-26');
   });
 
   it('handles edge cases with empty or invalid inputs', () => {

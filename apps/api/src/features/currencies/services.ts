@@ -14,7 +14,9 @@ export class CurrenciesService {
   }
 
   async findAll(activeOnly?: boolean) {
-    const where: Prisma.CurrencyWhereInput = {};
+    const where: Prisma.CurrencyWhereInput = {
+      isDeleted: false,
+    };
 
     if (activeOnly) {
       where.isActive = true;
@@ -27,7 +29,7 @@ export class CurrenciesService {
   }
 
   async findOne(id: string) {
-    const currency = await prisma.currency.findUnique({ where: { id } });
+    const currency = await prisma.currency.findFirst({ where: { id, isDeleted: false } });
     if (!currency) throw new NotFoundException(`Currency ${id} not found`);
     return currency;
   }
@@ -49,7 +51,7 @@ export class CurrenciesService {
     await this.findOne(id); // ensure exists
     return prisma.currency.update({
       where: { id },
-      data: { isActive: false },
+      data: { isActive: false, isDeleted: true, deletedAt: new Date() },
     });
   }
 }

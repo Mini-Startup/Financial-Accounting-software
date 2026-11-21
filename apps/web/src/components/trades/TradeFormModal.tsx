@@ -203,11 +203,10 @@ export function TradeFormModal({
     setTouched({});
   };
 
-  // Fetch active brokerage rules for client & broker
+  // Fetch active brokerage rules for client
   useEffect(() => {
-    if (!clientId && !brokerId) {
+    if (!clientId) {
       setClientRule(null);
-      setBrokerRule(null);
       return;
     }
 
@@ -215,27 +214,25 @@ export function TradeFormModal({
 
     const fetchRules = async () => {
       try {
-        const clientPromise = clientId
-          ? apiFetch(`/brokerages/account/${clientId}`).then((r) => r.ok ? r.json() : null)
-          : Promise.resolve(null);
-
-        const brokerPromise = brokerId
-          ? apiFetch(`/brokerages/account/${brokerId}`).then((r) => r.ok ? r.json() : null)
-          : Promise.resolve(null);
-
-        const [cRule, bRule] = await Promise.all([clientPromise, brokerPromise]);
+        const scriptQuery = scriptId ? `&scriptId=${encodeURIComponent(scriptId)}` : '';
+        const res = await apiFetch(`/brokerages/resolve?accountId=${encodeURIComponent(clientId)}&appliesTo=CLIENT${scriptQuery}`);
         if (active) {
-          setClientRule(cRule);
-          setBrokerRule(bRule);
+          if (res.ok) {
+            const data = await res.json();
+            setClientRule(data);
+          } else {
+            setClientRule(null);
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch brokerage rules:', err);
+        console.error('Failed to fetch client brokerage rule:', err);
+        if (active) setClientRule(null);
       }
     };
 
     fetchRules();
     return () => { active = false; };
-  }, [clientId, brokerId]);
+  }, [clientId, scriptId]);
 
   // Recalculate Trade Rates dynamically
   useEffect(() => {
@@ -258,11 +255,11 @@ export function TradeFormModal({
       side: transactionType,
       tradeType,
       clientRule,
-      brokerBrokerage: brokerRule?.brokerage ?? null,
+      brokerBrokerage: initialTrade?.brokerBrokerage ?? 0,
     });
 
     setCalc(res);
-  }, [quantity, marketRate, script, tradeType, clientRule, brokerRule, initialTrade]);
+  }, [quantity, marketRate, script, tradeType, clientRule, initialTrade]);
 
   // Metrics fallback: always displays stable calculation values
   const displayMetrics = useMemo(() => {

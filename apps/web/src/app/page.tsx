@@ -121,6 +121,7 @@ export default async function Dashboard() {
         orderBy: { tradeDate: "desc" },
       }),
       prisma.voucher.findMany({
+        where: { isDeleted: false },
         take: 5,
         orderBy: { date: "desc" },
         include: {
@@ -131,8 +132,9 @@ export default async function Dashboard() {
           },
         },
       }),
-      prisma.closingRate.count(),
+      prisma.closingRate.count({ where: { isDeleted: false } }),
       prisma.closingRate.findFirst({
+        where: { isDeleted: false },
         orderBy: { rateDate: "desc" },
         select: { rateDate: true },
       }),

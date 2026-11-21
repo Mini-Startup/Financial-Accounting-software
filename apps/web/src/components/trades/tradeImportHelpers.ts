@@ -72,85 +72,21 @@ export function formatExpiryForInput(expiryStr: string | null | undefined): stri
 }
 
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import { generateSecurityName } from '@/utils/securityName';
 
 export function generateDubaiSecurityName(
   row: DubaiParsedTrade,
   scriptObj?: { fullName?: string; shortName?: string }
 ): string | null {
   if (!scriptObj) return null;
-  const baseName = (scriptObj.fullName || scriptObj.shortName || '').trim();
-  if (!baseName) return null;
-
-  let dayStr = '';
-  let monthStr = '';
-  let yearStr = '';
-
-  const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
-  // 1. Try parsing expiryDate first (e.g. "30-06-2026 00:00" or "2026-06-30" or "28/07/2026" or "28-APR-2026")
-  if (row.expiryDate) {
-    const cleaned = row.expiryDate.trim().split(' ')[0];
-    
-    // Check DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 28APR26, 28-APR-2026)
-    const mmmMatch = cleaned.match(/^(\d{1,2})[-/]?([A-Za-z]{3})[-/]?(\d{2}|\d{4})$/);
-    if (mmmMatch) {
-      dayStr = mmmMatch[1].padStart(2, '0');
-      monthStr = mmmMatch[2].toUpperCase();
-      const y = parseInt(mmmMatch[3], 10);
-      yearStr = y < 100 ? (2000 + y).toString() : y.toString();
-    } else {
-      const parts = cleaned.split(/[-/]/);
-      if (parts.length === 3) {
-        let d = 0, m = 0, y = 0;
-        if (parts[0].length === 4) { // YYYY-MM-DD
-          y = parseInt(parts[0], 10);
-          m = parseInt(parts[1], 10);
-          d = parseInt(parts[2], 10);
-        } else { // DD-MM-YYYY
-          d = parseInt(parts[0], 10);
-          m = parseInt(parts[1], 10);
-          y = parseInt(parts[2], 10);
-        }
-        if (!isNaN(d) && d >= 1 && d <= 31) dayStr = String(d).padStart(2, '0');
-        if (!isNaN(m) && m >= 1 && m <= 12) monthStr = monthNames[m - 1];
-        if (!isNaN(y)) yearStr = y < 100 ? (2000 + y).toString() : y.toString();
-      }
-    }
-  }
-
-  // 2. Fallback delMonth if date parts missing e.g. "Jun-26"
-  if ((!monthStr || !yearStr) && row.delMonth) {
-    const dmParts = row.delMonth.trim().split(/[-/\s]+/);
-    if (dmParts.length >= 2) {
-      monthStr = dmParts[0].toUpperCase();
-      const y = parseInt(dmParts[1], 10);
-      if (!isNaN(y)) {
-        yearStr = y < 100 ? (2000 + y).toString() : y.toString();
-      }
-    }
-  }
-
-  const datePart = [dayStr, monthStr, yearStr].filter(Boolean).join(' ');
-
-  // 3. Option type & Strike price
-  const cpRaw = (row.rawCallPut || row.callPut || '').trim().toUpperCase();
-  let typePart = '';
-  if (cpRaw === 'P' || cpRaw === 'PUT' || cpRaw.includes('PUT')) {
-    typePart = 'PUT';
-  } else if (cpRaw === 'C' || cpRaw === 'CALL' || cpRaw.includes('CALL')) {
-    typePart = 'CALL';
-  }
-
-  const strikeVal = row.strikePrice ? parseFloat(row.strikePrice) : 0;
-  const strikePart = (strikeVal > 0) ? `${row.strikePrice}` : '';
-
-  if (strikeVal > 0 && !typePart) {
-    if (cpRaw.includes('P')) typePart = 'PUT';
-    else if (cpRaw.includes('C')) typePart = 'CALL';
-  }
-
-  const parts = [baseName, datePart, typePart, strikePart].filter(Boolean);
-  return parts.join(' ');
+  return generateSecurityName({
+    scriptFullName: scriptObj.fullName,
+    scriptShortName: scriptObj.shortName,
+    expiry: row.expiryDate,
+    delMonth: row.delMonth,
+    callPut: row.rawCallPut || row.callPut,
+    strikePrice: row.strikePrice,
+  });
 }
 
 export function checkExpiryDelMonthMismatch(expiryDateStr?: string, delMonthStr?: string): boolean {

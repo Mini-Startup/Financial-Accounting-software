@@ -3,7 +3,7 @@ import { NotFoundException } from '../../errors';
 
 export class LedgerReportService {
   async generateLedgerReport(accountId: string, fromDateStr?: string, toDateStr?: string) {
-    const whereClause: any = { accountId };
+    const whereClause: any = { accountId, isDeleted: false };
     let fromDate: Date | null = null;
 
     if (fromDateStr) {
@@ -35,6 +35,7 @@ export class LedgerReportService {
             _sum: { amount: true },
             where: {
               accountId,
+              isDeleted: false,
               date: { lt: fromDate },
             },
           })

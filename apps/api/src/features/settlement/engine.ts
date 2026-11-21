@@ -84,6 +84,7 @@ export class SettlementEngine {
     const unsettledTrades = await prisma.trade.findMany({
       where: {
         settlementId: null,
+        isDeleted: false,
         tradeDate: {
           lte: closingDate,
         },
@@ -123,6 +124,7 @@ export class SettlementEngine {
 
     let closingRates = await prisma.closingRate.findMany({
       where: {
+        isDeleted: false,
         rateDate: {
           gte: rateDateStart,
           lte: rateDateEnd,
@@ -133,6 +135,7 @@ export class SettlementEngine {
     if (closingRates.length === 0) {
       closingRates = await prisma.closingRate.findMany({
         where: {
+          isDeleted: false,
           rateDate: {
             lte: rateDateEnd,
           },
@@ -460,6 +463,7 @@ export class SettlementEngine {
         const settledTrades = await tx.trade.findMany({
           where: {
             settlementId: settlement.id,
+            isDeleted: false,
           },
           select: {
             accountId: true,

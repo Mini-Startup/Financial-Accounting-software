@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 export class RoleService {
   async listRoles() {
     return prisma.role.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: 'asc' },
       include: {
         _count: {
@@ -169,8 +170,8 @@ export class RoleService {
   }
 
   async deleteRole(roleId: string, actor: AuthUser) {
-    const role = await prisma.role.findUnique({
-      where: { id: roleId },
+    const role = await prisma.role.findFirst({
+      where: { id: roleId, isDeleted: false },
       include: {
         _count: { select: { users: true } },
       },
@@ -194,8 +195,12 @@ export class RoleService {
       throw new ForbiddenException('Not authorized to delete roles.');
     }
 
-    await prisma.role.delete({
+    await prisma.role.update({
       where: { id: roleId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
     });
 
     clearUserPermissionCache();

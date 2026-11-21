@@ -5,6 +5,7 @@ import { deriveSecurityName } from './utils';
 export class SettlementService {
   async listSettlements() {
     return prisma.settlement.findMany({
+      where: { isDeleted: false },
       orderBy: {
         toDate: 'desc',
       },
@@ -17,10 +18,11 @@ export class SettlementService {
   }
 
   async getSettlement(id: string) {
-    return prisma.settlement.findUnique({
-      where: { id },
+    return prisma.settlement.findFirst({
+      where: { id, isDeleted: false },
       include: {
         trades: {
+          where: { isDeleted: false },
           include: {
             account: true,
             broker: true,
@@ -41,7 +43,9 @@ export class SettlementService {
   }
 
   async generateSummary(fromDate?: string, toDate?: string, settlementId?: string | null) {
-    let whereClause: any = {};
+    let whereClause: any = {
+      isDeleted: false,
+    };
 
     if (settlementId === 'UNSETTLED' || settlementId === 'LIVE') {
       whereClause.settlementId = null;
@@ -382,6 +386,7 @@ export class SettlementService {
   async deleteSettlement(settlementId: string) {
     // 1. Verify it is the newest settlement (LIFO: only the latest can be deleted)
     const allSettlements = await prisma.settlement.findMany({
+      where: { isDeleted: false },
       orderBy: [{ toDate: 'desc' }, { createdAt: 'desc' }],
       take: 1,
     });
@@ -397,8 +402,8 @@ export class SettlementService {
       );
     }
 
-    const settlement = await prisma.settlement.findUnique({
-      where: { id: settlementId },
+    const settlement = await prisma.settlement.findFirst({
+      where: { id: settlementId, isDeleted: false },
     });
 
     if (!settlement) {
@@ -411,6 +416,7 @@ export class SettlementService {
         originSettlementId: settlementId,
         tradeType: 'BACK_FORWARD',
         settlementId: { not: null },
+        isDeleted: false,
       },
     });
 
@@ -422,10 +428,11 @@ export class SettlementService {
 
     return await prisma.$transaction(
       async (tx) => {
-        // 3. Delete all generated trades created by this settlement
-        //    Using originSettlementId (exact) plus legacy fallbacks
-        const deletedGenerated = await tx.trade.deleteMany({
+        const now = new Date();
+        // 3. Soft delete all generated trades created by this settlement
+        const deletedGenerated = await tx.trade.updateMany({
           where: {
+            isDeleted: false,
             OR: [
               { originSettlementId: settlementId },
               {
@@ -439,21 +446,27 @@ export class SettlementService {
               },
             ],
           },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
+          },
         });
 
         // 4. Un-tag original trades: revert settlementId = null for remaining trades tagged with this settlement
         const untagged = await tx.trade.updateMany({
           where: {
             settlementId: settlementId,
+            isDeleted: false,
           },
           data: {
             settlementId: null,
           },
         });
 
-        // 5. Delete all ledger entries that reference this settlement (via settlementId, referenceId, or legacy description)
-        const deletedLedger = await tx.ledger.deleteMany({
+        // 5. Soft delete all ledger entries that reference this settlement
+        const deletedLedger = await tx.ledger.updateMany({
           where: {
+            isDeleted: false,
             OR: [
               { settlementId: settlementId },
               { referenceId: settlementId },
@@ -463,11 +476,19 @@ export class SettlementService {
               },
             ],
           },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
+          },
         });
 
-        // 6. Delete the settlement record itself
-        await tx.settlement.delete({
+        // 6. Soft delete the settlement record itself
+        await tx.settlement.update({
           where: { id: settlementId },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
+          },
         });
 
         return {
