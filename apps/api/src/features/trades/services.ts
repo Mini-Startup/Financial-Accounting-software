@@ -68,13 +68,14 @@ export class TradesService {
       });
     }
 
-    const genSecurityName = (data as any).securityName || generateSecurityName({
+    const canonicalSecName = generateSecurityName({
       scriptFullName: script.fullName,
       scriptShortName: script.shortName,
       expiry: data.expiry,
       callPut: (data as any).callPut,
       strikePrice: (data as any).strikePrice,
     });
+    const genSecurityName = canonicalSecName || (data as any).securityName || script.fullName;
 
     return prisma.trade.create({
       data: {
@@ -292,15 +293,15 @@ export class TradesService {
     };
 
     const targetScript = data.scriptId ? await prisma.script.findUnique({ where: { id: data.scriptId } }) : existing.script;
-    const genSecName = (data as any).securityName !== undefined
-      ? (data as any).securityName
-      : generateSecurityName({
-          scriptFullName: targetScript?.fullName || existing.script?.fullName,
-          scriptShortName: targetScript?.shortName || existing.script?.shortName,
-          expiry: data.expiry !== undefined ? data.expiry : existing.expiry,
-          callPut: (data as any).callPut !== undefined ? (data as any).callPut : (existing as any).callPut,
-          strikePrice: (data as any).strikePrice !== undefined ? (data as any).strikePrice : (existing as any).strikePrice,
-        });
+    const targetExpiry = data.expiry !== undefined ? data.expiry : existing.expiry;
+    const canonicalSecName = generateSecurityName({
+      scriptFullName: targetScript?.fullName || existing.script?.fullName,
+      scriptShortName: targetScript?.shortName || existing.script?.shortName,
+      expiry: targetExpiry,
+      callPut: (data as any).callPut !== undefined ? (data as any).callPut : (existing as any).callPut,
+      strikePrice: (data as any).strikePrice !== undefined ? (data as any).strikePrice : (existing as any).strikePrice,
+    });
+    const genSecName = canonicalSecName || (data as any).securityName || targetScript?.fullName || existing.securityName;
 
     if (genSecName) {
       (updatePayload as any).securityName = genSecName;

@@ -163,6 +163,13 @@ export function TradeFormModal({
       });
   }, [expiryList, date]);
 
+  // Auto-select nearest active expiry date when creating a new trade if not already set
+  useEffect(() => {
+    if (!initialTrade && !expiryDate && expiryOptions.length > 0) {
+      setExpiryDate(expiryOptions[0].value);
+    }
+  }, [initialTrade, expiryDate, expiryOptions]);
+
   // Live Canonical Security Name Generator
   const liveSecurityName = useMemo(() => {
     if (!script) return initialTrade?.securityName || '';
@@ -312,7 +319,9 @@ export function TradeFormModal({
       Object.assign(errMap, clientRes.errors);
     }
 
-    if (expiryDate && date) {
+    if (!expiryDate) {
+      errMap.expiryDate = 'Expiry date is required';
+    } else if (date) {
       const expErr = validateExpiryAgainstTradeDate(date, expiryDate);
       if (expErr) errMap.expiryDate = expErr;
     }
@@ -320,7 +329,7 @@ export function TradeFormModal({
     return errMap;
   }, [clientId, scriptId, exchangeId, brokerId, marketRate, quantity, date, expiryDate]);
 
-  const isFormValid = Object.keys(errors).length === 0 && Boolean(scriptId && clientId && brokerId && quantity && marketRate);
+  const isFormValid = Object.keys(errors).length === 0 && Boolean(scriptId && clientId && brokerId && quantity && marketRate && expiryDate);
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -660,7 +669,7 @@ export function TradeFormModal({
                   <div className="flex flex-col">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Expiry Date
+                        Expiry Date <span className="text-red-500 font-bold">*</span>
                       </label>
                       {expiryOptions.length > 0 && (
                         <button

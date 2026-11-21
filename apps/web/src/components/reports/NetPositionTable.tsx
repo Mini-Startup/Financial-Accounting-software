@@ -322,16 +322,20 @@ export function NetPositionTable({ groups }: NetPositionTableProps) {
                                     {pos.netLot ?? pos.netQty}
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono text-slate-900 font-semibold">
-                                    {pos.netAvgRate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {pos.netAvgRate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono text-slate-900">
                                     {pos.closingRate != null 
-                                      ? pos.closingRate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                      ? pos.closingRate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
                                       : <span className="text-amber-600 font-semibold text-[11px]">Pending</span>}
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono">
                                     <span className={cn(pos.mtmDiff && pos.mtmDiff > 0 ? 'text-emerald-700' : pos.mtmDiff && pos.mtmDiff < 0 ? 'text-rose-700' : 'text-slate-600')}>
-                                      {pos.mtmDiff ? pos.mtmDiff.toFixed(2) : '0.00'}
+                                      {pos.mtmDiff 
+                                        ? (Math.abs(pos.mtmDiff) < 0.01 || (pos.mtmDiff * 100) % 1 !== 0 
+                                            ? pos.mtmDiff.toFixed(4) 
+                                            : pos.mtmDiff.toFixed(2)) 
+                                        : '0.00'}
                                     </span>
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono font-bold">
