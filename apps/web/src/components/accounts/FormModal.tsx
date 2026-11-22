@@ -64,6 +64,7 @@ export function FormModal({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [directClients, setDirectClients] = useState<any[]>([]);
+  const [isLoadingDirectClients, setIsLoadingDirectClients] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAccounts, setExistingAccounts] = useState<any[]>(initialAccounts);
 
@@ -161,6 +162,7 @@ export function FormModal({
     if (groupName === 'Sundry Debtors') {
       const fetchDirectClients = async () => {
         try {
+          setIsLoadingDirectClients(true);
           const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters?groupName=Sundry Debtors&directOnly=true`);
           if (res.ok) {
             const data = await res.json();
@@ -168,6 +170,8 @@ export function FormModal({
           }
         } catch (err) {
           console.error('Failed to fetch direct clients:', err);
+        } finally {
+          setIsLoadingDirectClients(false);
         }
       };
       fetchDirectClients();
@@ -196,8 +200,8 @@ export function FormModal({
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, saveAndAddMore = false) => {
+    if (e) e.preventDefault();
     if (isSubmitting) return;
 
     setHasSubmitted(true);
@@ -295,15 +299,18 @@ export function FormModal({
 
       if (res.ok) {
         const saved = await res.json();
-        notify.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
         if (onSuccess) {
           onSuccess(saved);
         } else {
           router.refresh();
         }
 
-        if (!initialData?.id) {
-          // Rapid entry persistence: reset identifiers, keep modal open
+        if (initialData?.id || !saveAndAddMore) {
+          notify.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
+          onClose();
+        } else {
+          // Rapid entry persistence (Save & Add More): reset identifiers, keep modal open
+          notify.success(`${entityLabel} created! Ready for next entry.`);
           setFormData((prev) => ({
             ...prev,
             code: '',
@@ -325,8 +332,6 @@ export function FormModal({
           if (codeInputRef.current) {
             codeInputRef.current.focus();
           }
-        } else {
-          onClose();
         }
       } else {
         const err = await res.json();
@@ -375,7 +380,7 @@ export function FormModal({
         </div>
 
         {/* Modal Form — Space-Efficient 2-Column Layout (Zero Scrollbar) */}
-        <form id="accountForm" onSubmit={handleSubmit} className="flex-1 flex flex-col">
+        <form id="accountForm" onSubmit={(e) => handleSubmit(e, false)} className="flex-1 flex flex-col">
           <div className="p-5 space-y-3.5 bg-white">
             {/* Duplicate Warning */}
             {isDuplicate && (
@@ -474,6 +479,7 @@ export function FormModal({
                       <div className="flex-1 min-w-0">
                         <UniversalDropdown
                           value={formData.dealerCode}
+                          loading={isLoadingDirectClients}
                           options={directClients.map((c) => ({
                             value: c.code,
                             label: `${c.code} - ${c.name}`,
@@ -771,7 +777,7 @@ export function FormModal({
             <span className="text-xs text-slate-500 hidden sm:inline">
               * Required fields: Code, Name.
             </span>
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-2.5 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
@@ -780,6 +786,19 @@ export function FormModal({
               >
                 Cancel
               </button>
+              {!initialData?.id && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(undefined, true)}
+                  disabled={isSubmitting || isDuplicate}
+                  className="h-9 px-4 text-xs font-semibold rounded-lg text-[#2652C8] bg-blue-50 hover:bg-blue-100/80 border border-blue-200 hover:-translate-y-0.5 transition-all duration-150 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  ) : null}
+                  <span>Save &amp; Add More</span>
+                </button>
+              )}
               <button
                 type="submit"
                 form="accountForm"
@@ -801,7 +820,7 @@ export function FormModal({
                 ) : initialData?.id ? (
                   `Update ${entityLabel}`
                 ) : (
-                  `Add ${entityLabel}`
+                  `Save ${entityLabel}`
                 )}
               </button>
             </div>

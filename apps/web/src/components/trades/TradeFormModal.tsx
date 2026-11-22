@@ -7,12 +7,13 @@ import { generateSecurityName, formatExpiryToDDMMMYY } from '@/utils/securityNam
 import { validateTradeForm } from '@/utils/validators';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles, Loader2 } from 'lucide-react';
+import { X, Lock, Trash2, ShieldCheck, RotateCcw, Check, Sparkles, Loader2, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { notify } from '@/utils/toastNotify';
 import { apiFetch } from '@/utils/apiClient';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { ExpiryDropdown } from '../ui/ExpiryDropdown';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -32,7 +33,7 @@ export interface TradeFormModalProps {
   initialTrade?: any;
   initialMode?: 'view' | 'edit';
   onClose: () => void;
-  onSave: (row: any) => void;
+  onSave: (row: any, keepOpen?: boolean) => void;
   onDelete?: (id: string) => Promise<void>;
 }
 
@@ -335,7 +336,7 @@ export function TradeFormModal({
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  const handleSave = async (e?: React.FormEvent) => {
+  const handleSave = async (e?: React.FormEvent, keepOpen = false) => {
     if (e) e.preventDefault();
     if (isLocked) return;
 
@@ -426,15 +427,20 @@ export function TradeFormModal({
       }
 
       const savedData = await res.json();
-      onSave(savedData);
+      onSave(savedData, keepOpen);
 
       if (!isEdit) {
-        notify.success(`Trade ${savedData.tradeNumber || ''} added successfully!`, {
-          description: 'Ready for next trade entry.',
-        });
-        setQuantity('');
-        setMarketRate('');
-        setTimeout(() => quantityInputRef.current?.focus(), 50);
+        if (keepOpen) {
+          notify.success(`Trade ${savedData.tradeNumber || ''} added successfully!`, {
+            description: 'Ready for next trade entry.',
+          });
+          setQuantity('');
+          setMarketRate('');
+          setTimeout(() => quantityInputRef.current?.focus(), 50);
+        } else {
+          notify.success(`Trade ${savedData.tradeNumber || ''} added successfully!`);
+          onClose();
+        }
       } else {
         notify.success(`Trade ${savedData.tradeNumber || ''} updated successfully`);
         onClose();
@@ -499,69 +505,42 @@ export function TradeFormModal({
     >
       <div
         ref={modalRef}
-        className="w-245 max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200 bg-white rounded-2xl"
+        className="w-full max-w-2xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200/90 bg-white rounded-2xl animate-in zoom-in-95 duration-150"
       >
         {/* Executive Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 rounded-md px-2.5 py-0.5 shadow-2xs">
-                #{initialTrade?.tradeNumber || 'New Entry'}
-              </span>
-
-              {/* Side Badge or Toggle */}
-              <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200/90">
-                <button
-                  type="button"
-                  onClick={() => handleToggleSide('BUY')}
-                  disabled={isLocked}
-                  className={cn(
-                    'px-3 py-1 rounded-md text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
-                    isBuy
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-emerald-700'
-                  )}
-                >
-                  BUY
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleToggleSide('SELL')}
-                  disabled={isLocked}
-                  className={cn(
-                    'px-3 py-1 rounded-md text-xs font-bold tracking-wide uppercase transition-all cursor-pointer',
-                    !isBuy
-                      ? 'bg-rose-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-rose-700'
-                  )}
-                >
-                  SELL
-                </button>
-              </div>
-
-              {isLocked ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded-md px-2 py-0.5">
-                  <Lock className="w-3 h-3 text-amber-600" /> Locked Record
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-2 py-0.5">
-                  <ShieldCheck className="w-3 h-3 text-slate-500" /> Active Trade
-                </span>
-              )}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <ArrowUpDown className="w-4 h-4 stroke-[2.2]" />
             </div>
-
-            <h2 className="text-base font-bold text-slate-900 mt-1">
-              {!initialTrade ? 'Add New Trade' : isDirty ? 'Edit Trade Details' : 'Trade Specifications'}
-            </h2>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {!initialTrade ? 'Add New Trade' : isDirty ? 'Edit Trade Details' : 'Trade Specifications'}
+                </h2>
+                {initialTrade?.tradeNumber && (
+                  <span className="text-xs font-mono font-bold text-slate-700 bg-white border border-slate-200 rounded px-2 py-0.5 shadow-2xs">
+                    #{initialTrade.tradeNumber}
+                  </span>
+                )}
+                {isLocked && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded px-2 py-0.5">
+                    <Lock className="w-3 h-3 text-amber-600" /> Locked Record
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter trade details, execution rates &amp; client/broker assignments
+              </p>
+            </div>
           </div>
-
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -570,11 +549,11 @@ export function TradeFormModal({
           id="tradeForm"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSave(e);
+            handleSave(e, false);
           }}
           className="flex-1 flex flex-col min-h-0"
         >
-          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
             {/* Locked Notification */}
             {isLocked && (
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800 text-xs animate-in fade-in">
@@ -585,314 +564,286 @@ export function TradeFormModal({
               </div>
             )}
 
-            <div className="grid grid-cols-12 gap-5">
-              {/* Left Column: Trade Specifications & Click-To-Edit Fields */}
-              <div className="col-span-12 lg:col-span-7 space-y-4">
-                {/* Canonical Security Banner */}
-                {liveSecurityName && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600 uppercase tracking-wider text-[11px]">Security:</span>
-                    <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
-                      {liveSecurityName}
-                    </span>
-                  </div>
-                )}
-
-                {/* Row 1: Script & Trade Type */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Script <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <div className={cn(touched.scriptId && errors.scriptId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
-                      <UniversalDropdown
-                        value={scriptId}
-                        options={(scripts || []).map((s) => ({
-                          value: s.id,
-                          label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
-                          sublabel: s.fullName,
-                        }))}
-                        onChange={(val) => {
-                          setScriptId(val);
-                          handleBlur('scriptId');
-                        }}
-                        variant={isExistingTrade ? 'seamless' : 'default'}
-                        placeholder="Select Script"
-                        disabled={isLocked}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Type <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <UniversalDropdown
-                      value={tradeType}
-                      options={[
-                        { value: 'INTERNAL', label: 'Internal Trade' },
-                        { value: 'CARRY_FORWARD', label: 'Carry Forward' },
-                        { value: 'BACK_FORWARD', label: 'Backforward' },
-                        { value: 'SETTLEMENT', label: 'Settlement' },
-                      ]}
-                      onChange={(val) => setTradeType(val)}
-                      variant={isExistingTrade ? 'seamless' : 'default'}
-                      placeholder="Select Type"
-                      disabled={isLocked}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Date & Expiry date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Trade Date <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <div className={cn(touched.tradeDate && errors.tradeDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
-                      <UniversalDatePicker
-                        value={date}
-                        onChange={(newDate) => {
-                          setDate(newDate);
-                          handleBlur('tradeDate');
-                        }}
-                        variant={isExistingTrade ? 'seamless' : 'default'}
-                        placeholder="DD-MM-YY"
-                        disabled={isLocked}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Expiry Date <span className="text-red-500 font-bold">*</span>
-                      </label>
-                      {expiryOptions.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setIsCustomExpiry(!isCustomExpiry)}
-                          className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
-                        >
-                          {isCustomExpiry ? 'Choose from Master' : 'Custom Date...'}
-                        </button>
-                      )}
-                    </div>
-
-                    <div className={cn(touched.expiryDate && errors.expiryDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
-                      {isCustomExpiry || expiryOptions.length === 0 ? (
-                        <UniversalDatePicker
-                          value={expiryDate}
-                          onChange={(newDate) => {
-                            setExpiryDate(newDate);
-                            handleBlur('expiryDate');
-                          }}
-                          variant={isExistingTrade ? 'seamless' : 'default'}
-                          placeholder="DD-MM-YY"
-                          disabled={isLocked}
-                        />
-                      ) : (
-                        <UniversalDropdown
-                          value={expiryDate}
-                          options={[
-                            { value: '', label: 'None / Cash' },
-                            ...expiryOptions,
-                          ]}
-                          onChange={(val) => {
-                            setExpiryDate(val);
-                            handleBlur('expiryDate');
-                          }}
-                          variant={isExistingTrade ? 'seamless' : 'default'}
-                          placeholder="Select Expiry"
-                          disabled={isLocked}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 3: Client & Broker */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Client <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <div className={cn(touched.clientId && errors.accountId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
-                      <UniversalDropdown
-                        value={clientId}
-                        options={(clients || []).map((c) => ({
-                          value: c.id,
-                          label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
-                        }))}
-                        onChange={(val) => {
-                          setClientId(val);
-                          handleBlur('clientId');
-                        }}
-                        variant={isExistingTrade ? 'seamless' : 'default'}
-                        placeholder="Select Client"
-                        disabled={isLocked}
-                        searchable={true}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Broker <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <div className={cn(touched.brokerId && !brokerId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
-                      <UniversalDropdown
-                        value={brokerId}
-                        options={(brokers || []).map((b) => ({
-                          value: b.id,
-                          label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
-                        }))}
-                        onChange={(val) => {
-                          setBrokerId(val);
-                          handleBlur('brokerId');
-                        }}
-                        variant={isExistingTrade ? 'seamless' : 'default'}
-                        placeholder="Select Broker"
-                        disabled={isLocked}
-                        searchable={true}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 4: Quantity & Market Rate */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Quantity <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <input
-                      ref={quantityInputRef}
-                      type="number"
-                      step="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      onBlur={() => handleBlur('quantity')}
-                      placeholder="e.g. 100 or -50"
-                      disabled={isLocked}
-                      className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none text-left',
-                        isExistingTrade
-                          ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
-                          : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
-                        isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed',
-                        touched.quantity && errors.quantity && 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-100'
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Market Rate <span className="text-red-500 font-bold">*</span>
-                    </label>
-
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={marketRate}
-                      onChange={(e) => setMarketRate(e.target.value)}
-                      onBlur={() => handleBlur('marketRate')}
-                      placeholder="0.00"
-                      disabled={isLocked}
-                      className={cn(
-                        'w-full min-h-9.5 h-9.5 px-3 text-xs font-mono font-bold rounded-lg border transition-all duration-150 outline-none text-left',
-                        isExistingTrade
-                          ? 'border-transparent bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 focus:bg-white text-slate-900'
-                          : 'border-slate-300 hover:border-slate-400 focus:border-[#2652C8] focus:ring-2 focus:ring-blue-100 bg-white shadow-2xs text-slate-900',
-                        isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed',
-                        touched.marketRate && errors.rate && 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-100'
-                      )}
-                    />
-                  </div>
+            {/* Row 1: Script & Trade Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Script <span className="text-rose-500">*</span>
+                </label>
+                <div className={cn(touched.scriptId && errors.scriptId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
+                  <UniversalDropdown
+                    value={scriptId}
+                    options={(scripts || []).map((s) => ({
+                      value: s.id,
+                      label: `${s.shortName || s.name || s.symbol || 'Unnamed'}${s.exchange?.code ? ` (${s.exchange.code})` : ''}`,
+                      sublabel: s.fullName,
+                    }))}
+                    onChange={(val) => {
+                      setScriptId(val);
+                      handleBlur('scriptId');
+                    }}
+                    placeholder="Select Script..."
+                    disabled={isLocked}
+                  />
                 </div>
               </div>
 
-              {/* Right Column: Rate & Brokerage Calculation Summary */}
-              <div className="col-span-12 lg:col-span-5 bg-slate-50/80 border border-slate-200/90 rounded-2xl p-5 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-                    Rate &amp; Brokerage Summary
-                  </h3>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Trade Type <span className="text-rose-500">*</span>
+                </label>
+                <UniversalDropdown
+                  value={tradeType}
+                  options={[
+                    { value: 'INTERNAL', label: 'Internal Trade' },
+                    { value: 'CARRY_FORWARD', label: 'Carry Forward' },
+                    { value: 'BACK_FORWARD', label: 'Backforward' },
+                    { value: 'SETTLEMENT', label: 'Settlement' },
+                  ]}
+                  onChange={(val) => setTradeType(val)}
+                  placeholder="Select Type..."
+                  disabled={isLocked}
+                />
+              </div>
+            </div>
 
-                  {!displayMetrics ? (
-                    <div className="p-8 text-center text-xs text-slate-400 italic">
-                      Enter quantity and rate to view calculated rates.
-                    </div>
-                  ) : (
-                    <div className="space-y-3.5">
-                      {/* Client Rate Card */}
-                      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
-                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
-                          <span className="font-semibold uppercase tracking-wider text-[10px]">Client Rate</span>
-                          <span className="font-mono text-[11px] text-slate-600">
-                            {displayMetrics.clientBrokerage > 0 ? `+${currSym}${displayMetrics.clientBrokerage.toFixed(2)} brk` : '0 brk'}
-                          </span>
-                        </div>
-                        <div className="font-mono text-base font-bold text-slate-900">
-                          {currSym}{displayMetrics.clientRate.toFixed(2)}
-                        </div>
-                      </div>
+            {/* Row 2: Date & Expiry */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Trade Date <span className="text-rose-500">*</span>
+                </label>
+                <div className={cn(touched.tradeDate && errors.tradeDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
+                  <UniversalDatePicker
+                    value={date}
+                    onChange={(newDate) => {
+                      setDate(newDate);
+                      handleBlur('tradeDate');
+                    }}
+                    placeholder="DD-MM-YY"
+                    disabled={isLocked}
+                  />
+                </div>
+              </div>
 
-                      {/* Broker Rate Card */}
-                      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
-                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
-                          <span className="font-semibold uppercase tracking-wider text-[10px]">Broker Rate</span>
-                          <span className="font-mono text-[11px] text-slate-600">
-                            {displayMetrics.brokerBrokerage > 0 ? `+${currSym}${displayMetrics.brokerBrokerage.toFixed(2)} brk` : '0 brk'}
-                          </span>
-                        </div>
-                        <div className="font-mono text-base font-bold text-slate-900">
-                          {currSym}{displayMetrics.brokerRate.toFixed(2)}
-                        </div>
-                      </div>
-
-                      {/* Net Trade Value */}
-                      {netTradeValue != null && !isNaN(netTradeValue) && (
-                        <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
-                          <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider text-[10px] mb-1">
-                            Total Net Value
-                          </div>
-                          <div className="font-mono text-lg font-bold text-[#2652C8]">
-                            {currSym}{netTradeValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trade Volume Metrics */}
-                      <div className="bg-white border border-slate-200 rounded-lg p-3 text-xs space-y-1.5 font-mono text-slate-600">
-                        <div className="flex justify-between">
-                          <span className="font-sans text-slate-500">Side:</span>
-                          <span className={cn('font-bold', displayMetrics.side === 'BUY' ? 'text-emerald-700' : 'text-rose-700')}>{displayMetrics.side}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-sans text-slate-500">Lot Size:</span>
-                          <span>{displayMetrics.marketLot}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-sans text-slate-500">Total Units:</span>
-                          <span>{displayMetrics.totalUnits.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Expiry Date <span className="text-rose-500">*</span>
+                </label>
+                <div className={cn(touched.expiryDate && errors.expiryDate && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
+                  <ExpiryDropdown
+                    value={expiryDate}
+                    onChange={(newDate) => {
+                      setExpiryDate(newDate);
+                      handleBlur('expiryDate');
+                    }}
+                    tradeDate={date}
+                    disabled={isLocked}
+                    placeholder="Select Expiry..."
+                  />
                 </div>
               </div>
             </div>
+
+            {/* Row 3: Client & Broker */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Client Account <span className="text-rose-500">*</span>
+                </label>
+                <div className={cn(touched.clientId && errors.accountId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
+                  <UniversalDropdown
+                    value={clientId}
+                    options={(clients || []).map((c) => ({
+                      value: c.id,
+                      label: `${c.code ? `${c.code} - ` : ''}${c.name || 'Unnamed'}`,
+                    }))}
+                    onChange={(val) => {
+                      setClientId(val);
+                      handleBlur('clientId');
+                    }}
+                    placeholder="Select Client..."
+                    disabled={isLocked}
+                    searchable={true}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Broker Account <span className="text-rose-500">*</span>
+                </label>
+                <div className={cn(touched.brokerId && !brokerId && 'rounded-lg ring-2 ring-rose-200 border-rose-400')}>
+                  <UniversalDropdown
+                    value={brokerId}
+                    options={(brokers || []).map((b) => ({
+                      value: b.id,
+                      label: `${b.code ? `${b.code} - ` : ''}${b.name || 'Unnamed'}`,
+                    }))}
+                    onChange={(val) => {
+                      setBrokerId(val);
+                      handleBlur('brokerId');
+                    }}
+                    placeholder="Select Broker..."
+                    disabled={isLocked}
+                    searchable={true}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: Side & Quantity + Market Rate */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Side &amp; Quantity <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-lg border border-slate-200/90 gap-1 h-10 select-none w-36 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSide('BUY')}
+                      disabled={isLocked}
+                      className={cn(
+                        'text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center',
+                        isBuy
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-emerald-700 hover:bg-white/50'
+                      )}
+                    >
+                      BUY
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSide('SELL')}
+                      disabled={isLocked}
+                      className={cn(
+                        'text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center',
+                        !isBuy
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-rose-700 hover:bg-white/50'
+                      )}
+                    >
+                      SELL
+                    </button>
+                  </div>
+                  <input
+                    ref={quantityInputRef}
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={quantity ? Math.abs(parseFloat(quantity)) : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        setQuantity(isBuy ? '' : '-');
+                      } else {
+                        const num = Math.abs(parseFloat(val));
+                        setQuantity(isBuy ? String(num) : String(-num));
+                      }
+                    }}
+                    onBlur={() => handleBlur('quantity')}
+                    placeholder="Qty"
+                    disabled={isLocked}
+                    className={cn(
+                      'w-full h-10 px-3.5 text-sm font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
+                      touched.quantity && errors.quantity
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20'
+                        : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15',
+                      isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed'
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Market Rate <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-slate-400 select-none">
+                    {currSym}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={marketRate}
+                    onChange={(e) => setMarketRate(e.target.value)}
+                    onBlur={() => handleBlur('marketRate')}
+                    placeholder="0.00"
+                    disabled={isLocked}
+                    className={cn(
+                      'w-full h-10 pl-8 pr-3.5 text-sm font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
+                      touched.marketRate && errors.rate
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20'
+                        : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15',
+                      isLocked && 'opacity-60 bg-slate-100/50 cursor-not-allowed'
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Canonical Security Banner */}
+            {liveSecurityName && (
+              <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] shrink-0">Security:</span>
+                  <span className="font-mono font-bold text-slate-900 truncate">
+                    {liveSecurityName}
+                  </span>
+                </div>
+                <span className="text-[10px] bg-blue-50 text-[#2652C8] px-2 py-0.5 rounded border border-blue-200/60 font-semibold font-sans shrink-0 ml-2">
+                  Canonical
+                </span>
+              </div>
+            )}
+
+            {/* Calculated Rate & Execution Summary */}
+            {displayMetrics && (
+              <div className="p-3.5 bg-slate-50/80 border border-slate-200/90 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                  <span>Calculated Rates &amp; Execution</span>
+                  <span className="font-mono font-normal normal-case text-slate-400">
+                    {displayMetrics.side} • Lot: {displayMetrics.marketLot} • {displayMetrics.totalUnits.toLocaleString()} units
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="bg-white border border-slate-200/90 rounded-lg p-2.5 shadow-2xs">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Client Rate</div>
+                    <div className="font-mono text-sm font-bold text-slate-900 mt-0.5">
+                      {currSym}{displayMetrics.clientRate.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                      {displayMetrics.clientBrokerage > 0 ? `+${currSym}${displayMetrics.clientBrokerage.toFixed(2)} brk` : '0 brk'}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200/90 rounded-lg p-2.5 shadow-2xs">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Broker Rate</div>
+                    <div className="font-mono text-sm font-bold text-slate-900 mt-0.5">
+                      {currSym}{displayMetrics.brokerRate.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                      {displayMetrics.brokerBrokerage > 0 ? `+${currSym}${displayMetrics.brokerBrokerage.toFixed(2)} brk` : '0 brk'}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200/90 rounded-lg p-2.5 shadow-2xs">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Total Value</div>
+                    <div className="font-mono text-sm font-bold text-[#2652C8] mt-0.5">
+                      {currSym}{netTradeValue ? netTradeValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                      Net Trade Value
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dynamic Footer Bar */}
-          <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
+          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between gap-3 shrink-0 rounded-b-2xl">
             {/* Left Action: Delete Trade (Only for existing trades) */}
             <div>
               {initialTrade?.id && (
@@ -901,15 +852,15 @@ export function TradeFormModal({
                   onClick={() => setIsConfirmDeleteOpen(true)}
                   disabled={isLocked || isDeleting}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors',
+                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer',
                     isLocked
                       ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 cursor-pointer'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 active:scale-[0.98]'
                   )}
                   title={isLocked ? 'Settled trades cannot be deleted' : 'Delete this trade'}
                 >
                   <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Delete Trade</span>
+                  <span>Delete</span>
                 </button>
               )}
             </div>
@@ -917,27 +868,38 @@ export function TradeFormModal({
             {/* Right Action: Cancel / Discard Changes / Save */}
             <div className="flex items-center gap-2.5">
               {!initialTrade ? (
-                // Add New Trade Mode
+                // Add New Trade Mode: Dual Action Buttons
                 <>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="btn btn--secondary text-xs px-4 py-2 cursor-pointer"
+                    className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
                   >
                     Cancel
                   </button>
                   <button
+                    type="button"
+                    onClick={() => handleSave(undefined, true)}
+                    disabled={isSaving || !isFormValid}
+                    className="h-9 px-4 text-xs font-semibold rounded-lg text-[#2652C8] bg-blue-50 hover:bg-blue-100/80 border border-blue-200 hover:-translate-y-0.5 transition-all duration-150 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : null}
+                    <span>Save &amp; Add More</span>
+                  </button>
+                  <button
                     type="submit"
                     disabled={isSaving || !isFormValid}
-                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
+                    className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm transition-all duration-150 shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Adding…</span>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                        <span>Saving…</span>
                       </>
                     ) : (
-                      'Add Trade'
+                      'Save Trade'
                     )}
                   </button>
                 </>
@@ -947,19 +909,19 @@ export function TradeFormModal({
                   <button
                     type="button"
                     onClick={handleDiscardChanges}
-                    className="btn btn--secondary flex items-center gap-1.5 text-xs px-4 py-2 cursor-pointer"
+                    className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98] flex items-center gap-1.5"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Discard Changes</span>
+                    <span>Discard</span>
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving || isLocked || !isFormValid}
-                    className="btn btn--primary flex items-center gap-2 text-xs px-4 py-2 min-w-28 justify-center cursor-pointer"
+                    className="h-9 px-5 text-xs font-semibold rounded-lg text-white bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm transition-all duration-150 shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                         <span>Saving…</span>
                       </>
                     ) : (
@@ -972,7 +934,7 @@ export function TradeFormModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn btn--secondary text-xs px-5 py-2 cursor-pointer font-semibold"
+                  className="h-9 px-5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
                 >
                   Close
                 </button>

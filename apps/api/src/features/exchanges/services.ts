@@ -2,27 +2,20 @@ import { NotFoundException, BadRequestException } from '../../errors';
 import { prisma, Prisma } from '../../database';
 
 export class ExchangesService {
-  async create(data: { code: string; name?: string; isActive?: boolean }) {
+  async create(data: { code: string; name?: string }) {
     return prisma.exchange.create({
       data: {
         code: data.code.toUpperCase().trim(),
         name: data.name?.trim() || null,
-        isActive: data.isActive ?? true,
       },
     });
   }
 
-  async findAll(activeOnly?: boolean) {
-    const where: Prisma.ExchangeWhereInput = {
-      isDeleted: false,
-    };
-
-    if (activeOnly) {
-      where.isActive = true;
-    }
-
+  async findAll() {
     return prisma.exchange.findMany({
-      where,
+      where: {
+        isDeleted: false,
+      },
       orderBy: { code: 'asc' },
     });
   }
@@ -55,14 +48,13 @@ export class ExchangesService {
     };
   }
 
-  async update(id: string, data: { code?: string; name?: string; isActive?: boolean }) {
+  async update(id: string, data: { code?: string; name?: string }) {
     await this.findOne(id); // ensure exists
     return prisma.exchange.update({
       where: { id },
       data: {
         ...(data.code !== undefined && { code: data.code.toUpperCase().trim() }),
         ...(data.name !== undefined && { name: data.name.trim() || null }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
   }
@@ -99,7 +91,6 @@ export class ExchangesService {
       data: {
         isDeleted: true,
         deletedAt: new Date(),
-        isActive: false,
       },
     });
   }

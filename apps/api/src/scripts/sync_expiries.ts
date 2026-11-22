@@ -18,11 +18,10 @@ async function main() {
 
     await prisma.expiryDate.upsert({
       where: { date: trimmed },
-      update: { isDeleted: false, isActive: true },
+      update: { isDeleted: false },
       create: {
         date: trimmed,
         normalizedDate: normalized,
-        isActive: true,
         isDeleted: false,
       },
     });

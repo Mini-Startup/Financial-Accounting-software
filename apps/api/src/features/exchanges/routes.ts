@@ -12,8 +12,7 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const activeOnly = req.query.active === 'true';
-    const result = await exchangesService.findAll(activeOnly);
+    const result = await exchangesService.findAll();
     res.json(result);
   } catch (err) { next(err); }
 });

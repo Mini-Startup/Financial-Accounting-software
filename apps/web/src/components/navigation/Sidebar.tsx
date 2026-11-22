@@ -405,6 +405,7 @@ export function Sidebar() {
           {/* Standalone Dashboard */}
           <Link
             href="/"
+            prefetch={true}
             className={cn(
               "flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-120 group mb-1 shrink-0",
               pathname === "/"
@@ -506,6 +507,7 @@ export function Sidebar() {
                                     <Link
                                       key={sub.path}
                                       href={sub.path}
+                                      prefetch={true}
                                       className={cn(
                                         "flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-120 shrink-0",
                                         subActive
@@ -537,6 +539,7 @@ export function Sidebar() {
                         <Link
                           key={child.path + child.name}
                           href={child.path}
+                          prefetch={true}
                           className={cn(
                             "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-120 shrink-0 group",
                             active

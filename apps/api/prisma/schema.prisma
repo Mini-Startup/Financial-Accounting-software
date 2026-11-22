@@ -198,7 +198,6 @@ model Exchange {
   id       String  @id @default(uuid())
   code     String  @unique
   name     String?
-  isActive Boolean @default(true) @map("is_active")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
@@ -222,7 +221,6 @@ model Currency {
   code      String    @unique              // e.g. "USD", "AED", "INR"
   name      String?                        // e.g. "US Dollar"
   symbol    String?                        // e.g. "$", "₹", "د.إ"
-  isActive  Boolean   @default(true) @map("is_active")
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -490,7 +488,6 @@ model ExpiryDate {
   id             String    @id @default(uuid())
   date           String    @unique
   normalizedDate DateTime  @map("normalized_date")
-  isActive       Boolean   @default(true) @map("is_active")
   isDeleted      Boolean   @default(false) @map("is_deleted")
   deletedAt      DateTime? @map("deleted_at")
   createdAt      DateTime  @default(now()) @map("created_at")

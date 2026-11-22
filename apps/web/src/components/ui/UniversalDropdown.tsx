@@ -3,12 +3,20 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
-import { Plus, ChevronDown, Check, X } from 'lucide-react';
+import { Plus, ChevronDown, Check, X, Loader2 } from 'lucide-react';
 
 export interface DropdownOption {
   value: string;
   label: string;
   sublabel?: string;
+}
+
+export interface StickyTopOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+  icon?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export interface UniversalDropdownProps {
@@ -21,7 +29,9 @@ export interface UniversalDropdownProps {
   variant?: 'default' | 'seamless';
   searchable?: boolean;
   disabled?: boolean;
+  loading?: boolean;
   clearable?: boolean;
+  stickyTopOption?: StickyTopOption;
   onAddClick?: () => void;
   addLabel?: string;
   id?: string;
@@ -46,7 +56,9 @@ export function UniversalDropdown({
   variant = 'default',
   searchable = true,
   disabled = false,
+  loading = false,
   clearable = false,
+  stickyTopOption,
   onAddClick,
   addLabel = 'Add New',
   id,
@@ -291,7 +303,12 @@ export function UniversalDropdown({
         }}
       >
         {/* Main Typable Search / Display Input or static label */}
-        {searchable ? (
+        {loading ? (
+          <div className="flex items-center gap-2 text-slate-400 select-none truncate">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
+            <span className="truncate">Loading options...</span>
+          </div>
+        ) : searchable ? (
           <input
             ref={inputRef}
             id={id}
@@ -388,9 +405,39 @@ export function UniversalDropdown({
             }}
             className="bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-60 duration-100"
           >
+            {/* Sticky Top Option (e.g. Custom Date...) */}
+            {stickyTopOption && (
+              <div
+                onClick={() => {
+                  closeDropdown();
+                  if (stickyTopOption.onClick) {
+                    stickyTopOption.onClick();
+                  } else {
+                    onChange(stickyTopOption.value);
+                  }
+                }}
+                className="px-3 py-2 text-xs flex items-center justify-between cursor-pointer select-none bg-slate-50/90 hover:bg-blue-50/90 text-blue-700 font-semibold border-b border-slate-200 transition-colors shrink-0"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  {stickyTopOption.icon}
+                  <span className="truncate">{stickyTopOption.label}</span>
+                </div>
+                {stickyTopOption.sublabel && (
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {stickyTopOption.sublabel}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Options List */}
             <div ref={listRef} className="overflow-y-auto flex-1 divide-y divide-slate-100">
-              {filteredOptions.length === 0 ? (
+              {loading ? (
+                <div className="p-4 flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <span>Loading options...</span>
+                </div>
+              ) : filteredOptions.length === 0 ? (
                 <div className="p-3 text-center text-xs text-slate-400 italic">
                   No matching options found
                 </div>

@@ -504,14 +504,12 @@ export class TradeImportService {
           where: { date: rawExpiry },
           update: {
             normalizedDate: parsed,
-            isActive: true,
             isDeleted: false,
             deletedAt: null,
           },
           create: {
             date: rawExpiry,
             normalizedDate: parsed,
-            isActive: true,
           },
         }).catch(() => {});
 
@@ -521,14 +519,12 @@ export class TradeImportService {
             where: { date: isoDate },
             update: {
               normalizedDate: parsed,
-              isActive: true,
               isDeleted: false,
               deletedAt: null,
             },
             create: {
               date: isoDate,
               normalizedDate: parsed,
-              isActive: true,
             },
           }).catch(() => {});
         }

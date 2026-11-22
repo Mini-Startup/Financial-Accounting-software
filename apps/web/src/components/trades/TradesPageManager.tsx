@@ -1357,9 +1357,11 @@ export function TradesPageManager({
           brokers={brokers}
           initialMode="edit"
           onClose={handleCloseAdd}
-          onSave={(saved) => {
+          onSave={(saved, keepOpen) => {
             handleSave(saved);
-            handleCloseAdd();
+            if (!keepOpen) {
+              handleCloseAdd();
+            }
           }}
         />
       )}

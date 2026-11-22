@@ -11,7 +11,6 @@ export class ExpiryDatesService {
       data: {
         date: rawDate,
         normalizedDate: isNaN(normalizedDate.getTime()) ? new Date() : normalizedDate,
-        isActive: data.isActive ?? true,
       },
     });
   }
@@ -21,10 +20,6 @@ export class ExpiryDatesService {
 
     if (!filter?.includeDeleted) {
       where.isDeleted = false;
-    }
-
-    if (filter?.activeOnly) {
-      where.isActive = true;
     }
 
     if (filter?.minDate) {
@@ -65,9 +60,6 @@ export class ExpiryDatesService {
       const norm = new Date(data.normalizedDate);
       updateData.normalizedDate = isNaN(norm.getTime()) ? new Date() : norm;
     }
-    if (data.isActive !== undefined) {
-      updateData.isActive = data.isActive;
-    }
 
     return prisma.expiryDate.update({
       where: { id },
@@ -82,7 +74,6 @@ export class ExpiryDatesService {
       data: {
         isDeleted: true,
         deletedAt: new Date(),
-        isActive: false,
       },
     });
   }
@@ -97,14 +88,12 @@ export class ExpiryDatesService {
       where: { date: trimmed },
       update: {
         normalizedDate: isNaN(finalNorm.getTime()) ? new Date() : finalNorm,
-        isActive: true,
         isDeleted: false,
         deletedAt: null,
       },
       create: {
         date: trimmed,
         normalizedDate: isNaN(finalNorm.getTime()) ? new Date() : finalNorm,
-        isActive: true,
       },
     });
   }

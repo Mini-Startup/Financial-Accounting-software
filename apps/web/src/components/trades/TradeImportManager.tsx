@@ -817,6 +817,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
             <div className="w-48 sm:w-56">
               <UniversalDropdown
                 value={selectedBrokerId}
+                loading={isLoadingBrokers}
                 options={brokers.map((b) => ({
                   value: b.id,
                   label: `${b.name} (${b.code})`,
@@ -825,7 +826,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
                   setSelectedBrokerId(val);
                   notify.success('Broker Updated', { description: 'Target broker updated for this import.' });
                 }}
-                placeholder={isLoadingBrokers ? 'Loading brokers...' : 'Select Broker...'}
+                placeholder="Select Broker..."
                 disabled={isProcessing || isLoadingBrokers}
                 onAddClick={() => setShowBrokerModal(true)}
                 addLabel="Add Broker"
@@ -905,12 +906,13 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
                 </label>
                 <UniversalDropdown
                   value={selectedBrokerId}
+                  loading={isLoadingBrokers}
                   options={brokers.map((b) => ({
                     value: b.id,
                     label: `${b.name} (${b.code})`,
                   }))}
                   onChange={(val) => setSelectedBrokerId(val)}
-                  placeholder={isLoadingBrokers ? "Loading brokers..." : "Select Broker for Settlement..."}
+                  placeholder="Select Broker for Settlement..."
                   disabled={isProcessing || isLoadingBrokers}
                   onAddClick={() => setShowBrokerModal(true)}
                   addLabel="Add Broker"

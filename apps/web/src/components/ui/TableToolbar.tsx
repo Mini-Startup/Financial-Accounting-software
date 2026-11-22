@@ -103,7 +103,7 @@ export function TableToolbar({
   totalItems,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [15, 25, 50, 100],
+  pageSizeOptions = [25, 50, 100, 200, { value: 999999, label: 'All' }],
   compactSearch = false,
   filterSlot,
   actionSlot,

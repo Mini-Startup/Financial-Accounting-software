@@ -263,7 +263,7 @@ export function ExpiryDatePageManager({
         totalItems={filteredExpiries.length}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
-        pageSizeOptions={[10, 25, 50, 100]}
+        pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
       />
 
       {/* Unified Table View */}

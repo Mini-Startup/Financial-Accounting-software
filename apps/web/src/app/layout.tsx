@@ -7,6 +7,7 @@ import { syncUser } from "../utils/syncUser";
 import { Sidebar } from "../components/navigation/Sidebar";
 import { TopBar } from "../components/navigation/TopBar";
 import { UniversalSearch } from "../components/navigation/UniversalSearch";
+import { RouteScrollReset } from "../components/navigation/RouteScrollReset";
 import { TradeImportProvider } from "../components/trades/TradeImportContext";
 import { AuthPermissionsProvider } from "../context/AuthPermissionsContext";
 import { TopBarProvider } from "../context/TopBarContext";
@@ -126,13 +127,16 @@ export default async function RootLayout({
                       {/* Right Section: Floating Island with rounded-2xl, 10px margin from edge and gap from sidebar */}
                       <div className="flex-1 flex flex-col h-full min-w-0 bg-white rounded-2xl shadow-2xl border border-white/20 overflow-hidden relative ml-2">
                         <TopBar />
-                        <main className="flex-1 p-3.5 md:p-5 lg:p-6 overflow-y-auto bg-slate-50/50">
+                        <main id="main-content-scroll" className="flex-1 p-3.5 md:p-5 lg:p-6 overflow-y-auto bg-slate-50/50">
                           <div className="max-w-425 w-full mx-auto">
                             {children}
                           </div>
                         </main>
                       </div>
                     </div>
+                    <Suspense fallback={null}>
+                      <RouteScrollReset />
+                    </Suspense>
                     <UniversalSearch />
                   </TableSearchProvider>
                 </TopBarProvider>

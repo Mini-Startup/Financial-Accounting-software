@@ -239,8 +239,8 @@ export function ScriptFormModal({
     setShowCurrencyModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, saveAndAddMore = false) => {
+    if (e) e.preventDefault();
 
     const validationErrors = validateScriptForm(formData);
     if (Object.keys(validationErrors).length > 0) {
@@ -288,22 +288,25 @@ export function ScriptFormModal({
 
       if (res.ok) {
         const savedData = await res.json().catch(() => null);
-        toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
         if (onSuccess) {
           onSuccess(savedData);
         }
         router.refresh();
-        if (!initialData?.id) {
-          // Rapid entry persistence: preserve exchangeId, currencyId, lotSize; reset name fields
+
+        if (initialData?.id || !saveAndAddMore) {
+          toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
+          onClose();
+        } else {
+          // Rapid entry persistence (Save & Add More): preserve exchangeId, currencyId, lotSize; reset name fields
+          toast.success(`Script '${formData.shortName}' created! Ready for next script.`);
           setFormData((prev) => ({
             ...prev,
             shortName: '',
             fullName: '',
-            code: '',
+            isin: '',
           }));
+          setTouched({});
           setTimeout(() => shortNameInputRef.current?.focus(), 50);
-        } else {
-          onClose();
         }
       } else {
         const err = await res.json();
@@ -362,7 +365,7 @@ export function ScriptFormModal({
             </button>
           </div>
 
-          <form id="scriptForm" onSubmit={handleSubmit} className="flex-1 flex flex-col">
+          <form id="scriptForm" onSubmit={(e) => handleSubmit(e, false)} className="flex-1 flex flex-col">
             <div className="p-5 space-y-3.5 bg-white">
               {/* Warning Banner: Exchange Missing from Database */}
               {isTargetExchangeMissing && (
@@ -561,7 +564,7 @@ export function ScriptFormModal({
             </div>
 
             {/* Unified Modal Footer */}
-            <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+            <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-2.5 shrink-0 rounded-b-2xl">
               <button
                 type="button"
                 onClick={onClose}
@@ -570,6 +573,19 @@ export function ScriptFormModal({
               >
                 Cancel
               </button>
+              {(!initialData || !initialData.id) && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(undefined, true)}
+                  disabled={isSubmitting || isDuplicate || !formData.exchangeId || !formData.currencyId || !formData.shortName.trim()}
+                  className="h-9 px-4 text-xs font-semibold rounded-lg text-[#2652C8] bg-blue-50 hover:bg-blue-100/80 border border-blue-200 hover:-translate-y-0.5 transition-all duration-150 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  ) : null}
+                  <span>Save &amp; Add More</span>
+                </button>
+              )}
               <button
                 type="submit"
                 form="scriptForm"
@@ -591,7 +607,7 @@ export function ScriptFormModal({
                 ) : initialData && initialData.id ? (
                   'Update Script'
                 ) : (
-                  'Add Script'
+                  'Save Script'
                 )}
               </button>
             </div>

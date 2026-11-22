@@ -389,14 +389,18 @@ export class BrokeragesService {
   }
 
   /**
-   * Bulk delete brokerage rules by an array of IDs.
+   * Bulk soft-delete brokerage rules by an array of IDs.
    */
   async removeBulk(ids: string[]) {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new BadRequestException('ids array is required and must not be empty');
     }
-    const result = await prisma.brokerage.deleteMany({
+    const result = await prisma.brokerage.updateMany({
       where: { id: { in: ids } },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
     });
     return { success: true, count: result.count };
   }

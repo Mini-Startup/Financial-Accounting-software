@@ -14,7 +14,7 @@ import {
   type SortDirection,
   type AdvancedCondition,
 } from '@/utils/tableFilter';
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 
 const EXCHANGE_COLUMNS = [
   { key: 'code', label: 'Code' },
@@ -130,7 +130,7 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
         totalItems={sortedExchanges.length}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
-        pageSizeOptions={[10, 25, 50, 100]}
+        pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
       />
 
       {isFindReplaceOpen && (
@@ -143,13 +143,13 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
         />
       )}
 
-      <div className="overflow-x-auto">
-        <table className="data-table w-full text-xs">
-          <thead className="bg-slate-50/90 border-b border-slate-200/80 select-none">
+      <div className="overflow-x-auto rounded-b-xl">
+        <table className="data-table data-table-dense w-full text-xs">
+          <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs select-none">
             <tr className="whitespace-nowrap">
               <th
                 onClick={() => handleSort('code')}
-                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+                className="cursor-pointer hover:bg-slate-100 select-none py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Exchange Code</span>
@@ -162,7 +162,7 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
               </th>
               <th
                 onClick={() => handleSort('name')}
-                className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+                className="cursor-pointer hover:bg-slate-100 select-none py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Exchange Full Name</span>
@@ -173,10 +173,10 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
                   )}
                 </div>
               </th>
-              <th className="text-right py-3 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]">Actions</th>
+              <th className="text-right py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px] w-28">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-slate-100 bg-white font-sans">
             {paginatedExchanges.length === 0 ? (
               <tr>
                 <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
@@ -188,23 +188,35 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
               <tr
                 key={exc.id}
                 onClick={() => setEditingExchange(exc)}
-                className="hover:bg-blue-50/40 transition-colors cursor-pointer"
+                className="hover:bg-slate-50 transition-colors cursor-pointer select-none whitespace-nowrap group"
               >
-                <td className="font-mono font-bold text-slate-900 py-3 px-4 text-xs">{exc.code}</td>
-                <td className="text-slate-800 font-medium py-3 px-4 text-xs">{exc.name || '—'}</td>
-                <td className="text-right py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    onClick={() => setEditingExchange(exc)}
-                    className="text-[#2652C8] hover:text-[#1E42A8] mr-3 font-semibold transition text-xs cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => setDeleteTargetExchange(exc)}
-                    className="text-rose-600 hover:text-rose-700 font-semibold transition text-xs cursor-pointer"
-                  >
-                    Delete
-                  </button>
+                <td className="py-2.5 px-4">
+                  <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/80 shadow-2xs inline-block">
+                    {exc.code}
+                  </span>
+                </td>
+                <td className="py-2.5 px-4">
+                  <span className="text-slate-800 font-medium text-xs">
+                    {exc.name || '—'}
+                  </span>
+                </td>
+                <td className="text-right py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button 
+                      onClick={() => setEditingExchange(exc)}
+                      className="p-1.5 text-slate-400 hover:text-[#2652C8] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Edit Exchange"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => setDeleteTargetExchange(exc)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Exchange"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -212,8 +224,10 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
           {/* Summary / Total Footer */}
           <tfoot className="border-t border-slate-200 bg-slate-50/80 font-medium text-xs text-slate-600">
             <tr>
-              <td className="py-3 px-4 font-bold text-slate-700" colSpan={2}>Total Exchanges: {sortedExchanges.length}</td>
-              <td className="py-3 px-4 text-right text-slate-500 font-normal">
+              <td className="py-2.5 px-4 font-bold text-slate-700" colSpan={2}>
+                Total Exchanges: <span className="font-mono font-bold text-slate-900">{sortedExchanges.length}</span>
+              </td>
+              <td className="py-2.5 px-4 text-right text-slate-500 font-normal">
                 Page {currentPage} of {Math.max(1, Math.ceil(sortedExchanges.length / pageSize))}
               </td>
             </tr>
