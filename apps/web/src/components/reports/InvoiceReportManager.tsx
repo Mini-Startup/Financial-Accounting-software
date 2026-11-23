@@ -14,6 +14,8 @@ import { apiFetch } from '@/utils/apiClient';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { cn } from '@/utils/cn';
+import { downloadReportPdf, type PdfExportGroup, type PdfExportKpi } from '@/lib/pdf/reportPdfGenerator';
+import { downloadReportExcel } from '@/lib/excel/reportExcelGenerator';
 import type { 
   InvoiceReportResponse, 
   InvoiceEntityGroup, 
@@ -141,12 +143,108 @@ export function InvoiceReportManager() {
     fetchInvoiceReport();
   }, [fetchInvoiceReport]);
 
-  // Handle "Generate Report" action (Phase 1 preview / Phase 2 redirection)
-  const handleGenerateReport = useCallback(() => {
-    toast.success('Report Ready for Generation', {
-      description: `Invoice report prepared for ${entityType === 'CLIENT' ? 'Clients' : 'Brokers'}. Dedicated viewer will open in Phase 2.`,
+  // Handle "Preview Report" in standalone viewer
+  const handlePreviewReport = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('type', 'invoice');
+    params.set('entityType', entityType);
+    if (selectedEntityId && selectedEntityId !== 'ALL') {
+      params.set('entityId', selectedEntityId);
+    }
+    if (selectedSettlementId && selectedSettlementId !== 'LATEST') {
+      params.set('settlementId', selectedSettlementId);
+    }
+    window.open(`/report-viewer?${params.toString()}`, '_blank');
+  }, [entityType, selectedEntityId, selectedSettlementId]);
+
+  // Handle direct PDF export
+  const handleExportPdf = useCallback(() => {
+    if (!invoiceData?.invoices || invoiceData.invoices.length === 0) {
+      toast.error('No invoice data available to export');
+      return;
+    }
+
+    const headers = ['Script / Instrument', 'Buy Qty', 'Sell Qty', 'Net Bill Amount'];
+    const groups: PdfExportGroup[] = invoiceData.invoices.map((inv) => ({
+      groupTitle: `${entityType}: ${inv.entityCode} - ${inv.entityName} | Cycle: ${inv.settlementName || invoiceData.settlementName || 'Latest'}`,
+      rows: inv.scripts.map((s) => [
+        s.securityName,
+        s.totalBuyQty,
+        s.totalSellQty,
+        s.netAmount.toFixed(2),
+      ]),
+      subtotalRow: [
+        `Total (${inv.entityName})`,
+        inv.totalBuyQty,
+        inv.totalSellQty,
+        inv.netPayableOrReceivable.toFixed(2),
+      ],
+    }));
+
+    const grandTotalRow = [
+      'GRAND TOTAL',
+      invoiceData.invoices.reduce((acc, inv) => acc + inv.totalBuyQty, 0),
+      invoiceData.invoices.reduce((acc, inv) => acc + inv.totalSellQty, 0),
+      invoiceData.invoices.reduce((acc, inv) => acc + inv.netPayableOrReceivable, 0).toFixed(2),
+    ];
+
+    const kpis: PdfExportKpi[] = [
+      { label: 'Total Entities', value: String(invoiceData.invoices.length) },
+      { label: 'Settlement Cycle', value: invoiceData.settlementName || 'Latest' },
+      {
+        label: 'Total Net Settlement',
+        value: invoiceData.invoices.reduce((acc, inv) => acc + inv.netPayableOrReceivable, 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+      },
+    ];
+
+    downloadReportPdf({
+      reportTitle: 'Client & Broker Invoice Statement',
+      reportSubtitle: `Settlement contract billing statement for ${entityType.toLowerCase()}s`,
+      periodLabel: 'Settlement',
+      asOfDate: invoiceData.settlementName || 'Latest',
+      headers,
+      groups,
+      grandTotalRow,
+      kpis,
+      columnAlignments: ['left', 'right', 'right', 'right'],
     });
-  }, [entityType]);
+    toast.success('Invoice report downloaded as PDF');
+  }, [invoiceData, entityType]);
+
+  // Handle direct Excel export
+  const handleExportCsv = useCallback(() => {
+    if (!invoiceData?.invoices || invoiceData.invoices.length === 0) {
+      toast.error('No invoice data available to export');
+      return;
+    }
+
+    const headers = ['Script / Instrument', 'Buy Qty', 'Sell Qty', 'Net Bill Amount'];
+    const groups: PdfExportGroup[] = invoiceData.invoices.map((inv) => ({
+      groupTitle: `${entityType}: ${inv.entityCode} - ${inv.entityName} | Cycle: ${inv.settlementName || invoiceData.settlementName || 'Latest'}`,
+      rows: inv.scripts.map((s) => [
+        s.securityName,
+        s.totalBuyQty,
+        s.totalSellQty,
+        s.netAmount.toFixed(2),
+      ]),
+      subtotalRow: [
+        `Total (${inv.entityName})`,
+        inv.totalBuyQty,
+        inv.totalSellQty,
+        inv.netPayableOrReceivable.toFixed(2),
+      ],
+    }));
+
+    downloadReportExcel({
+      reportTitle: 'Invoice Statement',
+      reportSubtitle: `Bilateral billing statement for ${entityType.toLowerCase()}s`,
+      periodLabel: 'Settlement',
+      asOfDate: invoiceData.settlementName || 'Latest',
+      headers,
+      groups,
+    });
+    toast.success('Invoice report downloaded as Excel');
+  }, [invoiceData, entityType]);
 
   // Filter invoices by search term
   const filteredInvoices = useMemo(() => {
@@ -195,7 +293,9 @@ export function InvoiceReportManager() {
         subtitle="Bilateral settled trade invoices and futures bills grouped by client, broker, and script."
         isLoading={isLoading}
         onRefresh={fetchInvoiceReport}
-        onGenerateReport={handleGenerateReport}
+        onPreviewReport={handlePreviewReport}
+        onExportPdf={handleExportPdf}
+        onExportCsv={handleExportCsv}
         onPrint={() => window.print()}
       />
 

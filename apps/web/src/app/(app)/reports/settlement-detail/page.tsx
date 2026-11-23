@@ -13,6 +13,7 @@ import {
   formatExportFilename,
   triggerPrint,
 } from '@/components/reports/ReportExportUtils';
+import { downloadReportPdf, type PdfExportGroup, type PdfExportKpi } from '@/lib/pdf/reportPdfGenerator';
 import { SettlementDetailAuditResponse, TradeClassification } from '@/components/reports/types';
 import { DropdownOption } from '@/components/ui/UniversalDropdown';
 
@@ -200,6 +201,93 @@ export default function SettlementDetailPage() {
     toast.success('Settlement Audit Report exported to CSV');
   };
 
+  const handlePreviewReport = () => {
+    const params = new URLSearchParams();
+    params.set('type', 'settlement-detail');
+    if (settlementId) params.set('settlementId', settlementId);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    if (clientId) params.set('entityId', clientId);
+    if (brokerId) params.set('brokerId', brokerId);
+    window.open(`/report-viewer?${params.toString()}`, '_blank');
+  };
+
+  const handleExportPdf = () => {
+    if (!auditData?.clientAuditGroups || auditData.clientAuditGroups.length === 0) {
+      toast.error('No settlement trade data to export');
+      return;
+    }
+
+    const headers = ['Client', 'Trade Date', 'Trade #', 'Type', 'Security', 'Broker', 'Side', 'Qty', 'Rate', 'Value', 'PnL'];
+    const groups: PdfExportGroup[] = auditData.clientAuditGroups.map((g) => ({
+      groupTitle: `Client: ${g.clientCode} - ${g.clientName}`,
+      rows: g.trades.map((t) => [
+        g.clientCode,
+        formatDateToDDMMYY(t.tradeDate),
+        t.tradeNumber,
+        t.tradeType,
+        t.securityName,
+        t.brokerCode || '-',
+        t.transactionType,
+        t.quantity,
+        t.rate.toFixed(2),
+        t.tradeValue.toFixed(2),
+        t.pnl.toFixed(2),
+      ]),
+      subtotalRow: [
+        `Subtotal (${g.clientName})`,
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        '-',
+        g.subtotals.buyQty + g.subtotals.sellQty,
+        '-',
+        (g.subtotals.buyValue + g.subtotals.sellValue).toFixed(2),
+        g.subtotals.cyclePnL.toFixed(2),
+      ],
+    }));
+
+    const grandTotalRow = [
+      'TOTALS',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      auditData.metrics?.totalTradedUnits || 0,
+      '-',
+      ((auditData.metrics?.grossBuyValue || 0) + (auditData.metrics?.grossSellValue || 0)).toFixed(2),
+      (auditData.metrics?.totalCyclePnL || 0).toFixed(2),
+    ];
+
+    const kpis: PdfExportKpi[] = [
+      { label: 'Total Trades', value: String(auditData.metrics?.totalTrades || 0) },
+      { label: 'Regular Trades', value: String(auditData.metrics?.regularCount || 0) },
+      { label: 'Settlement Trades', value: String(auditData.metrics?.settlementCount || 0) },
+      {
+        label: 'Cycle PnL',
+        value: (auditData.metrics?.totalCyclePnL || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+        color: (auditData.metrics?.totalCyclePnL || 0) >= 0 ? 'green' : 'red',
+      },
+    ];
+
+    downloadReportPdf({
+      reportTitle: 'Settlement Detail & Audit Report',
+      reportSubtitle: `Transaction provenance & ledger verification for ${auditData.settlementInfo?.name || 'Cycle'}`,
+      periodLabel: 'Settlement Period',
+      asOfDate: auditData.settlementInfo ? `${formatDateToDDMMYY(auditData.settlementInfo.fromDate)} - ${formatDateToDDMMYY(auditData.settlementInfo.toDate)}` : undefined,
+      headers,
+      groups,
+      grandTotalRow,
+      kpis,
+      columnAlignments: ['left', 'center', 'center', 'center', 'left', 'left', 'center', 'right', 'right', 'right', 'right'],
+    });
+    toast.success('Settlement Audit Report downloaded as PDF');
+  };
+
   const handleResetFilters = () => {
     setFromDate('');
     setToDate('');
@@ -223,13 +311,10 @@ export default function SettlementDetailPage() {
         }
         isLoading={isLoading}
         onRefresh={fetchAuditReport}
+        onPreviewReport={handlePreviewReport}
+        onExportPdf={handleExportPdf}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
-        onGenerateReport={() => {
-          toast.success('Report Ready for Generation', {
-            description: 'Settlement report prepared. Dedicated viewer will open in Phase 2.',
-          });
-        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}

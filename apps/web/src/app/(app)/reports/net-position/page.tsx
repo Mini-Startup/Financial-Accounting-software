@@ -14,6 +14,7 @@ import {
   formatExportFilename,
   triggerPrint,
 } from '@/components/reports/ReportExportUtils';
+import { downloadReportPdf, type PdfExportGroup, type PdfExportKpi } from '@/lib/pdf/reportPdfGenerator';
 import { NetPositionReportResponse, GroupByDimension } from '@/components/reports/types';
 import { DropdownOption } from '@/components/ui/UniversalDropdown';
 import { UniversalPageDropzone } from '@/components/ui/UniversalPageDropzone';
@@ -208,6 +209,89 @@ export default function NetPositionReportPage() {
     toast.success('Net Position Report exported to CSV');
   };
 
+  const handlePreviewReport = () => {
+    const params = new URLSearchParams();
+    params.set('type', 'net-position');
+    params.set('groupBy', groupBy);
+    if (asOfDate) params.set('asOfDate', asOfDate);
+    if (accountId) params.set('entityId', accountId);
+    if (brokerId) params.set('brokerId', brokerId);
+    if (scriptId) params.set('scriptId', scriptId);
+    window.open(`/report-viewer?${params.toString()}`, '_blank');
+  };
+
+  const handleExportPdf = () => {
+    if (!reportData?.groups || reportData.groups.length === 0) {
+      toast.error('No position data available to export');
+      return;
+    }
+    const headers = ['Symbol / Script', 'Expiry', 'Buy Qty', 'Buy Avg', 'Sell Qty', 'Sell Avg', 'Net Qty', 'Closing Rate', 'Market Value', 'Unrealized PnL'];
+    const groups: PdfExportGroup[] = reportData.groups.map((g) => ({
+      groupTitle: `${groupBy}: ${g.code} - ${g.name}`,
+      rows: g.positions.map((p) => [
+        p.securityName,
+        p.expiryFormatted || '-',
+        p.buyQty,
+        p.buyAvgRate > 0 ? p.buyAvgRate.toFixed(2) : '-',
+        p.sellQty,
+        p.sellAvgRate > 0 ? p.sellAvgRate.toFixed(2) : '-',
+        p.netQty,
+        p.closingRate !== null ? p.closingRate.toFixed(2) : 'Pending',
+        p.marketValue.toFixed(2),
+        p.unrealizedPnL.toFixed(2),
+      ]),
+      subtotalRow: [
+        `Subtotal (${g.name || g.code})`,
+        '-',
+        g.totals.buyQty,
+        '-',
+        g.totals.sellQty,
+        '-',
+        g.totals.netQty,
+        '-',
+        g.totals.marketValue.toFixed(2),
+        g.totals.unrealizedPnL.toFixed(2),
+      ],
+    }));
+
+    const grandTotalRow = [
+      'GRAND TOTAL',
+      '-',
+      reportData.groups.reduce((acc, g) => acc + g.totals.buyQty, 0),
+      '-',
+      reportData.groups.reduce((acc, g) => acc + g.totals.sellQty, 0),
+      '-',
+      reportData.groups.reduce((acc, g) => acc + g.totals.netQty, 0),
+      '-',
+      (reportData.summary?.totalNotionalMarketValue || 0).toFixed(2),
+      (reportData.summary?.totalUnrealizedPnL || 0).toFixed(2),
+    ];
+
+    const kpis: PdfExportKpi[] = [
+      { label: 'Open Trades', value: String(reportData.summary?.totalOpenTrades || 0) },
+      { label: 'Open Contracts', value: String(reportData.summary?.totalOpenContracts || 0) },
+      { label: 'Notional Market Value', value: (reportData.summary?.totalNotionalMarketValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
+      {
+        label: 'Unrealized MTM PnL',
+        value: (reportData.summary?.totalUnrealizedPnL || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+        color: (reportData.summary?.totalUnrealizedPnL || 0) >= 0 ? 'green' : 'red',
+      },
+    ];
+
+    downloadReportPdf({
+      reportTitle: 'Net Position Report (Open Positions)',
+      reportSubtitle: `Open contract exposures aggregated by ${groupBy.toLowerCase()}`,
+      periodLabel: 'As of Date',
+      asOfDate: reportData.asOfDate || asOfDate,
+      headers,
+      groups,
+      grandTotalRow,
+      kpis,
+      columnAlignments: ['left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'],
+    });
+    toast.success('Net Position Report downloaded as PDF');
+  };
+
   const handleResetFilters = () => {
     setAccountId('');
     setBrokerId('');
@@ -246,13 +330,10 @@ export default function NetPositionReportPage() {
         asOfDate={reportData?.asOfDate || asOfDate}
         isLoading={isLoading}
         onRefresh={fetchReport}
+        onPreviewReport={handlePreviewReport}
+        onExportPdf={handleExportPdf}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
-        onGenerateReport={() => {
-          toast.success('Report Ready for Generation', {
-            description: `Open Position report prepared for ${groupBy.toLowerCase()}. Dedicated viewer will open in Phase 2.`,
-          });
-        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}

@@ -17,6 +17,7 @@ import {
   formatExportFilename,
   triggerPrint,
 } from '@/components/reports/ReportExportUtils';
+import { downloadReportPdf, type PdfExportGroup, type PdfExportKpi } from '@/lib/pdf/reportPdfGenerator';
 import { SettlementSummaryReportResponse } from '@/components/reports/types';
 import { DropdownOption } from '@/components/ui/UniversalDropdown';
 
@@ -162,6 +163,99 @@ export default function SettlementSummaryPage() {
     toast.success('Financial Settlement Sheet exported to CSV');
   };
 
+  const handlePreviewReport = () => {
+    const params = new URLSearchParams();
+    params.set('type', 'settlement-summary');
+    if (settlementId) params.set('settlementId', settlementId);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    window.open(`/report-viewer?${params.toString()}`, '_blank');
+  };
+
+  const handleExportPdf = () => {
+    if (!summaryData) {
+      toast.error('No settlement summary data to export');
+      return;
+    }
+
+    const headers = ['Account Code', 'Account Name', 'Buy Value', 'Sell Value', 'Trading PnL', 'Brokerage / Charges', 'Net Settlement', 'Status'];
+    const clientRows = summaryData.clientSummary?.rows?.map((r) => [
+      r.accountCode,
+      r.accountName,
+      r.buyValue.toFixed(2),
+      r.sellValue.toFixed(2),
+      r.grossPnL.toFixed(2),
+      r.brokerage.toFixed(2),
+      r.netAmount.toFixed(2),
+      r.ledgerStatus,
+    ]) || [];
+
+    const brokerRows = summaryData.brokerSummary?.rows?.map((r) => [
+      r.brokerCode,
+      r.brokerName,
+      r.buyValue.toFixed(2),
+      r.sellValue.toFixed(2),
+      r.netTradingAmount.toFixed(2),
+      r.charges.toFixed(2),
+      r.netAmount.toFixed(2),
+      r.ledgerStatus,
+    ]) || [];
+
+    const groups: PdfExportGroup[] = [
+      {
+        groupTitle: `Clients Settlement Summary (${clientRows.length} Accounts)`,
+        rows: clientRows,
+        subtotalRow: [
+          'Total Clients',
+          '-',
+          (summaryData.clientSummary?.totals?.totalBuyValue || 0).toFixed(2),
+          (summaryData.clientSummary?.totals?.totalSellValue || 0).toFixed(2),
+          (summaryData.clientSummary?.totals?.grossTradingPnL || 0).toFixed(2),
+          (summaryData.clientSummary?.totals?.totalBrokerage || 0).toFixed(2),
+          (summaryData.clientSummary?.totals?.netSettlementAmount || 0).toFixed(2),
+          '-',
+        ],
+      },
+      {
+        groupTitle: `Brokers Settlement Summary (${brokerRows.length} Accounts)`,
+        rows: brokerRows,
+        subtotalRow: [
+          'Total Brokers',
+          '-',
+          (summaryData.brokerSummary?.totals?.totalBuyValue || 0).toFixed(2),
+          (summaryData.brokerSummary?.totals?.totalSellValue || 0).toFixed(2),
+          (summaryData.brokerSummary?.totals?.netTradingAmount || 0).toFixed(2),
+          (summaryData.brokerSummary?.totals?.totalCharges || 0).toFixed(2),
+          (summaryData.brokerSummary?.totals?.netSettlementAmount || 0).toFixed(2),
+          '-',
+        ],
+      },
+    ];
+
+    const kpis: PdfExportKpi[] = [
+      { label: 'Client Net', value: (summaryData.reconciliation?.totalClientNet || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
+      { label: 'Broker Net', value: (summaryData.reconciliation?.totalBrokerNet || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
+      { label: 'Firm Net Profit', value: (summaryData.reconciliation?.firmNetRealizedProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }), color: 'green' },
+      {
+        label: 'Equilibrium',
+        value: summaryData.reconciliation?.isBalanced ? 'BALANCED' : 'IMBALANCE',
+        color: summaryData.reconciliation?.isBalanced ? 'green' : 'red',
+      },
+    ];
+
+    downloadReportPdf({
+      reportTitle: 'Financial Settlement Summary Sheet',
+      reportSubtitle: `Consolidated balance sheet for ${summaryData.settlement?.name || 'Cycle'}`,
+      periodLabel: 'Settlement Period',
+      asOfDate: summaryData.settlement ? `${formatDateToDDMMYY(summaryData.settlement.fromDate)} - ${formatDateToDDMMYY(summaryData.settlement.toDate)}` : undefined,
+      headers,
+      groups,
+      kpis,
+      columnAlignments: ['left', 'left', 'right', 'right', 'right', 'right', 'right', 'center'],
+    });
+    toast.success('Settlement Summary downloaded as PDF');
+  };
+
   const handleResetFilters = () => {
     setFromDate('');
     setToDate('');
@@ -181,13 +275,10 @@ export default function SettlementSummaryPage() {
         }
         isLoading={isLoading}
         onRefresh={fetchSummaryReport}
+        onPreviewReport={handlePreviewReport}
+        onExportPdf={handleExportPdf}
         onExportCsv={handleExportCsv}
         onPrint={triggerPrint}
-        onGenerateReport={() => {
-          toast.success('Report Ready for Generation', {
-            description: 'Settlement summary report prepared. Dedicated viewer will open in Phase 2.',
-          });
-        }}
       />
 
       {/* ─── CONTROLS BAR ──────────────────────────────────────────────────── */}
