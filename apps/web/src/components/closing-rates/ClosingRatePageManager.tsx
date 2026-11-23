@@ -23,12 +23,15 @@ import {
   RefreshCw, ChevronDown, ChevronUp, PlusCircle, AlertCircle, X, ShieldAlert, Replace, Search
 } from 'lucide-react';
 import { 
+  parseClosingRatesWithDynamicTemplate,
   parseOpenPositionCSV, 
+  processClosingRates, 
   processOpenPositionClosingRates, 
+  validateClosingRateImportFile,
   type ParsedClosingRateItem, 
-  type OpenPositionParsedRow 
-} from '../../lib/tradeParser/openPositionParser';
-import { validateClosingRateImportFile, type FileValidationResult } from '../../lib/tradeParser';
+  type OpenPositionParsedRow,
+  type FileValidationResult,
+} from '../../lib/tradeParser';
 import {
   detectFileTemplate,
   fetchFileImportTemplates,
@@ -333,8 +336,25 @@ export function ClosingRatePageManager({
       try {
         const text = evt.target?.result as string;
 
+        // ── Auto-Detect Template if AUTO is selected ──
+        let activeTemplate = closingRateTemplates.find((t) => t.code === selectedTemplateCode);
+        if (selectedTemplateCode === 'AUTO') {
+          const detected = detectFileTemplate(text, closingRateTemplates);
+          if (detected) {
+            activeTemplate = detected;
+            setSelectedTemplateCode(detected.code);
+            setDetectedTemplate(detected);
+            notify.info('Template Auto-Detected', {
+              description: `Detected format: ${detected.name}`,
+            });
+          } else {
+            activeTemplate = closingRateTemplates[0];
+            setSelectedTemplateCode(closingRateTemplates[0]?.code || 'BROKER_OPEN_POSITIONS');
+          }
+        }
+
         // ── Pre-Parse File Validation Layer ──
-        const validation = validateClosingRateImportFile(text);
+        const validation = validateClosingRateImportFile(text, activeTemplate);
         if (!validation.isValid) {
           setFileValidationError(validation);
           setRawOpenPositionRows([]);
@@ -347,22 +367,8 @@ export function ClosingRatePageManager({
           return;
         }
 
-        // ── Auto-Detect Template if AUTO is selected ──
-        if (selectedTemplateCode === 'AUTO') {
-          const detected = detectFileTemplate(text, closingRateTemplates);
-          if (detected) {
-            setSelectedTemplateCode(detected.code);
-            setDetectedTemplate(detected);
-            notify.info('Template Auto-Detected', {
-              description: `Detected format: ${detected.name}`,
-            });
-          } else {
-            setSelectedTemplateCode('BROKER_OPEN_POSITIONS');
-          }
-        }
-
         setFileValidationError(null);
-        const rawRows = parseOpenPositionCSV(text);
+        const rawRows = parseClosingRatesWithDynamicTemplate(text, activeTemplate);
         if (rawRows.length === 0) {
           toast.error('No valid rows found in CSV file.');
           setIsProcessing(false);
@@ -370,7 +376,7 @@ export function ClosingRatePageManager({
         }
 
         setRawOpenPositionRows(rawRows);
-        const items = processOpenPositionClosingRates(rawRows, exchanges, localScripts);
+        const items = processClosingRates(rawRows, exchanges, localScripts);
         setParsedItems(items);
         notify.success('Rates Extracted Successfully', {
           description: `Extracted ${items.length} unique closing rates from ${rawRows.length} open position rows.`,

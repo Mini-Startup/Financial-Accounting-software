@@ -6,8 +6,14 @@ import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { notify } from '../../utils/toastNotify';
 import { ArrowLeft, RefreshCw, FileSpreadsheet, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
-import { parseTradeFile, parseDubaiTradeFile, validateTradeImportFile, type FileValidationResult } from '../../lib/tradeParser';
-import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import {
+  parseTradeFile,
+  parseTradesWithDynamicTemplate,
+  parseDubaiTradeFile,
+  validateTradeImportFile,
+  type FileValidationResult,
+  type DubaiParsedTrade,
+} from '../../lib/tradeParser';
 import {
   detectFileTemplate,
   fetchFileImportTemplates,
@@ -433,23 +439,13 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
     setFileName(name);
     setFileValidationError(null);
 
-    // ── Pre-Parse File Validation Layer ──
-    const validation = validateTradeImportFile(content);
-    if (!validation.isValid) {
-      setFileValidationError(validation);
-      notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Trade File Format', {
-        description: validation.errors[0] || 'File format does not match Trade file schema.',
-        duration: 8000,
-      });
-      setIsProcessing(false);
-      return;
-    }
-
     // ── Auto-Detect Template if in AUTO mode ──
+    let activeTemplate = tradeTemplates.find((t) => t.code === selectedTemplateCode);
     let activeCode = selectedTemplateCode;
     if (selectedTemplateCode === 'AUTO') {
       const matched = detectFileTemplate(content, tradeTemplates);
       if (matched) {
+        activeTemplate = matched;
         activeCode = matched.code;
         setSelectedTemplateCode(matched.code);
         setDetectedTemplate(matched);
@@ -460,37 +456,50 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
           description: `Using template: ${matched.name}`,
         });
       } else {
-        activeCode = 'DUBAI_FNO_TRADE';
-        setSelectedTemplateCode('DUBAI_FNO_TRADE');
+        activeTemplate = tradeTemplates[0];
+        activeCode = tradeTemplates[0]?.code || 'DUBAI_FNO_TRADE';
+        setSelectedTemplateCode(activeCode);
       }
     }
 
+    // ── Pre-Parse File Validation Layer ──
+    const validation = validateTradeImportFile(content, activeTemplate);
+    if (!validation.isValid) {
+      setFileValidationError(validation);
+      notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Trade File Format', {
+        description: validation.errors[0] || 'File format does not match Trade file schema.',
+        duration: 8000,
+      });
+      setIsProcessing(false);
+      return;
+    }
+
     try {
-      const isDubai = activeCode === 'DUBAI_FNO_TRADE' || activeCode === 'ELEC_TRADE' || isDubaiImport;
-      if (isDubai) {
-        const dubaiResult = parseDubaiTradeFile(content);
-        if (dubaiResult.trades.length === 0) {
+      const isDynamicTrade = Boolean(activeTemplate) || activeCode === 'DUBAI_FNO_TRADE' || activeCode === 'ELEC_TRADE' || isDubaiImport;
+      if (isDynamicTrade) {
+        const tradeResult = parseTradesWithDynamicTemplate(content, activeTemplate);
+        if (tradeResult.trades.length === 0) {
           throw new Error('No valid trade rows found in the file.');
         }
-        const deselectedTrades = dubaiResult.trades.map((t) => ({ ...t, selected: false }));
+        const deselectedTrades = tradeResult.trades.map((t) => ({ ...t, selected: false }));
         setDubaiPreviewRows(deselectedTrades);
-        setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
+        setDubaiDebugSample(tradeResult.debugSampleCsv || '');
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
-        const skipMsg = dubaiResult.skippedOptionsCount ? ` (${dubaiResult.skippedOptionsCount.toLocaleString()} Options trades excluded)` : '';
-        notify.success('Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
+        const skipMsg = tradeResult.skippedOptionsCount ? ` (${tradeResult.skippedOptionsCount.toLocaleString()} Options trades excluded)` : '';
+        notify.success('Trades Parsed', { description: `Successfully parsed ${tradeResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
 
         setIsValidatingMasterData(true);
         setTimeout(async () => {
           await handleRevalidateAll();
         }, 100);
 
-        if (dubaiResult.debugSampleCsv) {
+        if (tradeResult.debugSampleCsv) {
           try {
             apiFetch('/trade-import/save-debug-sample', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileName: name, csvContent: dubaiResult.debugSampleCsv }),
+              body: JSON.stringify({ fileName: name, csvContent: tradeResult.debugSampleCsv }),
             });
           } catch (e) {
             console.error('Failed to save debug sample to backend', e);
