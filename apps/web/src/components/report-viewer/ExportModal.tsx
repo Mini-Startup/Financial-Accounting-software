@@ -33,7 +33,7 @@ export function ExportModal({
   isExporting = false,
 }: ExportModalProps) {
   const [format, setFormat] = useState<'pdf' | 'excel'>('pdf');
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('portrait');
   const [scope, setScope] = useState<'all' | 'page'>('all');
   const [includeKpis, setIncludeKpis] = useState(true);
   const [includeSubtotals, setIncludeSubtotals] = useState(true);
@@ -142,23 +142,6 @@ export function ExportModal({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setOrientation('landscape')}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
-                    orientation === 'landscape'
-                      ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <Layout className="w-4 h-4 rotate-90" />
-                    <span>Landscape (Recommended)</span>
-                  </div>
-                  {orientation === 'landscape' && <Check className="w-4 h-4 text-[#2652C8]" />}
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => setOrientation('portrait')}
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
@@ -169,9 +152,26 @@ export function ExportModal({
                 >
                   <div className="flex items-center gap-2">
                     <Layout className="w-4 h-4" />
-                    <span>Portrait</span>
+                    <span>Portrait (Recommended)</span>
                   </div>
                   {orientation === 'portrait' && <Check className="w-4 h-4 text-[#2652C8]" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOrientation('landscape')}
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
+                    orientation === 'landscape'
+                      ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Layout className="w-4 h-4 rotate-90" />
+                    <span>Landscape</span>
+                  </div>
+                  {orientation === 'landscape' && <Check className="w-4 h-4 text-[#2652C8]" />}
                 </button>
               </div>
             </div>

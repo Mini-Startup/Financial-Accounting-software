@@ -12,6 +12,7 @@ export interface PdfExportGroup {
   groupTitle?: string;
   rows: (string | number)[][];
   subtotalRow?: (string | number)[];
+  summaryBoxLines?: string[];
 }
 
 export interface PdfExportOptions {
@@ -27,13 +28,14 @@ export interface PdfExportOptions {
   kpis?: PdfExportKpi[];
   headers: string[];
   columnAlignments?: ('left' | 'center' | 'right')[];
+  columnWidths?: { [key: number]: number };
   groups: PdfExportGroup[];
   grandTotalRow?: (string | number)[];
   filename?: string;
 }
 
 export function generateReportPdf(options: PdfExportOptions): jsPDF {
-  const orientation = options.orientation || 'landscape';
+  const orientation = options.orientation || 'portrait';
   const doc = new jsPDF({
     orientation,
     unit: 'pt',
@@ -42,63 +44,62 @@ export function generateReportPdf(options: PdfExportOptions): jsPDF {
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 32;
+  const margin = 28;
 
   // 1. BRAND TOP ACCENT BAR
   doc.setFillColor(29, 78, 216); // #1D4ED8 (Brand Blue)
-  doc.rect(0, 0, pageWidth, 5, 'F');
+  doc.rect(0, 0, pageWidth, 4, 'F');
 
-  // 2. DOCUMENT HEADER
-  let currentY = 28;
+  // 2. DOCUMENT HEADER (Rounded Container)
+  let currentY = 20;
+  const headerBoxHeight = 52;
+  const usableWidth = pageWidth - margin * 2;
 
-  // Brand Name & Subtitle
+  doc.setFillColor(248, 250, 252); // slate-50
+  doc.setDrawColor(226, 232, 240); // slate-200
+  doc.roundedRect(margin, currentY, usableWidth, headerBoxHeight, 5, 5, 'FD');
+
+  // Brand Name & Subtitle inside header box
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setTextColor(10, 26, 74); // #0A1A4A
-  doc.text('BIZZMATE FINANCIAL SYSTEMS', margin, currentY);
+  doc.text('BIZZMATE FINANCIAL SYSTEMS', margin + 12, currentY + 16);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139); // #64748B
-  doc.text('INSTITUTIONAL ACCOUNTING & SETTLEMENT ENGINE', margin, currentY + 11);
+  doc.text('INSTITUTIONAL ACCOUNTING & SETTLEMENT ENGINE', margin + 12, currentY + 26);
 
-  // Report Title (Right or Below)
+  // Report Title & Subtitle
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42); // #0F172A
-  doc.text(options.reportTitle.toUpperCase(), margin, currentY + 30);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(options.reportSubtitle, margin, currentY + 42);
+  doc.text(options.reportTitle.toUpperCase(), margin + 12, currentY + 40);
 
   // Metadata Box on Right Side
-  const metaRightX = pageWidth - margin;
+  const metaRightX = margin + usableWidth - 12;
   const asOf = options.asOfDate ? formatDateToDDMMYY(options.asOfDate) : formatDateToDDMMYY(new Date());
   const now = new Date();
   const printTimestamp = `${formatDateToDDMMYY(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(10, 26, 74);
-  doc.text(`${options.periodLabel || 'Period / As of'}:`, metaRightX - 160, currentY);
+  doc.text(`${options.periodLabel || 'As of'}:`, metaRightX - 140, currentY + 16);
   doc.setFont('helvetica', 'normal');
-  doc.text(asOf, metaRightX, currentY, { align: 'right' });
+  doc.text(asOf, metaRightX, currentY + 16, { align: 'right' });
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Generated On:', metaRightX - 160, currentY + 12);
+  doc.text('Generated On:', metaRightX - 140, currentY + 27);
   doc.setFont('helvetica', 'normal');
-  doc.text(printTimestamp, metaRightX, currentY + 12, { align: 'right' });
+  doc.text(printTimestamp, metaRightX, currentY + 27, { align: 'right' });
 
-  if (options.filterSummary && options.filterSummary.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Scope / Filters:', metaRightX - 160, currentY + 24);
-    doc.setFont('helvetica', 'normal');
-    doc.text(options.filterSummary.slice(0, 2).join(' | '), metaRightX, currentY + 24, { align: 'right' });
-  }
+  doc.setFont('helvetica', 'bold');
+  doc.text('Layout:', metaRightX - 140, currentY + 38);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${orientation.toUpperCase()} · AUDITED`, metaRightX, currentY + 38, { align: 'right' });
 
-  currentY += 56;
+  currentY += headerBoxHeight + 12;
 
   // 3. OPTIONAL KPI CARDS
   if (options.includeKpis !== false && options.kpis && options.kpis.length > 0) {
@@ -193,6 +194,27 @@ export function generateReportPdf(options: PdfExportOptions): jsPDF {
           },
         }))
       );
+    }
+
+    // Financial Exposure / Summary Box Row (matching Image 3 & 4)
+    if (group.summaryBoxLines && group.summaryBoxLines.length > 0) {
+      group.summaryBoxLines.forEach((line) => {
+        tableBody.push([
+          {
+            content: line,
+            colSpan: colCount,
+            styles: {
+              fillColor: [248, 250, 252], // slate-50
+              textColor: [30, 41, 59], // slate-800
+              fontStyle: 'bold',
+              halign: 'left',
+              fontSize: 7,
+              lineWidth: { bottom: 0.5 },
+              lineColor: [226, 232, 240],
+            },
+          },
+        ]);
+      });
     }
   });
 
