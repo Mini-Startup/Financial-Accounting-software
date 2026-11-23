@@ -610,41 +610,46 @@ function computeItemScore(item: SearchItem, query: string): number {
 
   let score = 0;
 
-  // 1. Exact title match
-  if (title === q) {
-    score += 2500;
+  // 1. Exact title match or direct singular/plural (e.g. "trade" matches "Trades", "client" matches "Clients")
+  if (title === q || title === q + 's' || title + 's' === q) {
+    score += 3500;
   } else if (title.startsWith(q)) {
-    score += 1200;
+    score += 1500;
   } else if (title.includes(q)) {
-    score += 500;
+    score += 600;
   }
 
-  // 2. Keyword exact / prefix match
+  // 2. Word boundary in title (e.g. "Trade" in "Add New Trade")
+  const words = title.split(/[\s-]+/);
+  if (words.some((w) => w === q || w === q + 's' || w + 's' === q)) {
+    score += 800;
+  } else if (words.some((w) => w.startsWith(q))) {
+    score += 400;
+  }
+
+  // 3. Keyword match (use max single keyword score to avoid keyword-stuffing inflation)
+  let maxKwScore = 0;
   for (const kw of keywords) {
-    if (kw === q) {
-      score += 800;
+    if (kw === q || kw === q + 's' || kw + 's' === q) {
+      maxKwScore = Math.max(maxKwScore, 1000);
     } else if (kw.startsWith(q)) {
-      score += 400;
+      maxKwScore = Math.max(maxKwScore, 500);
     } else if (kw.includes(q)) {
-      score += 150;
+      maxKwScore = Math.max(maxKwScore, 200);
     }
   }
+  score += maxKwScore;
 
-  // 3. Category weighting (Pages #1, Actions #2, Reports #3)
-  // Ensures "trade" -> Trades Page is #1, Add Trade is #2!
-  if (item.category === 'Pages') score += 120;
-  else if (item.category === 'Actions') score += 100;
-  else if (item.category === 'Reports') score += 80;
-  else if (item.category === 'Entities') score += 60;
-  else if (item.category === 'Shortcuts') score += 10;
+  // 4. Category priority: Pages (#1) > Actions (#2) > Reports (#3) > Entities (#4)
+  // Ensures: searching "trade" -> Trades Page is ALWAYS #1, Add Trade action is #2!
+  if (item.category === 'Pages') score += 600;
+  else if (item.category === 'Actions') score += 300;
+  else if (item.category === 'Reports') score += 200;
+  else if (item.category === 'Entities') score += 150;
+  else if (item.category === 'Shortcuts') score += 50;
 
-  // 4. Word boundary match in title
-  const words = title.split(/[\s-]+/);
-  if (words.some((w) => w === q)) score += 600;
-  else if (words.some((w) => w.startsWith(q))) score += 300;
-
-  // 5. Description partial match
-  if (desc.includes(q)) score += 60;
+  // 5. Description match
+  if (desc.includes(q)) score += 50;
 
   return score;
 }
