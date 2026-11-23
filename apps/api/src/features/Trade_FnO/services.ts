@@ -488,6 +488,48 @@ export class TradeImportService {
 
     // Batch insertion in chunks of 2000 for high performance
     const BATCH_SIZE = 2000;
+
+    // Extract and upsert unique expiry dates into ExpiryDate master
+    const uniqueExpiries = new Set<string>();
+    for (const { row } of validRowsWithCalcs) {
+      if (row.expiry && row.expiry.trim()) {
+        uniqueExpiries.add(row.expiry.trim());
+      }
+    }
+
+    for (const rawExpiry of uniqueExpiries) {
+      const parsed = parseAndNormalizeExpiry(rawExpiry);
+      if (parsed) {
+        await prisma.expiryDate.upsert({
+          where: { date: rawExpiry },
+          update: {
+            normalizedDate: parsed,
+            isDeleted: false,
+            deletedAt: null,
+          },
+          create: {
+            date: rawExpiry,
+            normalizedDate: parsed,
+          },
+        }).catch(() => {});
+
+        const isoDate = parsed.toISOString().split('T')[0];
+        if (isoDate !== rawExpiry) {
+          await prisma.expiryDate.upsert({
+            where: { date: isoDate },
+            update: {
+              normalizedDate: parsed,
+              isDeleted: false,
+              deletedAt: null,
+            },
+            create: {
+              date: isoDate,
+              normalizedDate: parsed,
+            },
+          }).catch(() => {});
+        }
+      }
+    }
     
     // Perform bulk insertion using createMany in batches
     for (let i = 0; i < validRowsWithCalcs.length; i += BATCH_SIZE) {

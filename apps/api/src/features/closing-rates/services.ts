@@ -81,6 +81,48 @@ export class ClosingRatesService {
 
     const currencyCode = data.currencyCode || script?.currency?.code || null;
 
+    const existing = await prisma.closingRate.findUnique({
+      where: {
+        exchangeId_securityName_rateDate: {
+          exchangeId: resolvedExchangeId,
+          securityName: resolvedSecurityName,
+          rateDate,
+        },
+      },
+    });
+
+    if (existing) {
+      if (!existing.isDeleted) {
+        throw new BadRequestException('A closing rate for this exchange, security and date already exists');
+      }
+      return prisma.closingRate.update({
+        where: { id: existing.id },
+        data: {
+          exchangeId: resolvedExchangeId,
+          scriptId: data.scriptId || null,
+          securityName: resolvedSecurityName,
+          rateDate,
+          rate: Number(data.rate),
+          expiry: data.expiry || null,
+          delMonth: data.delMonth || null,
+          callPut: data.callPut || null,
+          strikePrice: data.strikePrice ? Number(data.strikePrice) : null,
+          bloombergCode: data.bloombergCode || null,
+          currencyCode,
+          isDeleted: false,
+          deletedAt: null,
+        },
+        include: {
+          exchange: true,
+          script: {
+            include: {
+              currency: true,
+            },
+          },
+        },
+      });
+    }
+
     return prisma.closingRate.create({
       data: {
         exchangeId: resolvedExchangeId,
@@ -94,6 +136,7 @@ export class ClosingRatesService {
         strikePrice: data.strikePrice ? Number(data.strikePrice) : null,
         bloombergCode: data.bloombergCode || null,
         currencyCode,
+        isDeleted: false,
       },
       include: {
         exchange: true,
@@ -107,7 +150,9 @@ export class ClosingRatesService {
   }
 
   async findAll(params?: string | ClosingRateQueryParams) {
-    const where: Prisma.ClosingRateWhereInput = {};
+    const where: Prisma.ClosingRateWhereInput = {
+      isDeleted: false,
+    };
 
     if (typeof params === 'string') {
       if (params) {
@@ -172,8 +217,8 @@ export class ClosingRatesService {
   }
 
   async findOne(id: string) {
-    const closingRate = await prisma.closingRate.findUnique({
-      where: { id },
+    const closingRate = await prisma.closingRate.findFirst({
+      where: { id, isDeleted: false },
       include: {
         exchange: true,
         script: {
@@ -232,8 +277,12 @@ export class ClosingRatesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return prisma.closingRate.delete({
+    return prisma.closingRate.update({
       where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
     });
   }
 
@@ -312,6 +361,8 @@ export class ClosingRatesService {
           strikePrice: r.strikePrice ? Number(r.strikePrice) : null,
           bloombergCode: r.bloombergCode || null,
           currencyCode: resolvedCurrencyCode,
+          isDeleted: false,
+          deletedAt: null,
         },
         create: {
           exchangeId: r.exchangeId,
@@ -325,6 +376,7 @@ export class ClosingRatesService {
           strikePrice: r.strikePrice ? Number(r.strikePrice) : null,
           bloombergCode: r.bloombergCode || null,
           currencyCode: resolvedCurrencyCode,
+          isDeleted: false,
         },
       });
       imported++;
@@ -356,7 +408,7 @@ export class ClosingRatesService {
 
     if (allScriptIds.length > 0) {
       const fetchedScripts = await prisma.script.findMany({
-        where: { id: { in: allScriptIds } },
+        where: { id: { in: allScriptIds }, isDeleted: false },
         select: {
           id: true,
           fullName: true,
@@ -413,7 +465,7 @@ export class ClosingRatesService {
         rateDate: rateDate.toISOString().split('T')[0],
       };
 
-      if (!existing) {
+      if (!existing || existing.isDeleted) {
         newRates.push(rateObj);
       } else {
         const diff = Math.abs(Number(existing.rate) - Number(r.rate));

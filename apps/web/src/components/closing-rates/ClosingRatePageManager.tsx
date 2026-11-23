@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { OpenPositionVerificationPanel, type PositionVerificationItem } from '../trades/OpenPositionVerificationPanel';
 import { generateDubaiSecurityName, cleanScriptFullName } from '../trades/tradeImportHelpers';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
@@ -12,6 +13,7 @@ import { ClosingRateFormModal } from './ClosingRateFormModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
 import { UniversalFileUploader } from '@/components/ui/UniversalFileUploader';
+import { UniversalPageDropzone } from '@/components/ui/UniversalPageDropzone';
 import { UniversalDropdown } from '@/components/ui/UniversalDropdown';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { CustomCheckbox } from '@/components/ui/CustomCheckbox';
@@ -26,7 +28,12 @@ import {
   type ParsedClosingRateItem, 
   type OpenPositionParsedRow 
 } from '../../lib/tradeParser/openPositionParser';
+import { validateClosingRateImportFile, type FileValidationResult } from '../../lib/tradeParser';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { useTopBar } from '@/context/TopBarContext';
+import { UniversalTooltip } from '@/components/ui/UniversalTooltip';
+import { cn } from '@/utils/cn';
 
 
 export function ClosingRatePageManager({ 
@@ -45,9 +52,10 @@ export function ClosingRatePageManager({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isImportParam = searchParams.get('import') === 'true';
+  const isAddParam = searchParams.get('action') === 'add';
 
-  const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
-  const [isAdding, setIsAdding] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
+  const [isAdding, setIsAdding] = useState(isAddParam);
 
   // Dynamic reference master data
   const [localScripts, setLocalScripts] = useState<any[]>(scripts);
@@ -62,10 +70,58 @@ export function ClosingRatePageManager({
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientModalInitialData, setClientModalInitialData] = useState<any>(null);
 
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Closing Rates',
+      actions: (
+        <div className="flex items-center gap-2">
+          <UniversalTooltip content="Add a new daily closing rate">
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Closing Rate</span>
+            </button>
+          </UniversalTooltip>
+          <UniversalTooltip content="Import closing rates & verify positions from CSV">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('import', 'true');
+                window.history.pushState({}, '', url.toString());
+                setIsImportModalOpen(true);
+              }}
+              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+              <span>Import Position File</span>
+            </button>
+          </UniversalTooltip>
+        </div>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
+
   // Sync state with query parameters
   useEffect(() => {
-    setViewMode(isImportParam ? 'import' : 'list');
+    if (isImportParam) {
+      setIsImportModalOpen(true);
+    }
   }, [isImportParam]);
+
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+  }, [isAddParam]);
 
   // Open Position Import states
   const [importDate, setImportDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -75,6 +131,7 @@ export function ClosingRatePageManager({
   const [showAdjustConfirm, setShowAdjustConfirm] = useState<boolean>(false);
   const [rawOpenPositionRows, setRawOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
   const [parsedItems, setParsedItems] = useState<ParsedClosingRateItem[]>([]);
+  const [fileValidationError, setFileValidationError] = useState<FileValidationResult | null>(null);
   
   // Preview Selection & Search States
   const [selectedRateIndices, setSelectedRateIndices] = useState<Set<number>>(new Set());
@@ -145,17 +202,29 @@ export function ClosingRatePageManager({
   };
 
   useEffect(() => {
-    if (viewMode === 'import' && importDate) {
+    if (isImportModalOpen && importDate) {
       fetchSettlementForDate(importDate);
     }
-  }, [viewMode, importDate]);
+  }, [isImportModalOpen, importDate]);
+
+  const removeQueryParam = (paramKey: string) => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(paramKey)) {
+      url.searchParams.delete(paramKey);
+      const cleanUrl = url.pathname + (url.search ? url.search : '');
+      window.history.pushState({}, '', cleanUrl);
+    }
+  };
 
   const handleImportBack = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('import');
-    window.history.pushState({}, '', url.toString());
-    setViewMode('list');
-    router.refresh();
+    removeQueryParam('import');
+    setIsImportModalOpen(false);
+  };
+
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    removeQueryParam('action');
   };
 
   // Fetch currencies if not loaded
@@ -234,6 +303,22 @@ export function ClosingRatePageManager({
     reader.onload = (evt) => {
       try {
         const text = evt.target?.result as string;
+
+        // ── Pre-Parse File Validation Layer ──
+        const validation = validateClosingRateImportFile(text);
+        if (!validation.isValid) {
+          setFileValidationError(validation);
+          setRawOpenPositionRows([]);
+          setParsedItems([]);
+          notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Closing Rate File Format', {
+            description: validation.errors[0] || 'File format does not match Open Position schema.',
+            duration: 8000,
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        setFileValidationError(null);
         const rawRows = parseOpenPositionCSV(text);
         if (rawRows.length === 0) {
           toast.error('No valid rows found in CSV file.');
@@ -244,10 +329,15 @@ export function ClosingRatePageManager({
         setRawOpenPositionRows(rawRows);
         const items = processOpenPositionClosingRates(rawRows, exchanges, localScripts);
         setParsedItems(items);
-        toast.success(`Successfully extracted ${items.length} unique closing rates from ${rawRows.length} open position rows`);
+        setIsAccordionOpen(true);
+        notify.success('Rates Extracted Successfully', {
+          description: `Extracted ${items.length} unique closing rates from ${rawRows.length} open position rows.`,
+        });
       } catch (err: any) {
         console.error(err);
-        toast.error('Failed to parse open position CSV file.');
+        notify.error('File Parsing Failed', {
+          description: 'Failed to parse open position CSV file.',
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -257,6 +347,7 @@ export function ClosingRatePageManager({
 
   const handleClearFile = () => {
     setFileName('');
+    setFileValidationError(null);
     setRawOpenPositionRows([]);
     setParsedItems([]);
     if (inputRef.current) inputRef.current.value = '';
@@ -458,14 +549,18 @@ export function ClosingRatePageManager({
       }
 
       const result = await res.json();
-      toast.success(`Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`);
+      notify.success('Trade Adjustments Completed', {
+        description: `Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`,
+      });
       setShowAdjustConfirm(false);
       
       // Refresh settlement data
       await fetchSettlementForDate(importDate);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Error executing trade adjustments');
+      notify.error('Adjustment Failed', {
+        description: err.message || 'Error executing trade adjustments',
+      });
     } finally {
       setIsAdjusting(false);
     }
@@ -473,7 +568,7 @@ export function ClosingRatePageManager({
 
   const executeImport = async (ratesToImport: any[]) => {
     if (!ratesToImport || ratesToImport.length === 0) {
-      toast.error('No rates to import.');
+      notify.error('Import Failed', { description: 'No rates to import.' });
       return;
     }
 
@@ -491,7 +586,9 @@ export function ClosingRatePageManager({
       }
 
       const result = await res.json();
-      toast.success(`Successfully imported ${result.importedCount} closing rates for ${importDate}!`);
+      notify.success('Rates Imported', {
+        description: `Successfully imported ${result.importedCount} closing rates for ${importDate}!`,
+      });
       setDuplicateCheckModal(null);
       handleImportBack();
     } catch (err: any) {
@@ -569,7 +666,9 @@ export function ClosingRatePageManager({
     }
   };
 
-  if (viewMode === 'import') {
+  const renderImportModal = () => {
+    if (!isImportModalOpen) return null;
+
     const validCount = parsedItems.filter((i) => i.status === 'Valid').length;
     const selectedValidCount = parsedItems.filter((i, idx) => selectedRateIndices.has(idx) && i.status === 'Valid').length;
     const unmappedCount = parsedItems.filter((i) => i.status === 'Unmapped').length;
@@ -678,446 +777,451 @@ export function ClosingRatePageManager({
       });
     };
 
-    return (
-      <div className="space-y-6">
-        {/* Import Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={handleImportBack}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-slate-800"
-              title="Back to Closing Rates"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-h2 font-display">Open Position Import (Closing Rates)</h1>
-              <p className="text-sm text-[var(--color-slate)] mt-1">
-                Upload your daily Open Position CSV file to extract closing rates and verify position settlement.
-              </p>
-            </div>
-          </div>
-
-          {parsedItems.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3">
-              <button 
-                onClick={() => {
-                  setParsedItems([]);
-                  setRawOpenPositionRows([]);
-                  setFileName('');
-                  if (inputRef.current) inputRef.current.value = '';
-                }}
-                className="btn btn--secondary py-2 text-xs"
-              >
-                Reset File
-              </button>
-
-              {/* Add / Adjust Trades Button */}
-              <button
-                onClick={handleAddAdjustTrades}
-                disabled={!isValidated || isAdjusting}
-                className={`btn flex items-center gap-2 py-2 px-4 text-xs font-bold transition-all ${
-                  isValidated && !isAdjusting
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                }`}
-                title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
-              >
-                {isAdjusting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Adjusting Trades…
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4" /> Add / Adjust Trades
-                  </>
-                )}
-              </button>
-
-              {/* Import Closing Rates Button */}
-              <button
-                onClick={handleConfirmImport}
-                disabled={isProcessing || selectedValidCount === 0}
-                className="btn btn--primary flex items-center gap-2 py-2 text-xs font-bold"
-              >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Saving…
-                  </>
-                ) : (
-                  <>Import {selectedValidCount} Selected Rates</>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Configuration Card */}
-        <div className="card p-6 bg-white border border-[var(--color-border-light)] shadow-sm space-y-6">
-          {/* Top Section: Date Selection */}
-          <div className="max-w-md space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Import Rate Date <span className="text-rose-500">*</span>
-            </label>
-            <UniversalDatePicker
-              value={importDate}
-              onChange={(d) => setImportDate(d)}
-              placeholder="DD-MM-YY"
-            />
-            <p className="text-xs text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
-          </div>
-
-          {/* Bottom Section: File Upload Component */}
-          <div className="pt-5 border-t border-[var(--color-border-light)] space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Open Position CSV File <span className="text-rose-500">*</span>
-            </label>
-            <UniversalFileUploader
-              onFileSelect={handleFileSelect}
-              onClear={handleClearFile}
-              fileName={fileName}
-              isProcessing={isProcessing}
-              accept=".csv, .txt"
-              title="Select or drop Open Position CSV"
-              description="Supports CSV, TXT files (drag & drop or click to browse)"
-            />
-          </div>
-
-          {/* Validation Status Bar */}
-          {parsedItems.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4 border-t border-slate-100 bg-slate-50/50 p-4 rounded-xl">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Validation Status:</span>
-                {verification.status === 'VALIDATED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Open Position Verified
-                  </span>
-                ) : verification.status === 'FAILED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
-                    <AlertTriangle className="w-4 h-4 text-rose-600" />
-                    Open Position Not Validated ({verification.discrepancies.length} mismatches)
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    No Trades Found for {importDate}
-                  </span>
-                )}
+    return typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-150 select-none">
+          <div
+            className={cn(
+              "flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden transition-all duration-200",
+              parsedItems.length > 0
+                ? "w-[98vw] max-w-7xl h-[94vh] max-h-[94vh]"
+                : "w-full max-w-xl max-h-[88vh]"
+            )}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200/90 bg-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-[#2652C8] shadow-2xs">
+                  <FileSpreadsheet className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-base font-extrabold tracking-tight text-slate-900 font-display">
+                      Open Position Import (Closing Rates)
+                    </h2>
+                    {parsedItems.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 rounded-full px-2.5 py-0.5 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Data Preserved
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {parsedItems.length > 0
+                      ? 'Review extracted closing rates, verify against settlement, and commit to ledger.'
+                      : 'Upload daily Open Position CSV file to extract closing rates & verify positions.'}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Open Position Verification Panel with Search & Filters */}
-          {verification.items && verification.items.length > 0 && (
-            <OpenPositionVerificationPanel
-              items={verification.items}
-              isValidated={isValidated}
-              onAddScript={handleOpenScriptModal}
-              onAddClient={handleOpenClientModal}
-            />
-          )}
-
-          {/* Parsed Metrics Summary */}
-          {parsedItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-              <div className="card bg-slate-50 p-4 border border-slate-200">
-                <div className="text-xs text-slate-500 font-semibold uppercase">Total Unique Closing Rates</div>
-                <div className="text-xl font-bold text-slate-800 mt-1">{parsedItems.length}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">from {rawOpenPositionRows.length} open position rows</div>
-              </div>
-              <div className="card bg-emerald-50/60 p-4 border border-emerald-200">
-                <div className="text-xs text-emerald-700 font-semibold uppercase">Valid Unique Rates</div>
-                <div className="text-xl font-bold text-emerald-800 mt-1">{validCount}</div>
-                <div className="text-[11px] text-emerald-600 mt-0.5">ready for database import</div>
-              </div>
-              <div className="card bg-rose-50/60 p-4 border border-rose-200">
-                <div className="text-xs text-rose-700 font-semibold uppercase">Unmapped Securities</div>
-                <div className="text-xl font-bold text-rose-800 mt-1">{unmappedCount}</div>
-                <div className="text-[11px] text-rose-600 mt-0.5">require script creation</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Collapsible Accordion Preview Table (Closed by Default) */}
-        {parsedItems.length > 0 && (
-          <div className="card shadow-sm border border-slate-200 overflow-hidden">
-            {/* Accordion Toggle Header */}
-            <button
-              onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-              className="w-full p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors"
-            >
               <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-[var(--color-primary)]" />
-                <span>Closing Rates Extracted from File ({fileName}) — {parsedItems.length} unique security closing rates</span>
+                <button
+                  type="button"
+                  onClick={handleImportBack}
+                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  title="Close dialog (retains uploaded data)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex items-center gap-2 text-slate-500">
-                <span>{isAccordionOpen ? 'Hide File Preview' : 'View File Preview'}</span>
-                {isAccordionOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
+            </div>
 
-            {/* Accordion Body */}
-            {isAccordionOpen && (
-              <div className="space-y-3 p-4">
-                {/* Preview Toolbar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="flex items-center gap-3 flex-wrap flex-1">
-                    {/* Column-targeted Search */}
-                    <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all max-w-md w-full">
-                      <div className="w-[140px] shrink-0 border-r border-[var(--color-border-light)]">
-                        <UniversalDropdown
-                          value={previewSearchColumn}
-                          onChange={(val) => setPreviewSearchColumn(val)}
-                          searchable={false}
-                          options={[
-                            { value: 'ALL', label: 'All Columns' },
-                            { value: 'exchangeCode', label: 'Exchange' },
-                            { value: 'commodityCode', label: 'Commodity Code' },
-                            { value: 'scriptFullName', label: 'Script Name' },
-                            { value: 'securityName', label: 'Security Name' },
-                            { value: 'delMonth', label: 'Del Month' },
-                          ]}
-                          triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-[var(--color-charcoal)]"
-                        />
+            {/* Modal Body: Switch between Initial Upload State and Preview State */}
+            {parsedItems.length === 0 ? (
+              /* ── 1. Initial Upload State (Clean, Compact, No Dropzone after file selected) ── */
+              <div className="p-6 overflow-y-auto space-y-5 bg-slate-50/50 flex-1">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+                  {/* Top Section: Date Selection */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Import Rate Date <span className="text-rose-500">*</span>
+                    </label>
+                    <UniversalDatePicker
+                      value={importDate}
+                      onChange={(d) => setImportDate(d)}
+                      placeholder="DD-MM-YY"
+                    />
+                    <p className="text-[11px] text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
+                  </div>
+
+                  {/* Bottom Section: File Upload Component */}
+                  <div className="pt-4 border-t border-slate-100 space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Open Position CSV File <span className="text-rose-500">*</span>
+                    </label>
+                    <UniversalFileUploader
+                      onFileSelect={handleFileSelect}
+                      onClear={handleClearFile}
+                      fileName={fileName}
+                      isProcessing={isProcessing}
+                      isInvalid={Boolean(fileValidationError)}
+                      accept=".csv, .txt"
+                      title="Select or drop Open Position CSV"
+                      description="Supports CSV, TXT files (drag & drop or click to browse)"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ── 2. Preview State (Full-Width, Directly Visible Table, Dropzone Hidden) ── */
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/50">
+                {/* Control Strip: Active File Pill, Verification Status, and Action Buttons */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs shadow-2xs">
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2652C8]">
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
                       </div>
-                      <div className="relative flex-1 flex items-center">
-                        <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
-                        <input
-                          type="text"
-                          value={previewSearchQuery}
-                          onChange={(e) => {
-                            setPreviewSearchQuery(e.target.value);
-                            setTablePage(1);
-                          }}
-                          placeholder="Search in preview..."
-                          className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
-                        />
-                        {previewSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewSearchQuery('');
+                      <span className="font-mono font-bold text-slate-900 truncate max-w-[200px]" title={fileName}>{fileName}</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-slate-600 font-medium">Date: {formatDateToDDMMYY(importDate) || importDate}</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-slate-500 font-semibold">{rawOpenPositionRows.length.toLocaleString()} rows</span>
+                    </div>
+
+                    {/* Clean single-line Remove file button (cancels import & resets) */}
+                    <button
+                      type="button"
+                      onClick={handleClearFile}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
+                      title="Remove file"
+                    >
+                      <X className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
+                      <span>Remove file</span>
+                    </button>
+
+                    {/* Verification Status Badge */}
+                    {verification.status === 'VALIDATED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Open Position Verified
+                      </span>
+                    ) : verification.status === 'FAILED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        Mismatch ({verification.discrepancies.length})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        No Settlement Trades
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Top Action Buttons */}
+                  <div className="flex items-center gap-2 self-end lg:self-auto shrink-0">
+                    <button
+                      onClick={handleAddAdjustTrades}
+                      disabled={!isValidated || isAdjusting}
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer ${
+                        isValidated && !isAdjusting
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      }`}
+                      title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
+                    >
+                      {isAdjusting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Adjusting…</span>
+                        </>
+                      ) : (
+                        <>
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>Add / Adjust Trades</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleConfirmImport}
+                      disabled={isProcessing || selectedValidCount === 0}
+                      className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Saving…</span>
+                        </>
+                      ) : (
+                        <>Import {selectedValidCount} Selected Rates</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Executive Summary Strip (Dashboard Double-Bezel Design) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Unique Rates</div>
+                        <div className="text-2xl font-extrabold font-mono text-slate-900 mt-1">{parsedItems.length.toLocaleString()}</div>
+                        <div className="text-[11px] text-slate-400 mt-1 font-medium">from {rawOpenPositionRows.length.toLocaleString()} open position rows</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#2652C8]">
+                        <FileSpreadsheet className="w-5 h-5 stroke-[2]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
+                        <div className="text-2xl font-extrabold font-mono text-emerald-700 mt-1">{validCount.toLocaleString()}</div>
+                        <div className="text-[11px] text-emerald-600/90 mt-1 font-medium">Ready for database import</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
+                        <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
+                        <div className="text-2xl font-extrabold font-mono text-amber-700 mt-1">{unmappedCount.toLocaleString()}</div>
+                        <div className="text-[11px] text-amber-700/80 mt-1 font-medium">Require script mapping</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
+                        <AlertCircle className="w-5 h-5 stroke-[2.2]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Closing Rates Table (Directly Visible, not collapsed in an accordion) */}
+                <div className="card shadow-2xs border border-slate-200/90 overflow-hidden bg-white p-4 space-y-3 rounded-xl">
+                  {/* Preview Toolbar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3 flex-wrap flex-1">
+                      {/* Column-targeted Search */}
+                      <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all max-w-md w-full">
+                        <div className="w-35 shrink-0 border-r border-slate-200">
+                          <UniversalDropdown
+                            value={previewSearchColumn}
+                            onChange={(val) => setPreviewSearchColumn(val)}
+                            searchable={false}
+                            options={[
+                              { value: 'ALL', label: 'All Columns' },
+                              { value: 'exchangeCode', label: 'Exchange' },
+                              { value: 'commodityCode', label: 'Commodity Code' },
+                              { value: 'scriptFullName', label: 'Script Name' },
+                              { value: 'securityName', label: 'Security Name' },
+                              { value: 'delMonth', label: 'Del Month' },
+                            ]}
+                            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2 text-[11px] font-semibold text-slate-800"
+                          />
+                        </div>
+                        <div className="relative flex-1 flex items-center">
+                          <Search className="w-3.5 h-3.5 text-slate-400 ml-2.5 shrink-0" />
+                          <input
+                            type="text"
+                            value={previewSearchQuery}
+                            onChange={(e) => {
+                              setPreviewSearchQuery(e.target.value);
                               setTablePage(1);
                             }}
-                            className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                            title="Clear search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                            placeholder="Search in preview..."
+                            className="w-full h-8.5 px-2.5 text-xs bg-transparent text-slate-800 placeholder:text-slate-400 outline-none"
+                          />
+                          {previewSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewSearchQuery('');
+                                setTablePage(1);
+                              }}
+                              className="p-1 mr-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                              title="Clear search"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Batch Selection Counters */}
+                      <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
+                        <strong>{selectedValidCount}</strong> of {validCount} valid selected
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleSelectAllValidOverall}
+                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                      >
+                        Select All Valid
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDeselectAll}
+                        className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        Deselect All
+                      </button>
                     </div>
 
-                    {/* Batch Selection Counters */}
-                    <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
-                      <strong>{selectedValidCount}</strong> of {validCount} valid rates selected
-                    </span>
-
                     <button
                       type="button"
-                      onClick={handleSelectAllValidOverall}
-                      className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+                      onClick={() => setShowPreviewFindAndReplace(!showPreviewFindAndReplace)}
+                      className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
+                        showPreviewFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
+                      }`}
                     >
-                      Select All Valid
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleDeselectAll}
-                      className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
-                    >
-                      Deselect All
+                      <Replace className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Find & Replace</span>
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowPreviewFindAndReplace(!showPreviewFindAndReplace)}
-                    className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
-                      showPreviewFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
-                    }`}
-                  >
-                    <Replace className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Find & Replace</span>
-                  </button>
+                  {/* Find & Replace Drawer */}
+                  {showPreviewFindAndReplace && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <FindAndReplace<ParsedClosingRateItem>
+                        data={parsedItems}
+                        columns={findAndReplaceColumns}
+                        onReplaceOne={handleReplaceOne}
+                        onReplaceAll={handleReplaceAll}
+                        onClose={() => setShowPreviewFindAndReplace(false)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Data Table */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                          <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
+                            <CustomCheckbox
+                              checked={isAllFilteredValidSelected}
+                              onChange={handleToggleSelectAllValid}
+                            />
+                          </th>
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Exchange</th>
+                          <th className="py-3 px-4">Commodity Code</th>
+                          <th className="py-3 px-4">Script Full Name</th>
+                          <th className="py-3 px-4">Security Name</th>
+                          <th className="py-3 px-4">Expiry / DelMonth</th>
+                          <th className="py-3 px-4 text-right font-bold">Closing Rate</th>
+                          <th className="py-3 px-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedItems.map((item, idx) => {
+                          const globalIdx = parsedItems.indexOf(item);
+                          const isSelected = selectedRateIndices.has(globalIdx);
+
+                          return (
+                            <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
+                              <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <CustomCheckbox
+                                  checked={isSelected}
+                                  disabled={item.status !== 'Valid'}
+                                  onChange={() => handleToggleRow(globalIdx)}
+                                />
+                              </td>
+                              <td className="py-3 px-4 font-mono text-slate-500">
+                                {(safeTablePage - 1) * tablePageSize + idx + 1}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
+                              <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
+                              <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
+                              <td className="py-3 px-4 font-mono text-slate-600">{formatDateToDDMMYY(item.expiryDate) || item.delMonth || '—'}</td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                                {formatCurrencySymbol(item.currencySymbol, item.currencyCode)}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {item.status === 'Valid' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Valid</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
+                                    title={item.errors.join(', ') + ' - Click to add this script'}
+                                  >
+                                    <Plus className="w-3 h-3 text-rose-600" />
+                                    <span>Unmapped (Add)</span>
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Table Pagination Bar */}
+                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600 font-semibold">Rows per page:</span>
+                      <CustomSelect<number>
+                        value={tablePageSize}
+                        options={[20, 50, 100]}
+                        onChange={(val) => {
+                          setTablePageSize(Number(val));
+                          setTablePage(1);
+                        }}
+                        size="xs"
+                        menuWidth={75}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-600">
+                        Page {safeTablePage} of {totalTablePages} ({filteredParsedItems.length} items)
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          disabled={safeTablePage === 1}
+                          onClick={() => setTablePage((prev) => Math.max(prev - 1, 1))}
+                          className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          disabled={safeTablePage === totalTablePages}
+                          onClick={() => setTablePage((prev) => Math.min(prev + 1, totalTablePages))}
+                          className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Find & Replace Drawer */}
-                {showPreviewFindAndReplace && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                    <FindAndReplace<ParsedClosingRateItem>
-                      data={parsedItems}
-                      columns={findAndReplaceColumns}
-                      onReplaceOne={handleReplaceOne}
-                      onReplaceAll={handleReplaceAll}
-                      onClose={() => setShowPreviewFindAndReplace(false)}
+                {/* Open Position Verification Panel with Search & Filters */}
+                {verification.items && verification.items.length > 0 && (
+                  <div className="pt-2">
+                    <OpenPositionVerificationPanel
+                      items={verification.items}
+                      isValidated={isValidated}
+                      onAddScript={handleOpenScriptModal}
+                      onAddClient={handleOpenClientModal}
                     />
                   </div>
                 )}
-
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
-                          <CustomCheckbox
-                            checked={isAllFilteredValidSelected}
-                            onChange={handleToggleSelectAllValid}
-                          />
-                        </th>
-                        <th className="py-3 px-4">#</th>
-                        <th className="py-3 px-4">Exchange</th>
-                        <th className="py-3 px-4">Commodity Code</th>
-                        <th className="py-3 px-4">Script Full Name</th>
-                        <th className="py-3 px-4">Security Name</th>
-                        <th className="py-3 px-4">Expiry / DelMonth</th>
-                        <th className="py-3 px-4 text-right font-bold">Closing Rate</th>
-                        <th className="py-3 px-4 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {paginatedItems.map((item, idx) => {
-                        const globalIdx = parsedItems.indexOf(item);
-                        const isSelected = selectedRateIndices.has(globalIdx);
-
-                        return (
-                          <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
-                            <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <CustomCheckbox
-                                checked={isSelected}
-                                disabled={item.status !== 'Valid'}
-                                onChange={() => handleToggleRow(globalIdx)}
-                              />
-                            </td>
-                            <td className="py-3 px-4 font-mono text-slate-500">
-                              {(safeTablePage - 1) * tablePageSize + idx + 1}
-                            </td>
-                            <td className="py-3 px-4 font-bold text-slate-800">{item.exchangeCode}</td>
-                            <td className="py-3 px-4 font-mono font-semibold text-blue-700">{item.commodityCode}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900">{item.scriptFullName || '—'}</td>
-                            <td className="py-3 px-4 font-mono text-slate-800 font-bold">{item.securityName}</td>
-                            <td className="py-3 px-4 font-mono text-slate-600">{item.delMonth || item.expiryDate || '—'}</td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                              {formatCurrencySymbol(item.currencySymbol, item.currencyCode)}{item.closingPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              {item.status === 'Valid' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Valid</span>
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
-                                  title={item.errors.join(', ') + ' - Click to add this script'}
-                                >
-                                  <Plus className="w-3 h-3 text-rose-600" />
-                                  <span>Unmapped (Add)</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Table Pagination Bar */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-600 font-semibold">Rows per page:</span>
-                    <CustomSelect<number>
-                      value={tablePageSize}
-                      options={[20, 50, 100]}
-                      onChange={(val) => {
-                        setTablePageSize(Number(val));
-                        setTablePage(1);
-                      }}
-                      size="xs"
-                      menuWidth={75}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-600">
-                      Page {safeTablePage} of {totalTablePages} ({filteredParsedItems.length} items)
-                    </span>
-                    <div className="flex gap-1">
-                      <button
-                        disabled={safeTablePage === 1}
-                        onClick={() => setTablePage((prev) => Math.max(prev - 1, 1))}
-                        className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        disabled={safeTablePage === totalTablePages}
-                        onClick={() => setTablePage((prev) => Math.min(prev + 1, totalTablePages))}
-                        className="btn btn--secondary py-1 px-2 text-xs disabled:opacity-50"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
           </div>
-        )}
-
-        {showScriptModal &&
-          typeof document !== 'undefined' &&
-          createPortal(
-            <ScriptFormModal
-              initialData={scriptModalInitialData}
-              exchanges={exchanges}
-              currencies={localCurrencies}
-              onClose={() => setShowScriptModal(false)}
-              onSuccess={handleScriptCreated}
-            />,
-            document.body
-          )}
-      </div>
-    );
-  }
+        </div>,
+        document.body
+      );
+    };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-6">
-        <div>
-          <h1 className="text-h2 font-display">Closing Rates</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
-            Manage daily closing rates used for calculating portfolios, profit/loss, and account balances.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Closing Rate
-          </button>
-          <button
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set('import', 'true');
-              window.history.pushState({}, '', url.toString());
-              setViewMode('import');
-            }}
-            className="btn btn--secondary flex items-center gap-2"
-          >
-            <UploadCloud className="w-4 h-4 text-[var(--color-primary)]" /> Open Position Import
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <ClosingRateDataTable 
         closingRates={initialClosingRates} 
         exchanges={exchanges} 
@@ -1128,9 +1232,11 @@ export function ClosingRatePageManager({
         <ClosingRateFormModal 
           exchanges={exchanges}
           scripts={localScripts}
-          onClose={() => setIsAdding(false)} 
+          onClose={handleCloseAdd} 
         />
       )}
+
+      {renderImportModal()}
 
       {showScriptModal &&
         typeof document !== 'undefined' &&
@@ -1163,8 +1269,8 @@ export function ClosingRatePageManager({
         typeof document !== 'undefined' &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="bg-[var(--bg-card)] border border-[var(--color-border-medium)] rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-              <div className="p-6 border-b border-[var(--color-border-light)] flex items-center justify-between">
+            <div className="bg-(--bg-card) border border-border-medium rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-border-light flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
                     <ShieldAlert className="w-5 h-5" />
@@ -1265,7 +1371,7 @@ export function ClosingRatePageManager({
                 )}
               </div>
 
-              <div className="p-4 bg-slate-50 border-t border-[var(--color-border-light)] flex items-center justify-end gap-3">
+              <div className="p-4 bg-slate-50 border-t border-border-light flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setDuplicateCheckModal(null)}
@@ -1309,6 +1415,16 @@ export function ClosingRatePageManager({
         isLoading={isAdjusting}
         onConfirm={executeAdjustTrades}
         onCancel={() => setShowAdjustConfirm(false)}
+      />
+      {/* Universal Drag & Drop File Listener on Closing Rates page */}
+      <UniversalPageDropzone
+        onFileDrop={(file) => {
+          setIsImportModalOpen(true);
+          handleFileSelect(file);
+        }}
+        title="Drop Open Position File to Import Rates"
+        subtitle="Drop your daily Open Position CSV file anywhere to extract closing rates & verify positions"
+        acceptedExtensions={['.csv', '.txt']}
       />
     </div>
   );

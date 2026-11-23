@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { trialBalanceService } from './services';
+import { requirePermission } from '../../middleware/auth';
 
 const router = Router();
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('TRIAL_BALANCE', 'VIEW'), async (req, res, next) => {
   try {
     const { toDate, fromDate, groupId, category } = req.query;
 

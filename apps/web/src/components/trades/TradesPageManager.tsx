@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TradeFormModal } from './TradeFormModal';
-import { TradeImportManager } from './TradeImportManager';
-import { TradeDetailModal } from './TradeDetailModal';
+import { TradeImportModal } from './TradeImportModal';
+import { UniversalPageDropzone } from '../ui/UniversalPageDropzone';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { UniversalDatePicker } from '../ui/UniversalDatePicker';
+import { UniversalDateRangePicker } from '../ui/UniversalDateRangePicker';
+import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { apiFetch } from '@/utils/apiClient';
+import { useTopBar } from '@/context/TopBarContext';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
 import {
   sortRecords,
@@ -20,57 +24,66 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { cn } from '@/utils/cn';
-import { formatDateToDDMMYY } from '@/utils/dateUtils';
+import { formatDateToDDMMYY, formatDateForInput } from '@/utils/dateUtils';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
+import { formatExpiryToDDMMMYY } from '@/utils/securityName';
+import type { ColumnDefinition } from '../ui/ColumnSettingsPopover';
 
 type DateFilterMode = 'ALL' | 'DATE' | 'MONTH' | 'RANGE';
 
 function parseTradeDateString(dateVal: any): { yyyyMmDd: string; yyyyMm: string; time: number } | null {
   if (!dateVal) return null;
-  if (typeof dateVal === 'string') {
-    const isoMatch = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) {
-      const yyyy = isoMatch[1];
-      const mm = isoMatch[2];
-      const dd = isoMatch[3];
-      const d = new Date(dateVal);
-      return {
-        yyyyMmDd: `${yyyy}-${mm}-${dd}`,
-        yyyyMm: `${yyyy}-${mm}`,
-        time: isNaN(d.getTime()) ? new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`).getTime() : d.getTime(),
-      };
-    }
+  const iso = formatDateForInput(dateVal);
+  if (iso) {
+    const parts = iso.split('-');
+    return {
+      yyyyMmDd: iso,
+      yyyyMm: `${parts[0]}-${parts[1]}`,
+      time: new Date(`${iso}T00:00:00Z`).getTime(),
+    };
   }
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return null;
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const yyyyMmDd = `${yyyy}-${mm}-${dd}`;
   return {
-    yyyyMmDd: `${yyyy}-${mm}-${dd}`,
+    yyyyMmDd,
     yyyyMm: `${yyyy}-${mm}`,
     time: d.getTime(),
   };
 }
 
-const TRADE_COLUMNS = [
-  { key: 'securityName', label: 'Security / Script' },
-  { key: 'tradeDate', label: 'Trade Date' },
-  { key: 'exchange.code', label: 'Exchange' },
-  { key: 'expiry', label: 'Expiry Date' },
-  { key: 'transactionType', label: 'Type (BUY/SELL)' },
-  { key: 'account.name', label: 'Client' },
-  { key: 'broker.name', label: 'Broker' },
-  { key: 'price', label: 'Rate' },
-  { key: 'clientRate', label: 'Client Rate' },
-  { key: 'brokerRate', label: 'Broker Rate' },
-  { key: 'clientBrokerage', label: 'Client Brk' },
-  { key: 'brokerBrokerage', label: 'Broker Brk' },
-  // { key: 'profitTotal', label: 'Net Profit' },
-  { key: 'terminal', label: 'Terminal' },
-  { key: 'tradeType', label: 'Trade Type' },
+const TRADE_COLUMNS: ColumnDefinition[] = [
+  { key: 'tradeDate', label: 'Date & Trade No', isDefault: true, required: true },
+  { key: 'securityName', label: 'Security & Symbol', isDefault: true, required: true },
+  { key: 'expiry', label: 'Expiry', isDefault: true, required: true },
+  { key: 'transactionType', label: 'Side / Type', isDefault: true, required: true },
+  { key: 'quantity', label: 'Quantity', isDefault: true, required: true },
+  { key: 'client', label: 'Client & Rate', isDefault: true, required: true },
+  { key: 'broker', label: 'Broker & Rate', isDefault: true, required: true },
+  { key: 'price', label: 'Market Rate', isDefault: true },
+  { key: 'exchange.code', label: 'Exchange', isDefault: false },
+  { key: 'clientRate', label: 'Client Rate', isDefault: false },
+  { key: 'brokerRate', label: 'Broker Rate', isDefault: false },
+  { key: 'clientBrokerage', label: 'Client Brk', isDefault: false },
+  { key: 'brokerBrokerage', label: 'Broker Brk', isDefault: false },
+  { key: 'tradeType', label: 'Trade Type', isDefault: false },
+];
+
+const DEFAULT_VISIBLE_COLUMNS = [
+  'tradeDate',
+  'securityName',
+  'expiry',
+  'transactionType',
+  'quantity',
+  'client',
+  'broker',
+  'price',
 ];
 
 export function TradesPageManager({
@@ -78,20 +91,85 @@ export function TradesPageManager({
   accounts,
   scripts,
   initialTrades,
+  settlements = [],
+  initialExpiries = [],
 }: {
   exchanges: any[];
   accounts: any[];
   scripts: any[];
   initialTrades: any[];
+  settlements?: any[];
+  initialExpiries?: any[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isImportParam = searchParams.get('import') === 'true';
+  const isAddParam = searchParams.get('action') === 'add';
 
-  const [viewMode, setViewMode] = useState<'list' | 'import'>(isImportParam ? 'import' : 'list');
-  const [isAdding, setIsAdding] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(isImportParam);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingTrade, setEditingTrade] = useState<any | null>(null);
-  const [trades, setTrades] = useState<any[]>(initialTrades);
+  const [viewingTrade, setViewingTrade] = useState<any | null>(null);
+
+  const removeQueryParam = useCallback((paramKey: string) => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(paramKey)) {
+      url.searchParams.delete(paramKey);
+      const cleanUrl = url.pathname + (url.search ? url.search : '');
+      window.history.pushState({}, '', cleanUrl);
+    }
+  }, []);
+
+  const handleCloseAdd = useCallback(() => {
+    setIsAdding(false);
+    removeQueryParam('action');
+  }, [removeQueryParam]);
+
+  const handleCloseImport = useCallback(() => {
+    setIsImportModalOpen(false);
+    setDroppedFile(null);
+    removeQueryParam('import');
+  }, [removeQueryParam]);
+
+  // Synchronize when searchParams change or custom event is received
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+    if (isImportParam) {
+      setIsImportModalOpen(true);
+    }
+  }, [isAddParam, isImportParam]);
+
+  useEffect(() => {
+    const handleOpenAdd = () => {
+      setIsAdding(true);
+    };
+    window.addEventListener('bizzmate-open-add-trade', handleOpenAdd);
+    return () => window.removeEventListener('bizzmate-open-add-trade', handleOpenAdd);
+  }, []);
+
+  const {
+    items: trades,
+    setItems: setTrades,
+    addEntity,
+    updateEntity,
+    removeEntity,
+    syncWithServer,
+  } = useOptimisticEntityList<any>(initialTrades);
+
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_VISIBLE_COLUMNS);
+  const [expiryList, setExpiryList] = useState<any[]>(initialExpiries || []);
+  const [expiryFilter, setExpiryFilter] = useState('');
+
+  // Primary business filters
+  const [settlementFilter, setSettlementFilter] = useState<string>('OPEN');
+  const [clientFilter, setClientFilter] = useState<string>('');
+  const [brokerFilter, setBrokerFilter] = useState<string>('');
+  const [scriptFilter, setScriptFilter] = useState<string>('');
+
   const [selectedTrade, setSelectedTrade] = useState<any | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -109,6 +187,7 @@ export function TradesPageManager({
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['ALL']);
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [exchangeFilter, setExchangeFilter] = useState('');
@@ -116,12 +195,25 @@ export function TradesPageManager({
   const [tradeTypeFilter, setTradeTypeFilter] = useState('');
   const [findReplaceMatch, setFindReplaceMatch] = useState<FindReplaceMatchState | null>(null);
 
-  // Date filter state: particular date, particular month, or date range
-  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('ALL');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  // Date filter state: defaults from earliest open trade to latest open trade in data
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const openTrades = (initialTrades || []).filter((t: any) => !t.settlementId && t.tradeDate);
+    if (openTrades.length === 0) return '';
+    return openTrades.reduce((min: string, t: any) => {
+      const parts = parseTradeDateString(t.tradeDate);
+      if (!parts) return min;
+      return !min || parts.yyyyMmDd < min ? parts.yyyyMmDd : min;
+    }, '');
+  });
+  const [toDate, setToDate] = useState<string>(() => {
+    const openTrades = (initialTrades || []).filter((t: any) => !t.settlementId && t.tradeDate);
+    if (openTrades.length === 0) return '';
+    return openTrades.reduce((max: string, t: any) => {
+      const parts = parseTradeDateString(t.tradeDate);
+      if (!parts) return max;
+      return !max || parts.yyyyMmDd > max ? parts.yyyyMmDd : max;
+    }, '');
+  });
 
   // Sorting & Pagination
   const [sortKey, setSortKey] = useState<string | null>('tradeDate');
@@ -131,15 +223,75 @@ export function TradesPageManager({
   const [pageSize, setPageSize] = useState(50);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push clean simple title & page action buttons to unified TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Trades',
+      actions: (
+        <div className="flex items-center gap-2">
+          <UniversalTooltip content="Add a new trade entry (Alt+N)">
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Trade</span>
+            </button>
+          </UniversalTooltip>
+          <UniversalTooltip content="Bulk import trades from Excel or CSV file">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('import', 'true');
+                window.history.pushState({}, '', url.toString());
+                setIsImportModalOpen(true);
+              }}
+              className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+              <span>Import File</span>
+            </button>
+          </UniversalTooltip>
+        </div>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
+
   // Sync state with query parameters (e.g. sidebar links)
   useEffect(() => {
-    setViewMode(isImportParam ? 'import' : 'list');
+    if (isImportParam) {
+      setIsImportModalOpen(true);
+    }
   }, [isImportParam]);
 
   // Update local trades list when initialTrades changes
   useEffect(() => {
-    setTrades(initialTrades);
-  }, [initialTrades]);
+    syncWithServer(initialTrades);
+  }, [initialTrades, syncWithServer]);
+
+  // Load active contract expiries from ExpiryDate master
+  useEffect(() => {
+    const fetchExpiries = async () => {
+      try {
+        const res = await apiFetch('/expiry-dates?activeOnly=true');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setExpiryList(data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load active expiry dates:', err);
+      }
+    };
+    fetchExpiries();
+  }, []);
 
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
@@ -175,8 +327,54 @@ export function TradesPageManager({
     ...exchanges.map((ex) => ({ value: ex.code, label: ex.code })),
   ], [exchanges]);
 
+  const settlementOptions = useMemo(() => [
+    { value: 'OPEN', label: 'Open Positions' },
+    { value: 'ALL', label: 'All Settlements' },
+    ...(settlements || []).map((s: any) => ({
+      value: s.id,
+      label: s.name || `Settlement (${formatDateToDDMMYY(s.toDate)})`,
+    })),
+  ], [settlements]);
+
+  const scriptOptions = useMemo(() => [
+    { value: '', label: 'All Scripts' },
+    ...(scripts || []).map((s: any) => ({
+      value: s.id,
+      label: `${s.fullName || s.shortName} (${s.shortName})`,
+    })),
+  ], [scripts]);
+
+  const clientOptions = useMemo(() => [
+    { value: '', label: 'All Clients' },
+    ...clients.map((c: any) => ({
+      value: c.id,
+      label: `${c.name} (${c.code})`,
+    })),
+  ], [clients]);
+
+  const brokerOptions = useMemo(() => [
+    { value: '', label: 'All Brokers' },
+    ...brokers.map((b: any) => ({
+      value: b.id,
+      label: `${b.name} (${b.code})`,
+    })),
+  ], [brokers]);
+
+  const expiryFilterOptions = useMemo(() => [
+    { value: '', label: 'All Expiries' },
+    ...expiryList.map((exp: any) => {
+      const expDate = exp.expiryDate || exp.date;
+      const formatted = formatDateToDDMMYY(expDate);
+      const code = formatExpiryToDDMMMYY(expDate);
+      return {
+        value: formatted,
+        label: `${formatted} (${code})`,
+      };
+    }),
+  ], [expiryList]);
+
   const typeOptions = useMemo(() => [
-    { value: '', label: 'Buy / Sell' },
+    { value: '', label: 'All' },
     { value: 'BUY', label: 'BUY' },
     { value: 'SELL', label: 'SELL' },
   ], []);
@@ -190,13 +388,6 @@ export function TradesPageManager({
     { value: 'REGULAR', label: 'Regular / Import' },
   ], []);
 
-  const dateFilterModeOptions = useMemo(() => [
-    { value: 'ALL', label: 'All Dates' },
-    { value: 'DATE', label: 'Single Date' },
-    { value: 'MONTH', label: 'By Month' },
-    { value: 'RANGE', label: 'Date Range' },
-  ], []);
-
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDir(sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? null : 'asc');
@@ -207,11 +398,39 @@ export function TradesPageManager({
     }
   };
 
-  // Filter trades list with column targeting + advanced conditions + date filter
+  // Filter trades list with column targeting + advanced conditions + business filters
   const filteredTrades = useMemo(() => {
-    let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions);
+    let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions, selectedColumns);
+
+    // 1. Settlement filter (default 'OPEN' shows only open/unsettled positions)
+    if (settlementFilter === 'OPEN') {
+      list = list.filter((t) => !t.settlementId);
+    } else if (settlementFilter !== 'ALL' && settlementFilter) {
+      list = list.filter((t) => t.settlementId === settlementFilter);
+    }
+
+    // 2. Client filter
+    if (clientFilter) {
+      list = list.filter((t) => t.accountId === clientFilter);
+    }
+
+    // 3. Broker filter
+    if (brokerFilter) {
+      list = list.filter((t) => t.brokerId === brokerFilter);
+    }
+
+    // 4. Script filter
+    if (scriptFilter) {
+      list = list.filter((t) => t.scriptId === scriptFilter);
+    }
+
+    // 5. Exchange filter
     if (exchangeFilter) list = list.filter((t) => t.exchange?.code === exchangeFilter);
+
+    // 6. Buy/Sell Type filter
     if (typeFilter) list = list.filter((t) => t.transactionType === typeFilter);
+
+    // 7. Trade Type filter
     if (tradeTypeFilter) {
       list = list.filter((t) =>
         tradeTypeFilter === 'REGULAR'
@@ -220,18 +439,19 @@ export function TradesPageManager({
       );
     }
 
-    // Date filter: Particular Date, Particular Month, or Date Range
-    if (dateFilterMode === 'DATE' && selectedDate) {
+    // 8. Expiry filter
+    if (expiryFilter) {
       list = list.filter((t) => {
-        const parts = parseTradeDateString(t.tradeDate);
-        return parts ? parts.yyyyMmDd === selectedDate : false;
+        const formattedExp = formatDateToDDMMYY(t.expiry);
+        return (
+          formattedExp === expiryFilter ||
+          String(t.expiry || '').toUpperCase().includes(expiryFilter.toUpperCase())
+        );
       });
-    } else if (dateFilterMode === 'MONTH' && selectedMonth) {
-      list = list.filter((t) => {
-        const parts = parseTradeDateString(t.tradeDate);
-        return parts ? parts.yyyyMm === selectedMonth : false;
-      });
-    } else if (dateFilterMode === 'RANGE') {
+    }
+
+    // 9. Date Range filter
+    if (fromDate || toDate) {
       const from = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
       const to = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
       if (from !== null || to !== null) {
@@ -251,15 +471,18 @@ export function TradesPageManager({
     trades,
     searchQuery,
     searchColumn,
+    selectedColumns,
     advancedConditions,
+    settlementFilter,
+    clientFilter,
+    brokerFilter,
+    scriptFilter,
     exchangeFilter,
     typeFilter,
     tradeTypeFilter,
-    dateFilterMode,
-    selectedDate,
-    selectedMonth,
     fromDate,
     toDate,
+    expiryFilter,
   ]);
 
   // Sorted and Paginated trades
@@ -305,13 +528,13 @@ export function TradesPageManager({
     setTrades((prev) =>
       prev.map((t) => (t.id === target.id ? { ...t, [columnKey]: newValue } : t))
     );
-    toast.success(`Updated ${columnKey}`);
+    notify.success(`Updated ${columnKey}`);
   };
 
   const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
     const { updatedRecords, count } = replaceValueInRecords(trades, columnKey, findVal, replaceVal, true);
     setTrades(updatedRecords);
-    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+    notify.success(`Replaced ${count} occurrences in ${columnKey}`);
   };
 
   // Selection handlers
@@ -354,7 +577,9 @@ export function TradesPageManager({
       ))
     );
     if (isLocked) {
-      toast.error('Settlement-generated trades are locked and cannot be deleted.');
+      notify.error('Locked Trade', {
+        description: 'Settlement-generated trades are locked and cannot be deleted.',
+      });
       return;
     }
 
@@ -365,17 +590,18 @@ export function TradesPageManager({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
+          const res = await apiFetch(`/trades/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
-            setTrades((prev) => prev.filter((t) => t.id !== id));
-            toast.success('Trade deleted successfully');
+            removeEntity(id);
+            notify.success('Trade deleted successfully');
           } else {
-            toast.error('Failed to delete trade');
+            const err = await res.json().catch(() => ({}));
+            notify.error(err.message || 'Server failed to delete trade');
           }
-        } catch {
-          toast.error('Failed to delete trade');
+        } catch (e: any) {
+          notify.error(e.message || 'Failed to sync deletion with server');
         }
       },
     });
@@ -393,7 +619,9 @@ export function TradesPageManager({
     ).length;
 
     if (lockedCount > 0) {
-      toast.error(`Cannot delete selection: ${lockedCount} settlement trade(s) are locked.`);
+      notify.error('Locked Trades Selected', {
+        description: `Cannot delete selection: ${lockedCount} settlement trade(s) are locked.`,
+      });
       return;
     }
 
@@ -404,20 +632,31 @@ export function TradesPageManager({
       confirmLabel: `Delete ${count} Trades`,
       onConfirm: async () => {
         setIsDeleting(true);
+        const ids = Array.from(selectedIds);
+        let successCount = 0;
+        let lastErrorMessage = '';
         try {
-          const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/trades/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          setTrades((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+          for (const id of ids) {
+            const res = await apiFetch(`/trades/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              removeEntity(id);
+              successCount++;
+            } else {
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            notify.success(`${successCount} trades deleted successfully`);
+          }
+          if (lastErrorMessage) {
+            notify.error(lastErrorMessage);
+          }
           setSelectedIds(new Set());
-          toast.success(`${count} trades deleted successfully`);
         } catch {
-          toast.error('Failed to delete some trades');
+          notify.error('Failed to delete some trades on server');
         } finally {
           setIsDeleting(false);
         }
@@ -427,30 +666,13 @@ export function TradesPageManager({
 
   const handleSave = (savedTrade?: any) => {
     if (savedTrade && savedTrade.id) {
-      setTrades((prev) => {
-        const index = prev.findIndex((t) => t.id === savedTrade.id);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index] = savedTrade;
-          return updated;
-        }
-        return [savedTrade, ...prev];
-      });
+      if (editingTrade || viewingTrade) {
+        updateEntity(savedTrade);
+      } else {
+        addEntity(savedTrade);
+      }
     }
-    router.refresh();
   };
-
-  const handleImportBack = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('import');
-    window.history.pushState({}, '', url.toString());
-    setViewMode('list');
-    router.refresh();
-  };
-
-  if (viewMode === 'import') {
-    return <TradeImportManager onBack={handleImportBack} />;
-  }
 
   const renderWithDiff = (colKey: string, currentVal: any, isActiveMatch: boolean) => {
     const rawText = String(currentVal ?? '');
@@ -475,7 +697,7 @@ export function TradesPageManager({
     return (
       <span className="inline-flex items-center gap-1 font-mono text-xs">
         <span className="line-through text-red-600 bg-red-50 px-1 py-0.5 rounded opacity-75">{rawText || '—'}</span>
-        <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold shadow-2xs">→ {preview}</span>
+        <span className="text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded font-bold shadow-2xs">→ {preview}</span>
       </span>
     );
   };
@@ -484,39 +706,11 @@ export function TradesPageManager({
     <div className="space-y-4 relative">
       {isDeleting && <LoadingOverlay message="Deleting selected trades..." />}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
-        <div>
-          <h1 className="text-h2 font-display">Trades</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
-            Review manual, imported, and settlement trades cross-referenced with account masters.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsAdding(true)}
-            className="btn btn--primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Trade
-          </button>
-          <button
-            onClick={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set('import', 'true');
-              window.history.pushState({}, '', url.toString());
-              setViewMode('import');
-            }}
-            className="btn btn--secondary flex items-center gap-2"
-          >
-            <UploadCloud className="w-4 h-4 text-[var(--color-primary)]" /> Import File
-          </button>
-        </div>
-      </div>
-
-      {/* Table Container Card (Seamless zero gap between Toolbar and Table) */}
-      <div className="border border-[var(--color-border-light)] rounded-xl shadow-xs overflow-hidden bg-white">
+      {/* Table Container Card (Clean unified card: Toolbar -> Secondary Filters -> Data Table) */}
+      <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
         <TableToolbar
+          tableName="Trades"
+          records={trades}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -529,10 +723,21 @@ export function TradesPageManager({
             setSearchColumn(col);
             setCurrentPage(1);
           }}
+          selectedColumns={selectedColumns}
+          onSelectedColumnsChange={(cols) => {
+            setSelectedColumns(cols);
+            setCurrentPage(1);
+          }}
           advancedConditions={advancedConditions}
           onAdvancedConditionsChange={(conds) => {
             setAdvancedConditions(conds);
             setCurrentPage(1);
+          }}
+          columnSettings={{
+            columns: TRADE_COLUMNS,
+            visibleColumns,
+            onChange: setVisibleColumns,
+            storageKey: 'bizzmate_trades_visible_columns',
           }}
           showFindReplaceButton={true}
           isFindReplaceOpen={isFindReplaceOpen}
@@ -541,313 +746,370 @@ export function TradesPageManager({
           onBulkDelete={handleBulkDelete}
           onClearSelection={() => setSelectedIds(new Set())}
           isDeleting={isDeleting}
+          compactSearch={true}
           currentPage={currentPage}
           pageSize={pageSize}
           totalItems={totalItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[25, 50, 100, 200]}
-          className="border-0 rounded-none border-b border-[var(--color-border-light)]"
+          pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
+          className="border-0 rounded-none border-b border-slate-200/80 px-4 py-3"
           filterSlot={
-            <div className="flex gap-2 items-center flex-wrap">
-              <div className="w-36">
-                <UniversalDropdown
-                  options={exchangeOptions}
-                  value={exchangeFilter}
-                  onChange={(val) => {
-                    setExchangeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Exchanges"
-                />
-              </div>
-              <div className="w-32">
-                <UniversalDropdown
-                  options={typeOptions}
-                  value={typeFilter}
-                  onChange={(val) => {
-                    setTypeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Buy / Sell"
-                />
-              </div>
-              <div className="w-40">
-                <UniversalDropdown
-                  options={tradeTypeOptions}
-                  value={tradeTypeFilter}
-                  onChange={(val) => {
-                    setTradeTypeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="All Trade Types"
-                />
-              </div>
-
-              {/* Date Filters: Particular Date, Month, or Range */}
-              <div className="w-34">
-                <UniversalDropdown
-                  options={dateFilterModeOptions}
-                  value={dateFilterMode}
-                  onChange={(val) => {
-                    setDateFilterMode(val as DateFilterMode);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Filter Date"
-                />
-              </div>
-
-              {dateFilterMode === 'DATE' && (
-                <div className="w-38">
-                  <UniversalDatePicker
-                    value={selectedDate}
-                    onChange={(val) => {
-                      setSelectedDate(val);
+            <div className="flex gap-2.5 items-center">
+              {/* 1-Click Side Segmented Control: All / BUY / SELL */}
+              <div className="inline-flex p-0.5 rounded-lg bg-slate-100 border border-slate-200/80 shrink-0 select-none">
+                <UniversalTooltip content="Show all BUY and SELL trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('');
                       setCurrentPage(1);
                     }}
-                    placeholder="Select date"
-                  />
-                </div>
-              )}
-
-              {dateFilterMode === 'MONTH' && (
-                <div className="w-38">
-                  <input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => {
-                      setSelectedMonth(e.target.value);
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                      !typeFilter
+                        ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                    )}
+                  >
+                    All
+                  </button>
+                </UniversalTooltip>
+                <UniversalTooltip content="Filter only BUY trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('BUY');
                       setCurrentPage(1);
                     }}
-                    className="h-8.5 w-full px-2.5 text-xs rounded-lg border border-[var(--color-border-medium)] bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[var(--color-leaf)] shadow-2xs cursor-pointer"
-                    title="Select month"
-                  />
-                </div>
-              )}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      typeFilter === 'BUY'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-emerald-700 hover:bg-emerald-50'
+                    )}
+                  >
+                    BUY
+                  </button>
+                </UniversalTooltip>
+                <UniversalTooltip content="Filter only SELL trades">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTypeFilter('SELL');
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                      typeFilter === 'SELL'
+                        ? 'bg-rose-600 text-white shadow-2xs'
+                        : 'text-rose-700 hover:bg-rose-50'
+                    )}
+                  >
+                    SELL
+                  </button>
+                </UniversalTooltip>
+              </div>
 
-              {dateFilterMode === 'RANGE' && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-34">
-                    <UniversalDatePicker
-                      value={fromDate}
-                      onChange={(val) => {
-                        setFromDate(val);
-                        setCurrentPage(1);
-                      }}
-                      placeholder="From date"
-                    />
-                  </div>
-                  <span className="text-xs text-slate-400 font-semibold">to</span>
-                  <div className="w-34">
-                    <UniversalDatePicker
-                      value={toDate}
-                      onChange={(val) => {
-                        setToDate(val);
-                        setCurrentPage(1);
-                      }}
-                      placeholder="To date"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {dateFilterMode !== 'ALL' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDateFilterMode('ALL');
-                    setSelectedDate('');
-                    setSelectedMonth('');
-                    setFromDate('');
-                    setToDate('');
+              {/* Settlement Dropdown: Supports Open Positions, All Settlements, and specific cycles like Settlement 1 */}
+              <div className="w-44 shrink-0">
+                <UniversalDropdown
+                  options={settlementOptions}
+                  value={settlementFilter}
+                  onChange={(val) => {
+                    setSettlementFilter(val || 'OPEN');
                     setCurrentPage(1);
                   }}
-                  className="h-8.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center gap-1 cursor-pointer"
-                  title="Clear date filter"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Clear Date</span>
-                </button>
-              )}
+                  placeholder="Settlement"
+                  searchable={true}
+                />
+              </div>
             </div>
           }
         />
 
-        <div className="overflow-x-auto">
-          <table className="data-table w-full text-xs">
-            <thead>
+        {/* Secondary Granular Filter Shelf: Clean Single Shelf (Exchange, Expiry, Script, Client, Broker, Date Range, Reset) */}
+        <div className="px-4 py-2.5 bg-slate-50/70 border-b border-slate-200/80 flex items-center gap-2 flex-wrap">
+          <div className="w-32">
+            <UniversalDropdown
+              options={exchangeOptions}
+              value={exchangeFilter}
+              onChange={(val) => {
+                setExchangeFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Exchanges"
+              searchable={true}
+            />
+          </div>
+          <div className="w-32">
+            <UniversalDropdown
+              options={expiryFilterOptions}
+              value={expiryFilter}
+              onChange={(val) => {
+                setExpiryFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Expiries"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={scriptOptions}
+              value={scriptFilter}
+              onChange={(val) => {
+                setScriptFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Scripts"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={clientOptions}
+              value={clientFilter}
+              onChange={(val) => {
+                setClientFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Clients"
+              searchable={true}
+            />
+          </div>
+          <div className="w-36">
+            <UniversalDropdown
+              options={brokerOptions}
+              value={brokerFilter}
+              onChange={(val) => {
+                setBrokerFilter(val);
+                setCurrentPage(1);
+              }}
+              placeholder="All Brokers"
+              searchable={true}
+            />
+          </div>
+          <div className="w-60">
+            <UniversalDateRangePicker
+              startDate={fromDate}
+              endDate={toDate}
+              onChange={({ startDate, endDate }) => {
+                setFromDate(startDate);
+                setToDate(endDate);
+                setCurrentPage(1);
+              }}
+              placeholder="Filter Date Range"
+              compact={true}
+            />
+          </div>
+
+          {(settlementFilter !== 'OPEN' || clientFilter || brokerFilter || scriptFilter || exchangeFilter || typeFilter || tradeTypeFilter || expiryFilter || fromDate || toDate) && (
+            <UniversalTooltip content="Reset all active filters to default">
+              <button
+                type="button"
+                onClick={() => {
+                  setSettlementFilter('OPEN');
+                  setClientFilter('');
+                  setBrokerFilter('');
+                  setScriptFilter('');
+                  setExchangeFilter('');
+                  setTypeFilter('');
+                  setTradeTypeFilter('');
+                  setExpiryFilter('');
+                  setFromDate('');
+                  setToDate('');
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="h-8.5 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer transition shadow-2xs shrink-0"
+              >
+                <X className="w-3.5 h-3.5 text-slate-400" />
+                <span>Reset</span>
+              </button>
+            </UniversalTooltip>
+          )}
+        </div>
+
+        <div className="overflow-x-auto rounded-b-xl">
+          <table className="data-table data-table-dense w-full text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs">
               <tr className="whitespace-nowrap">
-                <th style={{ width: '40px' }} className="text-center">
+                <th style={{ width: '36px' }} className="text-center">
                   <CustomCheckbox
                     checked={isAllVisibleSelected}
                     onChange={handleToggleSelectAll}
                   />
                 </th>
-                <th
-                  onClick={() => handleSort('tradeDate')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Date</span>
-                    {sortKey === 'tradeDate' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('exchange.code')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Exchange</span>
-                    {sortKey === 'exchange.code' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('securityName')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Security Name / Script</span>
-                    {sortKey === 'securityName' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('expiry')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Expiry Date</span>
-                    {sortKey === 'expiry' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('transactionType')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Type</span>
-                    {sortKey === 'transactionType' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="text-right cursor-pointer hover:bg-slate-100 select-none"
-                  onClick={() => handleSort('quantity')}
-                >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Qty</span>
-                    {sortKey === 'quantity' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('account.name')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Client</span>
-                    {sortKey === 'account.name' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('broker.name')}
-                  className="cursor-pointer hover:bg-slate-100 select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Broker</span>
-                    {sortKey === 'broker.name' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-
-                {/* 6 Highlighted Rate & Brokerage & Profit Columns */}
-                <th
-                  className="text-right cursor-pointer select-none bg-slate-200/90 text-slate-800 border-l border-r border-slate-300 font-bold"
-                  onClick={() => handleSort('price')}
-                >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Rate</span>
-                    {sortKey === 'price' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
-                  Client Rate
-                </th>
-                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
-                  Broker Rate
-                </th>
-                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
-                  Client Brk
-                </th>
-                <th className="text-right font-bold bg-slate-200/90 text-slate-800 border-r border-slate-300">
-                  Broker Brk
-                </th>
-                {/* Net Profit Column - commented out as requested */}
-                {/* <th
-                  className="text-right cursor-pointer select-none bg-slate-200/90 text-slate-800 border-r border-slate-300 font-bold"
-                  onClick={() => handleSort('profitTotal')}
-                >
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Net Profit</span>
-                    {sortKey === 'profitTotal' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th> */}
-                <th>Trade Type</th>
-                <th style={{ width: '90px' }} className="text-right">Actions</th>
+                {visibleColumns.includes('tradeDate') && (
+                  <th
+                    onClick={() => handleSort('tradeDate')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Date &amp; Trade No</span>
+                      {sortKey === 'tradeDate' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('exchange.code') && (
+                  <th
+                    onClick={() => handleSort('exchange.code')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Exchange</span>
+                      {sortKey === 'exchange.code' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('securityName') && (
+                  <th
+                    onClick={() => handleSort('securityName')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Security &amp; Symbol</span>
+                      {sortKey === 'securityName' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('expiry') && (
+                  <th
+                    onClick={() => handleSort('expiry')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Expiry</span>
+                      {sortKey === 'expiry' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('transactionType') && (
+                  <th
+                    onClick={() => handleSort('transactionType')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Side / Type</span>
+                      {sortKey === 'transactionType' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('quantity') && (
+                  <th
+                    className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                    onClick={() => handleSort('quantity')}
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Quantity</span>
+                      {sortKey === 'quantity' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('client') && (
+                  <th
+                    onClick={() => handleSort('account.name')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Client &amp; Rate</span>
+                      {sortKey === 'account.name' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('broker') && (
+                  <th
+                    onClick={() => handleSort('broker.name')}
+                    className="cursor-pointer hover:bg-slate-100 select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Broker &amp; Rate</span>
+                      {sortKey === 'broker.name' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('price') && (
+                  <th
+                    className="text-right cursor-pointer hover:bg-slate-100 select-none font-semibold text-slate-700"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Market Rate</span>
+                      {sortKey === 'price' ? (
+                        sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                      ) : (
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('clientRate') && (
+                  <th className="text-right font-semibold text-slate-600">
+                    Client Rate
+                  </th>
+                )}
+                {visibleColumns.includes('brokerRate') && (
+                  <th className="text-right font-semibold text-slate-600">
+                    Broker Rate
+                  </th>
+                )}
+                {visibleColumns.includes('clientBrokerage') && (
+                  <th className="text-right font-semibold text-slate-600">
+                    Client Brk
+                  </th>
+                )}
+                {visibleColumns.includes('brokerBrokerage') && (
+                  <th className="text-right font-semibold text-slate-600">
+                    Broker Brk
+                  </th>
+                )}
+                {visibleColumns.includes('tradeType') && (
+                  <th>Trade Type</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
               {paginatedTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                  <td colSpan={visibleColumns.length + 1} className="py-12 text-center text-slate font-medium">
                     No trades match your search criteria.
                   </td>
                 </tr>
               ) : null}
               {paginatedTrades.map((t, index) => {
-                const profit = t.profitTotal ?? 0;
-                const isZeroBrk = ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType || '');
-                const netProfitPerShare = isZeroBrk
-                  ? 0
-                  : (t.clientRate != null && t.brokerRate != null)
-                  ? (t.transactionType === 'BUY' ? (t.clientRate - t.brokerRate) : (t.brokerRate - t.clientRate))
-                  : (t.profitTotal != null && t.quantity > 0 ? (t.profitTotal / t.quantity) : (t.profitTotal ?? 0));
                 const secName = t.securityName || t.script?.fullName || t.script?.shortName || '—';
                 const isSelected = selectedIds.has(t.id);
                 const isMatched = findReplaceMatch?.matchedRowIndices.includes(index);
@@ -867,15 +1129,14 @@ export function TradesPageManager({
                         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                       }
                     }}
-                    onClick={() => setSelectedTrade(t)}
+                    onClick={() => setViewingTrade(t)}
                     className={cn(
                       'transition-colors cursor-pointer select-none whitespace-nowrap',
-                      isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60',
+                      isSelected && 'bg-blue-50/60 hover:bg-blue-50/80',
                       !isSelected && isMatched && !isActiveMatch && 'bg-amber-50/60 hover:bg-amber-100/60',
                       isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
                       !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50'
                     )}
-                    title="Click to view full details"
                   >
                     <td
                       className="text-center whitespace-nowrap"
@@ -889,129 +1150,168 @@ export function TradesPageManager({
                         onChange={() => handleToggleRow(t.id)}
                       />
                     </td>
-                    <td className="text-[var(--color-slate)] font-mono text-xs whitespace-nowrap">
-                      {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
-                    </td>
-                    <td className="font-bold text-[var(--color-charcoal)] whitespace-nowrap">
-                      {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}
-                    </td>
-                    <td className="max-w-[260px] truncate whitespace-nowrap" title={secName}>
-                      <span className="font-semibold text-[var(--color-charcoal)] text-xs truncate block">
-                        {renderWithDiff('securityName', secName, isActiveMatch)}
-                      </span>
-                    </td>
-                    <td className="font-mono text-xs text-slate-700 whitespace-nowrap">
-                      {renderWithDiff('expiry', t.expiry || '—', isActiveMatch)}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {isActiveMatch && findReplaceMatch?.targetColumn === 'transactionType' ? (
-                        renderWithDiff('transactionType', t.transactionType, true)
-                      ) : (
+                    {visibleColumns.includes('tradeDate') && (
+                      <td className="text-slate text-xs whitespace-nowrap">
+                        <div className="font-mono font-medium text-slate-800">
+                          {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {t.tradeNumber || '—'}
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.includes('exchange.code') && (
+                      <td className="font-medium text-slate-600 text-xs whitespace-nowrap">
+                        {renderWithDiff('exchange.code', t.exchange?.code || '—', isActiveMatch)}
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('securityName') && (
+                      <td className="max-w-65 truncate whitespace-nowrap">
+                        <div className="font-medium text-slate-800 text-xs truncate">
+                          {renderWithDiff('securityName', secName, isActiveMatch)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-normal flex items-center gap-1.5 mt-0.5">
+                          <span>{t.script?.shortName || '—'}</span>
+                          {t.exchange?.code && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">
+                              {t.exchange.code}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('expiry') && (
+                      <td className="font-mono text-xs text-slate-600 whitespace-nowrap font-normal">
+                        {renderWithDiff('expiry', formatDateToDDMMYY(t.expiry) || '—', isActiveMatch)}
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('transactionType') && (
+                      <td className="whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {isActiveMatch && findReplaceMatch?.targetColumn === 'transactionType' ? (
+                            renderWithDiff('transactionType', t.transactionType, true)
+                          ) : (
+                            <span
+                              className={cn(
+                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap',
+                                t.transactionType === 'BUY'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              )}
+                            >
+                              {t.transactionType}
+                            </span>
+                          )}
+                          {t.tradeType && t.tradeType !== 'INTERNAL' && t.tradeType !== 'REGULAR' && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                              {t.tradeType === 'CARRY_FORWARD' ? 'CF' : t.tradeType === 'BACK_FORWARD' ? 'BF' : t.tradeType === 'SETTLEMENT' ? 'SETTL' : t.tradeType}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('quantity') && (
+                      <td className="font-mono font-medium text-right whitespace-nowrap text-slate-800">
+                        {Math.abs(t.quantity).toLocaleString()}
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('client') && (
+                      <td className="font-mono text-xs whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
+                          {renderWithDiff('account.code', t.account?.code || t.account?.name || '—', isActiveMatch)}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {(() => {
+                            const rateVal = t.clientRate != null ? t.clientRate : t.rate;
+                            const brk = t.clientBrokerage ?? 0;
+                            if (brk > 0) {
+                              return `Rate: ${currSym}${rateVal.toFixed(2)} (+${currSym}${brk.toFixed(2)})`;
+                            }
+                            return `Rate: ${currSym}${rateVal.toFixed(2)}`;
+                          })()}
+                        </div>
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('broker') && (
+                      <td className="font-mono text-xs whitespace-nowrap">
+                        <div className="font-medium text-slate-800">
+                          {renderWithDiff('broker.code', t.broker?.code || t.broker?.name || '—', isActiveMatch)}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {(() => {
+                            const rateVal = t.brokerRate != null ? t.brokerRate : t.rate;
+                            const brk = t.brokerBrokerage ?? 0;
+                            if (brk > 0) {
+                              return `Rate: ${currSym}${rateVal.toFixed(2)} (+${currSym}${brk.toFixed(2)})`;
+                            }
+                            return `Rate: ${currSym}${rateVal.toFixed(2)}`;
+                          })()}
+                        </div>
+                      </td>
+                    )}
+
+                    {/* Market Rate & Brokerage Columns (Uniform modern styling) */}
+                    {visibleColumns.includes('price') && (
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-semibold text-slate-900">
+                        {currSym}{t.rate.toFixed(2)}
+                      </td>
+                    )}
+                    {visibleColumns.includes('clientRate') && (
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-700">
+                        {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
+                      </td>
+                    )}
+                    {visibleColumns.includes('brokerRate') && (
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-700">
+                        {t.brokerRate != null ? `${currSym}${t.brokerRate.toFixed(2)}` : '—'}
+                      </td>
+                    )}
+                    {visibleColumns.includes('clientBrokerage') && (
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-500">
+                        {t.clientBrokerage != null && t.clientBrokerage > 0 ? `${currSym}${t.clientBrokerage.toFixed(2)}` : `${currSym}0.00`}
+                      </td>
+                    )}
+                    {visibleColumns.includes('brokerBrokerage') && (
+                      <td className="font-mono text-right text-xs whitespace-nowrap font-normal text-slate-500">
+                        {t.brokerBrokerage != null && t.brokerBrokerage > 0 ? `${currSym}${t.brokerBrokerage.toFixed(2)}` : `${currSym}0.00`}
+                      </td>
+                    )}
+
+                    {visibleColumns.includes('tradeType') && (
+                      <td className="whitespace-nowrap">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap',
-                            t.transactionType === 'BUY'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap',
+                            t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
+                            t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
+                            t.tradeType === 'SETTLEMENT' && 'bg-blue-50 text-blue-800 border-blue-200',
+                            t.tradeType === 'INTERNAL' && 'bg-blue-50 text-blue-700 border-blue-200',
+                            (!t.tradeType || t.tradeType === 'REGULAR') &&
+                              (t.source === 'MANUAL'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200')
                           )}
                         >
-                          {t.transactionType}
+                          {t.tradeType === 'CARRY_FORWARD'
+                            ? 'Carry Forward'
+                            : t.tradeType === 'BACK_FORWARD'
+                            ? 'Backforward'
+                            : t.tradeType === 'SETTLEMENT'
+                            ? 'Settlement'
+                            : t.tradeType === 'INTERNAL'
+                            ? 'Internal Trade'
+                            : t.tradeType && t.tradeType !== 'REGULAR'
+                            ? t.tradeType
+                            : t.source}
                         </span>
-                      )}
-                    </td>
-                    <td className="font-mono font-semibold text-right whitespace-nowrap">{t.quantity}</td>
-                    <td className="font-mono text-xs whitespace-nowrap" title={t.account?.name}>
-                      {renderWithDiff('account.code', t.account?.code || '—', isActiveMatch)}
-                    </td>
-                    <td className="font-mono text-xs whitespace-nowrap" title={t.broker?.name}>
-                      {renderWithDiff('broker.code', t.broker?.code || '—', isActiveMatch)}
-                    </td>
-
-                    {/* 6 Highlighted Rate & Brokerage & Profit Columns */}
-                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-l border-r border-slate-200/80">
-                      {currSym}{t.rate.toFixed(2)}
-                    </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-r border-slate-200/80">
-                      {t.clientRate != null ? `${currSym}${t.clientRate.toFixed(2)}` : '—'}
-                    </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap font-bold text-slate-900 bg-slate-100/90 border-r border-slate-200/80">
-                      {t.brokerRate != null ? `${currSym}${t.brokerRate.toFixed(2)}` : '—'}
-                    </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-100/90 border-r border-slate-200/80">
-                      {t.clientBrokerage != null && t.clientBrokerage > 0 ? `${currSym}${t.clientBrokerage.toFixed(2)}` : `${currSym}0.00`}
-                    </td>
-                    <td className="font-mono text-right text-xs whitespace-nowrap font-medium text-slate-800 bg-slate-100/90 border-r border-slate-200/80">
-                      {t.brokerBrokerage != null && t.brokerBrokerage > 0 ? `${currSym}${t.brokerBrokerage.toFixed(2)}` : `${currSym}0.00`}
-                    </td>
-                    {/* Net Profit cell - commented out as requested */}
-                    {/* <td
-                      className={cn(
-                        'font-mono font-bold text-right text-xs whitespace-nowrap bg-slate-100/90 border-r border-slate-200/80',
-                        netProfitPerShare > 0 ? 'text-[var(--color-positive)]' :
-                        netProfitPerShare < 0 ? 'text-[var(--color-negative)]' :
-                        'text-[var(--color-charcoal)]'
-                      )}
-                    >
-                      {netProfitPerShare > 0 ? '+' : ''}{currSym}{netProfitPerShare.toFixed(2)}
-                    </td> */}
-                    <td className="whitespace-nowrap">
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap',
-                          t.tradeType === 'CARRY_FORWARD' && 'bg-amber-50 text-amber-800 border-amber-200',
-                          t.tradeType === 'BACK_FORWARD' && 'bg-indigo-50 text-indigo-800 border-indigo-200',
-                          t.tradeType === 'SETTLEMENT' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
-                          t.tradeType === 'INTERNAL' && 'bg-blue-50 text-blue-700 border-blue-200',
-                          (!t.tradeType || t.tradeType === 'REGULAR') &&
-                            (t.source === 'MANUAL'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-purple-50 text-purple-700 border-purple-200')
-                        )}
-                      >
-                        {t.tradeType === 'CARRY_FORWARD'
-                          ? 'Carry Forward'
-                          : t.tradeType === 'BACK_FORWARD'
-                          ? 'Backforward'
-                          : t.tradeType === 'SETTLEMENT'
-                          ? 'Settlement'
-                          : t.tradeType === 'INTERNAL'
-                          ? 'Internal Trade'
-                          : t.tradeType && t.tradeType !== 'REGULAR'
-                          ? t.tradeType
-                          : t.source}
-                      </span>
-                    </td>
-                    <td
-                      className="text-right whitespace-nowrap"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {t.settlementId != null || (t.source === 'SYSTEM' && ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'].includes(t.tradeType)) ? (
-                        <div
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs select-none border border-slate-200"
-                          title="Settlement-generated trade is locked against edits and deletion"
-                        >
-                          <Lock className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-[11px] font-medium">Locked</span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setEditingTrade(t)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors rounded-md hover:bg-blue-50 cursor-pointer"
-                            title="Edit Trade"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50 cursor-pointer"
-                            title="Delete Trade"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -1019,33 +1319,14 @@ export function TradesPageManager({
             {/* Sticky Total / Summary Row */}
             <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
               <tr>
-                <td className="py-2.5 px-4 text-center" colSpan={6}>
+                <td className="py-2.5 px-4 text-center" colSpan={Math.max(1, visibleColumns.length - 1)}>
                   Visible Trades: {visibleStats.count} of {totalItems} (Page {currentPage} of {Math.max(1, Math.ceil(totalItems / pageSize))})
                 </td>
                 <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
                   <div className="text-[10px] text-slate-500 font-normal">Buy: {visibleStats.buyQty.toLocaleString()} | Sell: {visibleStats.sellQty.toLocaleString()}</div>
                   <div>Net: {visibleStats.netQty > 0 ? `+${visibleStats.netQty.toLocaleString()}` : visibleStats.netQty.toLocaleString()}</div>
                 </td>
-                {/* Visible Net P&L commented out as requested */}
-                {/* <td colSpan={5} className="py-2.5 px-3 text-right text-slate-500 font-normal">
-                  Visible Net P&amp;L:
-                </td>
-                <td className="py-2.5 px-3 text-right font-mono font-bold">
-                  <span
-                    className={cn(
-                      visibleStats.totalProfit > 0 ? 'text-[var(--color-positive)]' :
-                      visibleStats.totalProfit < 0 ? 'text-[var(--color-negative)]' :
-                      'text-slate-800'
-                    )}
-                  >
-                    {visibleStats.totalProfit > 0 ? '+' : ''}
-                    {paginatedTrades.length > 0
-                      ? formatCurrencySymbol(paginatedTrades[0].script?.currency?.symbol, paginatedTrades[0].script?.currency?.code || paginatedTrades[0].currencyCode)
-                      : '$'}
-                    {visibleStats.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </td> */}
-                <td colSpan={9} className="py-2.5 px-3"></td>
+                <td className="py-2.5 px-3"></td>
               </tr>
             </tfoot>
           </table>
@@ -1074,32 +1355,70 @@ export function TradesPageManager({
           scripts={scripts}
           clients={clients}
           brokers={brokers}
-          onClose={() => setIsAdding(false)}
-          onSave={handleSave}
+          initialMode="edit"
+          onClose={handleCloseAdd}
+          onSave={(saved, keepOpen) => {
+            handleSave(saved);
+            if (!keepOpen) {
+              handleCloseAdd();
+            }
+          }}
         />
       )}
 
-      {/* Edit Form Modal */}
-      {editingTrade && (
+      {/* Unified View / Edit / Delete Modal */}
+      {viewingTrade && (
         <TradeFormModal
           exchanges={exchanges}
           scripts={scripts}
           clients={clients}
           brokers={brokers}
-          initialTrade={editingTrade}
-          onClose={() => setEditingTrade(null)}
-          onSave={handleSave}
+          initialTrade={viewingTrade}
+          initialMode="view"
+          onClose={() => setViewingTrade(null)}
+          onSave={(saved) => {
+            handleSave(saved);
+            setViewingTrade(null);
+          }}
+          onDelete={async (id) => {
+            removeEntity(id);
+            setViewingTrade(null);
+            notify.success('Trade deleted successfully');
+            try {
+              const res = await apiFetch(`/trades/${id}`, {
+                method: 'DELETE',
+              });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                notify.error(err.message || 'Failed to sync deletion with server');
+              }
+            } catch {
+              notify.error('Failed to sync deletion with server');
+            }
+          }}
         />
       )}
 
-      {/* Detail Modal Popup */}
-      {selectedTrade && (
-        <TradeDetailModal
-          trade={selectedTrade}
-          onClose={() => setSelectedTrade(null)}
-          onEdit={() => setEditingTrade(selectedTrade)}
-        />
-      )}
+      {/* Universal Drag & Drop File Listener (Activates when dragging trade files anywhere on the page) */}
+      <UniversalPageDropzone
+        onFileDrop={(file) => {
+          setDroppedFile(file);
+          setIsImportModalOpen(true);
+        }}
+        title="Drop Trade File to Import"
+        subtitle="Drop your CSV or Excel trades file anywhere to parse and validate automatically"
+      />
+
+      {/* Bulk Trade Import Modal (Preserves parsed state across open/close) */}
+      <TradeImportModal
+        isOpen={isImportModalOpen}
+        onClose={handleCloseImport}
+        initialFile={droppedFile}
+        onComplete={() => {
+          handleCloseImport();
+          router.refresh();
+        }}
+      />
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

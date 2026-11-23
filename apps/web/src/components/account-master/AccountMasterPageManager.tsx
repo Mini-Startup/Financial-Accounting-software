@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AccountMasterFormModal } from './AccountMasterFormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
-import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace } from '../ui/FindAndReplace';
+import { useTopBar } from '@/context/TopBarContext';
+import { UniversalTooltip } from '../ui/UniversalTooltip';
+import { apiFetch } from '@/utils/apiClient';
+import { cn } from '@/utils/cn';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -35,9 +39,29 @@ export function AccountMasterPageManager({
   groups: any[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAddParam = searchParams?.get('action') === 'add';
   const [accounts, setAccounts] = useState<any[]>(initialAccounts);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding] = useState(isAddParam);
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
+
+  const handleCloseAdd = () => {
+    setIsAdding(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('action')) {
+        url.searchParams.delete('action');
+        const cleanUrl = url.pathname + (url.search ? url.search : '');
+        window.history.pushState({}, '', cleanUrl);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isAddParam) {
+      setIsAdding(true);
+    }
+  }, [isAddParam]);
 
   // Search & Pagination & Selection
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +74,28 @@ export function AccountMasterPageManager({
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('code');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const { setTopBar, resetTopBar } = useTopBar();
+
+  // Push unified page title & actions to TopBar
+  useEffect(() => {
+    setTopBar({
+      title: 'Accounts',
+      actions: (
+        <UniversalTooltip content="Add a new general or bank account master">
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="h-9 px-3.5 bg-[#2652C8] hover:bg-[#1F42A3] text-white text-xs font-semibold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Account</span>
+          </button>
+        </UniversalTooltip>
+      ),
+    });
+
+    return () => resetTopBar();
+  }, [setTopBar, resetTopBar]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -162,17 +208,18 @@ export function AccountMasterPageManager({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+          const res = await apiFetch(`/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
             setAccounts((prev) => prev.filter((acc) => acc.id !== id));
             toast.success('Account master deleted successfully');
           } else {
-            toast.error('Failed to delete account master');
+            const err = await res.json().catch(() => ({}));
+            toast.error(err.message || 'Failed to delete account master');
           }
-        } catch {
-          toast.error('Failed to delete account master');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete account master');
         }
       },
     });
@@ -190,18 +237,31 @@ export function AccountMasterPageManager({
         setIsDeleting(true);
         try {
           const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          setAccounts((prev) => prev.filter((acc) => !selectedIds.has(acc.id)));
+          let successCount = 0;
+          let failedCount = 0;
+          let lastErrorMessage = '';
+          for (const id of ids) {
+            const res = await apiFetch(`/account-masters/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+              successCount++;
+            } else {
+              failedCount++;
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            toast.success(`${successCount} account master(s) deleted successfully`);
+          }
+          if (failedCount > 0) {
+            toast.error(lastErrorMessage || `Could not delete ${failedCount} account(s) due to active trades or dependencies.`);
+          }
           setSelectedIds(new Set());
-          toast.success(`${count} account masters deleted successfully`);
-        } catch {
-          toast.error('Failed to delete some accounts');
+        } catch (e: any) {
+          toast.error(e.message || 'Failed to delete some accounts');
         } finally {
           setIsDeleting(false);
         }
@@ -215,19 +275,10 @@ export function AccountMasterPageManager({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
-        <div>
-          <h1 className="text-h2 font-display">Account Master</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">Manage standard and banking account masters.</p>
-        </div>
-        <button onClick={() => setIsAdding(true)} className="btn btn--primary">
-          + Add Account Master
-        </button>
-      </div>
-
       {/* Top Controls Toolbar */}
       <TableToolbar
+        tableName="Accounts"
+        records={accounts}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);
@@ -356,9 +407,13 @@ export function AccountMasterPageManager({
                 return (
                   <tr
                     key={acc.id}
-                    className={isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/50'}
+                    onClick={() => setEditingAccount(acc)}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      isSelected ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : 'hover:bg-slate-50/70'
+                    )}
                   >
-                    <td className="text-center">
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <CustomCheckbox
                         checked={isSelected}
                         onChange={() => handleToggleRow(acc.id)}
@@ -375,18 +430,18 @@ export function AccountMasterPageManager({
                       {opBal === 0 ? (
                         <span className="text-slate-400">₹0.00</span>
                       ) : opBal < 0 ? (
-                        <span className="text-[var(--color-negative)]">
+                        <span className="text-negative">
                           -₹{Math.abs(opBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                         </span>
                       ) : (
-                        <span className="text-[var(--color-forest)]">
+                        <span className="text-(--color-forest)">
                           +₹{opBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                         </span>
                       )}
                     </td>
                     <td className="text-slate-500 text-xs">
                       {acc.mobileNumber && <div>Mob: {acc.mobileNumber}</div>}
-                      {acc.email && <div className="truncate max-w-[150px]">{acc.email}</div>}
+                      {acc.email && <div className="truncate max-w-37.5">{acc.email}</div>}
                       {!acc.mobileNumber && !acc.email && '—'}
                     </td>
                     <td className="text-slate-500 text-xs">
@@ -403,7 +458,7 @@ export function AccountMasterPageManager({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="text-right">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setEditingAccount(acc)}
@@ -435,11 +490,11 @@ export function AccountMasterPageManager({
                   {totalOpeningBalance === 0 ? (
                     <span className="text-slate-500">₹0.00</span>
                   ) : totalOpeningBalance < 0 ? (
-                    <span className="text-[var(--color-negative)]">
+                    <span className="text-negative">
                       -₹{Math.abs(totalOpeningBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                     </span>
                   ) : (
-                    <span className="text-[var(--color-forest)]">
+                    <span className="text-(--color-forest)">
                       +₹{totalOpeningBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                     </span>
                   )}
@@ -455,8 +510,11 @@ export function AccountMasterPageManager({
         <AccountMasterFormModal
           groups={groups}
           accounts={accounts}
-          onClose={() => setIsAdding(false)}
-          onSave={handleSave}
+          onClose={handleCloseAdd}
+          onSave={() => {
+            handleSave();
+            handleCloseAdd();
+          }}
         />
       )}
 

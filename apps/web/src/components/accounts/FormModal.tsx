@@ -1,13 +1,16 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X } from 'lucide-react';
+import { X, Building2, Phone, CreditCard, Users2, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useScrollLock } from '../../hooks/useScrollLock';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { apiFetch } from '../../utils/apiClient';
+import { validateAccountForm } from '../../utils/validators';
 
 export function FormModal({
   initialData,
@@ -22,12 +25,13 @@ export function FormModal({
   groupName: string;
   accounts?: any[];
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (saved?: any) => void;
 }) {
   const router = useRouter();
   const codeInputRef = useRef<HTMLInputElement>(null);
   useScrollLock(true);
   const modalRef = useOutsideClickClose<HTMLDivElement>(onClose);
+
   const [formData, setFormData] = useState({
     code: initialData?.code || initialData?.fldClient || '',
     name: initialData?.name || initialData?.fldName || '',
@@ -57,15 +61,33 @@ export function FormModal({
     openingBalance: initialData?.openingBalance != null ? initialData.openingBalance : 0,
   });
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [directClients, setDirectClients] = useState<any[]>([]);
+  const [isLoadingDirectClients, setIsLoadingDirectClients] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAccounts, setExistingAccounts] = useState<any[]>(initialAccounts);
+
+  const fieldLabels: Record<string, string> = {
+    code: 'Account Code',
+    name: 'Account Name',
+    mobileNumber: 'Mobile Number',
+    officeNumber: 'Office Phone',
+    whatsappNumber: 'WhatsApp Number',
+    email: 'Email Address',
+    ifscCode: 'IFSC Code',
+    contactPersonName: 'Contact Person Name',
+    contactPersonMobile: 'Contact Person Mobile',
+    contactPersonEmail: 'Contact Person Email',
+    referenceName: 'Referred By Name',
+    referenceMobile: 'Referral Phone',
+  };
 
   useEffect(() => {
     if (!initialAccounts || initialAccounts.length === 0) {
       const fetchAccounts = async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters`);
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters`);
           if (res.ok) {
             const data = await res.json();
             setExistingAccounts(data);
@@ -100,34 +122,146 @@ export function FormModal({
 
   const isDuplicate = Boolean(duplicateCodeAccount || duplicateNameAccount);
 
+  // Real-time validation errors
+  const validationErrors = useMemo(() => {
+    return validateAccountForm({
+      ...formData,
+      groupName: groupName || (formData as any).groupName || (initialData as any)?.groupId || 'Sundry Debtors',
+    });
+  }, [formData, groupName, initialData]);
+
+  // Spontaneous error detection helper
+  const getFieldError = (field: string) => {
+    const err = validationErrors[field];
+    if (!err) return null;
+    const val = formData[field as keyof typeof formData];
+    const hasValue = typeof val === 'string' ? val.trim().length > 0 : Boolean(val);
+    // Show error if user attempted to submit, or blurred, or if the field currently has a non-empty value (spontaneous feedback as user types!)
+    if (hasSubmitted || touched[field] || hasValue) {
+      return err;
+    }
+    return null;
+  };
+
+  const renderFieldError = (field: string) => {
+    const err = getFieldError(field);
+    if (!err) return null;
+    return (
+      <span className="text-xs font-semibold text-rose-600 flex items-center gap-1.5 mt-1">
+        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+        <span>{err}</span>
+      </span>
+    );
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
   useEffect(() => {
     if (groupName === 'Sundry Debtors') {
       const fetchDirectClients = async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters?group=Sundry Debtors&directOnly=true`);
+          setIsLoadingDirectClients(true);
+          const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters?groupName=Sundry Debtors&directOnly=true`);
           if (res.ok) {
             const data = await res.json();
-            // Filter out current client if editing
-            const filtered = data.filter((c: any) => c.id !== initialData?.id);
-            setDirectClients(filtered);
+            setDirectClients(data.filter((c: any) => c.id !== initialData?.id));
           }
         } catch (err) {
           console.error('Failed to fetch direct clients:', err);
+        } finally {
+          setIsLoadingDirectClients(false);
         }
       };
       fetchDirectClients();
     }
   }, [groupName, initialData?.id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    let finalValue: any = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+    // For phone inputs, if user enters alphabets or characters, trigger spontaneous validation immediately
+    const isPhoneField = ['mobileNumber', 'officeNumber', 'whatsappNumber', 'contactPersonMobile', 'referenceMobile'].includes(name);
+    if (isPhoneField) {
+      setTouched((prev) => ({ ...prev, [name]: true }));
+    }
+
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: finalValue,
+      };
+      if (name === 'mobileNumber' && prev.isWhatsappSameAsMobile) {
+        updated.whatsappNumber = finalValue;
+      }
+      return updated;
+    });
+  };
+
+  const handleSubmit = async (e?: React.FormEvent, saveAndAddMore = false) => {
+    if (e) e.preventDefault();
     if (isSubmitting) return;
+
+    setHasSubmitted(true);
+
+    // Mark all fields touched
+    setTouched({
+      code: true,
+      name: true,
+      mobileNumber: true,
+      officeNumber: true,
+      whatsappNumber: true,
+      email: true,
+      ifscCode: true,
+      contactPersonMobile: true,
+      contactPersonEmail: true,
+      referenceMobile: true,
+    });
+
+    const activeErrors = validateAccountForm({
+      ...formData,
+      groupName: groupName || (formData as any).groupName || (initialData as any)?.groupId || 'Sundry Debtors',
+    });
+    const errorEntries = Object.entries(activeErrors);
+
+    if (errorEntries.length > 0) {
+      const errorList = errorEntries.map(([key, msg]) => {
+        const fieldName = fieldLabels[key] || key;
+        return `${fieldName}: ${msg}`;
+      });
+
+      notify.error('Validation Error', {
+        description: errorList.length === 1 ? errorList[0] : undefined,
+        errors: errorList.length > 1 ? errorList : undefined,
+        duration: 7000,
+      });
+
+      // Auto-focus the first invalid field
+      const firstKey = errorEntries[0][0];
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${firstKey}"]`) as HTMLElement;
+        if (el) {
+          el.focus();
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+      return;
+    }
+
+    if (isDuplicate) {
+      notify.error('Duplicate Account Record', {
+        description: 'Cannot save: an account with this code or name already exists.',
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const url = initialData?.id 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/account-masters/${initialData.id}` 
-        : `${process.env.NEXT_PUBLIC_API_URL}/account-masters`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters/${initialData.id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/account-masters`;
       
       const payload: any = {
         code: formData.code?.trim(),
@@ -157,21 +291,26 @@ export function FormModal({
         groupName: groupName,
       };
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (res.ok) {
-        toast.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
+        const saved = await res.json();
         if (onSuccess) {
-          onSuccess();
+          onSuccess(saved);
+        } else {
+          router.refresh();
         }
-        router.refresh();
 
-        if (!initialData?.id) {
-          // Rapid entry persistence: reset identifiers and details, keep modal open
+        if (initialData?.id || !saveAndAddMore) {
+          notify.success(initialData?.id ? `${entityLabel} updated successfully` : `${entityLabel} created successfully`);
+          onClose();
+        } else {
+          // Rapid entry persistence (Save & Add More): reset identifiers, keep modal open
+          notify.success(`${entityLabel} created! Ready for next entry.`);
           setFormData((prev) => ({
             ...prev,
             code: '',
@@ -180,289 +319,513 @@ export function FormModal({
             mobileNumber: '',
             officeNumber: '',
             whatsappNumber: '',
-            isWhatsappSameAsMobile: false,
             email: '',
             openingBalance: 0,
             contactPersonName: '',
             contactPersonMobile: '',
             contactPersonEmail: '',
-            bankName: '',
-            bankBranch: '',
-            ifscCode: '',
-            micrCode: '',
-            bankAccountNumber: '',
-            upiId: '',
+            referenceName: '',
+            referenceMobile: '',
+            referenceEmail: '',
           }));
-          setTimeout(() => codeInputRef.current?.focus(), 50);
-        } else {
-          onClose();
+          setTouched({});
+          if (codeInputRef.current) {
+            codeInputRef.current.focus();
+          }
         }
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.message || 'Save failed.');
+        const err = await res.json();
+        notify.error(err.message || 'Failed to save account');
       }
-    } catch(err) {
-      console.error(err);
-      toast.error('Network or server error while saving account.');
+    } catch (err: any) {
+      notify.error(err.message || 'Error occurred while saving account');
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  const handleChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev: any) => {
-      const updated = { ...prev, [name]: type === 'checkbox' ? checked : value };
-      if (updated.isDirectClient) {
-        updated.dealerCode = updated.code;
-      }
-      return updated;
-    });
-  }
+  };
 
   return (
     <div
-      onMouseDown={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div ref={modalRef} className="card w-[900px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
-        
-        {/* Header */}
-        <div className="card__header bg-[var(--color-snow)]">
-          <h2 className="card__title">
-            {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
-          </h2>
-          <button onClick={onClose} className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors">
-            <X className="w-5 h-5" />
+      <div
+        ref={modalRef}
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-5xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+      >
+        {/* Clean Modal Header — No redundant badges */}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Building2 className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                {initialData ? `Edit ${entityLabel}` : `Create New ${entityLabel}`}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Manage account profile, contact credentials, and banking settlements
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="card__body p-6 overflow-y-auto">
-          {initialData && (
-            <div className="mb-6 pb-4 border-b border-[var(--color-border-light)] flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[var(--color-slate)] uppercase tracking-wider font-semibold">Selected Record</p>
-                <p className="text-h3 text-[var(--color-forest)]">{formData.code} - {formData.name}</p>
-              </div>
-            </div>
-          )}
-          <form id="accountForm" onSubmit={handleSubmit} className="space-y-6">
-            {/* Duplicate Warning Banner */}
+        {/* Modal Form — Space-Efficient 2-Column Layout (Zero Scrollbar) */}
+        <form id="accountForm" onSubmit={(e) => handleSubmit(e, false)} className="flex-1 flex flex-col">
+          <div className="p-5 space-y-3.5 bg-white">
+            {/* Duplicate Warning */}
             {isDuplicate && (
-              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
-                <div className="space-y-0.5">
-                  <div className="font-bold text-amber-950">{entityLabel} Already Exists in Database</div>
-                  <div className="text-[11px] text-amber-850">
-                    {duplicateCodeAccount && (
-                      <p>An account with code <strong>&quot;{formData.code.trim()}&quot;</strong> already exists ({duplicateCodeAccount.name}).</p>
-                    )}
-                    {duplicateNameAccount && (
-                      <p>An account with name <strong>&quot;{formData.name.trim()}&quot;</strong> already exists in {groupName}.</p>
-                    )}
-                    Duplicate entries are not permitted.
-                  </div>
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2 text-xs text-amber-900 animate-in fade-in shrink-0">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px]">
+                  <span className="font-bold">Notice: </span>
+                  An account with this code or name already exists in the database. Duplicate entries are blocked.
                 </div>
               </div>
             )}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Basic</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="form-label">Code *</label>
-                  <input ref={codeInputRef} required name="code" value={formData.code} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Name *</label>
-                  <input required name="name" value={formData.name} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Opening Balance</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    name="openingBalance" 
-                    value={formData.openingBalance} 
-                    onChange={handleChange} 
-                    className="input font-mono" 
-                    placeholder="0.00"
-                  />
-                  <span className="text-[11px] text-[var(--color-slate)] mt-0.5 block">Positive for Credit, Negative for Debit</span>
-                </div>
-                
-                {groupName === 'Sundry Debtors' && (
-                  <>
-                    <div className="form-group flex items-center h-full pt-6">
-                      <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
-                        <CustomCheckbox
-                          checked={Boolean(formData.isDirectClient)}
-                          onChange={(checked) => setFormData((prev) => ({ ...prev, isDirectClient: checked }))}
-                        />
-                        <span>Is Direct Client</span>
-                      </label>
-                    </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Dealer Code *</label>
-                      {formData.isDirectClient ? (
-                        <input
-                          disabled
-                          value={formData.code}
-                          placeholder="Same as Client Code"
-                          className="input opacity-60 bg-[var(--color-snow)]"
-                        />
-                      ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4.5 items-start">
+              {/* LEFT COLUMN: Profile & Contact Details */}
+              <div className="space-y-3 bg-slate-50/40 p-3.5 rounded-xl border border-slate-200/70">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-1.5 flex items-center justify-between">
+                  <span>1. Account Profile & Contact</span>
+                </div>
+
+                {/* Code (compact) + Opening Balance */}
+                <div className="flex items-center gap-3">
+                  <div className="w-36 shrink-0">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Code <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      ref={codeInputRef}
+                      name="code"
+                      value={formData.code}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('code')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs font-mono font-bold uppercase rounded-lg border bg-white focus:outline-none transition-all',
+                        getFieldError('code')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="e.g. CL001"
+                    />
+                  </div>
+
+                  <div className="w-40 shrink-0">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Opening Balance
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="openingBalance"
+                      value={formData.openingBalance}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs font-mono font-bold rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all text-left"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <span className="text-xs text-slate-400 pt-5 font-mono">
+                    + Cr / - Dr
+                  </span>
+                </div>
+                {renderFieldError('code')}
+
+                {/* Account Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Account Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur('name')}
+                    className={cn(
+                      'w-full h-9 px-3 text-xs font-semibold rounded-lg border bg-white focus:outline-none transition-all',
+                      getFieldError('name')
+                        ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                        : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                    )}
+                    placeholder="e.g. ACME Securities Ltd"
+                  />
+                  {renderFieldError('name')}
+                </div>
+
+                {/* Direct Client Toggle if Sundry Debtors */}
+                {groupName === 'Sundry Debtors' && (
+                  <div className="flex items-center gap-4 py-1 border-t border-slate-200/60">
+                    <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                      <CustomCheckbox
+                        checked={Boolean(formData.isDirectClient)}
+                        onChange={(checked) => setFormData((prev) => ({ ...prev, isDirectClient: checked }))}
+                      />
+                      <span className="font-semibold text-slate-800">Direct Client</span>
+                    </label>
+
+                    {!formData.isDirectClient && (
+                      <div className="flex-1 min-w-0">
                         <UniversalDropdown
                           value={formData.dealerCode}
+                          loading={isLoadingDirectClients}
                           options={directClients.map((c) => ({
                             value: c.code,
                             label: `${c.code} - ${c.name}`,
                           }))}
                           onChange={(val) => setFormData((prev) => ({ ...prev, dealerCode: val }))}
-                          placeholder="-- Select Direct Client --"
+                          placeholder="Assign Dealer / Master Client"
                         />
-                      )}
-                    </div>
-                  </>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group col-span-2">
-                  <label className="form-label">Address</label>
-                  <textarea name="address" rows={3} value={formData.address} onChange={handleChange} className="input resize-none" />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Mobile number</label>
-                  <input name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="input" />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Office number</label>
-                  <input name="officeNumber" value={formData.officeNumber} onChange={handleChange} className="input" />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">WhatsApp number</label>
-                  <input
-                    name="whatsappNumber"
-                    value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
-                    onChange={handleChange}
-                    disabled={formData.isWhatsappSameAsMobile}
-                    className={cn("input", formData.isWhatsappSameAsMobile && 'opacity-60 bg-[var(--color-snow)]')}
-                  />
-                  <label className="flex items-center gap-2 text-sm text-[var(--color-slate)] mt-2 cursor-pointer hover:text-[var(--color-charcoal)] transition-colors">
-                    <CustomCheckbox
-                      checked={Boolean(formData.isWhatsappSameAsMobile)}
-                      onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
+                {/* Mobile & WhatsApp Numbers */}
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Mobile Number
+                    </label>
+                    <input
+                      name="mobileNumber"
+                      value={formData.mobileNumber}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('mobileNumber')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white focus:outline-none transition-all',
+                        getFieldError('mobileNumber')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="+91 98765 43210"
                     />
-                    <span>WhatsApp number is same as mobile</span>
+                    {renderFieldError('mobileNumber')}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                        WhatsApp
+                      </label>
+                      <label className="flex items-center gap-1 text-[10px] text-slate-500 cursor-pointer select-none">
+                        <CustomCheckbox
+                          checked={Boolean(formData.isWhatsappSameAsMobile)}
+                          onChange={(checked) => setFormData((prev) => ({ ...prev, isWhatsappSameAsMobile: checked }))}
+                        />
+                        <span>Same</span>
+                      </label>
+                    </div>
+                    <input
+                      name="whatsappNumber"
+                      value={formData.isWhatsappSameAsMobile ? formData.mobileNumber : formData.whatsappNumber}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('whatsappNumber')}
+                      disabled={formData.isWhatsappSameAsMobile}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white disabled:opacity-60 disabled:bg-slate-100 transition-all',
+                        getFieldError('whatsappNumber')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="+91 98765 43210"
+                    />
+                    {renderFieldError('whatsappNumber')}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('email')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white focus:outline-none transition-all',
+                        getFieldError('email')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="account@client.com"
+                    />
+                    {renderFieldError('email')}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Office Landline
+                    </label>
+                    <input
+                      name="officeNumber"
+                      value={formData.officeNumber}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('officeNumber')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white transition-all',
+                        getFieldError('officeNumber')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="022-12345678"
+                    />
+                    {renderFieldError('officeNumber')}
+                  </div>
+                </div>
+
+                {/* Postal Address */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Postal Address
                   </label>
+                  <textarea
+                    name="address"
+                    rows={2}
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Enter full postal address, street, building, city..."
+                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Banking & Representatives */}
+              <div className="space-y-3 bg-slate-50/40 p-3.5 rounded-xl border border-slate-200/70">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-1.5">
+                  <span>2. Banking Settlements</span>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Email ID</label>
-                  <input name="email" type="email" value={formData.email} onChange={handleChange} className="input" />
+                {/* Bank Name + Account No */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Bank Name
+                    </label>
+                    <input
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="e.g. HDFC Bank"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Account Number
+                    </label>
+                    <input
+                      name="bankAccountNumber"
+                      value={formData.bankAccountNumber}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="50100234567890"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      IFSC Code
+                    </label>
+                    <input
+                      name="ifscCode"
+                      value={formData.ifscCode}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('ifscCode')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs font-mono uppercase rounded-lg border bg-white transition-all',
+                        getFieldError('ifscCode')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="HDFC0001234"
+                    />
+                    {renderFieldError('ifscCode')}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Branch Name
+                    </label>
+                    <input
+                      name="bankBranch"
+                      value={formData.bankBranch}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="e.g. Fort, Mumbai"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      UPI ID / VPA
+                    </label>
+                    <input
+                      name="upiId"
+                      value={formData.upiId}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="client@upi"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      MICR Code
+                    </label>
+                    <input
+                      name="micrCode"
+                      value={formData.micrCode}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="400240002"
+                    />
+                  </div>
+                </div>
+
+                {/* Representatives & References */}
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200/60 pb-1.5 pt-2">
+                  <span>3. Representative & Referral</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Contact Person
+                    </label>
+                    <input
+                      name="contactPersonName"
+                      value={formData.contactPersonName}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="Representative Name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Person Mobile
+                    </label>
+                    <input
+                      name="contactPersonMobile"
+                      value={formData.contactPersonMobile}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('contactPersonMobile')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white transition-all',
+                        getFieldError('contactPersonMobile')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="+91 98765 00000"
+                    />
+                    {renderFieldError('contactPersonMobile')}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Referred By
+                    </label>
+                    <input
+                      name="referenceName"
+                      value={formData.referenceName}
+                      onChange={handleChange}
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
+                      placeholder="Referral Name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                      Referral Phone
+                    </label>
+                    <input
+                      name="referenceMobile"
+                      value={formData.referenceMobile}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur('referenceMobile')}
+                      className={cn(
+                        'w-full h-9 px-3 text-xs rounded-lg border bg-white transition-all',
+                        getFieldError('referenceMobile')
+                          ? 'border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950'
+                          : 'border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15'
+                      )}
+                      placeholder="+91 98765 00000"
+                    />
+                    {renderFieldError('referenceMobile')}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Contact person</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group col-span-2">
-                  <label className="form-label">Contact person name</label>
-                  <input name="contactPersonName" value={formData.contactPersonName} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Contact person mobile</label>
-                  <input name="contactPersonMobile" value={formData.contactPersonMobile} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Contact person email</label>
-                  <input name="contactPersonEmail" type="email" value={formData.contactPersonEmail} onChange={handleChange} className="input" />
-                </div>
-              </div>
+          {/* Unified Modal Footer */}
+          <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between shrink-0 rounded-b-2xl">
+            <span className="text-xs text-slate-500 hidden sm:inline">
+              * Required fields: Code, Name.
+            </span>
+            <div className="flex items-center gap-2.5 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+              {!initialData?.id && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(undefined, true)}
+                  disabled={isSubmitting || isDuplicate}
+                  className="h-9 px-4 text-xs font-semibold rounded-lg text-[#2652C8] bg-blue-50 hover:bg-blue-100/80 border border-blue-200 hover:-translate-y-0.5 transition-all duration-150 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  ) : null}
+                  <span>Save &amp; Add More</span>
+                </button>
+              )}
+              <button
+                type="submit"
+                form="accountForm"
+                disabled={isSubmitting || isDuplicate}
+                className={cn(
+                  'h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.98]',
+                  isSubmitting || isDuplicate
+                    ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                    : 'bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm'
+                )}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Saving...</span>
+                  </>
+                ) : isDuplicate ? (
+                  `${entityLabel} Exists`
+                ) : initialData?.id ? (
+                  `Update ${entityLabel}`
+                ) : (
+                  `Save ${entityLabel}`
+                )}
+              </button>
             </div>
-
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Banking details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="form-label">Bank name</label>
-                  <input name="bankName" value={formData.bankName} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Bank branch</label>
-                  <input name="bankBranch" value={formData.bankBranch} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">IFSC code</label>
-                  <input name="ifscCode" value={formData.ifscCode} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">MICR code</label>
-                  <input name="micrCode" value={formData.micrCode} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Account number</label>
-                  <input name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">UPI ID</label>
-                  <input name="upiId" value={formData.upiId} onChange={handleChange} className="input" />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">Referred by</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group col-span-2">
-                  <label className="form-label">Reference Name</label>
-                  <input name="referenceName" value={formData.referenceName} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Reference mobile number</label>
-                  <input name="referenceMobile" value={formData.referenceMobile} onChange={handleChange} className="input" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Reference email</label>
-                  <input name="referenceEmail" type="email" value={formData.referenceEmail} onChange={handleChange} className="input" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 pt-6 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
-               <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary">Cancel</button>
-               <button
-                 type="submit"
-                 form="accountForm"
-                 disabled={isSubmitting || isDuplicate || !formData.code?.trim() || !formData.name?.trim()}
-                 className={cn(
-                   "btn btn--primary flex items-center gap-2 min-w-[110px] justify-center",
-                   (isDuplicate || !formData.code?.trim() || !formData.name?.trim()) && "opacity-60 cursor-not-allowed bg-slate-400 border-slate-400 hover:bg-slate-400"
-                 )}
-               >
-                 {isSubmitting ? (
-                   <>
-                     <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                     <span>Saving…</span>
-                   </>
-                 ) : isDuplicate ? (
-                   `${entityLabel} Exists`
-                 ) : initialData?.id ? (
-                   `Update ${entityLabel}`
-                 ) : (
-                   `Add ${entityLabel}`
-                 )}
-               </button>
-            </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );

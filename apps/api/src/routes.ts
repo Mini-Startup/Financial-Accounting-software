@@ -1,4 +1,5 @@
 import type { Application } from 'express';
+import { authenticateUser } from './middleware/auth';
 import accountMastersRouter from './features/account-masters/routes';
 import brokeragesRouter from './features/brokerages/routes';
 import currenciesRouter from './features/currencies/routes';
@@ -12,12 +13,23 @@ import settlementRouter from './features/settlement/routes';
 import vouchersRouter from './features/vouchers/routes';
 import ledgerReportRouter from './features/ledger-report/routes';
 import trialBalanceRouter from './features/trial-balance/routes';
+import usersRouter from './features/users/routes';
+import rolesRouter from './features/roles/routes';
+import reportsRouter from './features/reports/routes';
+import expiryDatesRouter from './features/expiry-dates/routes';
 
 export function registerRoutes(app: Application) {
   // Health check
   app.get('/', (_req, res) => {
     res.json({ status: 'ok', service: 'Financial Accounting API' });
   });
+
+  // Global authentication extractor
+  app.use(authenticateUser);
+
+  // User & Role Management (RBAC)
+  app.use('/users', usersRouter);
+  app.use('/roles', rolesRouter);
 
   // Feature routes
   app.use('/account-masters', accountMastersRouter);
@@ -31,6 +43,8 @@ export function registerRoutes(app: Application) {
   app.use('/vouchers', vouchersRouter);
   app.use('/ledger-report', ledgerReportRouter);
   app.use('/trial-balance', trialBalanceRouter);
+  app.use('/expiry-dates', expiryDatesRouter);
+  app.use('/reports', reportsRouter);
   app.use('/', tradesRouter);
   app.use('/', tradeFnoRouter);
 }

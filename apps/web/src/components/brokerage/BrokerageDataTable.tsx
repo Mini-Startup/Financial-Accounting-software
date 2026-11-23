@@ -15,6 +15,8 @@ import {
 } from '@/utils/tableFilter';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Trash2, Edit } from 'lucide-react';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { apiFetch } from '@/utils/apiClient';
+import { cn } from '@/utils/cn';
 import { BrokerageFormModal } from './BrokerageFormModal';
 
 const BROKERAGE_COLUMNS = [
@@ -132,7 +134,7 @@ export function BrokerageDataTable({
     if (ids.length === 0) return;
     setIsBulkDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/bulk-delete`, {
+      const res = await apiFetch('/brokerages/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
@@ -141,14 +143,23 @@ export function BrokerageDataTable({
         toast.success(`${ids.length} brokerage rules deleted successfully`);
       } else {
         // Fallback to Promise.all
-        await Promise.all(
-          ids.map((id) =>
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/${id}`, {
-              method: 'DELETE',
-            })
-          )
-        );
-        toast.success(`${ids.length} brokerage rules deleted successfully`);
+        let successCount = 0;
+        let lastErrorMessage = '';
+        for (const id of ids) {
+          const deleteRes = await apiFetch(`/brokerages/${id}`, { method: 'DELETE' });
+          if (deleteRes.ok) {
+            successCount++;
+          } else {
+            const err = await deleteRes.json().catch(() => ({}));
+            if (err.message) lastErrorMessage = err.message;
+          }
+        }
+        if (successCount > 0) {
+          toast.success(`${successCount} brokerage rules deleted successfully`);
+        }
+        if (lastErrorMessage) {
+          toast.error(lastErrorMessage);
+        }
       }
       setSelectedIds(new Set());
       setIsConfirmBulkOpen(false);
@@ -179,7 +190,7 @@ export function BrokerageDataTable({
     if (!deleteTargetId) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brokerages/${deleteTargetId}`, {
+      const res = await apiFetch(`/brokerages/${deleteTargetId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -187,7 +198,8 @@ export function BrokerageDataTable({
         setDeleteTargetId(null);
         router.refresh();
       } else {
-        throw new Error('Failed to delete brokerage rule');
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to delete brokerage rule');
       }
     } catch (e: any) {
       console.error(e);
@@ -201,6 +213,8 @@ export function BrokerageDataTable({
     <>
       <div className="space-y-2">
         <TableToolbar
+          tableName="Brokerage"
+          records={brokeragesList}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -230,7 +244,7 @@ export function BrokerageDataTable({
           totalItems={sortedBrokerages.length}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[10, 25, 50, 100]}
+          pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
         />
 
         {isFindReplaceOpen && (
@@ -332,11 +346,13 @@ export function BrokerageDataTable({
                   return (
                     <tr
                       key={rule.id}
-                      className={`transition-colors ${
+                      onClick={() => setEditingRule(rule)}
+                      className={cn(
+                        'cursor-pointer transition-colors',
                         isSelected ? 'bg-emerald-50/50 hover:bg-emerald-50/70' : 'hover:bg-slate-50/70'
-                      }`}
+                      )}
                     >
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                         <CustomCheckbox
                           checked={isSelected}
                           onChange={() => handleToggleRow(rule.id)}
@@ -396,7 +412,7 @@ export function BrokerageDataTable({
                       <td className="px-6 py-3.5 whitespace-nowrap text-xs text-right font-mono text-blue-600 font-bold">
                         {currSym}{perUnit}
                       </td>
-                      <td className="px-6 py-3.5 whitespace-nowrap text-right text-xs font-medium space-x-2">
+                      <td className="px-6 py-3.5 whitespace-nowrap text-right text-xs font-medium space-x-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setEditingRule(rule)}
                           className="text-slate-500 hover:text-blue-600 p-1 hover:bg-slate-100 rounded transition inline-flex items-center"

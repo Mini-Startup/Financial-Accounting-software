@@ -96,9 +96,11 @@ export class VouchersService {
 
   async findAll() {
     return prisma.voucher.findMany({
+      where: { isDeleted: false },
       orderBy: { date: 'desc' },
       include: {
         lines: {
+          where: { isDeleted: false },
           include: {
             account: true,
           },
@@ -108,22 +110,44 @@ export class VouchersService {
   }
 
   async remove(id: string) {
-    const voucher = await prisma.voucher.findUnique({ where: { id } });
+    const voucher = await prisma.voucher.findFirst({ where: { id, isDeleted: false } });
     if (!voucher) {
       throw new NotFoundException(`Voucher with ID ${id} not found.`);
     }
 
+    const now = new Date();
     return prisma.$transaction(async (tx) => {
-      // Remove ledger entries first
-      await tx.ledger.deleteMany({
+      // Soft-delete ledger entries
+      await tx.ledger.updateMany({
         where: {
           referenceId: id,
           entryType: 'VOUCHER',
+          isDeleted: false,
+        },
+        data: {
+          isDeleted: true,
+          deletedAt: now,
         },
       });
 
-      return tx.voucher.delete({
+      // Soft-delete voucher lines
+      await tx.voucherLine.updateMany({
+        where: {
+          voucherId: id,
+          isDeleted: false,
+        },
+        data: {
+          isDeleted: true,
+          deletedAt: now,
+        },
+      });
+
+      return tx.voucher.update({
         where: { id },
+        data: {
+          isDeleted: true,
+          deletedAt: now,
+        },
       });
     });
   }

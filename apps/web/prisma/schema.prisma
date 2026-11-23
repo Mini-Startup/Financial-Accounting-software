@@ -17,21 +17,62 @@ model User {
   password  String?
   roleId    String?  @map("role_id")
 
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 
   role Role? @relation(fields: [roleId], references: [id])
 
+  @@index([isDeleted])
   @@map("users")
 }
 
 model Role {
-  id   String @id @default(uuid())
-  name String @unique
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system")
 
-  users User[]
+  isDeleted   Boolean          @default(false) @map("is_deleted")
+  deletedAt   DateTime?        @map("deleted_at")
 
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt      @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@index([isDeleted])
   @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  feature     String           @map("feature")
+  action      String           @map("action")
+  name        String           @map("name")
+  description String?          @map("description")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  roles       RolePermission[]
+
+  @@unique([feature, action], name: "uq_feature_action")
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId], name: "uq_role_permission")
+  @@map("role_permissions")
 }
 
 // ─────────────────────────────────────────────
@@ -42,8 +83,11 @@ model Group {
   id           Int       @id @default(autoincrement())
   name         String    @unique
   displayOrder Int?      @map("display_order")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedAt    DateTime? @map("deleted_at")
   accounts     Account[]
 
+  @@index([isDeleted])
   @@map("groups")
 }
 
@@ -74,6 +118,8 @@ model Account {
   bankAccountNumber   String?  @map("bank_account_number")
   upiId               String?  @map("upi_id")
   isActive            Boolean  @default(true) @map("is_active")
+  isDeleted           Boolean  @default(false) @map("is_deleted")
+  deletedAt           DateTime? @map("deleted_at")
   isDirectClient      Boolean  @default(true) @map("is_direct_client")
   dealerCode          String?  @map("dealer_code")
   openingBalance      Float    @default(0) @map("opening_balance")
@@ -89,6 +135,7 @@ model Account {
 
   @@index([name])
   @@index([groupId])
+  @@index([isDeleted])
   @@map("accounts")
 }
 
@@ -105,6 +152,8 @@ model Script {
   exchangeId String?   @map("exchange_id")
   currencyId String?   @map("currency_id")
   isActive   Boolean   @default(true) @map("is_active")
+  isDeleted  Boolean   @default(false) @map("is_deleted")
+  deletedAt  DateTime? @map("deleted_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt      @map("updated_at")
 
@@ -117,6 +166,7 @@ model Script {
   @@index([shortName])
   @@index([fullName])
   @@index([exchangeId])
+  @@index([isDeleted])
   @@map("scripts")
 }
 
@@ -148,7 +198,8 @@ model Exchange {
   id       String  @id @default(uuid())
   code     String  @unique
   name     String?
-  isActive Boolean @default(true) @map("is_active")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
@@ -157,6 +208,7 @@ model Exchange {
   closingRates ClosingRate[]
   scripts      Script[]
 
+  @@index([isDeleted])
   @@map("exchanges")
 }
 
@@ -165,16 +217,18 @@ model Exchange {
 // ─────────────────────────────────────────────
 
 model Currency {
-  id        String   @id @default(uuid())
-  code      String   @unique              // e.g. "USD", "AED", "INR"
+  id        String    @id @default(uuid())
+  code      String    @unique              // e.g. "USD", "AED", "INR"
   name      String?                        // e.g. "US Dollar"
   symbol    String?                        // e.g. "$", "₹", "د.إ"
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
 
   scripts   Script[]
 
+  @@index([isDeleted])
   @@map("currencies")
 }
 
@@ -220,34 +274,41 @@ model Trade {
   vat             Float?   @map("vat")
 
   // Trade classification
-  tradeType       String   @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
-  settlementId    String?  @map("settlement_id")
+  tradeType          String      @default("REGULAR") @map("trade_type") // REGULAR, CARRY_FORWARD, BACK_FORWARD, SETTLEMENT
+  settlementId       String?     @map("settlement_id")
+  originSettlementId String?     @map("origin_settlement_id")
+  isDeleted          Boolean     @default(false) @map("is_deleted")
+  deletedAt          DateTime?   @map("deleted_at")
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt      @map("updated_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt      @map("updated_at")
 
   // Calculations
-  brokerId        String?  @map("broker_id")
-  clientRate      Float?   @map("client_rate")
-  brokerRate      Float?   @map("broker_rate")
-  clientBrokerage Float?   @map("client_brokerage")
-  brokerBrokerage Float?   @map("broker_brokerage")
-  profitTotal     Float?   @map("profit_total")
+  brokerId           String?     @map("broker_id")
+  clientRate         Float?      @map("client_rate")
+  brokerRate         Float?      @map("broker_rate")
+  clientBrokerage    Float?      @map("client_brokerage")
+  brokerBrokerage    Float?      @map("broker_brokerage")
+  profitTotal        Float?      @map("profit_total")
 
-  account    Account     @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
-  broker     Account?    @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
-  script     Script      @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
-  exchange   Exchange    @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
-  settlement Settlement? @relation(fields: [settlementId], references: [id])
+  account          Account     @relation("AccountTrades", fields: [accountId],  references: [id], onDelete: Cascade)
+  broker           Account?    @relation("BrokerTrades",  fields: [brokerId],   references: [id], onDelete: Cascade)
+  script           Script      @relation(fields: [scriptId],   references: [id], onDelete: Cascade)
+  exchange         Exchange    @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  settlement       Settlement? @relation("SettlementTrades", fields: [settlementId], references: [id])
+  originSettlement Settlement? @relation("SettlementOriginTrades", fields: [originSettlementId], references: [id])
 
   @@index([accountId])
   @@index([brokerId])
   @@index([scriptId])
   @@index([exchangeId])
   @@index([settlementId])
+  @@index([originSettlementId])
   @@index([tradeDate])
   @@index([settlementId, tradeDate])
   @@index([tradeType])
+  @@index([isDeleted])
+  @@index([isDeleted, settlementId])
   @@map("trades")
 }
 
@@ -267,6 +328,9 @@ model Brokerage {
   quantity    Float          @map("quantity")
   brokerage   Float          @map("brokerage")
 
+  isDeleted   Boolean        @default(false) @map("is_deleted")
+  deletedAt   DateTime?      @map("deleted_at")
+
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt      @map("updated_at")
 
@@ -276,6 +340,7 @@ model Brokerage {
   @@unique([accountId, appliesTo, scope, scriptId, direction], name: "uq_brokerage_rule")
   @@index([accountId])
   @@index([scriptId])
+  @@index([isDeleted])
   @@map("brokerages")
 }
 
@@ -284,22 +349,25 @@ model Brokerage {
 // ─────────────────────────────────────────────
 
 model ClosingRate {
-  id            String   @id @default(uuid())
-  exchangeId    String   @map("exchange_id")
-  scriptId      String?  @map("script_id")
-  securityName  String   @map("security_name")
-  rateDate      DateTime @map("rate_date")
-  rate          Float    @map("rate")
+  id            String    @id @default(uuid())
+  exchangeId    String    @map("exchange_id")
+  scriptId      String?   @map("script_id")
+  securityName  String    @map("security_name")
+  rateDate      DateTime  @map("rate_date")
+  rate          Float     @map("rate")
 
-  expiry        String?  @map("expiry")
-  delMonth      String?  @map("del_month")
-  callPut       String?  @map("call_put")
-  strikePrice   Float?   @map("strike_price")
-  bloombergCode String?  @map("bloomberg_code")
-  currencyCode  String?  @map("currency_code")
+  expiry        String?   @map("expiry")
+  delMonth      String?   @map("del_month")
+  callPut       String?   @map("call_put")
+  strikePrice   Float?    @map("strike_price")
+  bloombergCode String?   @map("bloomberg_code")
+  currencyCode  String?   @map("currency_code")
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt      @map("updated_at")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  deletedAt     DateTime? @map("deleted_at")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt      @map("updated_at")
 
   exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
   script   Script?  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
@@ -310,6 +378,7 @@ model ClosingRate {
   @@index([securityName])
   @@index([rateDate])
   @@index([rateDate, securityName])
+  @@index([isDeleted])
   @@map("closing_rates")
 }
 
@@ -318,15 +387,20 @@ model ClosingRate {
 // ─────────────────────────────────────────────
 
 model Settlement {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String                          // e.g. "Settlement 1"
-  fromDate  DateTime @map("from_date")
-  toDate    DateTime @map("to_date")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  fromDate  DateTime  @map("from_date")
+  toDate    DateTime  @map("to_date")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
 
-  trades Trade[]
+  trades        Trade[]  @relation("SettlementTrades")
+  originTrades  Trade[]  @relation("SettlementOriginTrades")
+  ledgerEntries Ledger[]
 
+  @@index([isDeleted])
   @@map("settlements")
 }
 
@@ -335,21 +409,29 @@ model Settlement {
 // ─────────────────────────────────────────────
 
 model Ledger {
-  id          String   @id @default(uuid())
-  accountId   String   @map("account_id")
-  date        DateTime @map("date")
-  amount      Float    @map("amount")
-  entryType   String   @map("entry_type")       // SETTLEMENT, VOUCHER
-  description String?  @map("description")
-  referenceId String?  @map("reference_id")     // settlementId or voucherId
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  id           String      @id @default(uuid())
+  accountId    String      @map("account_id")
+  settlementId String?     @map("settlement_id")
+  date         DateTime    @map("date")
+  amount       Float       @map("amount")
+  entryType    String      @map("entry_type")       // SETTLEMENT, VOUCHER
+  description  String?     @map("description")
+  referenceId  String?     @map("reference_id")     // settlementId or voucherId
+  isDeleted    Boolean     @default(false) @map("is_deleted")
+  deletedAt    DateTime?   @map("deleted_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt      @map("updated_at")
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  settlement   Settlement? @relation(fields: [settlementId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
+  @@index([settlementId])
+  @@index([entryType])
+  @@index([referenceId])
   @@index([date])
   @@index([accountId, date])
+  @@index([isDeleted])
   @@map("ledger_entries")
 }
 
@@ -370,24 +452,49 @@ model Voucher {
   date          DateTime      @map("date")
   type          VoucherType   @map("type")
   remarks       String?       @map("remarks")
+  isDeleted     Boolean       @default(false) @map("is_deleted")
+  deletedAt     DateTime?     @map("deleted_at")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt      @map("updated_at")
   
   lines         VoucherLine[]
 
+  @@index([isDeleted])
   @@map("vouchers")
 }
 
 model VoucherLine {
-  id        String   @id @default(uuid())
-  voucherId String   @map("voucher_id")
-  accountId String   @map("account_id")
-  amount    Float    @map("amount")
+  id        String    @id @default(uuid())
+  voucherId String    @map("voucher_id")
+  accountId String    @map("account_id")
+  amount    Float     @map("amount")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
 
   voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([voucherId])
   @@index([accountId])
+  @@index([isDeleted])
   @@map("voucher_lines")
 }
+
+// ─────────────────────────────────────────────
+// EXPIRY DATES
+// ─────────────────────────────────────────────
+
+model ExpiryDate {
+  id             String    @id @default(uuid())
+  date           String    @unique
+  normalizedDate DateTime  @map("normalized_date")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt      @map("updated_at")
+
+  @@index([normalizedDate])
+  @@index([isDeleted])
+  @@map("expiry_dates")
+}
+

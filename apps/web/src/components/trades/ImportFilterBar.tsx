@@ -34,12 +34,12 @@ export function ImportFilterBar({
   resetPage,
 }: ImportFilterBarProps) {
   return (
-    <div className="card p-4 bg-white border border-[var(--color-border-light)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="card p-4 bg-white border border-border-light shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
       {/* Search Bar with Column Selector */}
       <div className="flex items-center gap-2 flex-1 max-w-xl">
-        <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-lg shadow-2xs hover:border-[var(--color-border-focus)] focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/15 transition-all w-full">
+        <div className="flex items-center bg-white border border-border-medium rounded-lg shadow-2xs hover:border-(--color-border-focus) focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/15 transition-all w-full">
           {/* Column Select Dropdown */}
-          <div className="w-[145px] shrink-0 border-r border-[var(--color-border-light)]">
+          <div className="w-36.25 shrink-0 border-r border-border-light">
             <UniversalDropdown
               value={searchColumn}
               onChange={(val) => {
@@ -58,7 +58,7 @@ export function ImportFilterBar({
                 { value: 'price', label: 'Price / Rate' },
                 { value: 'ALL', label: 'All Columns' },
               ]}
-              triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2.5 text-[11px] font-semibold text-[var(--color-charcoal)]"
+              triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-lg border-0 bg-slate-50/70 hover:bg-slate-100 shadow-none px-2.5 text-[11px] font-semibold text-charcoal"
             />
           </div>
 
@@ -138,8 +138,8 @@ export function ImportFilterBar({
 
         {/* Status Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-slate)] font-semibold shrink-0">Filter:</span>
-          <div className="w-[210px]">
+          <span className="text-xs text-slate font-semibold shrink-0">Filter:</span>
+          <div className="w-52.5">
             <UniversalDropdown
               value={statusFilter}
               onChange={(val) => {
@@ -149,13 +149,13 @@ export function ImportFilterBar({
               searchable={false}
               options={[
                 { value: 'ALL', label: 'All Parsed Rows' },
-                { value: 'VALID', label: '✓ Valid Trades Only' },
-                { value: 'INVALID', label: '⚠ Invalid / Unmapped Trades' },
-                { value: 'UNMAPPED_CLIENT', label: '🔴 Unmapped Clients' },
-                { value: 'UNMAPPED_SCRIPT', label: '🔴 Unmapped Scripts' },
-                { value: 'UNMAPPED_EXCHANGE', label: '🔴 Unmapped Exchanges' },
+                { value: 'VALID', label: 'Valid Trades Only' },
+                { value: 'INVALID', label: 'Invalid / Unmapped Trades' },
+                { value: 'UNMAPPED_CLIENT', label: 'Unmapped Clients' },
+                { value: 'UNMAPPED_SCRIPT', label: 'Unmapped Scripts' },
+                { value: 'UNMAPPED_EXCHANGE', label: 'Unmapped Exchanges' },
               ]}
-              triggerClassName="min-h-[34px] h-[34px] text-xs font-semibold px-2.5 py-1.5"
+              triggerClassName="min-h-8.5 h-8.5 text-xs font-semibold px-2.5 py-1.5"
             />
           </div>
         </div>

@@ -79,12 +79,12 @@ export function OpenPositionVerificationPanel({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             {validCount} Matched
           </span>
           {mismatchCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
               {mismatchCount} Mismatches
             </span>
@@ -157,7 +157,7 @@ export function OpenPositionVerificationPanel({
       </div>
 
       {/* Verification Table */}
-      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-xs max-h-[420px] overflow-y-auto">
+      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-xs max-h-105 overflow-y-auto">
         <table className="w-full text-left text-xs whitespace-nowrap">
           <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
             <tr>

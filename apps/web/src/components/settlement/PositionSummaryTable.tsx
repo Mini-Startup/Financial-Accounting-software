@@ -5,6 +5,7 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import type { SettlementItem } from './types';
 
 interface PositionSummaryTableProps {
@@ -155,15 +156,15 @@ export function PositionSummaryTable({
   return (
     <div className="space-y-4">
       {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/90 shadow-2xs">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search party code, name, script, exchange..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-9 text-xs w-full py-1.5"
+            className="input pl-10 text-xs w-full py-2 rounded-xl border border-slate-200 focus:border-blue-500"
           />
         </div>
 
@@ -188,53 +189,53 @@ export function PositionSummaryTable({
             />
           </div>
 
-          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200">
+          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 font-mono shadow-2xs">
             {filteredRows.length} rows
           </span>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="card shadow-xs border border-slate-200 rounded-xl bg-white p-0 overflow-hidden">
+      <div className="border border-slate-200/90 rounded-3xl bg-white p-0 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="data-table w-full text-xs" style={{ minWidth: '1350px' }}>
+          <table className="w-full text-xs text-left border-collapse" style={{ minWidth: '1350px' }}>
             <thead>
-              <tr className="whitespace-nowrap bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px] select-none">
-                <th onClick={() => handleSort('accountCode')} className="cursor-pointer py-3 px-3">
+              <tr className="whitespace-nowrap bg-slate-50/95 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px] select-none sticky top-0 z-10 backdrop-blur-xs">
+                <th onClick={() => handleSort('accountCode')} className="cursor-pointer py-3.5 px-3.5">
                   Party Code &amp; Name {renderSortIndicator('accountCode')}
                 </th>
-                <th onClick={() => handleSort('role')} className="cursor-pointer py-3 px-3">
+                <th onClick={() => handleSort('role')} className="cursor-pointer py-3.5 px-3">
                   Role {renderSortIndicator('role')}
                 </th>
-                <th onClick={() => handleSort('exchangeCode')} className="cursor-pointer py-3 px-3">
+                <th onClick={() => handleSort('exchangeCode')} className="cursor-pointer py-3.5 px-3">
                   Exchange {renderSortIndicator('exchangeCode')}
                 </th>
-                <th onClick={() => handleSort('scriptShortName')} className="cursor-pointer py-3 px-3 min-w-[200px]">
+                <th onClick={() => handleSort('scriptShortName')} className="cursor-pointer py-3.5 px-3 min-w-50">
                   Script / Security {renderSortIndicator('scriptShortName')}
                 </th>
-                <th className="py-3 px-3">Expiry</th>
-                <th onClick={() => handleSort('marketLot' as any)} className="text-right cursor-pointer py-3 px-3">
+                <th className="py-3.5 px-3">Expiry</th>
+                <th onClick={() => handleSort('marketLot' as any)} className="text-right cursor-pointer py-3.5 px-3">
                   Market Lot {renderSortIndicator('marketLot' as any)}
                 </th>
-                <th onClick={() => handleSort('buyQty')} className="text-right cursor-pointer py-3 px-3">
+                <th onClick={() => handleSort('buyQty')} className="text-right cursor-pointer py-3.5 px-3">
                   Buy Qty {renderSortIndicator('buyQty')}
                 </th>
-                <th className="text-right py-3 px-3">Buy Avg</th>
-                <th onClick={() => handleSort('sellQty')} className="text-right cursor-pointer py-3 px-3">
+                <th className="text-right py-3.5 px-3">Buy Avg</th>
+                <th onClick={() => handleSort('sellQty')} className="text-right cursor-pointer py-3.5 px-3">
                   Sell Qty {renderSortIndicator('sellQty')}
                 </th>
-                <th className="text-right py-3 px-3">Sell Avg</th>
-                <th onClick={() => handleSort('netQty')} className="text-right cursor-pointer py-3 px-3 font-bold">
+                <th className="text-right py-3.5 px-3">Sell Avg</th>
+                <th onClick={() => handleSort('netQty')} className="text-right cursor-pointer py-3.5 px-3 font-bold">
                   Net Qty {renderSortIndicator('netQty')}
                 </th>
-                <th className="text-right py-3 px-3">Net Avg</th>
-                <th className="text-right py-3 px-3">Closing Rate</th>
-                <th onClick={() => handleSort('finalPnL')} className="text-right cursor-pointer py-3 px-3 font-bold min-w-[120px]">
+                <th className="text-right py-3.5 px-3">Net Avg</th>
+                <th className="text-right py-3.5 px-3">Closing Rate</th>
+                <th onClick={() => handleSort('finalPnL')} className="text-right cursor-pointer py-3.5 px-3.5 font-bold min-w-30">
                   Final P&amp;L {renderSortIndicator('finalPnL')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {loading ? (
                 <tr>
                   <td colSpan={14} className="py-12 text-center text-slate-400 italic">
@@ -264,12 +265,12 @@ export function PositionSummaryTable({
                   return (
                     <tr
                       key={`${item.accountId}_${item.scriptId}_${idx}`}
-                      className="hover:bg-slate-50/70 transition-colors"
+                      className="hover:bg-blue-50/30 transition-colors"
                     >
                       {/* Party */}
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3.5">
                         <div className="font-mono font-bold text-slate-900">{item.accountCode}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[180px]" title={item.accountName}>
+                        <div className="text-[11px] text-slate-500 truncate max-w-45" title={item.accountName}>
                           {item.accountName}
                         </div>
                       </td>
@@ -278,10 +279,10 @@ export function PositionSummaryTable({
                       <td className="py-2.5 px-3">
                         <span
                           className={cn(
-                            'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase',
+                            'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border',
                             item.role === 'CLIENT'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-purple-50 text-purple-700 border border-purple-200'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-purple-50 text-purple-700 border-purple-200'
                           )}
                         >
                           {item.role}
@@ -294,14 +295,14 @@ export function PositionSummaryTable({
                       {/* Script / Security */}
                       <td className="py-2.5 px-3">
                         <div className="font-bold text-slate-900">{item.scriptShortName}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[220px]" title={item.securityName || item.scriptFullName}>
+                        <div className="text-[11px] text-slate-500 truncate max-w-55" title={item.securityName || item.scriptFullName}>
                           {item.securityName || item.scriptFullName}
                         </div>
                       </td>
 
                       {/* Expiry */}
                       <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
-                        {item.expiry || '—'}
+                        {formatDateToDDMMYY(item.expiry) || '—'}
                       </td>
 
                       {/* Market Lot */}
@@ -358,11 +359,11 @@ export function PositionSummaryTable({
                       {/* Final P&L */}
                       <td
                         className={cn(
-                          'py-2.5 px-3 text-right font-mono font-bold',
+                          'py-2.5 px-3.5 text-right font-mono font-bold',
                           pnl > 0
-                            ? 'text-[var(--color-positive)]'
+                            ? 'text-emerald-700'
                             : pnl < 0
-                            ? 'text-[var(--color-negative)]'
+                            ? 'text-rose-700'
                             : 'text-slate-500'
                         )}
                       >
@@ -381,9 +382,9 @@ export function PositionSummaryTable({
 
             {/* Sticky Total Summary Row (visible rows only) */}
             {sortedRows.length > 0 && (
-              <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-mono text-xs font-bold text-slate-900 sticky bottom-0 z-10 shadow-inner">
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50/95 font-mono text-xs font-bold text-slate-900 sticky bottom-0 z-10 shadow-xs">
                 <tr>
-                  <td colSpan={6} className="py-3 px-3 uppercase tracking-wider text-slate-700 font-sans">
+                  <td colSpan={6} className="py-3 px-3.5 uppercase tracking-wider text-slate-700 font-sans">
                     Total ({filteredRows.length} visible rows)
                   </td>
                   <td className="py-3 px-3 text-right text-emerald-700">
@@ -410,11 +411,11 @@ export function PositionSummaryTable({
                   <td className="py-3 px-3 text-right text-slate-500">—</td>
                   <td
                     className={cn(
-                      'py-3 px-3 text-right font-bold',
+                      'py-3 px-3.5 text-right font-bold',
                       totals.totalPnL > 0
-                        ? 'text-[var(--color-positive)]'
+                        ? 'text-emerald-700'
                         : totals.totalPnL < 0
-                        ? 'text-[var(--color-negative)]'
+                        ? 'text-rose-700'
                         : 'text-slate-900'
                     )}
                   >

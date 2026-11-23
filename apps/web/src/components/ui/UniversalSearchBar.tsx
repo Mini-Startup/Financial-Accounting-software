@@ -85,9 +85,9 @@ export function UniversalSearchBar({
   return (
     <div className={cn('relative flex flex-col gap-2', className)}>
       {/* Simple Search Bar */}
-      <div className="flex items-center bg-white border border-[var(--color-border-medium)] rounded-[var(--radius-md)] shadow-xs transition-all focus-within:border-[var(--color-border-focus)] focus-within:ring-2 focus-within:ring-[var(--color-leaf)]/20">
+      <div className="flex items-center bg-white border border-border-medium rounded-md shadow-xs transition-all focus-within:border-(--color-border-focus) focus-within:ring-2 focus-within:ring-(--color-leaf)/20">
         {/* Column Selector */}
-        <div className="w-[130px] shrink-0 border-r border-[var(--color-border-light)]">
+        <div className="w-32.5 shrink-0 border-r border-border-light">
           <UniversalDropdown
             value={selectedColumn}
             onChange={(val) => handleSimpleSearch(simpleQuery, val)}
@@ -96,25 +96,25 @@ export function UniversalSearchBar({
               { value: 'ALL', label: 'All Columns' },
               ...columns.map((col) => ({ value: col.key, label: col.label })),
             ]}
-            triggerClassName="min-h-[34px] h-[34px] rounded-none rounded-l-[var(--radius-md)] border-0 bg-[var(--color-snow)] hover:bg-slate-100 shadow-none px-2.5 text-xs font-medium text-[var(--color-charcoal)]"
+            triggerClassName="min-h-8.5 h-8.5 rounded-none rounded-l-md border-0 bg-snow hover:bg-slate-100 shadow-none px-2.5 text-xs font-medium text-charcoal"
           />
         </div>
 
         {/* Input */}
         <div className="relative flex-1 flex items-center">
-          <Search className="w-4 h-4 text-[var(--color-fog)] ml-3 shrink-0" />
+          <Search className="w-4 h-4 text-fog ml-3 shrink-0" />
           <input
             type="text"
             value={simpleQuery}
             onChange={(e) => handleSimpleSearch(e.target.value, selectedColumn)}
             placeholder={placeholder}
-            className="w-full h-[36px] px-3 text-xs bg-transparent text-[var(--color-charcoal)] placeholder:text-[var(--color-fog)] outline-none"
+            className="w-full h-9 px-3 text-xs bg-transparent text-charcoal placeholder:text-fog outline-none"
           />
           {simpleQuery && (
             <button
               type="button"
               onClick={() => handleSimpleSearch('', selectedColumn)}
-              className="p-1 mr-2 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] transition-colors rounded"
+              className="p-1 mr-2 text-slate hover:text-charcoal transition-colors rounded"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -127,16 +127,16 @@ export function UniversalSearchBar({
           onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
           title="Advanced Search (AND/OR conditions)"
           className={cn(
-            'h-[36px] px-3.5 flex items-center gap-1.5 text-xs font-medium border-l border-[var(--color-border-light)] rounded-r-[var(--radius-md)] transition-colors cursor-pointer select-none',
+            'h-9 px-3.5 flex items-center gap-1.5 text-xs font-medium border-l border-border-light rounded-r-md transition-colors cursor-pointer select-none',
             activeAdvancedCount > 0
-              ? 'bg-[var(--color-mist)] text-[var(--color-forest)] font-semibold'
-              : 'text-[var(--color-slate)] hover:bg-[var(--color-snow)] hover:text-[var(--color-charcoal)]'
+              ? 'bg-mist text-(--color-forest) font-semibold'
+              : 'text-slate hover:bg-snow hover:text-charcoal'
           )}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Advanced</span>
           {activeAdvancedCount > 0 && (
-            <span className="px-1.5 py-0.2 bg-[var(--color-forest)] text-white text-[10px] rounded-full font-mono">
+            <span className="px-1.5 py-0.2 bg-(--color-forest) text-white text-[10px] rounded-md font-mono">
               {activeAdvancedCount}
             </span>
           )}
@@ -145,18 +145,18 @@ export function UniversalSearchBar({
 
       {/* Advanced Search Drawer / Expanded Panel */}
       {isAdvancedOpen && (
-        <div className="p-3.5 bg-white border border-[var(--color-border-light)] rounded-[var(--radius-lg)] shadow-[var(--shadow-md)] animate-in fade-in duration-150 flex flex-col gap-3">
-          <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2">
+        <div className="p-3.5 bg-white border border-border-light rounded-lg shadow-(--shadow-md) animate-in fade-in duration-150 flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-border-light pb-2">
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-[var(--color-forest)]" />
-              <h4 className="text-xs font-semibold text-[var(--color-charcoal)] uppercase tracking-wider">
+              <SlidersHorizontal className="w-4 h-4 text-(--color-forest)" />
+              <h4 className="text-xs font-semibold text-charcoal uppercase tracking-wider">
                 Advanced Multi-Column Filter
               </h4>
             </div>
             <button
               type="button"
               onClick={() => setIsAdvancedOpen(false)}
-              className="p-1 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] rounded"
+              className="p-1 text-slate hover:text-charcoal rounded"
             >
               <X className="w-4 h-4" />
             </button>
@@ -165,7 +165,7 @@ export function UniversalSearchBar({
           {/* Conditions Rows */}
           <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
             {conditions.length === 0 ? (
-              <p className="text-xs text-[var(--color-slate)] italic py-2">
+              <p className="text-xs text-slate italic py-2">
                 No advanced conditions added. Click below to add multi-column AND/OR rules.
               </p>
             ) : (
@@ -220,14 +220,14 @@ export function UniversalSearchBar({
                     value={cond.value}
                     onChange={(e) => handleUpdateCondition(cond.id, { value: e.target.value })}
                     placeholder="Filter value..."
-                    className="h-8 flex-1 min-w-[120px] px-2.5 bg-white border border-[var(--color-border-medium)] rounded text-[var(--color-charcoal)] outline-none focus:border-[var(--color-border-focus)]"
+                    className="h-8 flex-1 min-w-30 px-2.5 bg-white border border-border-medium rounded text-charcoal outline-none focus:border-(--color-border-focus)"
                   />
 
                   {/* Remove button */}
                   <button
                     type="button"
                     onClick={() => handleRemoveCondition(cond.id)}
-                    className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] hover:bg-red-50 rounded transition-colors"
+                    className="p-1.5 text-slate hover:text-negative hover:bg-red-50 rounded transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -237,11 +237,11 @@ export function UniversalSearchBar({
           </div>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between border-t border-[var(--color-border-light)] pt-2 mt-1">
+          <div className="flex items-center justify-between border-t border-border-light pt-2 mt-1">
             <button
               type="button"
               onClick={handleAddCondition}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--color-forest)] bg-[var(--color-snow)] hover:bg-[var(--color-mist)] border border-[var(--color-border-light)] rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-(--color-forest) bg-snow hover:bg-mist border border-border-light rounded-sm transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Condition</span>
@@ -252,7 +252,7 @@ export function UniversalSearchBar({
                 <button
                   type="button"
                   onClick={handleClearAdvanced}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate hover:text-negative transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Clear</span>
@@ -261,7 +261,7 @@ export function UniversalSearchBar({
               <button
                 type="button"
                 onClick={handleApplyAdvanced}
-                className="px-4 py-1.5 text-xs font-semibold bg-[var(--color-forest)] hover:bg-[var(--color-emerald)] text-white rounded-[var(--radius-sm)] shadow-xs transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs font-semibold bg-(--color-forest) hover:bg-emerald text-white rounded-sm shadow-xs transition-colors cursor-pointer"
               >
                 Apply Rules
               </button>

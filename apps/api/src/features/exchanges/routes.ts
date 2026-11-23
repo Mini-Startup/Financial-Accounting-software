@@ -12,8 +12,7 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const activeOnly = req.query.active === 'true';
-    const result = await exchangesService.findAll(activeOnly);
+    const result = await exchangesService.findAll();
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -21,6 +20,13 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const result = await exchangesService.findOne(req.params.id);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get('/:id/impact', async (req, res, next) => {
+  try {
+    const result = await exchangesService.getImpact(req.params.id);
     res.json(result);
   } catch (err) { next(err); }
 });

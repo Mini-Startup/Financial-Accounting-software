@@ -1,46 +1,51 @@
 import { Router } from 'express';
 import { scriptsService } from './services';
+import { requirePermission } from '../../middleware/auth';
 
 const router = Router();
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('SCRIPTS', 'CREATE'), async (req, res, next) => {
   try {
     const result = await scriptsService.create(req.body);
     res.status(201).json(result);
   } catch (err) { next(err); }
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', requirePermission('SCRIPTS', 'VIEW'), async (req, res, next) => {
   try {
     const result = await scriptsService.findAll(req.query.search as string | undefined);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requirePermission('SCRIPTS', 'VIEW'), async (req, res, next) => {
   try {
-    const result = await scriptsService.findOne(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await scriptsService.findOne(id);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requirePermission('SCRIPTS', 'EDIT'), async (req, res, next) => {
   try {
-    const result = await scriptsService.update(req.params.id, req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await scriptsService.update(id, req.body);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('SCRIPTS', 'EDIT'), async (req, res, next) => {
   try {
-    const result = await scriptsService.update(req.params.id, req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await scriptsService.update(id, req.body);
     res.json(result);
   } catch (err) { next(err); }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('SCRIPTS', 'DELETE'), async (req, res, next) => {
   try {
-    const result = await scriptsService.remove(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await scriptsService.remove(id);
     res.json(result);
   } catch (err) { next(err); }
 });

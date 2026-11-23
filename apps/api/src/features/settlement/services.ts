@@ -5,6 +5,7 @@ import { deriveSecurityName } from './utils';
 export class SettlementService {
   async listSettlements() {
     return prisma.settlement.findMany({
+      where: { isDeleted: false },
       orderBy: {
         toDate: 'desc',
       },
@@ -17,10 +18,11 @@ export class SettlementService {
   }
 
   async getSettlement(id: string) {
-    return prisma.settlement.findUnique({
-      where: { id },
+    return prisma.settlement.findFirst({
+      where: { id, isDeleted: false },
       include: {
         trades: {
+          where: { isDeleted: false },
           include: {
             account: true,
             broker: true,
@@ -41,7 +43,9 @@ export class SettlementService {
   }
 
   async generateSummary(fromDate?: string, toDate?: string, settlementId?: string | null) {
-    let whereClause: any = {};
+    let whereClause: any = {
+      isDeleted: false,
+    };
 
     if (settlementId === 'UNSETTLED' || settlementId === 'LIVE') {
       whereClause.settlementId = null;
@@ -382,7 +386,8 @@ export class SettlementService {
   async deleteSettlement(settlementId: string) {
     // 1. Verify it is the newest settlement (LIFO: only the latest can be deleted)
     const allSettlements = await prisma.settlement.findMany({
-      orderBy: { createdAt: 'desc' },
+      where: { isDeleted: false },
+      orderBy: [{ toDate: 'desc' }, { createdAt: 'desc' }],
       take: 1,
     });
 
@@ -397,63 +402,96 @@ export class SettlementService {
       );
     }
 
-    const settlement = await prisma.settlement.findUnique({
-      where: { id: settlementId },
+    const settlement = await prisma.settlement.findFirst({
+      where: { id: settlementId, isDeleted: false },
     });
 
     if (!settlement) {
       throw new Error('Settlement not found.');
     }
 
+    // 2. Forward Dependency Check: Ensure no BF trades created by this settlement have been settled in a subsequent cycle
+    const forwardSettledCount = await prisma.trade.count({
+      where: {
+        originSettlementId: settlementId,
+        tradeType: 'BACK_FORWARD',
+        settlementId: { not: null },
+        isDeleted: false,
+      },
+    });
+
+    if (forwardSettledCount > 0) {
+      throw new Error(
+        `Cannot delete "${settlement.name}" because its carry-forward positions have already been settled in a subsequent settlement. Please delete that settlement first.`
+      );
+    }
+
     return await prisma.$transaction(
       async (tx) => {
-        // 2. Delete unsettled BF trades that were created by this settlement
-        //    These have settlementId = null, tradeType = BACK_FORWARD, and remarks containing the settlement name
-        const deletedBfUnsettled = await tx.trade.deleteMany({
+        const now = new Date();
+        // 3. Soft delete all generated trades created by this settlement
+        const deletedGenerated = await tx.trade.updateMany({
           where: {
-            settlementId: null,
-            tradeType: 'BACK_FORWARD',
-            remarks: {
-              contains: settlement.name,
-            },
+            isDeleted: false,
+            OR: [
+              { originSettlementId: settlementId },
+              {
+                settlementId: settlementId,
+                tradeType: { in: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'] },
+              },
+              {
+                settlementId: null,
+                tradeType: 'BACK_FORWARD',
+                remarks: { contains: settlement.name },
+              },
+            ],
+          },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
           },
         });
 
-        // 3. Delete all generated trades (CF, BF, SETTLEMENT) that belong to this settlement
-        const deletedGenerated = await tx.trade.deleteMany({
-          where: {
-            settlementId: settlementId,
-            tradeType: {
-              in: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'],
-            },
-          },
-        });
-
-        // 4. Un-tag original trades: set settlementId = null for remaining trades tagged with this settlement
+        // 4. Un-tag original trades: revert settlementId = null for remaining trades tagged with this settlement
         const untagged = await tx.trade.updateMany({
           where: {
             settlementId: settlementId,
+            isDeleted: false,
           },
           data: {
             settlementId: null,
           },
         });
 
-        // 5. Delete ledger entries that reference this settlement
-        const deletedLedger = await tx.ledger.deleteMany({
+        // 5. Soft delete all ledger entries that reference this settlement
+        const deletedLedger = await tx.ledger.updateMany({
           where: {
-            referenceId: settlementId,
-            entryType: 'SETTLEMENT',
+            isDeleted: false,
+            OR: [
+              { settlementId: settlementId },
+              { referenceId: settlementId },
+              {
+                entryType: 'SETTLEMENT',
+                description: { contains: settlement.name },
+              },
+            ],
+          },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
           },
         });
 
-        // 6. Delete the settlement record itself
-        await tx.settlement.delete({
+        // 6. Soft delete the settlement record itself
+        await tx.settlement.update({
           where: { id: settlementId },
+          data: {
+            isDeleted: true,
+            deletedAt: now,
+          },
         });
 
         return {
-          deletedBfUnsettledCount: deletedBfUnsettled.count,
           deletedGeneratedCount: deletedGenerated.count,
           untaggedTradesCount: untagged.count,
           deletedLedgerCount: deletedLedger.count,

@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@/utils/cn';
 import { Check } from 'lucide-react';
+import { cn } from '@/utils/cn';
 
 export interface CustomCheckboxProps {
   checked: boolean;
@@ -24,7 +24,7 @@ export function CustomCheckbox({
     <label
       htmlFor={id}
       className={cn(
-        'inline-flex items-center gap-2 select-none cursor-pointer text-xs font-medium text-[var(--color-charcoal)]',
+        'inline-flex items-center gap-2 select-none cursor-pointer text-xs font-medium text-charcoal',
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         className
       )}
@@ -44,16 +44,18 @@ export function CustomCheckbox({
       />
       <div
         className={cn(
-          'w-4 h-4 rounded border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-leaf)] peer-focus-visible:ring-offset-1',
+          'w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer overflow-hidden leading-none',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-1',
           checked
-            ? 'bg-[var(--color-leaf)] border-[var(--color-leaf)] text-white shadow-2xs'
-            : 'bg-white border-[var(--color-border-medium)] hover:border-[var(--color-border-focus)]'
+            ? 'bg-[#2652C8] border-[#2652C8] text-white shadow-xs'
+            : 'bg-white border-slate-300 hover:border-blue-500'
         )}
       >
-        {checked && <Check className="w-3 h-3 stroke-[3]" />}
+        {checked && (
+          <Check className="w-2.5 h-2.5 text-white stroke-[3] shrink-0" />
+        )}
       </div>
-      {label && <span className="text-[var(--color-charcoal)]">{label}</span>}
+      {label && <span className="text-charcoal">{label}</span>}
     </label>
   );
 }

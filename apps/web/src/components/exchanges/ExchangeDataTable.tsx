@@ -3,9 +3,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ExchangeFormModal } from './ExchangeFormModal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ExchangeDeleteModal } from './ExchangeDeleteModal';
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { FindAndReplace } from '@/components/ui/FindAndReplace';
+import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -13,7 +14,7 @@ import {
   type SortDirection,
   type AdvancedCondition,
 } from '@/utils/tableFilter';
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 
 const EXCHANGE_COLUMNS = [
   { key: 'code', label: 'Code' },
@@ -22,10 +23,17 @@ const EXCHANGE_COLUMNS = [
 
 export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: any[] }) {
   const router = useRouter();
-  const [exchangesList, setExchangesList] = useState<any[]>(initialExchanges);
+  const {
+    items: exchangesList,
+    setItems: setExchangesList,
+    addEntity,
+    updateEntity,
+    removeEntity,
+    syncWithServer,
+  } = useOptimisticEntityList<any>(initialExchanges);
+
   const [editingExchange, setEditingExchange] = useState<any | null>(null);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTargetExchange, setDeleteTargetExchange] = useState<any | null>(null);
 
   // Search, Sort, Pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,9 +45,9 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  useMemo(() => {
-    setExchangesList(initialExchanges);
-  }, [initialExchanges]);
+  useEffect(() => {
+    syncWithServer(initialExchanges);
+  }, [initialExchanges, syncWithServer]);
 
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
@@ -76,10 +84,6 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
     return sortedExchanges.slice(start, start + pageSize);
   }, [sortedExchanges, currentPage, pageSize]);
 
-  const activeCount = useMemo(() => {
-    return paginatedExchanges.filter((e) => e.isActive).length;
-  }, [paginatedExchanges]);
-
   const handleReplaceOne = (rowIndex: number, columnKey: string, newValue: string) => {
     const target = paginatedExchanges[rowIndex];
     if (!target) return;
@@ -95,30 +99,12 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
     toast.success(`Replaced ${count} occurrences in ${columnKey}`);
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/exchanges/${deleteTargetId}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Exchange deactivated successfully');
-        setDeleteTargetId(null);
-        router.refresh();
-      } else {
-        throw new Error('Failed to deactivate exchange');
-      }
-    } catch(e: any) {
-      console.error(e);
-      toast.error(e.message || 'Failed to delete right now.');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <>
-    <div className="space-y-2">
+    <div className="border border-slate-200/90 rounded-2xl shadow-xs bg-white overflow-hidden relative">
       <TableToolbar
+        tableName="Exchanges"
+        records={exchangesList}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           setSearchQuery(q);
@@ -144,7 +130,7 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
         totalItems={sortedExchanges.length}
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
-        pageSizeOptions={[10, 25, 50, 100]}
+        pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
       />
 
       {isFindReplaceOpen && (
@@ -157,99 +143,96 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
         />
       )}
 
-      <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">
+      <div className="overflow-x-auto rounded-b-xl">
+        <table className="data-table data-table-dense w-full text-xs">
+          <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs select-none">
+            <tr className="whitespace-nowrap">
+              <th
+                onClick={() => handleSort('code')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Exchange Code</span>
+                  {sortKey === 'code' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th
+                onClick={() => handleSort('name')}
+                className="cursor-pointer hover:bg-slate-100 select-none py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Exchange Full Name</span>
+                  {sortKey === 'name' ? (
+                    sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-[#2652C8]" /> : <ChevronDown className="w-3.5 h-3.5 text-[#2652C8]" />
+                  ) : (
+                    <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
+              <th className="text-right py-2.5 px-4 font-bold uppercase tracking-wider text-slate-600 text-[11px] w-28">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white font-sans">
+            {paginatedExchanges.length === 0 ? (
               <tr>
-                <th
-                  onClick={() => handleSort('code')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Code</span>
-                    {sortKey === 'code' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('name')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Name</span>
-                    {sortKey === 'name' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('isActive')}
-                  className="cursor-pointer hover:bg-slate-100 select-none py-3 px-4"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Status</span>
-                    {sortKey === 'isActive' ? (
-                      sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
-                    ) : (
-                      <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
-                  </div>
-                </th>
-                <th className="text-right py-3 px-4">Actions</th>
+                <td colSpan={3} className="py-12 text-center text-slate-400 font-medium">
+                  No exchanges match search criteria.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedExchanges.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-[var(--color-slate)] font-medium">
-                    No exchanges match search criteria.
-                  </td>
-                </tr>
-              ) : null}
-              {paginatedExchanges.map((exc) => (
-                <tr key={exc.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="font-mono font-bold text-[var(--color-charcoal)] py-2.5 px-4">{exc.code}</td>
-                  <td className="text-[var(--color-slate)] py-2.5 px-4">{exc.name || '-'}</td>
-                  <td className="py-2.5 px-4">
-                    {exc.isActive ? (
-                      <span className="badge badge--dot badge--success">Active</span>
-                    ) : (
-                      <span className="badge badge--dot badge--error">Inactive</span>
-                    )}
-                  </td>
-                  <td className="text-right py-2.5 px-4">
+            ) : null}
+            {paginatedExchanges.map((exc) => (
+              <tr
+                key={exc.id}
+                onClick={() => setEditingExchange(exc)}
+                className="hover:bg-slate-50 transition-colors cursor-pointer select-none whitespace-nowrap group"
+              >
+                <td className="py-2.5 px-4">
+                  <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/80 shadow-2xs inline-block">
+                    {exc.code}
+                  </span>
+                </td>
+                <td className="py-2.5 px-4">
+                  <span className="text-slate-800 font-medium text-xs">
+                    {exc.name || '—'}
+                  </span>
+                </td>
+                <td className="text-right py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1.5">
                     <button 
                       onClick={() => setEditingExchange(exc)}
-                      className="text-[var(--color-forest)] hover:text-[var(--color-emerald)] mr-4 font-semibold transition text-xs cursor-pointer"
+                      className="p-1.5 text-slate-400 hover:text-[#2652C8] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Edit Exchange"
                     >
-                      Edit
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button 
-                      onClick={() => setDeleteTargetId(exc.id)}
-                      className="text-[var(--color-negative)] hover:opacity-80 font-semibold transition text-xs cursor-pointer"
+                      onClick={() => setDeleteTargetExchange(exc)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Exchange"
                     >
-                      Delete
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {/* Sticky Total / Summary Row */}
-            <tfoot className="sticky bottom-0 bg-slate-100/95 border-t-2 border-slate-300 font-bold text-xs text-slate-800">
-              <tr>
-                <td className="py-2.5 px-4">Total Exchanges: {sortedExchanges.length}</td>
-                <td className="py-2.5 px-4 text-slate-500 font-normal">Active: {activeCount} | Inactive: {exchangesList.length - activeCount}</td>
-                <td className="py-2.5 px-4" colSpan={2}></td>
+                  </div>
+                </td>
               </tr>
-            </tfoot>
-          </table>
-        </div>
+            ))}
+          </tbody>
+          {/* Summary / Total Footer */}
+          <tfoot className="border-t border-slate-200 bg-slate-50/80 font-medium text-xs text-slate-600">
+            <tr>
+              <td className="py-2.5 px-4 font-bold text-slate-700" colSpan={2}>
+                Total Exchanges: <span className="font-mono font-bold text-slate-900">{sortedExchanges.length}</span>
+              </td>
+              <td className="py-2.5 px-4 text-right text-slate-500 font-normal">
+                Page {currentPage} of {Math.max(1, Math.ceil(sortedExchanges.length / pageSize))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
 
@@ -257,18 +240,21 @@ export function ExchangeDataTable({ exchanges: initialExchanges }: { exchanges: 
       <ExchangeFormModal 
         initialData={editingExchange} 
         onClose={() => setEditingExchange(null)} 
+        onSuccess={(updated) => {
+          if (updated) updateEntity(updated);
+          setEditingExchange(null);
+        }}
       />
     )}
 
-    <ConfirmDialog
-      isOpen={!!deleteTargetId}
-      title="Deactivate Exchange"
-      message="Are you sure you want to deactivate this exchange?"
-      variant="danger"
-      confirmLabel="Deactivate"
-      isLoading={isDeleting}
-      onConfirm={confirmDelete}
-      onCancel={() => setDeleteTargetId(null)}
+    <ExchangeDeleteModal
+      isOpen={!!deleteTargetExchange}
+      exchange={deleteTargetExchange}
+      onClose={() => setDeleteTargetExchange(null)}
+      onDeleted={(deletedId) => {
+        removeEntity(deletedId);
+        setDeleteTargetExchange(null);
+      }}
     />
     </>
   );

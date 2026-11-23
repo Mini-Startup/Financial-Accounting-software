@@ -3,7 +3,7 @@ import { NotFoundException } from '../../errors';
 
 export class LedgerReportService {
   async generateLedgerReport(accountId: string, fromDateStr?: string, toDateStr?: string) {
-    const whereClause: any = { accountId };
+    const whereClause: any = { accountId, isDeleted: false };
     let fromDate: Date | null = null;
 
     if (fromDateStr) {
@@ -35,12 +35,21 @@ export class LedgerReportService {
             _sum: { amount: true },
             where: {
               accountId,
+              isDeleted: false,
               date: { lt: fromDate },
             },
           })
         : Promise.resolve({ _sum: { amount: 0 } }),
       prisma.ledger.findMany({
         where: whereClause,
+        include: {
+          settlement: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
         orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
       }),
     ]);
@@ -74,6 +83,8 @@ export class LedgerReportService {
         entryType: entry.entryType,
         type: entry.entryType,
         referenceId: entry.referenceId,
+        settlementId: entry.settlementId,
+        settlementName: entry.settlement?.name || null,
         amount,
         credit,
         debit,

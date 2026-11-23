@@ -215,52 +215,11 @@ export function DubaiPreviewTable({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card bg-[var(--color-snow)]">
-          <div className="card__body p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Parsed Dubai Rows</div>
-              <div className="text-lg font-bold text-[var(--color-charcoal)]">{activeDubaiRows.length} active</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card bg-[var(--color-snow)]">
-          <div className="card__body p-4 flex items-center gap-3">
-            <div className="p-2 bg-green-50 rounded-lg text-green-600">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Valid Trades</div>
-              <div className="text-lg font-bold text-[var(--color-positive)]">
-                {activeDubaiRows.filter((r) => getDubaiRowValidation(r).isValid).length} ready
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card bg-[var(--color-snow)]">
-          <div className="card__body p-4 flex items-center gap-3">
-            <div className="p-2 bg-red-50 rounded-lg text-red-600">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <div className="text-xs text-[var(--color-slate)] uppercase font-semibold">Excluded X Trades</div>
-              <div className="text-lg font-bold text-rose-600">{excludedDubaiRows.length} excluded</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tip Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[var(--color-slate)] bg-emerald-50/60 border border-emerald-200 rounded-lg px-4 py-3 gap-2">
+    <div className="space-y-4">
+      {/* Tip & Debug Sample Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-700 bg-emerald-50/70 border border-emerald-200/90 rounded-xl px-4 py-2.5 gap-2 shadow-2xs">
         <span className="flex items-center gap-2">
-          <span className="font-bold text-emerald-800">💡 Quick Tip:</span> Click any row to inspect & edit all fields in the side drawer. Click unmapped client/script badges to add them immediately.
+          <span className="font-bold text-emerald-800">Quick Tip:</span> Click any row to inspect &amp; edit all fields in the side drawer. Click unmapped client/script badges to add them immediately.
         </span>
         {dubaiDebugSample && (
           <button
@@ -274,7 +233,7 @@ export function DubaiPreviewTable({
               link.click();
               document.body.removeChild(link);
             }}
-            className="text-xs font-bold text-blue-600 hover:underline shrink-0 flex items-center gap-1"
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 shrink-0 flex items-center gap-1 transition-colors cursor-pointer"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Download Debug Sample CSV
           </button>
@@ -282,27 +241,28 @@ export function DubaiPreviewTable({
       </div>
 
       {/* Batch Selection & Action Controls Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
             <CheckSquare className="w-4 h-4 text-emerald-600" />
             <span>
-              <strong>{selectedCount}</strong> of {activeDubaiRows.length} trades selected for import
+              <strong className="text-slate-900 font-bold">{selectedCount.toLocaleString()}</strong> of {activeDubaiRows.length.toLocaleString()} trades selected
             </span>
           </div>
 
           <button
             type="button"
             onClick={handleSelectAllValid}
-            className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
           >
-            Select All Valid
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Select All Valid</span>
           </button>
 
           <button
             type="button"
             onClick={handleDeselectAll}
-            className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors cursor-pointer"
+            className="text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer shadow-2xs active:scale-95"
           >
             Deselect All
           </button>
@@ -311,12 +271,14 @@ export function DubaiPreviewTable({
         <button
           type="button"
           onClick={() => setShowFindAndReplace(!showFindAndReplace)}
-          className={`btn btn--secondary text-xs flex items-center gap-1.5 py-1.5 px-3 transition-colors cursor-pointer ${
-            showFindAndReplace ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold' : ''
+          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer shadow-2xs active:scale-95 ${
+            showFindAndReplace
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <Replace className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Find & Replace</span>
+          <span>Find &amp; Replace</span>
         </button>
       </div>
 
@@ -352,7 +314,7 @@ export function DubaiPreviewTable({
                 <th className="py-3 px-3">Dealer Code</th>
                 <th className="py-3 px-3">Exchange</th>
                 <th className="py-3 px-3">Curr</th>
-                <th className="py-3 px-3 min-w-[220px]">Security Name</th>
+                <th className="py-3 px-3 min-w-55">Security Name</th>
                 <th className="py-3 px-3">Del Month</th>
                 <th className="py-3 px-3">Expiry Date</th>
                 <th className="py-3 px-3 text-right">Market Lot</th>

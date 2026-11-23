@@ -64,6 +64,19 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/account/:accountId', async (req, res, next) => {
+  try {
+    const { appliesTo, scriptId, direction } = req.query;
+    const result = await brokeragesService.resolve(
+      req.params.accountId,
+      (appliesTo as 'CLIENT' | 'BROKER') || 'CLIENT',
+      scriptId as string | undefined,
+      direction as 'BUY' | 'SELL' | undefined,
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const result = await brokeragesService.findOne(req.params.id);

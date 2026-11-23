@@ -73,7 +73,7 @@ export class TrialBalanceService {
     const { toDate: toDateStr, fromDate: fromDateStr, groupId, category } = options || {};
 
     // 1. Prepare ledger where clause
-    const ledgerWhere: any = {};
+    const ledgerWhere: any = { isDeleted: false };
     if (toDateStr) {
       const toDate = new Date(toDateStr);
       toDate.setUTCHours(23, 59, 59, 999);
@@ -88,6 +88,7 @@ export class TrialBalanceService {
     // 2. Fetch accounts and ledger entries in parallel with lean projection
     const [accounts, ledgerEntries] = await Promise.all([
       prisma.account.findMany({
+        where: { isDeleted: false },
         select: {
           id: true,
           code: true,

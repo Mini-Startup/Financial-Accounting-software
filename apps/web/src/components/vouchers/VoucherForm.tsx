@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Trash2, AlertCircle, CheckCircle, Scale, FileText, Plus, Sparkles } from 'lucide-react';
+import { Trash2, AlertCircle, CheckCircle, Scale, FileText, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { UniversalDatePicker } from '@/components/ui/UniversalDatePicker';
@@ -255,10 +255,10 @@ export function VoucherForm({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-display flex items-center gap-2">
-            <Scale className="w-8 h-8 text-[var(--color-primary)]" />
+            <Scale className="w-8 h-8 text-(--color-primary)" />
             Voucher Entry
           </h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
+          <p className="text-sm text-slate mt-1">
             Record multi-line payments, receipts, contra, or journal vouchers with real-time double-entry balancing and ledger integration.
           </p>
         </div>
@@ -266,9 +266,9 @@ export function VoucherForm({
 
       <div className="space-y-6">
         {/* Voucher Form Panel */}
-        <div className="card shadow-md border border-[var(--color-border-light)] bg-white p-6">
-          <div className="flex items-center justify-between pb-4 mb-6 border-b border-[var(--color-border-light)]">
-            <h3 className="text-lg font-bold text-[var(--color-charcoal)]">
+        <div className="card shadow-md border border-border-light bg-white p-6">
+          <div className="flex items-center justify-between pb-4 mb-6 border-b border-border-light">
+            <h3 className="text-lg font-bold text-charcoal">
               Create New Voucher
             </h3>
             <div className="flex items-center gap-3">
@@ -337,7 +337,7 @@ export function VoucherForm({
             </div>
 
             {/* Dynamic Voucher Lines Table */}
-            <div className="border border-[var(--color-border-light)] rounded-xl overflow-hidden shadow-sm">
+            <div className="border border-border-light rounded-xl overflow-hidden shadow-sm">
               <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <span>Voucher Lines (Double-Entry Rows)</span>
                 <span>{lines.length} Rows</span>
@@ -352,7 +352,7 @@ export function VoucherForm({
                     >
                       {/* Row Index & Type Badge */}
                       <div className="col-span-1 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-md bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center font-mono">
                           {index + 1}
                         </span>
                       </div>
@@ -504,9 +504,16 @@ export function VoucherForm({
                   <button
                     type="submit"
                     disabled={saving || !isBalanced}
-                    className="btn btn--primary py-2 px-6 font-bold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn btn--primary py-2 px-6 font-bold shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {saving ? 'Posting...' : 'Save & Post Voucher'}
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        <span>Posting Voucher...</span>
+                      </>
+                    ) : (
+                      'Save & Post Voucher'
+                    )}
                   </button>
                 </div>
               </div>
@@ -515,9 +522,9 @@ export function VoucherForm({
         </div>
 
         {/* Voucher History Panel */}
-        <div className="card shadow-md border border-[var(--color-border-light)] bg-white p-0">
-          <div className="p-6 border-b border-[var(--color-border-light)] flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[var(--color-charcoal)]">Voucher History</h3>
+        <div className="card shadow-md border border-border-light bg-white p-0">
+          <div className="p-6 border-b border-border-light flex items-center justify-between">
+            <h3 className="text-lg font-bold text-charcoal">Voucher History</h3>
             <span className="text-xs text-slate-400 font-semibold">{vouchers.length} Vouchers Recorded</span>
           </div>
 
@@ -536,7 +543,7 @@ export function VoucherForm({
               <tbody>
                 {vouchers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-[var(--color-slate)] font-medium">
+                    <td colSpan={6} className="py-12 text-center text-slate font-medium">
                       No voucher entries found. Create one using the form above.
                     </td>
                   </tr>
@@ -547,7 +554,7 @@ export function VoucherForm({
 
                   return (
                     <tr key={v.id} className="hover:bg-slate-50/50">
-                      <td className="text-xs font-semibold text-[var(--color-charcoal)]">
+                      <td className="text-xs font-semibold text-charcoal">
                         {formatDateToDDMMYY(v.date)}
                       </td>
                       <td>
@@ -589,13 +596,13 @@ export function VoucherForm({
                           ))}
                         </div>
                       </td>
-                      <td className="text-xs text-[var(--color-slate)] max-w-[240px] truncate" title={v.remarks || ''}>
+                      <td className="text-xs text-slate max-w-60 truncate" title={v.remarks || ''}>
                         {v.remarks || '—'}
                       </td>
                       <td className="text-right">
                         <button
                           onClick={() => setDeleteTargetId(v.id)}
-                          className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-negative)] transition-colors rounded-md hover:bg-red-50"
+                          className="p-1.5 text-slate hover:text-negative transition-colors rounded-md hover:bg-red-50"
                           title="Delete Voucher"
                         >
                           <Trash2 className="w-4 h-4" />

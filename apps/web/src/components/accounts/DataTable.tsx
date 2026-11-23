@@ -6,9 +6,10 @@ import { FormModal } from './FormModal';
 import { TableToolbar } from '../ui/TableToolbar';
 import { CustomCheckbox } from '../ui/CustomCheckbox';
 import { Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '@/utils/toastNotify';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { FindAndReplace, type FindReplaceMatchState } from '../ui/FindAndReplace';
+import { useOptimisticEntityList } from '@/hooks/useOptimisticEntityList';
 import {
   sortRecords,
   filterRecordsWithAdvanced,
@@ -17,29 +18,45 @@ import {
   type AdvancedCondition,
 } from '@/utils/tableFilter';
 import { cn } from '@/utils/cn';
+import { apiFetch } from '../../utils/apiClient';
 
 const TABLE_COLUMNS = [
-  { key: 'code', label: 'Code / ID' },
-  { key: 'name', label: 'Account Name' },
+  { key: 'code', label: 'Code / ID', required: true },
+  { key: 'name', label: 'Account Name', required: true },
+  { key: 'openingBalance', label: 'Opening Balance' },
   { key: 'mobileNumber', label: 'Mobile Number' },
   { key: 'email', label: 'Email Address' },
-  { key: 'openingBalance', label: 'Opening Balance' },
+  { key: 'bankName', label: 'Bank Name', isDefault: false },
+  { key: 'ifscCode', label: 'IFSC Code', isDefault: false },
 ];
 
 export function DataTable({
   accounts: initialAccounts,
   groupName,
   entityLabel,
+  canEdit = true,
+  canDelete = true,
 }: {
   accounts: any[];
   groupName: string;
   entityLabel: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
-  const [accountsList, setAccountsList] = useState<any[]>(initialAccounts);
+  const {
+    items: accountsList,
+    setItems: setAccountsList,
+    addEntity,
+    updateEntity,
+    removeEntity,
+    syncWithServer,
+  } = useOptimisticEntityList<any>(initialAccounts);
+
   const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchColumn, setSearchColumn] = useState('ALL');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(['ALL']);
   const [advancedConditions, setAdvancedConditions] = useState<AdvancedCondition[]>([]);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -48,6 +65,12 @@ export function DataTable({
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('code');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'code',
+    'name',
+    'openingBalance',
+    'mobileNumber',
+  ]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -62,9 +85,9 @@ export function DataTable({
   });
 
   // Keep local list in sync with props
-  useMemo(() => {
-    setAccountsList(initialAccounts);
-  }, [initialAccounts]);
+  useEffect(() => {
+    syncWithServer(initialAccounts);
+  }, [initialAccounts, syncWithServer]);
 
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
@@ -90,8 +113,8 @@ export function DataTable({
 
   // Filter accounts with column targeting + advanced conditions
   const filteredAccounts = useMemo(() => {
-    return filterRecordsWithAdvanced(accountsList, searchQuery, searchColumn, advancedConditions);
-  }, [accountsList, searchQuery, searchColumn, advancedConditions]);
+    return filterRecordsWithAdvanced(accountsList, searchQuery, searchColumn, advancedConditions, selectedColumns);
+  }, [accountsList, searchQuery, searchColumn, advancedConditions, selectedColumns]);
 
   // Sorted and Paginated accounts
   const sortedAccounts = useMemo(() => {
@@ -118,13 +141,13 @@ export function DataTable({
     setAccountsList((prev) =>
       prev.map((acc) => (acc.id === targetRow.id ? { ...acc, [columnKey]: newValue } : acc))
     );
-    toast.success(`Replaced value in ${columnKey}`);
+    notify.success(`Replaced value in ${columnKey}`);
   };
 
   const handleReplaceAll = (columnKey: string, findVal: string, replaceVal: string) => {
     const { updatedRecords, count } = replaceValueInRecords(accountsList, columnKey, findVal, replaceVal, true);
     setAccountsList(updatedRecords);
-    toast.success(`Replaced ${count} occurrences in ${columnKey}`);
+    notify.success(`Replaced ${count} occurrences in ${columnKey}`);
   };
 
 
@@ -158,6 +181,12 @@ export function DataTable({
   };
 
   const handleDeleteSingle = (id: string) => {
+    if (!canDelete) {
+      notify.error('Permission Denied', {
+        description: 'You do not have permission to delete records.',
+      });
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       title: `Delete ${entityLabel}`,
@@ -165,23 +194,30 @@ export function DataTable({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
+          const res = await apiFetch(`/account-masters/${id}`, {
             method: 'DELETE',
           });
           if (res.ok) {
-            toast.success(`${entityLabel} deleted successfully`);
-            router.refresh();
+            removeEntity(id);
+            notify.success(`${entityLabel} deleted successfully`);
           } else {
-            toast.error('Failed to delete account');
+            const err = await res.json().catch(() => ({}));
+            notify.error(err.message || `Failed to delete ${entityLabel.toLowerCase()}`);
           }
-        } catch {
-          toast.error('Failed to delete record');
+        } catch (e: any) {
+          notify.error(e.message || `Failed to delete ${entityLabel.toLowerCase()}`);
         }
       },
     });
   };
 
   const handleBulkDelete = () => {
+    if (!canDelete) {
+      notify.error('Permission Denied', {
+        description: 'You do not have permission to delete records.',
+      });
+      return;
+    }
     const count = selectedIds.size;
     if (count === 0) return;
     setConfirmDialog({
@@ -193,18 +229,33 @@ export function DataTable({
         setIsDeleting(true);
         try {
           const ids = Array.from(selectedIds);
-          await Promise.all(
-            ids.map((id) =>
-              fetch(`${process.env.NEXT_PUBLIC_API_URL}/account-masters/${id}`, {
-                method: 'DELETE',
-              })
-            )
-          );
-          toast.success(`${count} records deleted successfully`);
+          let successCount = 0;
+          let failedCount = 0;
+          let lastErrorMessage = '';
+          for (const id of ids) {
+            const res = await apiFetch(`/account-masters/${id}`, {
+              method: 'DELETE',
+            });
+            if (res.ok) {
+              removeEntity(id);
+              successCount++;
+            } else {
+              failedCount++;
+              const err = await res.json().catch(() => ({}));
+              if (err.message) lastErrorMessage = err.message;
+            }
+          }
+          if (successCount > 0) {
+            notify.success(`${successCount} ${entityLabel.toLowerCase()}(s) deleted successfully`);
+          }
+          if (failedCount > 0) {
+            notify.error(
+              lastErrorMessage || `Could not delete ${failedCount} record(s) because active trades or dependencies are linked.`
+            );
+          }
           setSelectedIds(new Set());
-          router.refresh();
-        } catch {
-          toast.error('Failed to delete some records');
+        } catch (e: any) {
+          notify.error(e.message || 'Failed to delete some records');
         } finally {
           setIsDeleting(false);
         }
@@ -243,8 +294,10 @@ export function DataTable({
   return (
     <div className="space-y-4">
       {/* Seamless Table Container with Zero Gap between Toolbar and Grid */}
-      <div className="border border-[var(--color-border-light)] rounded-xl shadow-xs overflow-hidden bg-white">
+      <div className="border border-border-light rounded-xl shadow-xs bg-white relative">
         <TableToolbar
+          tableName={entityLabel === 'Broker' ? 'Brokers' : 'Clients'}
+          records={accountsList}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -257,6 +310,11 @@ export function DataTable({
             setSearchColumn(col);
             setCurrentPage(1);
           }}
+          selectedColumns={selectedColumns}
+          onSelectedColumnsChange={(cols) => {
+            setSelectedColumns(cols);
+            setCurrentPage(1);
+          }}
           advancedConditions={advancedConditions}
           onAdvancedConditionsChange={(conds) => {
             setAdvancedConditions(conds);
@@ -266,7 +324,7 @@ export function DataTable({
           isFindReplaceOpen={isFindReplaceOpen}
           onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
           selectedCount={selectedIds.size}
-          onBulkDelete={handleBulkDelete}
+          onBulkDelete={canDelete ? handleBulkDelete : undefined}
           onClearSelection={() => setSelectedIds(new Set())}
           isDeleting={isDeleting}
           currentPage={currentPage}
@@ -274,12 +332,18 @@ export function DataTable({
           totalItems={totalItems}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-          className="border-0 rounded-none border-b border-[var(--color-border-light)]"
+          columnSettings={{
+            columns: TABLE_COLUMNS,
+            visibleColumns,
+            onChange: setVisibleColumns,
+            storageKey: `bizzmate_cols_accounts_${groupName}`,
+          }}
+          className="border-0 rounded-none border-b border-border-light"
         />
 
         <div className="overflow-x-auto">
           <table className="data-table w-full">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shadow-2xs">
               <tr>
                 <th style={{ width: '40px' }} className="text-center">
                   <CustomCheckbox
@@ -354,15 +418,16 @@ export function DataTable({
                         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                       }
                     }}
+                    onClick={() => canEdit && setEditingAccount(acc)}
                     className={cn(
-                      'transition-colors',
+                      'cursor-pointer transition-colors',
                       isSelected && 'bg-emerald-50/40 hover:bg-emerald-50/60',
                       !isSelected && isMatched && !isActiveMatch && 'bg-amber-50/60 hover:bg-amber-100/60',
                       isActiveMatch && 'bg-amber-100/90 ring-2 ring-amber-400 font-semibold shadow-xs',
-                      !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50/50'
+                      !isSelected && !isMatched && !isActiveMatch && 'hover:bg-slate-50/70'
                     )}
                   >
-                    <td className="text-center">
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <CustomCheckbox
                         checked={isSelected}
                         onChange={() => handleToggleRow(acc.id)}
@@ -378,11 +443,11 @@ export function DataTable({
                       {opBal === 0 ? (
                         <span className="text-slate-400">₹0.00</span>
                       ) : opBal < 0 ? (
-                        <span className="text-[var(--color-negative)]">
+                        <span className="text-negative">
                           -₹{Math.abs(opBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                         </span>
                       ) : (
-                        <span className="text-[var(--color-forest)]">
+                        <span className="text-(--color-forest)">
                           +₹{opBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                         </span>
                       )}
@@ -390,22 +455,26 @@ export function DataTable({
                     <td className="text-slate-500 text-xs">
                       {renderWithDiff('mobileNumber', acc.mobileNumber || acc.whatsappNumber || acc.email || '—', isActiveMatch)}
                     </td>
-                    <td className="text-right">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => setEditingAccount(acc)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors rounded-md hover:bg-slate-100"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSingle(acc.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-md hover:bg-red-50"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => setEditingAccount(acc)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors rounded-md hover:bg-slate-100"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteSingle(acc.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-md hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -422,11 +491,11 @@ export function DataTable({
                   {totalOpeningBalance === 0 ? (
                     <span className="text-slate-500">₹0.00</span>
                   ) : totalOpeningBalance < 0 ? (
-                    <span className="text-[var(--color-negative)]">
+                    <span className="text-negative">
                       -₹{Math.abs(totalOpeningBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Dr)
                     </span>
                   ) : (
-                    <span className="text-[var(--color-forest)]">
+                    <span className="text-(--color-forest)">
                       +₹{totalOpeningBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (Cr)
                     </span>
                   )}
@@ -460,6 +529,12 @@ export function DataTable({
           groupName={groupName}
           accounts={accountsList}
           onClose={() => setEditingAccount(null)}
+          onSuccess={(saved) => {
+            if (saved) {
+              updateEntity(saved);
+            }
+            setEditingAccount(null);
+          }}
         />
       )}
 

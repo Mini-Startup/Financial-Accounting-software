@@ -24,8 +24,10 @@ import {
   ChevronRight,
   ChevronDown,
   Sliders,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { usePermissions } from "@/context/AuthPermissionsContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,10 +35,19 @@ interface ChildItem {
   name: string;
   path: string;
   upcoming?: boolean;
+  feature?: string;
+  permission?: { feature: string; action: string };
   icon: React.ComponentType<any>;
   /** true when this child is itself an expandable sub-group */
   subGroup?: boolean;
-  children?: Array<{ name: string; path: string; upcoming?: boolean; icon: React.ComponentType<any> }>;
+  children?: Array<{
+    name: string;
+    path: string;
+    upcoming?: boolean;
+    feature?: string;
+    permission?: { feature: string; action: string };
+    icon: React.ComponentType<any>;
+  }>;
 }
 
 interface NavSection {
@@ -60,13 +71,14 @@ const sections: NavSection[] = [
     label: "Master",
     icon: Sliders,
     children: [
-      { name: "Broker",    path: "/brokers",       icon: ShieldCheckIcon },
-      { name: "Clients",   path: "/clients",       icon: Users },
-      { name: "Scripts",   path: "/scripts",       icon: ScrollText },
-      { name: "Exchanges", path: "/exchanges",     icon: Globe },
-      { name: "Currencies", path: "/currencies",   icon: Coins },
-      { name: "Brokerage", path: "/brokerage",     icon: Percent },
-      { name: "Others",    path: "/account-master", icon: Layers },
+      { name: "Broker",    path: "/brokers",       icon: ShieldCheckIcon, feature: "BROKERS" },
+      { name: "Clients",   path: "/clients",       icon: Users,           feature: "CLIENTS" },
+      { name: "Scripts",   path: "/scripts",       icon: ScrollText,      feature: "SCRIPTS" },
+      { name: "Exchanges", path: "/exchanges",     icon: Globe,           feature: "EXCHANGES" },
+      { name: "Currencies", path: "/currencies",   icon: Coins,           feature: "CURRENCIES" },
+      { name: "Expiry Dates", path: "/expiry-dates", icon: Calendar,       feature: "SCRIPTS" },
+      { name: "Brokerage", path: "/brokerage",     icon: Percent,         feature: "BROKERAGE" },
+      { name: "Others",    path: "/account-master", icon: Layers,          feature: "ACCOUNT_MASTER" },
     ],
   },
   {
@@ -74,32 +86,50 @@ const sections: NavSection[] = [
     label: "Data",
     icon: FolderOpen,
     children: [
-      { name: "Trades",        path: "/trades",        icon: ArrowUpDown },
-      { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp },
-      {
-        name: "Import Files",
-        path: "#",
-        icon: FileSpreadsheet,
-        subGroup: true,
-        children: [
-          { name: "Trade Import",          path: "/trades?import=true",                 icon: FileSpreadsheet },
-          { name: "Open Position Import",  path: "/closing-rates?import=true",          icon: TrendingUp },
-          // { name: "Margine File Imports",  path: _comingSoon("margine-file-imports"), upcoming: true },
-        ],
-      },
+      { name: "Trades",        path: "/trades",        icon: ArrowUpDown,  feature: "TRADES" },
+      { name: "Closing Rates", path: "/closing-rates",  icon: TrendingUp,   feature: "CLOSING_RATES" },
     ],
   },
   {
     id: "reports",
     label: "Reports",
-    icon: Coins,
+    icon: FileSpreadsheet,
     children: [
-      { name: "Sattelment Reports",     path: "/settlement",                         icon: Scale },
-      // { name: "Brokerage Report",       path: _comingSoon("brokerage-report"), upcoming: true },
-      // { name: "Cleint wise / Script Wise", path: _comingSoon("client-wise-script-wise"), upcoming: true },
-      // { name: "Broker wise / Script Wise", path: _comingSoon("broker-wise-script-wise"), upcoming: true },
-      // { name: "Script Wise / Cleint",   path: _comingSoon("script-wise-client"), upcoming: true },
-      // { name: "Script Wise / Broker",   path: _comingSoon("script-wise-broker"), upcoming: true },
+      {
+        name: "Invoice Report",
+        path: "/reports/invoice",
+        icon: FileSpreadsheet,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Open Position Report",
+        path: "/reports/open-position",
+        icon: TrendingUp,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      // {
+      //   name: "Settlement Report",
+      //   path: "/reports/settlement",
+      //   icon: ScrollText,
+      //   feature: "REPORTS",
+      //   permission: { feature: "REPORTS", action: "VIEW" },
+      // },
+      // {
+      //   name: "Settlement Summary",
+      //   path: "/reports/settlement-summary",
+      //   icon: BookText,
+      //   feature: "REPORTS",
+      //   permission: { feature: "REPORTS", action: "VIEW" },
+      // },
+      {
+        name: "Settlement Operations",
+        path: "/settlement",
+        icon: Scale,
+        feature: "SETTLEMENT",
+        permission: { feature: "SETTLEMENT", action: "VIEW" },
+      },
     ],
   },
   {
@@ -107,18 +137,17 @@ const sections: NavSection[] = [
     label: "Financial",
     icon: Wallet,
     children: [
-      { name: "Ledger Report",             path: "/ledger",                               icon: BookText },
-      { name: "Voucher Entry",             path: "/vouchers",                             icon: Receipt },
-      { name: "Trial Balance",             path: "/trial-balance",                        icon: Scale },
-      // { name: "Collection Book",           path: _comingSoon("collection-book"), upcoming: true },
-      // { name: "Cash Book",                 path: _comingSoon("cash-book"), upcoming: true },
-      // { name: "Bank Book",                 path: _comingSoon("bank-book"), upcoming: true },
-      // { name: "JV / Contra Register",      path: _comingSoon("jv-contra-register"), upcoming: true },
-      // { name: "Payment / Receipt Register",path: _comingSoon("payment-receipt-register"), upcoming: true },
-      // { name: "Margine Report",            path: _comingSoon("margine-report"), upcoming: true },
-      // { name: "Expance Register",          path: _comingSoon("expance-register"), upcoming: true },
-      // { name: "Profit & Loss",             path: _comingSoon("profit-loss"), upcoming: true },
-      // { name: "Balancesheet",              path: _comingSoon("balancesheet"), upcoming: true },
+      { name: "Ledger Report", path: "/ledger",        icon: BookText, feature: "LEDGER" },
+      { name: "Voucher Entry", path: "/vouchers",      icon: Receipt,  feature: "VOUCHERS" },
+      { name: "Trial Balance", path: "/trial-balance", icon: Scale,    feature: "TRIAL_BALANCE" },
+    ],
+  },
+  {
+    id: "admin",
+    label: "Administration",
+    icon: ShieldCheckIcon,
+    children: [
+      { name: "Users & Roles", path: "/users", icon: Users, feature: "USER_MANAGEMENT" },
     ],
   },
 ];
@@ -147,6 +176,7 @@ function ShieldCheckIcon(props: React.ComponentProps<"svg">) {
 export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { hasFeature, hasPermission, roleName, userName, userId } = usePermissions();
 
   // Collapsible logic state
   const [isLocked, setIsLocked] = React.useState(true);
@@ -159,8 +189,43 @@ export function Sidebar() {
     data: true,
     reports: true,
     financial: true,
+    admin: true,
     "import-files": true,
   });
+
+  const filteredSections = React.useMemo(() => {
+    return sections
+      .map((sec) => {
+        const filteredChildren = sec.children
+          .map((child) => {
+            if (child.subGroup && child.children) {
+              const validSub = child.children.filter((sub) => {
+                if (sub.permission) {
+                  return hasPermission(sub.permission.feature, sub.permission.action);
+                }
+                if (sub.feature) {
+                  return hasFeature(sub.feature);
+                }
+                return true;
+              });
+              if (validSub.length === 0) return null;
+              return { ...child, children: validSub };
+            }
+
+            if (child.permission) {
+              if (!hasPermission(child.permission.feature, child.permission.action)) return null;
+            } else if (child.feature) {
+              if (!hasFeature(child.feature)) return null;
+            }
+            return child;
+          })
+          .filter(Boolean) as ChildItem[];
+
+        if (filteredChildren.length === 0) return null;
+        return { ...sec, children: filteredChildren };
+      })
+      .filter(Boolean) as NavSection[];
+  }, [hasFeature, hasPermission]);
 
   React.useEffect(() => {
     const saved = localStorage.getItem("sidebar-locked");
@@ -170,11 +235,39 @@ export function Sidebar() {
     setMounted(true);
   }, []);
 
-  const toggleLock = () => {
-    const nextVal = !isLocked;
-    setIsLocked(nextVal);
-    localStorage.setItem("sidebar-locked", String(nextVal));
-  };
+  const toggleLock = React.useCallback(() => {
+    setIsLocked((prev) => {
+      const nextVal = !prev;
+      localStorage.setItem("sidebar-locked", String(nextVal));
+      return nextVal;
+    });
+  }, []);
+
+  // Listen for global shortcut '[' and universal search custom trigger
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        toggleLock();
+      }
+    };
+
+    const handleCustomToggle = () => {
+      toggleLock();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('bizzmate-toggle-sidebar', handleCustomToggle);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('bizzmate-toggle-sidebar', handleCustomToggle);
+    };
+  }, [toggleLock]);
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -250,7 +343,7 @@ export function Sidebar() {
 
   if (!mounted) {
     return (
-      <div className="w-64 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] shrink-0" />
+      <div className="w-64 h-screen bg-transparent shrink-0 rounded-none m-0" />
     );
   }
 
@@ -259,28 +352,32 @@ export function Sidebar() {
       {/* Space holder: sits in layout grid/flex, matches width of current locked/collapsed state */}
       <div
         className={cn(
-          "h-screen shrink-0 hidden md:block transition-all duration-300 ease-in-out",
+          "h-screen shrink-0 hidden md:block transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-none m-0",
           isLocked ? "w-64" : "w-16"
         )}
       />
 
-      {/* Floating Panel Sidebar */}
+      {/* Panel Sidebar (Flush to edge, 0 margin, NOT rounded, Transparent on Primary Gradient) */}
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-divider)] select-none transition-all duration-300 ease-in-out",
-          isExpanded ? "w-64 shadow-2xl" : "w-16"
+          "h-screen fixed top-0 left-0 bottom-0 z-50 flex flex-col text-blue-100 select-none overflow-hidden rounded-none m-0 border-0",
+          "transition-[width,background-color,backdrop-filter,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          isExpanded ? "w-64" : "w-16",
+          isHovered && !isLocked
+            ? "bg-[#061438]/85 backdrop-blur-2xl shadow-[16px_0_48px_rgba(2,8,24,0.55)]"
+            : "bg-transparent shadow-none"
         )}
       >
-        {/* Top Header / Logo Area */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--sidebar-divider)] shrink-0 overflow-hidden">
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="w-8 h-8 rounded-lg bg-[var(--color-leaf)] flex items-center justify-center text-[var(--color-forest)] font-extrabold text-lg shadow-sm shrink-0">
+        {/* Top Header / Logo Area (56px) */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 overflow-hidden bg-transparent rounded-none">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
               B
             </span>
             {isExpanded && (
-              <span className="text-[var(--color-white)] font-display font-black text-lg tracking-tight transition-all duration-200">
+              <span className="text-white font-bold text-base tracking-tight whitespace-nowrap animate-in fade-in duration-200">
                 BizzMate FAS
               </span>
             )}
@@ -290,72 +387,78 @@ export function Sidebar() {
           {isExpanded && (
             <button
               onClick={toggleLock}
-              className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-white hover:bg-[var(--color-emerald)]/30 transition-all shrink-0"
-              title={isLocked ? "Collapse sidebar" : "Pin/Lock sidebar"}
+              className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+              title={isLocked ? "Collapse sidebar ([)" : "Pin/Lock sidebar ([)"}
             >
               {isLocked ? (
-                <ChevronLeft className="w-4 h-4 stroke-[2]" />
+                <ChevronLeft className="w-4 h-4 stroke-[1.75]" />
               ) : (
-                <ChevronRight className="w-4 h-4 stroke-[2]" />
+                <ChevronRight className="w-4 h-4 stroke-[1.75]" />
               )}
             </button>
           )}
         </div>
 
-        {/* Scrollable Navigation links */}
-        <div className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-0.5 scrollbar-thin">
+        {/* Scrollable Navigation links (scrollbar hidden) */}
+        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-0.5 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           
           {/* Standalone Dashboard */}
           <Link
             href="/"
+            prefetch={true}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 group mb-1 shrink-0",
+              "flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-120 group mb-1 shrink-0",
               pathname === "/"
-                ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/20 hover:text-[var(--sidebar-active-txt)]"
+                ? "bg-white text-[#0A1B4D] font-bold shadow-md"
+                : "text-blue-100/80 hover:bg-white/10 hover:text-white"
             )}
           >
             <LayoutDashboard
               className={cn(
-                "w-[18px] h-[18px] shrink-0 stroke-[1.75] transition-colors",
+                "w-4 h-4 shrink-0 stroke-[1.75] transition-colors",
                 pathname === "/"
-                  ? "text-[var(--sidebar-active-txt)]"
-                  : "text-[var(--sidebar-text-muted)] group-hover:text-[var(--sidebar-active-txt)]"
+                  ? "text-[#0A1B4D]"
+                  : "text-blue-200 group-hover:text-white"
               )}
             />
             {isExpanded && (
-              <span className="transition-all duration-200">Dashboard</span>
+              <span className="transition-all duration-150">Dashboard</span>
             )}
           </Link>
 
           {/* Collapsible Sections */}
-          {sections.map((section) => {
+          {filteredSections.map((section) => {
             const sectionOpen = openSections[section.id];
             const sectionActive = isSectionActive(section);
 
             return (
-              <div key={section.id} className="flex flex-col mt-2.5 shrink-0">
+              <div key={section.id} className="flex flex-col mt-2 shrink-0">
                 
                 {/* Section Header Title */}
                 <button
                   onClick={() => isExpanded && toggleSection(section.id)}
                   className={cn(
-                    "w-full flex items-center justify-between rounded-lg transition-all duration-150 shrink-0",
-                    isExpanded ? "px-3 py-2 text-[10px] font-bold tracking-widest uppercase" : "px-3 py-2 text-center",
+                    "w-full flex items-center justify-between rounded-lg transition-all duration-120 shrink-0 cursor-pointer",
+                    isExpanded ? "px-2.5 py-1.5 text-[11px] font-bold tracking-wider uppercase" : "px-2 py-1.5 text-center",
                     sectionActive
-                      ? "text-[var(--color-leaf)] bg-[var(--color-leaf)]/5"
-                      : "text-[var(--sidebar-text-muted)] hover:text-[var(--color-leaf)] hover:bg-[var(--color-leaf)]/5"
+                      ? "text-white font-bold"
+                      : "text-blue-200/70 hover:text-white hover:bg-white/5"
                   )}
                   disabled={!isExpanded}
                 >
                   <div className={cn("flex items-center gap-2", !isExpanded && "mx-auto")}>
-                    <section.icon className="w-4 h-4 shrink-0 stroke-[2]" />
-                    {isExpanded && <span>{section.label}</span>}
+                    {isExpanded ? (
+                      <span className="text-[11px] font-bold tracking-wider uppercase text-blue-200/70 select-none">
+                        {section.label}
+                      </span>
+                    ) : (
+                      <section.icon className="w-4 h-4 shrink-0 stroke-[1.75] text-blue-200/80" />
+                    )}
                   </div>
                   {isExpanded && (
                     <ChevronDown
                       className={cn(
-                        "w-3 h-3 transition-transform duration-200",
+                        "w-3.5 h-3.5 transition-transform duration-200 text-blue-300/70",
                         sectionOpen ? "rotate-180" : "rotate-0"
                       )}
                     />
@@ -364,7 +467,7 @@ export function Sidebar() {
 
                 {/* Section Children list */}
                 {isExpanded && sectionOpen && (
-                  <div className="flex flex-col gap-1 mt-1 ml-3.5 pl-3.5 border-l border-[var(--sidebar-divider)]/40">
+                  <div className="flex flex-col gap-1 mt-1">
                     {section.children.map((child) => {
                       
                       // ── Sub-group element (Import Files) ────────────────
@@ -378,45 +481,46 @@ export function Sidebar() {
                             <button
                               onClick={() => toggleSection(subKey)}
                               className={cn(
-                                "w-full flex items-center justify-between px-2.5 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 group shrink-0",
-                                subGroupActive
-                                  ? "text-[var(--sidebar-active-txt)] bg-[var(--sidebar-active-bg)]"
-                                  : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
+                                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-120 group shrink-0 cursor-pointer",
+                                subGroupActive || subOpen
+                                  ? "text-white bg-[#0D2460]/80 border border-blue-400/25 shadow-xs"
+                                  : "text-blue-100/80 hover:bg-white/10 hover:text-white"
                               )}
                             >
-                              <div className="flex items-center gap-2">
-                                <child.icon className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                                <span>{child.name}</span>
+                              <div className="flex items-center gap-2.5">
+                                <child.icon className={cn("w-4 h-4 shrink-0 stroke-[1.75]", subGroupActive ? "text-white" : "text-blue-200 group-hover:text-white")} />
+                                <span className="font-medium text-sm">{child.name}</span>
                               </div>
                               <ChevronDown
                                 className={cn(
-                                  "w-3.5 h-3.5 transition-transform duration-200",
+                                  "w-3.5 h-3.5 transition-transform duration-200 text-blue-200",
                                   subOpen ? "rotate-180" : "rotate-0"
                                 )}
                               />
                             </button>
 
                             {subOpen && (
-                              <div className="flex flex-col gap-1 mt-0.5 ml-3 pl-3 border-l border-[var(--sidebar-divider)]/30">
+                              <div className="flex flex-col gap-1 mt-0.5 ml-4 pl-2.5 border-l border-white/20">
                                 {child.children.map((sub) => {
                                   const subActive = isActive(sub.path);
                                   return (
                                     <Link
                                       key={sub.path}
                                       href={sub.path}
+                                      prefetch={true}
                                       className={cn(
-                                        "flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 shrink-0",
+                                        "flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-120 shrink-0",
                                         subActive
-                                          ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                                          : "text-[var(--sidebar-text-muted)] hover:bg-[var(--color-emerald)]/10 hover:text-[var(--sidebar-active-txt)]"
+                                          ? "bg-white text-[#0A1B4D] font-bold shadow-sm"
+                                          : "text-blue-100/80 hover:bg-white/10 hover:text-white"
                                       )}
                                     >
                                       <div className="flex items-center gap-2">
-                                        <sub.icon className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                                        <sub.icon className={cn("w-3.5 h-3.5 shrink-0 stroke-[1.75]", subActive ? "text-[#0A1B4D]" : "text-blue-200")} />
                                         <span>{sub.name}</span>
                                       </div>
                                       {sub.upcoming && (
-                                        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                                        <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950 tracking-wider uppercase">
                                           Soon
                                         </span>
                                       )}
@@ -435,19 +539,25 @@ export function Sidebar() {
                         <Link
                           key={child.path + child.name}
                           href={child.path}
+                          prefetch={true}
                           className={cn(
-                            "flex items-center justify-between gap-2 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 shrink-0",
+                            "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-120 shrink-0 group",
                             active
-                              ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-txt)] shadow-sm font-semibold"
-                              : "text-[var(--sidebar-text)] hover:bg-[var(--color-emerald)]/15 hover:text-[var(--sidebar-active-txt)]"
+                              ? "bg-white text-[#0A1B4D] font-bold shadow-md"
+                              : "text-blue-100/80 hover:bg-white/10 hover:text-white"
                           )}
                         >
                           <div className="flex items-center gap-2.5">
-                            <child.icon className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                            <child.icon
+                              className={cn(
+                                "w-4 h-4 shrink-0 stroke-[1.75]",
+                                active ? "text-[#0A1B4D]" : "text-blue-200 group-hover:text-white"
+                              )}
+                            />
                             <span>{child.name}</span>
                           </div>
                           {child.upcoming && (
-                            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-leaf)]/10 text-[var(--color-leaf)] tracking-wider uppercase border border-[var(--color-leaf)]/20">
+                            <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950 tracking-wider uppercase font-sans">
                               Soon
                             </span>
                           )}
@@ -462,24 +572,27 @@ export function Sidebar() {
         </div>
 
         {/* Footer Area with User Profile info */}
-        <div className="p-3 border-t border-[var(--sidebar-divider)] mt-auto flex items-center gap-3 bg-[var(--sidebar-bg)] shrink-0 overflow-hidden">
+        <div className="p-3.5 border-t border-white/10 mt-auto flex items-center gap-3 bg-transparent rounded-none m-0 shrink-0 overflow-hidden">
           <div className="shrink-0">
             <UserButton
               appearance={{
                 elements: {
-                  avatarBox: "w-9 h-9 border border-[var(--sidebar-divider)] shadow-sm",
+                  avatarBox: "w-8 h-8 border border-white/20 shadow-xs",
                 },
               }}
             />
           </div>
           {isExpanded && (
-            <div className="flex flex-col min-w-0 transition-all duration-200">
-              <span className="text-sm font-semibold text-[var(--sidebar-active-txt)] truncate">
-                My Account
+            <div className="flex flex-col min-w-0 transition-all duration-150">
+              <span className="text-sm font-semibold text-white truncate">
+                {userName || "My Account"}
               </span>
-              <span className="text-xs text-[var(--sidebar-text-muted)] truncate">
-                Settings & Profile
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-xs bg-blue-400 shrink-0" />
+                <span className="text-[11px] font-medium uppercase tracking-wider text-blue-200 truncate">
+                  {roleName}
+                </span>
+              </div>
             </div>
           )}
         </div>

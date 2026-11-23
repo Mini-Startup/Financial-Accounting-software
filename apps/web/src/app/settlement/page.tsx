@@ -10,6 +10,8 @@ import { PositionSummaryTable } from '../../components/settlement/PositionSummar
 import { SettledTradesTable } from '../../components/settlement/SettledTradesTable';
 import { SettlementPreviewModal } from '../../components/settlement/SettlementPreviewModal';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { usePermissions } from '@/context/AuthPermissionsContext';
+import { apiFetch } from '@/utils/apiClient';
 import type {
   SettlementItem,
   SettlementRecord,
@@ -18,6 +20,10 @@ import type {
 } from '../../components/settlement/types';
 
 export default function SettlementPage() {
+  const { hasPermission } = usePermissions();
+  const canDeleteSettlement = hasPermission('SETTLEMENT', 'DELETE');
+  const canExecuteSettlement = hasPermission('SETTLEMENT', 'EXECUTE');
+
   const [reportDate, setReportDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<SettlementItem[]>([]);
@@ -47,7 +53,7 @@ export default function SettlementPage() {
   const fetchSettlementsList = async () => {
     setIsLoadingSettlements(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements`);
+      const res = await apiFetch('/settlement/settlements');
       if (res.ok) {
         const data = await res.json();
         setSettlementsList(data);
@@ -79,12 +85,12 @@ export default function SettlementPage() {
   const fetchSettlementSummary = async (date: string, settlementId: string = 'LIVE') => {
     let url = '';
     if (settlementId === 'LIVE') {
-      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=LIVE&date=${date}`;
+      url = `/settlement?settlementId=LIVE&date=${date}`;
     } else {
-      url = `${process.env.NEXT_PUBLIC_API_URL}/settlement?settlementId=${settlementId}`;
+      url = `/settlement?settlementId=${settlementId}`;
     }
 
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (res.ok) {
       const data = await res.json();
       setSummaryData(data);
@@ -92,7 +98,7 @@ export default function SettlementPage() {
       return data;
     } else {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to generate settlement summary');
+      throw new Error(errData.error || errData.message || 'Failed to generate settlement summary');
     }
   };
 
@@ -125,9 +131,7 @@ export default function SettlementPage() {
       return null;
     }
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements/${settlementId}`
-      );
+      const res = await apiFetch(`/settlement/settlements/${settlementId}`);
       if (res.ok) {
         const data = await res.json();
         setSettlementDetail(data);
@@ -182,7 +186,7 @@ export default function SettlementPage() {
 
     setIsExecutingSettlement(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/preview`, {
+      const res = await apiFetch('/settlement/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closingRateDate: reportDate }),
@@ -214,7 +218,7 @@ export default function SettlementPage() {
     if (!reportDate) return;
     setIsExecutingSettlement(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/execute`, {
+      const res = await apiFetch('/settlement/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closingRateDate: reportDate }),
@@ -250,8 +254,8 @@ export default function SettlementPage() {
     if (!deleteConfirm) return;
     setIsDeletingSettlement(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/settlement/settlements/${deleteConfirm.settlementId}`,
+      const res = await apiFetch(
+        `/settlement/settlements/${deleteConfirm.settlementId}`,
         {
           method: 'DELETE',
         }
@@ -259,16 +263,16 @@ export default function SettlementPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to delete settlement');
+        throw new Error(err.message || err.error || 'Failed to delete settlement');
       }
 
       const data = await res.json();
       toast.success(
         `"${data.settlementName}" deleted. Removed ${
-          data.deletedGeneratedCount + data.deletedBfUnsettledCount
-        } generated trades, ${data.untaggedTradesCount} trades un-tagged, ${
+          data.deletedGeneratedCount
+        } generated trades, ${data.untaggedTradesCount} trades reopened, ${
           data.deletedLedgerCount
-        } ledger entries removed.`
+        } ledger entries wiped clean.`
       );
       setDeleteConfirm(null);
       setSelectedSettlementId('LIVE');
@@ -289,24 +293,72 @@ export default function SettlementPage() {
   };
 
   // KPI Calculations
-  const { totalVolume, openPositionsCount, netTotalPnL, pnlDisplayStr } = useMemo(() => {
+  const {
+    totalVolume,
+    buyOrdersCount,
+    sellOrdersCount,
+    openPositionsCount,
+    totalOpenLots,
+    longPositionsCount,
+    shortPositionsCount,
+    netTotalPnL,
+    pnlDisplayStr,
+    realizedPnLStr,
+    unrealizedPnLStr,
+    profitableLegsCount,
+    lossLegsCount,
+    ratesAvailableCount,
+    missingRatesCount,
+  } = useMemo(() => {
     let vol = 0;
+    let buyCount = 0;
+    let sellCount = 0;
     let openCount = 0;
+    let openLots = 0;
+    let longCount = 0;
+    let shortCount = 0;
     let netPnL = 0;
+    let realizedSum = 0;
+    let unrealizedSum = 0;
+    let profitLegs = 0;
+    let lossLegs = 0;
+    let availableRates = 0;
+    let missingRates = 0;
     const pnlByCurr: Record<string, number> = {};
 
     for (const item of summaryData) {
-      vol += item.buyQty + item.sellQty;
-      if (item.netQty !== 0) openCount++;
+      const lot = item.marketLot && Number(item.marketLot) > 0 ? Number(item.marketLot) : 1;
+      vol += Math.abs(item.buyQty + item.sellQty);
+      if (item.buyQty > 0) buyCount++;
+      if (item.sellQty > 0) sellCount++;
 
-      const finalPnL =
-        item.netQty === 0
-          ? item.realizedPnL
-          : item.closingRate !== null
+      if (item.netQty !== 0) {
+        openCount++;
+        openLots += Math.abs(item.netQty);
+        if (item.netQty > 0) longCount++;
+        else shortCount++;
+      }
+
+      if (item.closingRate !== null && item.closingRate !== undefined) {
+        availableRates++;
+      } else {
+        missingRates++;
+      }
+
+      const itemRealized = item.netQty === 0 ? (item.realizedPnL || 0) : 0;
+      const itemUnrealized =
+        item.netQty !== 0 && item.closingRate !== null
           ? item.netQty * (item.closingRate - item.netAvgRate)
           : 0;
 
+      const finalPnL = item.netQty === 0 ? itemRealized : itemUnrealized;
+      if (finalPnL > 0) profitLegs++;
+      else if (finalPnL < 0) lossLegs++;
+
+      realizedSum += itemRealized;
+      unrealizedSum += itemUnrealized;
       netPnL += finalPnL;
+
       const symbol = formatCurrencySymbol(item.currencySymbol, item.currencyCode);
       pnlByCurr[symbol] = (pnlByCurr[symbol] || 0) + finalPnL;
     }
@@ -324,11 +376,30 @@ export default function SettlementPage() {
             )
             .join(' / ');
 
+    const formatShortPnL = (amount: number) => {
+      const isPos = amount >= 0;
+      return `${isPos ? '+' : '-'}$${Math.abs(amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    };
+
     return {
       totalVolume: vol,
+      buyOrdersCount: buyCount,
+      sellOrdersCount: sellCount,
       openPositionsCount: openCount,
+      totalOpenLots: openLots,
+      longPositionsCount: longCount,
+      shortPositionsCount: shortCount,
       netTotalPnL: netPnL,
       pnlDisplayStr: pnlStr,
+      realizedPnLStr: formatShortPnL(realizedSum),
+      unrealizedPnLStr: formatShortPnL(unrealizedSum),
+      profitableLegsCount: profitLegs,
+      lossLegsCount: lossLegs,
+      ratesAvailableCount: availableRates,
+      missingRatesCount: missingRates,
     };
   }, [summaryData]);
 
@@ -339,12 +410,20 @@ export default function SettlementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-light)] pb-4">
+      {/* Executive Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
         <div>
-          <h1 className="text-h2 font-display text-[var(--color-charcoal)]">Settlement</h1>
-          <p className="text-sm text-[var(--color-slate)] mt-1">
-            Review position exposure, calculate mark-to-market settlements, and generate daily CF/BF accounting cycles.
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-[#2652C8] border border-blue-200 font-mono shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              Double-Entry Settlement Engine
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-display">
+            Settlement Operations
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
+            Position exposure auditing, automated mark-to-market valuations, bilateral client-broker rollovers (Carry Forward / Back Forward), and automated journal vouchers.
           </p>
         </div>
       </div>
@@ -358,13 +437,26 @@ export default function SettlementPage() {
         isLoading={loading || isLoadingSettlements}
       />
 
-      {/* KPI Cards */}
+      {/* KPI Cards (Brand Card Architecture matching Image) */}
       <PositionSummaryCards
+        tradeCount={settledTradesCount > 0 ? settledTradesCount : (buyOrdersCount + sellOrdersCount)}
+        totalVolume={totalVolume}
+        buyOrdersCount={buyOrdersCount}
+        sellOrdersCount={sellOrdersCount}
         pnlDisplayStr={pnlDisplayStr}
         netTotalPnL={netTotalPnL}
-        totalVolume={totalVolume}
+        realizedPnLStr={realizedPnLStr}
+        unrealizedPnLStr={unrealizedPnLStr}
+        profitableLegsCount={profitableLegsCount}
+        lossLegsCount={lossLegsCount}
         openPositionsCount={openPositionsCount}
+        totalOpenLots={totalOpenLots}
+        longPositionsCount={longPositionsCount}
+        shortPositionsCount={shortPositionsCount}
         totalLegsCount={summaryData.length}
+        ratesAvailableCount={ratesAvailableCount}
+        missingRatesCount={missingRatesCount}
+        cycleStatus={selectedSettlementId === 'LIVE' ? 'Live Session' : 'Cycle Closed'}
       />
 
       {/* Action Bar (Date input or historical status + tabs) */}
@@ -389,6 +481,8 @@ export default function SettlementPage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         settledTradesCount={settledTradesCount}
+        canDeleteSettlement={canDeleteSettlement}
+        canExecuteSettlement={canExecuteSettlement}
       />
 
       {/* Content depending on active tab */}

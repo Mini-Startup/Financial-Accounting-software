@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
-import { X, AlertTriangle, Coins, Plus } from 'lucide-react';
+import { X, AlertTriangle, Coins, Plus, Loader2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
 import { ExchangeFormModal } from '../exchanges/ExchangeFormModal';
@@ -12,6 +12,7 @@ import { CurrencyFormModal } from '../currencies/CurrencyFormModal';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { cn } from '@/utils/cn';
 import { formatCurrencySymbol } from '@/utils/currency';
+import { validateScriptForm } from '@/utils/validators';
 
 export function ScriptFormModal({
   initialData,
@@ -90,6 +91,9 @@ export function ScriptFormModal({
     currencyId: resolveInitialCurrencyId(initialCurrencies, initialData, targetCurrencyCode),
     isActive: initialData?.isActive ?? true,
   });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const errors = useMemo(() => validateScriptForm(formData), [formData]);
 
   const lastInitialIdRef = useRef(initialData?.id);
   useEffect(() => {
@@ -202,6 +206,10 @@ export function ScriptFormModal({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
   // Check if target exchange is missing
   const isTargetExchangeMissing =
     Boolean(targetExchangeCode) &&
@@ -231,8 +239,21 @@ export function ScriptFormModal({
     setShowCurrencyModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, saveAndAddMore = false) => {
+    if (e) e.preventDefault();
+
+    const validationErrors = validateScriptForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setTouched({
+        shortName: true,
+        fullName: true,
+        lotSize: true,
+        exchangeId: true,
+      });
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError);
+      return;
+    }
 
     if (!formData.exchangeId) {
       toast.error(
@@ -267,22 +288,25 @@ export function ScriptFormModal({
 
       if (res.ok) {
         const savedData = await res.json().catch(() => null);
-        toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
         if (onSuccess) {
           onSuccess(savedData);
         }
         router.refresh();
-        if (!initialData?.id) {
-          // Rapid entry persistence: preserve exchangeId, currencyId, lotSize; reset name fields
+
+        if (initialData?.id || !saveAndAddMore) {
+          toast.success(initialData?.id ? 'Script updated successfully' : `Script '${formData.shortName}' created successfully`);
+          onClose();
+        } else {
+          // Rapid entry persistence (Save & Add More): preserve exchangeId, currencyId, lotSize; reset name fields
+          toast.success(`Script '${formData.shortName}' created! Ready for next script.`);
           setFormData((prev) => ({
             ...prev,
             shortName: '',
             fullName: '',
-            code: '',
+            isin: '',
           }));
+          setTouched({});
           setTimeout(() => shortNameInputRef.current?.focus(), 50);
-        } else {
-          onClose();
         }
       } else {
         const err = await res.json();
@@ -308,113 +332,126 @@ export function ScriptFormModal({
   return (
     <>
       <div
-        onMouseDown={(e) => e.stopPropagation()}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150"
       >
         <div
           ref={modalRef}
-          className="card w-[620px] max-w-[95vw] max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none animate-in zoom-in-95 duration-150"
+          className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         >
-          {/* Header */}
-          <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <div>
-              <h2 className="card__title text-base font-bold text-slate-800">
-                {initialData && initialData.id ? 'Edit Script Master' : 'Create New Script Master'}
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Define security symbol, exchange linkage, and contract specifications
-              </p>
+          {/* Clean Modal Header — No redundant badges or cryptic SC boxes */}
+          <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+                <FileSpreadsheet className="w-4 h-4 stroke-[2]" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                  {initialData && initialData.id ? 'Edit Script Master' : 'Create New Script Master'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Define security symbol, contract lot size, and trading exchange linkage
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          <form id="scriptForm" onSubmit={handleSubmit} className="card__body p-6 space-y-5 overflow-y-auto">
-            {/* Warning Banner: Exchange Missing from Database */}
-            {isTargetExchangeMissing && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-800 animate-in fade-in">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-bold text-rose-900">Exchange &apos;{targetExchangeCode}&apos; Not Found in Database</div>
-                    <div className="text-[11px] text-rose-700 mt-0.5">
-                      This trade record belongs to exchange <strong>{targetExchangeCode}</strong>, which must be added before saving.
+          <form id="scriptForm" onSubmit={(e) => handleSubmit(e, false)} className="flex-1 flex flex-col">
+            <div className="p-5 space-y-3.5 bg-white">
+              {/* Warning Banner: Exchange Missing from Database */}
+              {isTargetExchangeMissing && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-rose-800 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-rose-900">Exchange &apos;{targetExchangeCode}&apos; Not Found</div>
+                      <div className="text-[11px] text-rose-700">Add exchange before saving this script.</div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddExchange}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs shrink-0 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Exchange</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleOpenAddExchange}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs shrink-0 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Exchange &apos;{targetExchangeCode}&apos;</span>
-                </button>
-              </div>
-            )}
+              )}
 
-            {/* Warning Banner: Currency Missing from Database */}
-            {isTargetCurrencyMissing && (
-              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-800 animate-in fade-in">
-                <div className="flex items-start gap-2.5">
-                  <Coins className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-bold text-amber-900">Currency &apos;{targetCurrencyCode}&apos; Not Found</div>
-                    <div className="text-[11px] text-amber-700 mt-0.5">
-                      Add currency <strong>{targetCurrencyCode}</strong> to properly calibrate trade profit and rates.
+              {/* Warning Banner: Currency Missing from Database */}
+              {isTargetCurrencyMissing && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-800 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <Coins className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-amber-900">Currency &apos;{targetCurrencyCode}&apos; Not Found</div>
+                      <div className="text-[11px] text-amber-700">Add currency for proper trade valuation.</div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddCurrency}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs shrink-0 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Currency</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleOpenAddCurrency}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-xs shrink-0 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Currency &apos;{targetCurrencyCode}&apos;</span>
-                </button>
-              </div>
-            )}
+              )}
 
-            {/* Warning Banner: Duplicate Script in Database */}
-            {isDuplicate && (
-              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <div className="font-bold text-amber-950">Script Already Exists in Database</div>
-                  <div className="text-[11px] text-amber-800">
-                    A script with symbol <strong>&quot;{formData.shortName.trim()}&quot;</strong> or name <strong>&quot;{formData.fullName.trim()}&quot;</strong> already exists on the selected exchange. Duplicate entries are blocked.
+              {/* Warning Banner: Duplicate Script in Database */}
+              {isDuplicate && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2 text-xs text-amber-900 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-[11px]">
+                    <span className="font-bold">Script Already Exists: </span>
+                    Symbol &quot;{formData.shortName.trim()}&quot; already exists on this exchange. Duplicate entries are blocked.
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Basic Info */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold tracking-wider text-[var(--color-slate)] uppercase">
-                Script Information
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-field">
-                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Short Name / Tick Code</label>
+              {/* Intelligent Compact Form Layout — No Scrollbars */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Symbol / Short Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Symbol / Tick Code <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     ref={shortNameInputRef}
                     required
                     name="shortName"
                     value={formData.shortName}
                     onChange={handleChange}
-                    className="input text-xs font-mono font-bold uppercase"
+                    onBlur={() => handleBlur('shortName')}
+                    className={cn(
+                      "w-full h-9 px-3 text-xs font-mono font-bold uppercase rounded-lg border bg-white focus:outline-none transition-all",
+                      touched.shortName && errors.shortName
+                        ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500"
+                        : "border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15"
+                    )}
                     placeholder="e.g. GIN, GOLD"
                   />
+                  {touched.shortName && errors.shortName && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.shortName}</p>
+                  )}
                 </div>
 
-                <div className="form-field">
-                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Market Lot / Lot Size</label>
+                {/* Market Lot Size */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Market Lot Size <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
                     type="text"
@@ -426,49 +463,61 @@ export function ScriptFormModal({
                       setFormData((prev) => ({ ...prev, lotSize: val }));
                     }}
                     onBlur={() => {
+                      handleBlur('lotSize');
                       if (!formData.lotSize || parseInt(formData.lotSize, 10) < 1) {
                         setFormData((prev) => ({ ...prev, lotSize: '1' }));
                       }
                     }}
-                    className="input text-xs font-mono text-right font-bold"
+                    className={cn(
+                      "w-full h-9 px-3 text-xs font-mono font-bold rounded-lg border bg-white focus:outline-none transition-all text-left",
+                      touched.lotSize && errors.lotSize
+                        ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500"
+                        : "border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15"
+                    )}
                     placeholder="1"
                   />
-                  <p className="form-hint text-[10px]">Positive integer (defaults to 1)</p>
+                  {touched.lotSize && errors.lotSize && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.lotSize}</p>
+                  )}
                 </div>
 
-                <div className="form-field col-span-2">
-                  <label className="form-label form-label--required text-xs font-semibold text-slate-700">Full Security Name</label>
+                {/* Full Security Name */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Full Security Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="input text-xs"
-                    placeholder="e.g. GIFT CONN NIFTY 50 IND"
+                    onBlur={() => handleBlur('fullName')}
+                    className={cn(
+                      "w-full h-9 px-3 text-xs rounded-lg border bg-white focus:outline-none transition-all",
+                      touched.fullName && errors.fullName
+                        ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20 text-rose-950 focus:border-rose-500"
+                        : "border-slate-200 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15"
+                    )}
+                    placeholder="e.g. GIFT CONN NIFTY 50 INDEX"
                   />
+                  {touched.fullName && errors.fullName && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.fullName}</p>
+                  )}
                 </div>
 
-                {/* Exchange Select */}
-                <div className="form-field">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700">
-                      Primary Exchange
-                    </label>
-                    {targetExchangeCode && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                          formData.exchangeId ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'
-                        }`}
-                      >
-                        Target: {targetExchangeCode}
-                      </span>
-                    )}
-                  </div>
-                  <div className={isTargetExchangeMissing || !formData.exchangeId ? 'rounded-lg border-2 border-rose-300' : ''}>
+                {/* Exchange Dropdown */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Primary Exchange <span className="text-rose-500">*</span>
+                  </label>
+                  <div className={isTargetExchangeMissing || (!formData.exchangeId && touched.exchangeId) ? 'rounded-lg border-2 border-rose-300' : ''}>
                     <UniversalDropdown
                       value={formData.exchangeId}
                       options={exchangeOptions}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, exchangeId: val }))}
+                      onChange={(val) => {
+                        setFormData((prev) => ({ ...prev, exchangeId: val }));
+                        handleBlur('exchangeId');
+                      }}
                       placeholder={
                         isTargetExchangeMissing
                           ? `⚠️ Add '${targetExchangeCode}' first`
@@ -478,60 +527,79 @@ export function ScriptFormModal({
                       addLabel={targetExchangeCode ? `Add '${targetExchangeCode}'` : 'Add Exchange'}
                     />
                   </div>
+                  {touched.exchangeId && errors.exchangeId && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.exchangeId}</p>
+                  )}
                 </div>
 
-                {/* Currency Select */}
-                <div className="form-field">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="form-label form-label--required text-xs font-semibold text-slate-700">
-                      Trade Currency
-                    </label>
-                    {targetCurrencyCode && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
-                        Target: {targetCurrencyCode}
-                      </span>
-                    )}
-                  </div>
+                {/* Currency Dropdown */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    Settlement Currency <span className="text-rose-500">*</span>
+                  </label>
                   <UniversalDropdown
                     value={formData.currencyId}
                     options={currencyOptions}
                     onChange={(val) => setFormData((prev) => ({ ...prev, currencyId: val }))}
-                    placeholder="Select Currency (e.g. USD, INR)"
+                    placeholder="Select Currency (USD, INR)"
                     onAddClick={handleOpenAddCurrency}
                     addLabel={targetCurrencyCode ? `Add '${targetCurrencyCode}'` : 'Add Currency'}
                   />
                 </div>
 
-                <div className="form-field col-span-2">
-                  <label className="form-label text-xs font-semibold text-slate-700">ISIN Code (Optional)</label>
+                {/* ISIN Code (Optional) */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                    ISIN Code <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                  </label>
                   <input
                     name="isin"
                     value={formData.isin}
                     onChange={handleChange}
-                    className="input text-xs font-mono"
+                    className="w-full h-9 px-3 text-xs font-mono rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-[#2652C8] focus:ring-2 focus:ring-[#2652C8]/15 outline-none transition-all"
                     placeholder="e.g. INE123A01012"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-8 pt-4 flex justify-end gap-3 border-t border-[var(--color-border-light)]">
-              <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn--secondary text-xs py-2 px-3">
+            {/* Unified Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-end gap-2.5 shrink-0 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 shadow-2xs cursor-pointer active:scale-[0.98]"
+              >
                 Cancel
               </button>
+              {(!initialData || !initialData.id) && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(undefined, true)}
+                  disabled={isSubmitting || isDuplicate || !formData.exchangeId || !formData.currencyId || !formData.shortName.trim()}
+                  className="h-9 px-4 text-xs font-semibold rounded-lg text-[#2652C8] bg-blue-50 hover:bg-blue-100/80 border border-blue-200 hover:-translate-y-0.5 transition-all duration-150 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  ) : null}
+                  <span>Save &amp; Add More</span>
+                </button>
+              )}
               <button
                 type="submit"
                 form="scriptForm"
                 disabled={isSubmitting || isDuplicate || !formData.exchangeId || !formData.currencyId || !formData.shortName.trim()}
                 className={cn(
-                  "btn btn--primary text-xs py-2 px-4 shadow-xs flex items-center gap-1.5",
-                  (isDuplicate || !formData.exchangeId) && "opacity-60 cursor-not-allowed bg-slate-400 border-slate-400 hover:bg-slate-400"
+                  "h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.98]",
+                  (isDuplicate || !formData.exchangeId)
+                    ? "bg-slate-400 cursor-not-allowed opacity-60"
+                    : "bg-[#2652C8] hover:bg-[#1E42A8] hover:-translate-y-0.5 hover:shadow-sm"
                 )}
               >
                 {isSubmitting ? (
                   <>
-                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                     <span>Saving...</span>
                   </>
                 ) : isDuplicate ? (
@@ -539,7 +607,7 @@ export function ScriptFormModal({
                 ) : initialData && initialData.id ? (
                   'Update Script'
                 ) : (
-                  'Add Script'
+                  'Save Script'
                 )}
               </button>
             </div>

@@ -85,6 +85,8 @@ async function sanitizeAndPrepareAccountData(rawData: any, isUpdate = false) {
   return clean;
 }
 
+const groupCache = new Map<string, number>();
+
 export class AccountMastersService {
   async create(data: any) {
     const cleanData = await sanitizeAndPrepareAccountData(data, false);
@@ -127,15 +129,31 @@ export class AccountMastersService {
   }
 
   async findAll(groupName?: string, search?: string, excludeGroups?: string, directOnly?: boolean) {
-    const where: Prisma.AccountWhereInput = {};
+    const where: Prisma.AccountWhereInput = {
+      isDeleted: false,
+    };
 
     if (groupName) {
-      where.group = {
-        name: {
-          equals: groupName,
-          mode: 'insensitive',
-        },
-      };
+      const lower = groupName.trim().toLowerCase();
+      let gId = groupCache.get(lower);
+      if (gId === undefined) {
+        const grp = await prisma.group.findFirst({
+          where: { name: { equals: groupName.trim(), mode: 'insensitive' } },
+          select: { id: true },
+        });
+        if (grp) {
+          gId = grp.id;
+          groupCache.set(lower, gId);
+        } else {
+          groupCache.set(lower, -1);
+          gId = -1;
+        }
+      }
+      if (gId > 0) {
+        where.groupId = gId;
+      } else {
+        where.groupId = -1;
+      }
     }
 
     if (excludeGroups) {
@@ -175,7 +193,7 @@ export class AccountMastersService {
         group: true,
       },
     });
-    if (!account) throw new NotFoundException(`Account ${id} not found`);
+    if (!account || account.isDeleted) throw new NotFoundException(`Account ${id} not found`);
     return account;
   }
 
@@ -219,9 +237,30 @@ export class AccountMastersService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-    return prisma.account.delete({
+    const account = await this.findOne(id);
+    const activeTradesCount = await prisma.trade.count({
+      where: {
+        isDeleted: false,
+        OR: [
+          { accountId: id },
+          { brokerId: id },
+        ],
+      },
+    });
+
+    if (activeTradesCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete Account: ${activeTradesCount} active trades are currently linked to this account.`
+      );
+    }
+
+    return prisma.account.update({
       where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        isActive: false,
+      },
     });
   }
 }

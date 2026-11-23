@@ -61,9 +61,16 @@ export function parseDateDetailed(dateVal: string | number | Date | null | undef
   if (typeof dateVal === 'number' || dateVal instanceof Date) {
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return { isValid: false, error: 'Invalid date format' };
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
+    let y: number, m: number, day: number;
+    if (d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0) {
+      y = d.getUTCFullYear();
+      m = d.getUTCMonth() + 1;
+      day = d.getUTCDate();
+    } else {
+      y = d.getFullYear();
+      m = d.getMonth() + 1;
+      day = d.getDate();
+    }
     if (!isValidCalendarDate(y, m, day)) return { isValid: false, error: 'Invalid calendar date' };
     const iso = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return { isValid: true, iso, year: y, month: m, day };
@@ -72,8 +79,30 @@ export function parseDateDetailed(dateVal: string | number | Date | null | undef
   const raw = String(dateVal).trim();
   if (!raw) return { isValid: false, error: 'Date is required' };
 
-  // Check for separator-based input: DD-MM-YY, DD-MM-YYYY, DD/MM/YY, DD/MM/YYYY, etc.
-  const dmyMatch = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  // 1. Check for ISO date format with optional time/timezone:
+  // e.g. "2026-10-02", "2026-10-02T00:00:00.000Z", "2026-10-02T00:00:00Z", "2026-10-02 00:00:00", etc.
+  const ymdMatch = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s].*)?$/);
+  if (ymdMatch) {
+    const y = parseInt(ymdMatch[1], 10);
+    const m = parseInt(ymdMatch[2], 10);
+    const d = parseInt(ymdMatch[3], 10);
+
+    if (m < 1 || m > 12) {
+      return { isValid: false, error: 'Month must be between 01 and 12' };
+    }
+    if (d < 1 || d > 31) {
+      return { isValid: false, error: 'Day must be between 01 and 31' };
+    }
+    if (!isValidCalendarDate(y, m, d)) {
+      const maxDays = new Date(y, m, 0).getDate();
+      return { isValid: false, error: `Invalid date: Month ${String(m).padStart(2, '0')} has ${maxDays} days` };
+    }
+    const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return { isValid: true, iso, year: y, month: m, day: d };
+  }
+
+  // 2. Check for separator-based input: DD-MM-YY, DD-MM-YYYY, DD/MM/YY, DD/MM/YYYY with optional time
+  const dmyMatch = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})(?:[T\s].*)?$/);
   if (dmyMatch) {
     const d = parseInt(dmyMatch[1], 10);
     const m = parseInt(dmyMatch[2], 10);
@@ -96,29 +125,8 @@ export function parseDateDetailed(dateVal: string | number | Date | null | undef
     return { isValid: true, iso, year: yNorm, month: m, day: d };
   }
 
-  // Check for ISO format: YYYY-MM-DD
-  const ymdMatch = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
-  if (ymdMatch) {
-    const y = parseInt(ymdMatch[1], 10);
-    const m = parseInt(ymdMatch[2], 10);
-    const d = parseInt(ymdMatch[3], 10);
-
-    if (m < 1 || m > 12) {
-      return { isValid: false, error: 'Month must be between 01 and 12' };
-    }
-    if (d < 1 || d > 31) {
-      return { isValid: false, error: 'Day must be between 01 and 31' };
-    }
-    if (!isValidCalendarDate(y, m, d)) {
-      const maxDays = new Date(y, m, 0).getDate();
-      return { isValid: false, error: `Invalid date: Month ${String(m).padStart(2, '0')} has ${maxDays} days` };
-    }
-    const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    return { isValid: true, iso, year: y, month: m, day: d };
-  }
-
-  // Check for DD-MMM-YY format (e.g., 25-OCT-26)
-  const mmmMatch = raw.match(/^(\d{1,2})[-/. ]?([A-Za-z]{3})[-/. ]?(\d{2,4})$/);
+  // 3. Check for DD-MMM-YY format (e.g., 25-OCT-26, 25-OCT-2026) with optional time
+  const mmmMatch = raw.match(/^(\d{1,2})[-/. ]?([A-Za-z]{3})[-/. ]?(\d{2,4})(?:[T\s].*)?$/);
   if (mmmMatch) {
     const d = parseInt(mmmMatch[1], 10);
     const mStr = mmmMatch[2].toUpperCase();
@@ -139,6 +147,18 @@ export function parseDateDetailed(dateVal: string | number | Date | null | undef
     }
     const iso = `${yNorm}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     return { isValid: true, iso, year: yNorm, month: m, day: d };
+  }
+
+  // 4. Fallback for valid date string parseable by Date constructor
+  const parsedFallback = new Date(raw);
+  if (!isNaN(parsedFallback.getTime())) {
+    const y = parsedFallback.getUTCFullYear();
+    const m = parsedFallback.getUTCMonth() + 1;
+    const d = parsedFallback.getUTCDate();
+    if (isValidCalendarDate(y, m, d)) {
+      const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return { isValid: true, iso, year: y, month: m, day: d };
+    }
   }
 
   // Pure digits: 6 digits (DDMMYY) or 8 digits (DDMMYYYY or YYYYMMDD)
@@ -237,17 +257,35 @@ export function formatDateToSecurityDate(dateVal: string | Date | null | undefin
 }
 
 /**
- * Formats any date string or Date object into "DD-MM-YY" (e.g. "25-10-26") for consistent display throughout the UI.
+ * Formats any date string or Date object strictly into "DD-MM-YY" (e.g. "02-10-26") for consistent display throughout the UI.
+ * NEVER outputs raw ISO timestamps, full ISO dates, or unformatted database strings.
  */
 export function formatDateToDDMMYY(dateVal: string | number | Date | null | undefined): string {
   if (!dateVal && dateVal !== 0) return '';
   const inputNorm = formatDateForInput(dateVal);
-  if (!inputNorm) return String(dateVal).trim();
+  if (inputNorm) {
+    const [y, m, d] = inputNorm.split('-');
+    if (y && m && d) {
+      const shortYear = y.slice(-2);
+      return `${d}-${m}-${shortYear}`;
+    }
+  }
 
-  const [y, m, d] = inputNorm.split('-');
-  if (!y || !m || !d) return String(dateVal).trim();
-  const shortYear = y.slice(-2);
-  return `${d}-${m}-${shortYear}`;
+  // Fallback: If formatDateForInput failed, try parsing via Date constructor
+  const d = new Date(dateVal);
+  if (!isNaN(d.getTime())) {
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const shortYear = String(d.getUTCFullYear()).slice(-2);
+    return `${day}-${month}-${shortYear}`;
+  }
+
+  // Never return raw ISO timestamps or raw date strings with 'T', ':', or 'Z'
+  const rawStr = String(dateVal).trim();
+  if (rawStr.includes('T') || rawStr.includes(':') || rawStr.includes('Z')) {
+    return '';
+  }
+  return rawStr;
 }
 
 /**

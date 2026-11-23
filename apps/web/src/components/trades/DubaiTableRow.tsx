@@ -347,13 +347,13 @@ export function DubaiTableRow({
       {/* 27. Status */}
       <td className="py-3 px-3 text-center">
         {val.isValid ? (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>Valid</span>
           </span>
         ) : (
           <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700"
             title={val.errors.join(', ')}
           >
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />

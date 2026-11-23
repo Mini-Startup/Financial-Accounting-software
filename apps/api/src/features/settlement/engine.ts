@@ -84,6 +84,7 @@ export class SettlementEngine {
     const unsettledTrades = await prisma.trade.findMany({
       where: {
         settlementId: null,
+        isDeleted: false,
         tradeDate: {
           lte: closingDate,
         },
@@ -123,6 +124,7 @@ export class SettlementEngine {
 
     let closingRates = await prisma.closingRate.findMany({
       where: {
+        isDeleted: false,
         rateDate: {
           gte: rateDateStart,
           lte: rateDateEnd,
@@ -133,6 +135,7 @@ export class SettlementEngine {
     if (closingRates.length === 0) {
       closingRates = await prisma.closingRate.findMany({
         where: {
+          isDeleted: false,
           rateDate: {
             lte: rateDateEnd,
           },
@@ -394,6 +397,7 @@ export class SettlementEngine {
               profitTotal: 0,
               tradeType: item.tradeType,
               settlementId: settlement.id,
+              originSettlementId: settlement.id,
               source: 'SYSTEM',
               remarks: `${item.tradeType} trade for ${settlementName}`,
               securityName: item.securityName,
@@ -429,6 +433,7 @@ export class SettlementEngine {
               profitTotal: 0,
               tradeType: 'BACK_FORWARD',
               settlementId: null, // Open/live for next cycle
+              originSettlementId: settlement.id, // Explicitly tracks creating settlement
               source: 'SYSTEM',
               remarks: `Back forward trade from ${settlementName}`,
               securityName: item.securityName,
@@ -454,10 +459,11 @@ export class SettlementEngine {
           });
         }
 
-        // 5. Create Ledger entries per Client and per Broker (lean select projection)
+        // 5. Create Ledger entries per Client and per Broker (lean select projection with marketLot)
         const settledTrades = await tx.trade.findMany({
           where: {
             settlementId: settlement.id,
+            isDeleted: false,
           },
           select: {
             accountId: true,
@@ -467,6 +473,12 @@ export class SettlementEngine {
             clientRate: true,
             brokerRate: true,
             transactionType: true,
+            marketLot: true,
+            script: {
+              select: {
+                lotSize: true,
+              },
+            },
           },
         });
 
@@ -476,8 +488,9 @@ export class SettlementEngine {
         for (const t of settledTrades) {
           const clientRate = t.clientRate ?? t.rate;
           const brokerRate = t.brokerRate ?? t.rate;
-          const clientVal = t.quantity * clientRate;
-          const brokerVal = t.quantity * brokerRate;
+          const lot = (t.marketLot && t.marketLot > 0) ? t.marketLot : (t.script?.lotSize || 1);
+          const clientVal = t.quantity * clientRate * lot;
+          const brokerVal = t.quantity * brokerRate * lot;
 
           const clientSignedVal = t.transactionType === 'SELL' ? clientVal : -clientVal;
           clientTotals.set(t.accountId, (clientTotals.get(t.accountId) || 0) + clientSignedVal);
@@ -490,6 +503,7 @@ export class SettlementEngine {
 
         const ledgerDataToInsert: Array<{
           accountId: string;
+          settlementId: string;
           date: Date;
           amount: number;
           entryType: string;
@@ -502,6 +516,7 @@ export class SettlementEngine {
           if (Math.abs(amount) < 0.01) continue;
           ledgerDataToInsert.push({
             accountId: clientId,
+            settlementId: settlement.id,
             date: new Date(closingRateDateStr),
             amount: Number(amount.toFixed(2)),
             entryType: 'SETTLEMENT',
@@ -516,6 +531,7 @@ export class SettlementEngine {
           if (Math.abs(amount) < 0.01) continue;
           ledgerDataToInsert.push({
             accountId: brokerId,
+            settlementId: settlement.id,
             date: new Date(closingRateDateStr),
             amount: Number(amount.toFixed(2)),
             entryType: 'SETTLEMENT',

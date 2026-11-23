@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { X, Calculator, Building2, User, Layers, ArrowRight, Plus } from 'lucide-react';
+import { X, Calculator, Building2, User, Layers, ArrowRight, Plus, Loader2 } from 'lucide-react';
 import { useOutsideClickClose } from '../../hooks/useOutsideClickClose';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { UniversalDropdown } from '../ui/UniversalDropdown';
@@ -458,51 +458,53 @@ export function BrokerageFormModal({
         className={cn(
           'card flex flex-col p-0 overflow-hidden shadow-2xl border-none animate-in zoom-in-95 duration-150 transition-all',
           scope === 'ALL'
-            ? 'w-[1140px] max-w-[96vw] h-[88vh] max-h-[88vh]'
-            : 'w-[580px] max-w-[95vw] max-h-[88vh]'
+            ? 'w-285 max-w-[96vw] h-[88vh] max-h-[88vh]'
+            : 'w-145 max-w-[95vw] max-h-[88vh]'
         )}
       >
-        {/* Header (Aligned with Brand Style Guide) */}
-        <div className="card__header bg-[var(--color-snow)] flex items-center justify-between px-6 py-4 border-b border-[var(--color-border-light)] shrink-0">
+        {/* Unified Modal Header */}
+        <div className="px-6 py-4.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100/70 text-emerald-800 rounded-lg flex items-center justify-center">
-              <Calculator className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Calculator className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="card__title text-base font-bold text-[var(--color-charcoal)]">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
                 {initialRule?.id ? 'Edit Brokerage Rule' : 'Configure Brokerage Rules'}
               </h2>
-              <p className="text-xs text-[var(--color-slate)] mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Set quantity-based brokerage rate formulas for clients or brokers
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)] rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Wrap */}
         <form id="brokerageForm" onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          {/* Modal Body: overflow-hidden in ALL mode so popup NEVER has a scrollbar */}
+          {/* Modal Body */}
           <div
             className={cn(
-              'card__body p-5 flex-1 flex flex-col min-h-0',
-              scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-4'
+              'p-6 flex-1 flex flex-col min-h-0 bg-white',
+              scope === 'ALL' ? 'overflow-hidden' : 'overflow-y-auto space-y-5'
             )}
           >
           {/* Top Configuration Controls */}
-          <div className="space-y-4 shrink-0 bg-[var(--color-snow)] p-4 rounded-xl border border-[var(--color-border-light)]">
+          <div className="space-y-4 shrink-0 pb-4 border-b border-slate-100">
             {/* Row 1: Applies To & Select Account */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* 1. Applies To */}
-              <div className="form-field">
-                <label className="form-label form-label--required">Applies To</label>
-                <div className="inline-flex p-1 bg-white rounded-lg border border-[var(--color-border-light)] gap-1 w-full">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Applies To <span className="text-rose-500">*</span>
+                </label>
+                <div className="inline-flex p-1 bg-slate-100/80 rounded-lg border border-slate-200/80 gap-1 w-full select-none">
                   <button
                     type="button"
                     onClick={() => {
@@ -512,8 +514,8 @@ export function BrokerageFormModal({
                     className={cn(
                       'flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none',
                       appliesTo === 'CLIENT'
-                        ? 'bg-[var(--color-forest)] text-white shadow-xs'
-                        : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)]/30'
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     )}
                   >
                     <User className="w-3.5 h-3.5" />
@@ -528,8 +530,8 @@ export function BrokerageFormModal({
                     className={cn(
                       'flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap select-none',
                       appliesTo === 'BROKER'
-                        ? 'bg-[var(--color-forest)] text-white shadow-xs'
-                        : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)]/30'
+                        ? 'bg-[#2652C8] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     )}
                   >
                     <Building2 className="w-3.5 h-3.5" />
@@ -539,9 +541,9 @@ export function BrokerageFormModal({
               </div>
 
               {/* 2. Select Account */}
-              <div className="form-field">
-                <label className="form-label form-label--required">
-                  {appliesTo === 'CLIENT' ? 'Select Client' : 'Select Broker'}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+                  {appliesTo === 'CLIENT' ? 'Select Client' : 'Select Broker'} <span className="text-rose-500">*</span>
                 </label>
                 <UniversalDropdown
                   value={accountId}
@@ -559,15 +561,15 @@ export function BrokerageFormModal({
             {/* Row 2: Script Mode (under the other two options, text wrap = none) */}
             <div className="form-field">
               <label className="form-label form-label--required">Script Mode</label>
-              <div className="inline-flex p-1 bg-white rounded-lg border border-[var(--color-border-light)] gap-1 w-full">
+              <div className="inline-flex p-1 bg-white rounded-lg border border-border-light gap-1 w-full">
                 <button
                   type="button"
                   onClick={() => setScope('SINGLE')}
                   className={cn(
                     'flex-1 py-1.5 px-4 rounded-md text-xs font-semibold transition-all cursor-pointer text-center whitespace-nowrap select-none',
                     scope === 'SINGLE'
-                      ? 'bg-[var(--color-forest)] text-white shadow-xs'
-                      : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)]/30'
+                      ? 'bg-(--color-forest) text-white shadow-xs'
+                      : 'text-slate hover:text-charcoal hover:bg-mist/30'
                   )}
                 >
                   <span className="whitespace-nowrap">Single Script</span>
@@ -578,8 +580,8 @@ export function BrokerageFormModal({
                   className={cn(
                     'flex-1 py-1.5 px-4 rounded-md text-xs font-semibold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 whitespace-nowrap select-none',
                     scope === 'ALL'
-                      ? 'bg-[var(--color-forest)] text-white shadow-xs'
-                      : 'text-[var(--color-slate)] hover:text-[var(--color-charcoal)] hover:bg-[var(--color-mist)]/30'
+                      ? 'bg-(--color-forest) text-white shadow-xs'
+                      : 'text-slate hover:text-charcoal hover:bg-mist/30'
                   )}
                 >
                   <Layers className="w-3.5 h-3.5" />
@@ -609,16 +611,16 @@ export function BrokerageFormModal({
 
               {/* Script Badges & Market Lot info */}
               {selectedScript && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-[var(--color-snow)] rounded-xl border border-[var(--color-border-light)]">
+                <div className="grid grid-cols-2 gap-3 p-3 bg-snow rounded-xl border border-border-light">
                   <div>
-                    <div className="text-[11px] font-semibold text-[var(--color-slate)]">Exchange</div>
-                    <div className="text-sm font-bold text-[var(--color-charcoal)] mt-0.5">
+                    <div className="text-[11px] font-semibold text-slate">Exchange</div>
+                    <div className="text-sm font-bold text-charcoal mt-0.5">
                       {selectedScript.exchange?.code || 'N/A'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] font-semibold text-[var(--color-slate)]">Market Lot (Read-Only)</div>
-                    <div className="text-sm font-bold font-mono text-[var(--color-charcoal)] mt-0.5">
+                    <div className="text-[11px] font-semibold text-slate">Market Lot (Read-Only)</div>
+                    <div className="text-sm font-bold font-mono text-charcoal mt-0.5">
                       {selectedScript.lotSize || 1}
                     </div>
                   </div>
@@ -669,14 +671,14 @@ export function BrokerageFormModal({
                   </div>
 
                   {bothPerUnit && (
-                    <div className="p-3.5 bg-[var(--color-mist)]/50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                    <div className="p-3.5 bg-mist/50 border border-emerald-200 rounded-xl flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs text-emerald-900">Per-Quantity Rate:</span>
                         <span className="text-xs text-emerald-800 font-mono">
                           ({currSym}{bothBrokerage} ÷ {bothQuantity} quantity)
                         </span>
                       </div>
-                      <div className="text-sm font-extrabold font-mono text-[var(--color-forest)]">
+                      <div className="text-sm font-extrabold font-mono text-(--color-forest)">
                         {currSym}{bothPerUnit} / quantity
                       </div>
                     </div>
@@ -813,7 +815,7 @@ export function BrokerageFormModal({
                       <button
                         type="button"
                         onClick={() => setBuyActive(true)}
-                        className="flex-1 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-dashed border-emerald-300 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                        className="flex-1 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-dashed border-emerald-300 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>+ Add Buy Rule</span>
@@ -823,7 +825,7 @@ export function BrokerageFormModal({
                       <button
                         type="button"
                         onClick={() => setSellActive(true)}
-                        className="flex-1 py-2 text-xs font-semibold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-dashed border-rose-300 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                        className="flex-1 py-2 text-xs font-semibold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-dashed border-rose-300 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>+ Add Sell Rule</span>
@@ -832,7 +834,7 @@ export function BrokerageFormModal({
                   </div>
 
                   {!buyActive && !sellActive && (
-                    <div className="p-3 text-center text-xs text-[var(--color-slate)] bg-[var(--color-snow)] rounded-xl border border-dashed border-slate-300">
+                    <div className="p-3 text-center text-xs text-slate bg-snow rounded-lg border border-dashed border-slate-300">
                       Both Buy and Sell rules are removed. Click "+ Add Buy Rule" or "+ Add Sell Rule" above, or switch direction back to "Both".
                     </div>
                   )}
@@ -850,12 +852,12 @@ export function BrokerageFormModal({
           )}
         </div>
 
-        {/* Footer (Aligned with Brand Style Guide) */}
-        <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-snow)] flex items-center justify-between shrink-0">
-          <div className="text-xs text-[var(--color-slate)]">
+        {/* Unified Modal Footer */}
+        <div className="px-6 py-4 border-t border-slate-200/80 bg-slate-50/80 flex items-center justify-between shrink-0 rounded-b-2xl">
+          <div className="text-xs text-slate-500">
             {scope === 'ALL' ? (
               <span>
-                <strong>{configuredAllCount}</strong> of {scriptRows.length} scripts will be saved individually
+                <strong className="text-slate-800 font-bold">{configuredAllCount}</strong> of {scriptRows.length} scripts will be configured individually
               </span>
             ) : (
               <span>Individual script rule will be configured for selected account</span>
@@ -866,7 +868,7 @@ export function BrokerageFormModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="btn btn--secondary text-xs py-2 px-4 cursor-pointer"
+              className="h-9 px-4 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
             >
               Cancel
             </button>
@@ -875,13 +877,15 @@ export function BrokerageFormModal({
               form="brokerageForm"
               disabled={isSubmitting || !accountId}
               className={cn(
-                'btn btn--primary text-xs py-2 px-5 flex items-center gap-1.5 shadow-xs cursor-pointer',
-                (!accountId || isSubmitting) && 'opacity-60 cursor-not-allowed'
+                'h-9 px-5 text-xs font-semibold rounded-lg text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer',
+                (!accountId || isSubmitting)
+                  ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                  : 'bg-[#2652C8] hover:bg-[#1E42A8]'
               )}
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : scope === 'ALL' ? (
