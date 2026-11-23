@@ -127,8 +127,6 @@ export function ClosingRatePageManager({
   const [importDate, setImportDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [fileName, setFileName] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [isAdjusting, setIsAdjusting] = useState<boolean>(false);
-  const [showAdjustConfirm, setShowAdjustConfirm] = useState<boolean>(false);
   const [rawOpenPositionRows, setRawOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
   const [parsedItems, setParsedItems] = useState<ParsedClosingRateItem[]>([]);
   const [fileValidationError, setFileValidationError] = useState<FileValidationResult | null>(null);
@@ -143,52 +141,28 @@ export function ClosingRatePageManager({
   const [settlementItems, setSettlementItems] = useState<any[]>([]);
 
   // Filter Parsed Closing Rates to only those relevant to active unsettled trades
-  // (User requirement: Only matched closing rates for active unsettled trades should be shown, with stats chips)
+  // Matched means: script exists in our system and has active unsettled trades
   const activeUnsettledScriptIds = new Set(
     settlementItems
       .filter((i) => i.scriptId && i.netQty !== 0)
       .map((i) => i.scriptId)
   );
 
-  const activeUnsettledScriptNames = new Set(
-    settlementItems
-      .filter((i) => i.netQty !== 0)
-      .flatMap((i) => [
-        (i.scriptShortName || '').toUpperCase().trim(),
-        (i.scriptFullName || '').toUpperCase().trim(),
-        (i.securityName || '').toUpperCase().trim(),
-      ])
-      .filter(Boolean)
-  );
-
   const matchedParsedItems = parsedItems.filter((item) => {
-    // If no active settlement trades, show all parsed items so user can import closing rates
-    if (activeUnsettledScriptNames.size === 0 && activeUnsettledScriptIds.size === 0) return true;
+    // If no active settlement trades on this date, show all valid parsed items so user can import closing rates
+    if (activeUnsettledScriptIds.size === 0) return item.status === 'Valid';
 
-    // Check if scriptId matches an active unsettled trade
-    if (item.resolvedScriptId && activeUnsettledScriptIds.has(item.resolvedScriptId)) return true;
-
-    // Check if commodityCode, scriptFullName, or securityName matches
-    const commCode = (item.commodityCode || '').toUpperCase().trim();
-    const fullName = (item.scriptFullName || '').toUpperCase().trim();
-    const secName = (item.securityName || '').toUpperCase().trim();
-
-    return (
-      activeUnsettledScriptNames.has(commCode) ||
-      activeUnsettledScriptNames.has(fullName) ||
-      activeUnsettledScriptNames.has(secName)
-    );
+    // Must have a resolved script ID in our DB that belongs to active unsettled trades
+    return item.status === 'Valid' && item.resolvedScriptId && activeUnsettledScriptIds.has(item.resolvedScriptId);
   });
 
   // Sync selectedRateIndices whenever parsedItems or matchedParsedItems changes
-  // Default to selecting only VALID rates (where script exists in DB)
+  // Default to selecting all matched rates (which are all Valid and in active unsettled trades)
   useEffect(() => {
     const init = new Set<number>();
     matchedParsedItems.forEach((item) => {
-      if (item.status === 'Valid') {
-        const idx = parsedItems.indexOf(item);
-        if (idx !== -1) init.add(idx);
-      }
+      const idx = parsedItems.indexOf(item);
+      if (idx !== -1) init.add(idx);
     });
     setSelectedRateIndices(init);
   }, [matchedParsedItems, parsedItems]);
@@ -540,68 +514,6 @@ export function ClosingRatePageManager({
 
   const verification = performVerification();
   const isValidated = verification.status === 'VALIDATED';
-
-  // Handle Add or Adjust Trades button
-  const handleAddAdjustTrades = () => {
-    if (!isValidated) {
-      toast.error('Open Position validation must pass before adding or adjusting trades.');
-      return;
-    }
-
-    const openPositions = settlementItems.filter((i) => i.netQty !== 0);
-    if (openPositions.length === 0) {
-      toast.error('No open positions available to adjust.');
-      return;
-    }
-
-    setShowAdjustConfirm(true);
-  };
-
-  const executeAdjustTrades = async () => {
-    const openPositions = settlementItems.filter((i) => i.netQty !== 0);
-    setIsAdjusting(true);
-    try {
-      const adjustments = openPositions.map((item) => ({
-        accountId: item.accountId,
-        scriptId: item.scriptId,
-        exchangeId: item.exchangeId,
-        netQty: item.netQty,
-        closingRate: item.closingRate ?? 0,
-        securityName: item.securityName,
-        expiry: item.expiry,
-      }));
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settlement/adjust-trades`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportDate: importDate,
-          adjustments,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to create adjustment trades');
-      }
-
-      const result = await res.json();
-      notify.success('Trade Adjustments Completed', {
-        description: `Successfully added ${result.createdCount} Carry Forward & Back Forward trades!`,
-      });
-      setShowAdjustConfirm(false);
-      
-      // Refresh settlement data
-      await fetchSettlementForDate(importDate);
-    } catch (err: any) {
-      console.error(err);
-      notify.error('Adjustment Failed', {
-        description: err.message || 'Error executing trade adjustments',
-      });
-    } finally {
-      setIsAdjusting(false);
-    }
-  };
 
   const executeImport = async (ratesToImport: any[]) => {
     if (!ratesToImport || ratesToImport.length === 0) {
@@ -956,29 +868,6 @@ export function ClosingRatePageManager({
                   {/* Top Action Buttons */}
                   <div className="flex items-center gap-2 self-end lg:self-auto shrink-0">
                     <button
-                      onClick={handleAddAdjustTrades}
-                      disabled={!isValidated || isAdjusting}
-                      className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer ${
-                        isValidated && !isAdjusting
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                      }`}
-                      title={!isValidated ? 'Open Position validation must pass to enable Add / Adjust Trades' : 'Create Carry & Back Forward trades'}
-                    >
-                      {isAdjusting ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Adjusting…</span>
-                        </>
-                      ) : (
-                        <>
-                          <PlusCircle className="w-3.5 h-3.5" />
-                          <span>Add / Adjust Trades</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
                       onClick={handleConfirmImport}
                       disabled={isProcessing || selectedCount === 0}
                       className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1026,19 +915,6 @@ export function ClosingRatePageManager({
                       </>
                     )}
                   </div>
-
-                  {/* Unmapped Scripts Chip */}
-                  {unmappedCount > 0 ? (
-                    <div className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 rounded-xl border border-amber-300 shadow-2xs text-xs font-semibold text-amber-800">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Unmapped Scripts: <strong>{unmappedCount} (Add Script before importing)</strong></span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3.5 py-2 bg-white rounded-xl border border-slate-200 shadow-2xs text-xs font-semibold text-slate-600">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>All Scripts Mapped in DB</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Closing Rates Table (Directly Visible, not collapsed in an accordion) */}
@@ -1454,16 +1330,6 @@ export function ClosingRatePageManager({
           document.body
         )}
 
-      <ConfirmDialog
-        isOpen={showAdjustConfirm}
-        title="Generate Carry Forward / Back Forward Trades"
-        message={`Are you sure you want to add Carry Forward and Back Forward trades for ${settlementItems.filter((i) => i.netQty !== 0).length} open positions on ${importDate}?`}
-        variant="warning"
-        confirmLabel="Generate Trades"
-        isLoading={isAdjusting}
-        onConfirm={executeAdjustTrades}
-        onCancel={() => setShowAdjustConfirm(false)}
-      />
       {/* Universal Drag & Drop File Listener on Closing Rates page */}
       <UniversalPageDropzone
         onFileDrop={(file) => {
