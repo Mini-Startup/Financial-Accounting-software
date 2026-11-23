@@ -1146,7 +1146,7 @@ export function ClosingRatePageManager({
                         <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                           <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
                             <CustomCheckbox
-                              checked={isAllFilteredSelected}
+                              checked={isAllFilteredValidSelected}
                               onChange={handleToggleSelectAllFiltered}
                             />
                           </th>
