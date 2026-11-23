@@ -26,7 +26,7 @@ export interface FileValidationResult {
  * Normalizes header string: strips outer quotes, converts to lowercase, removes underscores and spaces
  */
 function normalizeHeader(h: string): string {
-  return h.replace(/^["']|["']$/g, '').trim().toLowerCase().replace(/[\s_\-]/g, '');
+  return h.replace(/^["']|["']$/g, '').trim().toLowerCase().replace(/[\s_\-\/]/g, '');
 }
 
 /**
@@ -80,6 +80,9 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
     normalizedHeaders.includes('netlots') ||
     normalizedHeaders.includes('closingprice') ||
     normalizedHeaders.includes('variancemargin') ||
+    normalizedHeaders.includes('settlprice') ||
+    normalizedHeaders.includes('unrealizedpnl') ||
+    (normalizedHeaders.includes('insttypecode') && (normalizedHeaders.includes('futcom') || normalizedHeaders.includes('optcom') || normalizedHeaders.includes('settlprice'))) ||
     (normalizedHeaders.includes('commoditycode') && normalizedHeaders.includes('openprice'));
 
   if (isClosingRateFile) {
@@ -92,7 +95,7 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
       isCrossFileMismatch: true,
       errors: [
         'Wrong File Type Detected: This appears to be an Open Positions / Closing Rate file, not a Trade file.',
-        'Columns like NET_LOTS, VARIANCE_MARGIN, or CLOSING_PRICE belong to Closing Rates.',
+        'Columns like NET_LOTS, SETTLPRICE, VARIANCE_MARGIN, or CLOSING_PRICE belong to Closing Rates.',
       ],
       warnings: [],
       suggestedAction: {
@@ -102,9 +105,9 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
     };
   }
 
-  // ── 2. Check Dubai Trade FNO Schema ──
+  // ── 2. Check Dubai / ELEC Trade FNO Schema ──
   const hasClientCode = normalizedHeaders.some((h) =>
-    ['clientcode', 'client', 'clncode', 'accountcode', 'partycode'].includes(h)
+    ['clientcode', 'client', 'clncode', 'accountcode', 'partycode', 'custcode'].includes(h)
   );
   const hasBuySell = normalizedHeaders.some((h) =>
     ['buysellflag', 'buysell', 'side', 'bs', 'transactiontype'].includes(h)
@@ -113,10 +116,10 @@ export function validateTradeImportFile(rawContent: string): FileValidationResul
     ['price', 'rate', 'tradeprice', 'mktprice'].includes(h)
   );
   const hasQty = normalizedHeaders.some((h) =>
-    ['qty', 'quantity', 'lots', 'volume'].includes(h)
+    ['qty', 'quantity', 'lots', 'volume', 'qtylot', 'qty/lot'].includes(h)
   );
   const hasSecurityOrScript = normalizedHeaders.some((h) =>
-    ['securityname', 'tickcode', 'commodity', 'script', 'symbol', 'securitycode'].includes(h)
+    ['securityname', 'tickcode', 'commodity', 'script', 'symbol', 'securitycode', 'contractcode', 'instument', 'instrument'].includes(h)
   );
 
   const missingDubai: string[] = [];
@@ -211,9 +214,11 @@ export function validateClosingRateImportFile(rawContent: string): FileValidatio
   const isTradeFile =
     normalizedHeaders.includes('tradetime') ||
     normalizedHeaders.includes('exchorderid') ||
+    normalizedHeaders.includes('traderefno') ||
     normalizedHeaders.includes('clncommission') ||
     normalizedHeaders.includes('mktvalue') ||
-    (normalizedHeaders.includes('typecode') && normalizedHeaders.includes('buysellflag'));
+    (normalizedHeaders.includes('typecode') && normalizedHeaders.includes('buysellflag')) ||
+    (normalizedHeaders.includes('custcode') && normalizedHeaders.includes('qtylot') && normalizedHeaders.includes('tradeprice'));
 
   if (isTradeFile) {
     return {
@@ -225,7 +230,7 @@ export function validateClosingRateImportFile(rawContent: string): FileValidatio
       isCrossFileMismatch: true,
       errors: [
         'Wrong File Type Detected: This appears to be a Trade file, not an Open Positions file.',
-        'Columns like TRADETIME, EXCHORDERID, or CLNCOMMISSION belong to Trades.',
+        'Columns like TRADETIME, TRADEREFNO, EXCHORDERID, or CLNCOMMISSION belong to Trades.',
       ],
       warnings: [],
       suggestedAction: {
@@ -240,10 +245,10 @@ export function validateClosingRateImportFile(rawContent: string): FileValidatio
     ['exchange', 'market', 'exch', 'marketcode'].includes(h)
   );
   const hasCommodity = normalizedHeaders.some((h) =>
-    ['commoditycode', 'commodity', 'tickcode', 'script', 'security'].includes(h)
+    ['commoditycode', 'commodity', 'tickcode', 'script', 'security', 'contractcode'].includes(h)
   );
   const hasClosingPrice = normalizedHeaders.some((h) =>
-    ['closingprice', 'closeprice', 'closingrate', 'rate', 'price'].includes(h)
+    ['closingprice', 'closeprice', 'closingrate', 'rate', 'price', 'settlprice', 'settlementprice'].includes(h)
   );
 
   const missingColumns: string[] = [];

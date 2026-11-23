@@ -32,6 +32,15 @@ export const DEFAULT_TRADE_TEMPLATES: FileImportTemplateOption[] = [
     formatType: 'CSV',
     signatureHeaders: ['TRADETIME', 'EXCHORDERID', 'CLNCOMMISSION', 'MKTVALUE', 'CALLPUT'],
   },
+  {
+    id: 'tpl-elec-trade-default',
+    code: 'ELEC_TRADE',
+    name: 'Elec Broker Trade CSV',
+    description: 'Elec broker commodities and futures trade format with direct brokerage and TradeRefNo.',
+    importType: 'TRADE',
+    formatType: 'CSV',
+    signatureHeaders: ['CUSTCODE', 'INSTUMENT', 'TRADEREFNO', 'QTY/LOT', 'TRADEPRICE'],
+  },
 ];
 
 export const DEFAULT_CLOSING_RATE_TEMPLATES: FileImportTemplateOption[] = [
@@ -43,6 +52,15 @@ export const DEFAULT_CLOSING_RATE_TEMPLATES: FileImportTemplateOption[] = [
     importType: 'CLOSING_RATE',
     formatType: 'CSV',
     signatureHeaders: ['COMMODITY_CODE', 'CLOSING_PRICE', 'NET_LOTS'],
+  },
+  {
+    id: 'tpl-elec-open-pos-default',
+    code: 'ELEC_OPEN_POSITIONS',
+    name: 'Elec Broker Open Positions & Closing Rates CSV',
+    description: 'Elec broker open positions CSV with SettlPrice and FUTCOM commodity futures.',
+    importType: 'CLOSING_RATE',
+    formatType: 'CSV',
+    signatureHeaders: ['INSTTYPECODE', 'SETTLPRICE', 'UNREALIZEDPNL', 'CONTRACTNAME'],
   },
 ];
 

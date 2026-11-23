@@ -28,6 +28,9 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   client: 'clientCode',
   clncode: 'clientCode',
   cln_code: 'clientCode',
+  custcode: 'clientCode',
+  cust_code: 'clientCode',
+  cust: 'clientCode',
 
   // Market Code / Exchange
   marketcode: 'marketCode',
@@ -50,6 +53,8 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   securityname: 'securityName',
   security_name: 'securityName',
   secname: 'securityName',
+  instument: 'securityName',
+  instrument: 'securityName',
 
   // Delivery Month
   delmonth: 'delMonth',
@@ -65,6 +70,8 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   marketlot: 'marketLot',
   market_lot: 'marketLot',
   lot: 'marketLot',
+  lotsize: 'marketLot',
+  lot_size: 'marketLot',
 
   // Call Put
   callput: 'callPut',
@@ -82,6 +89,8 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   script: 'tickCode',
   scriptcode: 'tickCode',
   symbol: 'tickCode',
+  contractcode: 'tickCode',
+  contract_code: 'tickCode',
 
   // Bloomberg Code
   bloombergcode: 'bloombergCode',
@@ -99,17 +108,22 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   qty: 'qty',
   quantity: 'qty',
   tradedqty: 'qty',
+  qtylot: 'qty',
 
   // Price / Rate
   price: 'price',
   rate: 'price',
   tradedprice: 'price',
+  tradeprice: 'price',
+  trade_price: 'price',
 
   // Market Value
   mktvalue: 'mktValue',
   mkt_value: 'mktValue',
   marketvalue: 'mktValue',
   value: 'mktValue',
+  tradevalue: 'mktValue',
+  trade_value: 'mktValue',
 
   // Statement Date
   statementdate: 'statementDate',
@@ -119,6 +133,7 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   clncommission: 'clnCommission',
   cln_commission: 'clnCommission',
   commission: 'clnCommission',
+  brokerage: 'clnCommission',
 
   clnexcharges: 'clnExCharges',
   cln_ex_charges: 'clnExCharges',
@@ -137,6 +152,9 @@ const HEADER_KEY_MAP: Record<string, keyof DubaiParsedTrade> = {
   exch_order_id: 'exchOrderId',
   orderid: 'exchOrderId',
   order_id: 'exchOrderId',
+  traderefno: 'exchOrderId',
+  trade_ref_no: 'exchOrderId',
+  refno: 'exchOrderId',
 
   platformorderid: 'platformOrderId',
   platform_order_id: 'platformOrderId',
@@ -272,9 +290,33 @@ function detectColumnsHeuristically(rows: string[][]): {
 
 // ─── Row Parser ─────────────────────────────────────────────────
 
+function normalizeDateToDDMMYYYY(dateStr: string, isMMDDYYYY: boolean): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  const datePart = trimmed.split(/\s+/)[0];
+  const parts = datePart.split(/[-/]/);
+  if (parts.length === 3) {
+    let [p1, p2, year] = parts;
+    if (year.length === 2) year = `20${year}`;
+    // If p2 > 12, then p1 is definitely Month and p2 is Day
+    const isActuallyMMDD = isMMDDYYYY || parseInt(p2, 10) > 12;
+    if (isActuallyMMDD) {
+      const mm = p1.padStart(2, '0');
+      const dd = p2.padStart(2, '0');
+      return `${dd}/${mm}/${year}`;
+    } else {
+      const dd = p1.padStart(2, '0');
+      const mm = p2.padStart(2, '0');
+      return `${dd}/${mm}/${year}`;
+    }
+  }
+  return dateStr;
+}
+
 function extractDubaiFields(
   fields: string[],
-  colMap?: Map<keyof DubaiParsedTrade, number>
+  colMap?: Map<keyof DubaiParsedTrade, number>,
+  isMMDDYYYY: boolean = false
 ): DubaiParsedTrade {
   const g = (fieldKey: keyof DubaiParsedTrade, fallbackIdx: number): string => {
     if (colMap && colMap.has(fieldKey)) {
@@ -297,9 +339,12 @@ function extractDubaiFields(
   const effectiveClientCode = hasSwappedClient ? lastColRaw : rawClient;
   const substituteClientCode = hasSwappedClient ? rawClient : undefined;
 
+  const rawTradeDate = g('tradeDate', 1);
+  const rawExpiryDate = g('expiryDate', 9);
+
   return {
     typeCode:        g('typeCode', 0),
-    tradeDate:       g('tradeDate', 1),
+    tradeDate:       normalizeDateToDDMMYYYY(rawTradeDate, isMMDDYYYY),
     tradeTime:       g('tradeTime', 2),
     clientCode:      effectiveClientCode,
     substituteClientCode,
@@ -309,7 +354,7 @@ function extractDubaiFields(
     currencyCode:    g('currencyCode', 6),
     securityName:    g('securityName', 7),
     delMonth:        g('delMonth', 8),
-    expiryDate:      g('expiryDate', 9),
+    expiryDate:      normalizeDateToDDMMYYYY(rawExpiryDate, isMMDDYYYY),
     marketLot:       g('marketLot', 10),
     callPut:         transformCallPut(rawCP),
     rawCallPut:      rawCP,
@@ -453,6 +498,10 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
 
 
 
+  const isMMDDYYYY = raw.toUpperCase().includes('CUSTCODE') ||
+                     raw.toUpperCase().includes('TRADEREFNO') ||
+                     raw.toUpperCase().includes('INSTUMENT');
+
   for (let idx = 0; idx < rows.length; idx++) {
     const rowNum = idx + 1;
     const fields = rows[idx];
@@ -479,13 +528,14 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
       continue;
     }
 
-    const trade = extractDubaiFields(fields, colMap);
+    const trade = extractDubaiFields(fields, colMap, isMMDDYYYY);
 
     // Filter out Option trades (only import and show Futures)
     const isOption =
       trade.callPut === 'Options' ||
       (trade.rawCallPut && ['P', 'C', 'PE', 'CE', 'PUT', 'CALL'].includes(trade.rawCallPut.trim().toUpperCase())) ||
-      (trade.strikePrice && parseFloat(trade.strikePrice) > 0);
+      (trade.strikePrice && parseFloat(trade.strikePrice) > 0) ||
+      (trade.tradeType && trade.tradeType.toUpperCase().includes('EXPIRE'));
 
     if (isOption) {
       skippedOptionsCount++;

@@ -36,6 +36,23 @@ export interface ParsedClosingRateItem {
   errors: string[];
 }
 
+function normalizeExpiryDate(expiryStr: string): string {
+  if (!expiryStr) return '';
+  const trimmed = expiryStr.trim().split(/\s+/)[0];
+  const parts = trimmed.split(/[-/]/);
+  if (parts.length === 3) {
+    let [p1, p2, year] = parts;
+    if (year.length === 2) year = `20${year}`;
+    // If p2 > 12, then p1 is Month and p2 is Day -> convert to DD/MM/YYYY
+    if (parseInt(p2, 10) > 12) {
+      const mm = p1.padStart(2, '0');
+      const dd = p2.padStart(2, '0');
+      return `${dd}/${mm}/${year}`;
+    }
+  }
+  return expiryStr;
+}
+
 export function parseOpenPositionCSV(csvText: string): OpenPositionParsedRow[] {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) return [];
@@ -57,22 +74,51 @@ export function parseOpenPositionCSV(csvText: string): OpenPositionParsedRow[] {
     });
 
     const exchange = record['EXCHANGE'] || record['MARKET'] || '';
-    const commodityCode = record['COMMODITY_CODE'] || record['COMMODITY'] || record['TICKCODE'] || '';
-    const closingPrice = parseFloat(record['CLOSING_PRICE'] || record['CLOSING_RATE'] || record['CLOSE_PRICE'] || '0') || 0;
+    const commodityCode =
+      record['COMMODITY_CODE'] ||
+      record['COMMODITY'] ||
+      record['TICKCODE'] ||
+      record['CONTRACTCODE'] ||
+      record['CONTRACT_CODE'] ||
+      '';
+    const closingPrice =
+      parseFloat(
+        record['CLOSING_PRICE'] ||
+        record['CLOSING_RATE'] ||
+        record['CLOSE_PRICE'] ||
+        record['SETTLPRICE'] ||
+        record['SETTLEMENT_PRICE'] ||
+        '0'
+      ) || 0;
 
     if (!commodityCode && !exchange) continue;
 
+    // Synthesize NET_LOTS, BOUGHT_LOTS, SOLD_LOTS if BUY and SELL are present (ELEC format)
+    if (!record['NET_LOTS'] && (record['BUY'] !== undefined || record['SELL'] !== undefined)) {
+      const buy = parseFloat(record['BUY'] || '0') || 0;
+      const sell = parseFloat(record['SELL'] || '0') || 0;
+      record['NET_LOTS'] = String(buy - sell);
+      record['BOUGHT_LOTS'] = String(buy);
+      record['SOLD_LOTS'] = String(sell);
+    }
+
+    const rawInstType = record['INSTTYPECODE'] || record['FUTURE_OPTION'] || record['INSTRUMENT_TYPE'] || 'FUTURES';
+    const isOptionType = rawInstType.toUpperCase() === 'OPTCOM' || rawInstType.toUpperCase() === 'OPTIONS';
+    const futureOption = isOptionType ? 'OPTIONS' : 'FUTURES';
+
+    const rawExpiry = record['EXPIRY_DATE'] || record['EXPIRYDATE'] || '';
+
     rows.push({
-      clientCode: record['CLIENTCODE'] || '',
-      groupCode: record['GROUP_CODE'] || '',
+      clientCode: record['CLIENTCODE'] || record['CUSTCODE'] || '',
+      groupCode: record['GROUP_CODE'] || record['GROUPCODE'] || '',
       exchange,
       commodityCode,
-      expiryDate: record['EXPIRY_DATE'] || '',
+      expiryDate: normalizeExpiryDate(rawExpiry),
       callPut: record['CALLPUT'] || record['CALL_PUT'] || '',
-      futureOption: record['FUTURE_OPTION'] || record['INSTRUMENT_TYPE'] || 'FUTURES',
-      strikePrice: record['STRIKE_PRICE'] || '',
+      futureOption,
+      strikePrice: record['STRIKE_PRICE'] || record['STRIKE'] || '',
       closingPrice,
-      delMonth: record['DELMONTH'] || '',
+      delMonth: record['DELMONTH'] || record['DELIVERYMONTH'] || '',
       rawRow: record,
     });
   }
@@ -90,6 +136,8 @@ export function processOpenPositionClosingRates(
 
   for (const row of rawRows) {
     if (row.closingPrice <= 0) continue;
+    // Skip options rows from closing rate extraction
+    if (row.futureOption === 'OPTIONS' || row.callPut === 'P' || row.callPut === 'C') continue;
 
     const exCode = row.exchange.toUpperCase();
     const commCode = row.commodityCode.toUpperCase();

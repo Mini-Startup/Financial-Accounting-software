@@ -62,7 +62,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
   } = useTradeImport();
 
   const [tradeTemplates, setTradeTemplates] = useState<FileImportTemplateOption[]>(DEFAULT_TRADE_TEMPLATES);
-  const isDubaiImport = selectedTemplateCode === 'DUBAI_FNO_TRADE' || selectedImportType === 'dubai_trade_fno';
+  const isDubaiImport = selectedTemplateCode === 'DUBAI_FNO_TRADE' || selectedTemplateCode === 'ELEC_TRADE' || selectedImportType === 'dubai_trade_fno';
 
   // Load trade templates on mount
   useEffect(() => {
@@ -453,7 +453,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
         activeCode = matched.code;
         setSelectedTemplateCode(matched.code);
         setDetectedTemplate(matched);
-        if (matched.code === 'DUBAI_FNO_TRADE') {
+        if (matched.code === 'DUBAI_FNO_TRADE' || matched.code === 'ELEC_TRADE') {
           setSelectedImportType('dubai_trade_fno');
         }
         notify.info('Template Auto-Detected', {
@@ -466,11 +466,11 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
     }
 
     try {
-      const isDubai = activeCode === 'DUBAI_FNO_TRADE' || isDubaiImport;
+      const isDubai = activeCode === 'DUBAI_FNO_TRADE' || activeCode === 'ELEC_TRADE' || isDubaiImport;
       if (isDubai) {
         const dubaiResult = parseDubaiTradeFile(content);
         if (dubaiResult.trades.length === 0) {
-          throw new Error('No valid trade rows found in the Dubai file.');
+          throw new Error('No valid trade rows found in the file.');
         }
         const deselectedTrades = dubaiResult.trades.map((t) => ({ ...t, selected: false }));
         setDubaiPreviewRows(deselectedTrades);
@@ -478,7 +478,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
         const skipMsg = dubaiResult.skippedOptionsCount ? ` (${dubaiResult.skippedOptionsCount.toLocaleString()} Options trades excluded)` : '';
-        notify.success('Dubai Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
+        notify.success('Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
 
         setIsValidatingMasterData(true);
         setTimeout(async () => {
@@ -991,7 +991,7 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
                     } else {
                       const found = tradeTemplates.find((t) => t.code === val);
                       if (found) setDetectedTemplate(found);
-                      if (val === 'DUBAI_FNO_TRADE') {
+                      if (val === 'DUBAI_FNO_TRADE' || val === 'ELEC_TRADE') {
                         setSelectedImportType('dubai_trade_fno');
                       }
                     }
