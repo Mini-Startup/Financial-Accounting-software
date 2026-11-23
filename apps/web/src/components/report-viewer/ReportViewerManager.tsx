@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -8,41 +8,55 @@ import {
   Printer,
   Download,
   RefreshCw,
-  FileText,
   FileSpreadsheet,
   ChevronLeft,
   ChevronRight,
-  Filter,
-  Layers,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
   Calendar,
-  Building2,
-  Coins,
-  ShieldCheck,
+  Layers,
+  FileText,
+  PanelLeftClose,
+  PanelLeft,
+  Search,
   CheckCircle2,
-  TrendingUp,
-  TrendingDown,
-  Scale
+  SlidersHorizontal,
 } from 'lucide-react';
 import { apiFetch } from '@/utils/apiClient';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
-import { formatCurrencySymbol } from '@/utils/currency';
 import { cn } from '@/utils/cn';
 import { ExportModal, type ExportConfig } from './ExportModal';
-import { generateReportPdf, downloadReportPdf, type PdfExportOptions, type PdfExportGroup, type PdfExportKpi } from '@/lib/pdf/reportPdfGenerator';
+import { downloadReportPdf, type PdfExportOptions } from '@/lib/pdf/reportPdfGenerator';
 import { downloadReportExcel } from '@/lib/excel/reportExcelGenerator';
 import type {
   NetPositionReportResponse,
   InvoiceReportResponse,
   SettlementDetailAuditResponse,
   SettlementSummaryReportResponse,
-  GroupByDimension
+  GroupByDimension,
 } from '@/components/reports/types';
+
+interface DocumentPageChunk {
+  pageNumber: number;
+  title: string;
+  groups: {
+    groupTitle?: string;
+    rows: (string | number)[][];
+    subtotalRow?: (string | number)[];
+  }[];
+  isFirstPage: boolean;
+  isLastPage: boolean;
+  rowCount: number;
+}
+
+const ROWS_PER_PAGE = 22; // Natural financial ledger sheet page height
 
 export function ReportViewerManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL Query Parameters
+  // URL Parameters
   const initialType = searchParams.get('type') || 'net-position';
   const initialGroupBy = (searchParams.get('groupBy')?.toUpperCase() as GroupByDimension) || 'CLIENT';
   const initialAsOfDate = searchParams.get('asOfDate') || new Date().toISOString().split('T')[0];
@@ -64,9 +78,11 @@ export function ReportViewerManager() {
   const [settlementId, setSettlementId] = useState<string>(initialSettlementId);
   const [scriptId, setScriptId] = useState<string>(initialScriptId);
 
-  // Pagination state
-  const [pageSize, setPageSize] = useState<number | 'all'>(25);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  // Viewer controls: Sidebar, Zoom, Active Page
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [activePage, setActivePage] = useState<number>(1);
+  const [zoomLevel, setZoomLevel] = useState<number>(100); // 75, 90, 100, 110, 125
+  const [filterSearch, setFilterSearch] = useState<string>('');
 
   // Loading & Data states
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -84,7 +100,9 @@ export function ReportViewerManager() {
   const [scriptsList, setScriptsList] = useState<{ id: string; name: string }[]>([]);
   const [settlementsList, setSettlementsList] = useState<{ id: string; name: string }[]>([]);
 
-  // Load dropdown references
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load references
   useEffect(() => {
     async function loadReferences() {
       try {
@@ -102,7 +120,7 @@ export function ReportViewerManager() {
                 id: a.id,
                 code: a.code,
                 name: a.name,
-                isBroker: a.group?.name?.toUpperCase()?.includes('BROKER'),
+                isBroker: a.group?.name?.toUpperCase()?.includes('BROKER') || a.groupId === 2,
               }))
             );
           }
@@ -114,16 +132,21 @@ export function ReportViewerManager() {
             setScriptsList(
               scrs.map((s: any) => ({
                 id: s.id,
-                name: s.fullName || s.shortName || s.symbol || s.id,
+                name: s.fullName || s.shortName || s.symbol,
               }))
             );
           }
         }
 
         if (setRes.ok) {
-          const sets = await setRes.json();
-          if (Array.isArray(sets)) {
-            setSettlementsList(sets.map((s: any) => ({ id: s.id, name: s.name })));
+          const setts = await setRes.json();
+          if (Array.isArray(setts)) {
+            setSettlementsList(
+              setts.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+              }))
+            );
           }
         }
       } catch (err) {
@@ -133,75 +156,68 @@ export function ReportViewerManager() {
     loadReferences();
   }, []);
 
-  // Fetch active report data
+  // Fetch report data
   const fetchReport = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (reportType === 'net-position' || reportType === 'open-position') {
+      if (reportType === 'net-position') {
         const params = new URLSearchParams();
-        params.set('groupBy', groupBy);
         if (asOfDate) params.set('asOfDate', asOfDate);
-        if (entityId) {
-          if (entityType === 'BROKER') params.set('brokerId', entityId);
-          else params.set('accountId', entityId);
-        }
+        if (groupBy) params.set('groupBy', groupBy);
+        if (entityId) params.set('entityId', entityId);
+        if (settlementId) params.set('settlementId', settlementId);
         if (scriptId) params.set('scriptId', scriptId);
 
         const res = await apiFetch(`/reports/net-position?${params.toString()}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: NetPositionReportResponse = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
         setNetPositionData(data);
       } else if (reportType === 'invoice') {
         const params = new URLSearchParams();
         params.set('entityType', entityType);
-        if (entityId && entityId !== 'ALL') params.set('entityId', entityId);
-        if (settlementId && settlementId !== 'LATEST') params.set('settlementId', settlementId);
+        if (entityId) params.set('entityId', entityId);
+        if (settlementId) params.set('settlementId', settlementId);
 
         const res = await apiFetch(`/reports/invoice?${params.toString()}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: InvoiceReportResponse = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
         setInvoiceData(data);
-      } else if (reportType === 'settlement' || reportType === 'settlement-detail') {
+      } else if (reportType === 'settlement-detail') {
         const params = new URLSearchParams();
         if (settlementId) params.set('settlementId', settlementId);
-        if (fromDate) params.set('fromDate', fromDate);
-        if (toDate) params.set('toDate', toDate);
-        if (entityId) {
-          if (entityType === 'BROKER') params.set('brokerId', entityId);
-          else params.set('clientId', entityId);
-        }
+        if (entityId) params.set('clientId', entityId);
+        if (scriptId) params.set('scriptId', scriptId);
 
         const res = await apiFetch(`/reports/settlement-detail?${params.toString()}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: SettlementDetailAuditResponse = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
         setSettlementDetailData(data);
       } else if (reportType === 'settlement-summary') {
         const params = new URLSearchParams();
         if (settlementId) params.set('settlementId', settlementId);
-        if (fromDate) params.set('fromDate', fromDate);
-        if (toDate) params.set('toDate', toDate);
 
         const res = await apiFetch(`/reports/settlement-summary?${params.toString()}`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: SettlementSummaryReportResponse = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
         setSettlementSummaryData(data);
       }
     } catch (err: any) {
+      console.error('Failed to load report data:', err);
       toast.error('Failed to load report data', {
-        description: err.message || 'Error communicating with server.',
+        description: err.message || 'Please check your connection and try again.',
       });
     } finally {
       setIsLoading(false);
     }
-  }, [reportType, groupBy, asOfDate, fromDate, toDate, entityId, entityType, settlementId, scriptId]);
+  }, [reportType, asOfDate, groupBy, entityId, entityType, settlementId, scriptId]);
 
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
 
-  // Compute table headers, rows, and totals based on active report type
+  // Unified Report Configuration Model
   const reportConfig = useMemo(() => {
-    if (reportType === 'net-position' || reportType === 'open-position') {
+    if (reportType === 'net-position') {
       const title = 'Net Position Report (Open Positions)';
       const subtitle = `Contract exposures and valuations aggregated by ${groupBy.toLowerCase()}`;
       const headers = ['Symbol / Script', 'Expiry', 'Buy Qty', 'Buy Avg', 'Sell Qty', 'Sell Avg', 'Net Qty', 'Closing Rate', 'Market Value', 'Unrealized PnL'];
@@ -217,21 +233,21 @@ export function ReportViewerManager() {
 
       netPositionData?.groups?.forEach((g) => {
         const rows: (string | number)[][] = g.positions.map((p) => [
-          p.securityName || p.scriptShortName,
+          p.securityName,
           p.expiryFormatted || '-',
           p.buyQty,
-          p.buyAvgRate > 0 ? p.buyAvgRate.toFixed(2) : '-',
+          p.buyAvgRate ? p.buyAvgRate.toFixed(2) : '-',
           p.sellQty,
-          p.sellAvgRate > 0 ? p.sellAvgRate.toFixed(2) : '-',
+          p.sellAvgRate ? p.sellAvgRate.toFixed(2) : '-',
           p.netQty,
-          p.closingRate !== null ? p.closingRate.toFixed(2) : 'Pending',
+          p.closingRate ? p.closingRate.toFixed(2) : '-',
           p.marketValue.toFixed(2),
           p.unrealizedPnL.toFixed(2),
         ]);
         totalRows += rows.length;
 
         const subtotalRow: (string | number)[] = [
-          `Subtotal (${g.name || g.code})`,
+          `Subtotal (${g.code})`,
           '-',
           g.totals.buyQty,
           '-',
@@ -263,17 +279,6 @@ export function ReportViewerManager() {
         (netPositionData?.summary?.totalUnrealizedPnL || 0).toFixed(2),
       ];
 
-      const kpis: PdfExportKpi[] = [
-        { label: 'Open Trades', value: String(netPositionData?.summary?.totalOpenTrades || 0) },
-        { label: 'Open Contracts', value: String(netPositionData?.summary?.totalOpenContracts || 0) },
-        { label: 'Notional Value', value: (netPositionData?.summary?.totalNotionalMarketValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
-        {
-          label: 'Unrealized PnL',
-          value: (netPositionData?.summary?.totalUnrealizedPnL || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-          color: (netPositionData?.summary?.totalUnrealizedPnL || 0) >= 0 ? 'green' : 'red',
-        },
-      ];
-
       return {
         title,
         subtitle,
@@ -283,7 +288,6 @@ export function ReportViewerManager() {
         alignments,
         groups,
         grandTotalRow,
-        kpis,
         totalRows,
       };
     } else if (reportType === 'invoice') {
@@ -330,32 +334,32 @@ export function ReportViewerManager() {
         (invoiceData?.invoices?.reduce((acc, inv) => acc + inv.netPayableOrReceivable, 0) || 0).toFixed(2),
       ];
 
-      const kpis: PdfExportKpi[] = [
-        { label: 'Total Entities', value: String(invoiceData?.invoices?.length || 0) },
-        { label: 'Settlement Cycle', value: invoiceData?.settlementName || 'Latest' },
-        {
-          label: 'Total Net Settlement',
-          value: (invoiceData?.invoices?.reduce((acc, inv) => acc + inv.netPayableOrReceivable, 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-        },
-      ];
-
       return {
         title,
         subtitle,
-        periodLabel: 'Settlement',
-        asOfDate: invoiceData?.settlementName || asOfDate,
+        periodLabel: 'Invoice Date',
+        asOfDate,
         headers,
         alignments,
         groups,
         grandTotalRow,
-        kpis,
         totalRows,
       };
-    } else if (reportType === 'settlement' || reportType === 'settlement-detail') {
-      const title = 'Settlement Detail & Audit Report';
-      const subtitle = `Transaction ledger verification for ${settlementDetailData?.settlementInfo?.name || 'Cycle'}`;
-      const headers = ['Trade Date', 'Trade #', 'Security', 'Type', 'Broker', 'Quantity', 'Rate', 'Value', 'PnL'];
-      const alignments: ('left' | 'center' | 'right')[] = ['center', 'center', 'left', 'center', 'left', 'right', 'right', 'right', 'right'];
+    } else if (reportType === 'settlement-detail') {
+      const title = 'Settlement Audit Report';
+      const subtitle = `Trade provenance breakdown for ${settlementDetailData?.settlementInfo?.name || 'Active Settlement'}`;
+      const headers = ['Date', 'Trade No', 'Type', 'Security', 'Price', 'Traded Qty', 'Market Rate', 'Traded Value', 'Cycle PnL'];
+      const alignments: ('left' | 'center' | 'center' | 'left' | 'right' | 'right' | 'right' | 'right' | 'right')[] = [
+        'left',
+        'center',
+        'center',
+        'left',
+        'right',
+        'right',
+        'right',
+        'right',
+        'right',
+      ];
 
       const groups: {
         groupTitle?: string;
@@ -366,14 +370,14 @@ export function ReportViewerManager() {
       let totalRows = 0;
 
       settlementDetailData?.clientAuditGroups?.forEach((g) => {
-        const rows: (string | number)[][] = g.trades.map((t) => [
+        const rows: (string | number)[][] = (g.trades || []).map((t) => [
           formatDateToDDMMYY(t.tradeDate),
-          t.tradeNumber,
+          t.tradeNumber || '-',
+          t.tradeType || '-',
           t.securityName,
-          t.tradeType,
-          t.brokerCode || '-',
-          t.quantity,
           t.rate.toFixed(2),
+          t.quantity,
+          t.settlementRate ? t.settlementRate.toFixed(2) : '-',
           t.tradeValue.toFixed(2),
           t.pnl.toFixed(2),
         ]);
@@ -410,27 +414,17 @@ export function ReportViewerManager() {
         (settlementDetailData?.metrics?.totalCyclePnL || 0).toFixed(2),
       ];
 
-      const kpis: PdfExportKpi[] = [
-        { label: 'Total Trades', value: String(settlementDetailData?.metrics?.totalTrades || 0) },
-        { label: 'Regular Trades', value: String(settlementDetailData?.metrics?.regularCount || 0) },
-        { label: 'Settlement Trades', value: String(settlementDetailData?.metrics?.settlementCount || 0) },
-        {
-          label: 'Cycle PnL',
-          value: (settlementDetailData?.metrics?.totalCyclePnL || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-          color: (settlementDetailData?.metrics?.totalCyclePnL || 0) >= 0 ? 'green' : 'red',
-        },
-      ];
-
       return {
         title,
         subtitle,
         periodLabel: 'Settlement Period',
-        asOfDate: settlementDetailData?.settlementInfo ? `${formatDateToDDMMYY(settlementDetailData.settlementInfo.fromDate)} - ${formatDateToDDMMYY(settlementDetailData.settlementInfo.toDate)}` : asOfDate,
+        asOfDate: settlementDetailData?.settlementInfo
+          ? `${formatDateToDDMMYY(settlementDetailData.settlementInfo.fromDate)} - ${formatDateToDDMMYY(settlementDetailData.settlementInfo.toDate)}`
+          : asOfDate,
         headers,
         alignments,
         groups,
         grandTotalRow,
-        kpis,
         totalRows,
       };
     } else {
@@ -440,27 +434,29 @@ export function ReportViewerManager() {
       const headers = ['Account Code', 'Account Name', 'Buy Value', 'Sell Value', 'Trading PnL', 'Brokerage / Charges', 'Net Settlement', 'Status'];
       const alignments: ('left' | 'center' | 'right')[] = ['left', 'left', 'right', 'right', 'right', 'right', 'right', 'center'];
 
-      const clientRows: (string | number)[][] = settlementSummaryData?.clientSummary?.rows?.map((r) => [
-        r.accountCode,
-        r.accountName,
-        r.buyValue.toFixed(2),
-        r.sellValue.toFixed(2),
-        r.grossPnL.toFixed(2),
-        r.brokerage.toFixed(2),
-        r.netAmount.toFixed(2),
-        r.ledgerStatus,
-      ]) || [];
+      const clientRows: (string | number)[][] =
+        settlementSummaryData?.clientSummary?.rows?.map((r) => [
+          r.accountCode,
+          r.accountName,
+          r.buyValue.toFixed(2),
+          r.sellValue.toFixed(2),
+          r.grossPnL.toFixed(2),
+          r.brokerage.toFixed(2),
+          r.netAmount.toFixed(2),
+          r.ledgerStatus,
+        ]) || [];
 
-      const brokerRows: (string | number)[][] = settlementSummaryData?.brokerSummary?.rows?.map((r) => [
-        r.brokerCode,
-        r.brokerName,
-        r.buyValue.toFixed(2),
-        r.sellValue.toFixed(2),
-        r.netTradingAmount.toFixed(2),
-        r.charges.toFixed(2),
-        r.netAmount.toFixed(2),
-        r.ledgerStatus,
-      ]) || [];
+      const brokerRows: (string | number)[][] =
+        settlementSummaryData?.brokerSummary?.rows?.map((r) => [
+          r.brokerCode,
+          r.brokerName,
+          r.buyValue.toFixed(2),
+          r.sellValue.toFixed(2),
+          r.netTradingAmount.toFixed(2),
+          r.charges.toFixed(2),
+          r.netAmount.toFixed(2),
+          r.ledgerStatus,
+        ]) || [];
 
       const groups: {
         groupTitle?: string;
@@ -497,84 +493,165 @@ export function ReportViewerManager() {
         },
       ];
 
-      const kpis: PdfExportKpi[] = [
-        { label: 'Client Net', value: (settlementSummaryData?.reconciliation?.totalClientNet || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
-        { label: 'Broker Net', value: (settlementSummaryData?.reconciliation?.totalBrokerNet || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) },
-        { label: 'Firm Net Profit', value: (settlementSummaryData?.reconciliation?.firmNetRealizedProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }), color: 'green' },
-        {
-          label: 'Equilibrium',
-          value: settlementSummaryData?.reconciliation?.isBalanced ? 'BALANCED' : 'IMBALANCE',
-          color: settlementSummaryData?.reconciliation?.isBalanced ? 'green' : 'red',
-        },
+      const grandTotalRow: (string | number)[] = [
+        'NET FIRM BALANCE',
+        '-',
+        ((settlementSummaryData?.clientSummary?.totals?.totalBuyValue || 0) + (settlementSummaryData?.brokerSummary?.totals?.totalBuyValue || 0)).toFixed(2),
+        ((settlementSummaryData?.clientSummary?.totals?.totalSellValue || 0) + (settlementSummaryData?.brokerSummary?.totals?.totalSellValue || 0)).toFixed(2),
+        ((settlementSummaryData?.clientSummary?.totals?.grossTradingPnL || 0) + (settlementSummaryData?.brokerSummary?.totals?.netTradingAmount || 0)).toFixed(2),
+        '-',
+        (settlementSummaryData?.reconciliation?.firmNetRealizedProfit || 0).toFixed(2),
+        settlementSummaryData?.reconciliation?.isBalanced ? 'BALANCED' : 'IMBALANCE',
       ];
 
       return {
         title,
         subtitle,
         periodLabel: 'Settlement Period',
-        asOfDate: settlementSummaryData?.settlement ? `${formatDateToDDMMYY(settlementSummaryData.settlement.fromDate)} - ${formatDateToDDMMYY(settlementSummaryData.settlement.toDate)}` : asOfDate,
+        asOfDate: settlementSummaryData?.settlement
+          ? `${formatDateToDDMMYY(settlementSummaryData.settlement.fromDate)} - ${formatDateToDDMMYY(settlementSummaryData.settlement.toDate)}`
+          : asOfDate,
         headers,
         alignments,
         groups,
-        grandTotalRow: undefined,
-        kpis,
+        grandTotalRow,
         totalRows: clientRows.length + brokerRows.length,
       };
     }
-  }, [reportType, groupBy, asOfDate, netPositionData, invoiceData, settlementDetailData, settlementSummaryData, entityType]);
+  }, [reportType, groupBy, asOfDate, entityType, netPositionData, invoiceData, settlementDetailData, settlementSummaryData]);
 
-  // Paginated groups for UI rendering
-  const paginatedGroups = useMemo(() => {
-    if (pageSize === 'all') return reportConfig.groups;
-
-    const limit = typeof pageSize === 'number' ? pageSize : 25;
-    const startIndex = (currentPage - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    let currentIndex = 0;
-    const result: typeof reportConfig.groups = [];
-
-    for (const group of reportConfig.groups) {
-      const groupRows = group.rows;
-      const groupLength = groupRows.length;
-      const groupStartIndex = currentIndex;
-      const groupEndIndex = currentIndex + groupLength;
-
-      if (groupEndIndex > startIndex && groupStartIndex < endIndex) {
-        // Overlaps with current page
-        const sliceStart = Math.max(0, startIndex - groupStartIndex);
-        const sliceEnd = Math.min(groupLength, endIndex - groupStartIndex);
-        result.push({
-          groupTitle: group.groupTitle,
-          rows: groupRows.slice(sliceStart, sliceEnd),
-          subtotalRow: sliceEnd === groupLength ? group.subtotalRow : undefined,
-        });
-      }
-
-      currentIndex += groupLength;
+  // Document Pages Partitioning (Real Paper Sheets)
+  const documentPages = useMemo((): DocumentPageChunk[] => {
+    const allGroups = reportConfig.groups;
+    if (allGroups.length === 0) {
+      return [
+        {
+          pageNumber: 1,
+          title: reportConfig.title,
+          groups: [],
+          isFirstPage: true,
+          isLastPage: true,
+          rowCount: 0,
+        },
+      ];
     }
 
-    return result;
-  }, [reportConfig.groups, pageSize, currentPage]);
+    const pages: DocumentPageChunk[] = [];
+    let currentPageNumber = 1;
+    let currentGroupsForPage: typeof allGroups = [];
+    let currentRowsOnPage = 0;
 
-  const totalPages = useMemo(() => {
-    if (pageSize === 'all' || reportConfig.totalRows === 0) return 1;
-    return Math.ceil(reportConfig.totalRows / (typeof pageSize === 'number' ? pageSize : 25));
-  }, [reportConfig.totalRows, pageSize]);
+    for (let gIndex = 0; gIndex < allGroups.length; gIndex++) {
+      const group = allGroups[gIndex];
+      const rows = group.rows;
 
-  const currentPageRowsCount = useMemo(() => {
-    return paginatedGroups.reduce((acc, g) => acc + g.rows.length, 0);
-  }, [paginatedGroups]);
+      if (rows.length === 0) {
+        currentGroupsForPage.push(group);
+        continue;
+      }
 
-  // Handle Export execution from Modal
+      let rowIndex = 0;
+      while (rowIndex < rows.length) {
+        const remainingSpace = ROWS_PER_PAGE - currentRowsOnPage;
+        const sliceEnd = rowIndex + remainingSpace;
+        const rowSlice = rows.slice(rowIndex, sliceEnd);
+        const isLastSliceOfGroup = sliceEnd >= rows.length;
+
+        currentGroupsForPage.push({
+          groupTitle: rowIndex === 0 ? group.groupTitle : `${group.groupTitle} (Cont.)`,
+          rows: rowSlice,
+          subtotalRow: isLastSliceOfGroup ? group.subtotalRow : undefined,
+        });
+
+        currentRowsOnPage += rowSlice.length;
+        rowIndex = sliceEnd;
+
+        // If page is full or last group finished
+        if (currentRowsOnPage >= ROWS_PER_PAGE || (gIndex === allGroups.length - 1 && isLastSliceOfGroup)) {
+          pages.push({
+            pageNumber: currentPageNumber,
+            title: currentGroupsForPage[0]?.groupTitle || `Page ${currentPageNumber}`,
+            groups: currentGroupsForPage,
+            isFirstPage: currentPageNumber === 1,
+            isLastPage: false,
+            rowCount: currentRowsOnPage,
+          });
+
+          currentPageNumber++;
+          currentGroupsForPage = [];
+          currentRowsOnPage = 0;
+        }
+      }
+    }
+
+    // Flush any leftover rows
+    if (currentGroupsForPage.length > 0) {
+      pages.push({
+        pageNumber: currentPageNumber,
+        title: currentGroupsForPage[0]?.groupTitle || `Page ${currentPageNumber}`,
+        groups: currentGroupsForPage,
+        isFirstPage: currentPageNumber === 1,
+        isLastPage: false,
+        rowCount: currentRowsOnPage,
+      });
+    }
+
+    if (pages.length > 0) {
+      pages[pages.length - 1].isLastPage = true;
+    }
+
+    return pages;
+  }, [reportConfig]);
+
+  const totalDocumentPages = documentPages.length;
+
+  // Handle jump to page
+  const scrollToPage = (pageNum: number) => {
+    setActivePage(pageNum);
+    const element = document.getElementById(`doc-sheet-page-${pageNum}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Observe active page during vertical scroll
+  useEffect(() => {
+    const container = viewerContainerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const pageIdStr = entry.target.id.replace('doc-sheet-page-', '');
+            const pNum = parseInt(pageIdStr, 10);
+            if (!isNaN(pNum)) {
+              setActivePage(pNum);
+            }
+          }
+        });
+      },
+      {
+        root: container,
+        threshold: 0.35,
+      }
+    );
+
+    documentPages.forEach((p) => {
+      const el = document.getElementById(`doc-sheet-page-${p.pageNumber}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [documentPages]);
+
+  // Handle Export execute
   const handleExportExecute = (config: ExportConfig) => {
     setIsExporting(true);
     try {
-      const exportGroups = config.scope === 'page' ? paginatedGroups : reportConfig.groups;
-
       const exportOptions: PdfExportOptions = {
         orientation: config.orientation,
-        includeKpis: config.includeKpis,
+        includeKpis: false, // NO bulky KPI cards as requested!
         includeSubtotals: config.includeSubtotals,
         includeTotals: config.includeTotals,
         reportTitle: reportConfig.title,
@@ -583,12 +660,11 @@ export function ReportViewerManager() {
         asOfDate: reportConfig.asOfDate,
         filterSummary: [
           `Format: ${config.format.toUpperCase()}`,
-          `Scope: ${config.scope === 'page' ? `Page ${currentPage}` : 'All Records'}`,
+          `Generated: ${formatDateToDDMMYY(new Date())}`,
         ],
-        kpis: reportConfig.kpis,
         headers: reportConfig.headers,
         columnAlignments: reportConfig.alignments,
-        groups: exportGroups,
+        groups: reportConfig.groups,
         grandTotalRow: reportConfig.grandTotalRow,
       };
 
@@ -610,7 +686,7 @@ export function ReportViewerManager() {
     }
   };
 
-  // Close tab or go back
+  // Close tab or back
   const handleBack = () => {
     if (typeof window !== 'undefined' && window.opener) {
       window.close();
@@ -620,307 +696,452 @@ export function ReportViewerManager() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-body antialiased">
-      {/* ─── TOP CONTROL BAR (STICKY, HIDDEN ON PRINT) ────────────────────── */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] text-white shadow-lg print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Left: Back & Title Badge */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border border-white/20"
-              title="Return to previous window"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
-            </button>
-            <div className="h-5 w-px bg-white/20" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-white">{reportConfig.title}</h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-blue-100 uppercase tracking-wider">
-                  Viewer
-                </span>
-              </div>
-              <p className="text-[11px] text-blue-200 hidden sm:block">{reportConfig.subtitle}</p>
-            </div>
-          </div>
+    <div className="h-screen w-screen flex flex-col bg-[#0F172A] text-slate-100 font-body overflow-hidden antialiased select-none">
+      {/* ─── 1. TOP DOCUMENT TOOLBAR (PDF READER CHROME) ───────────────────────── */}
+      <header className="h-14 bg-[#1E293B] border-b border-slate-700/80 px-4 flex items-center justify-between shrink-0 z-30 shadow-md">
+        {/* Left: Back & Document Metadata */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/70 transition-colors cursor-pointer shrink-0"
+            title="Return to application"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Back</span>
+          </button>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={fetchReport}
-              disabled={isLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border border-white/20 disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={cn(
+              'p-1.5 rounded-lg text-xs border transition-colors cursor-pointer shrink-0',
+              isSidebarOpen
+                ? 'bg-blue-600/20 text-blue-300 border-blue-500/40'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-600/70'
+            )}
+            title={isSidebarOpen ? 'Hide Page Thumbnails' : 'Show Page Thumbnails'}
+          >
+            {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+          </button>
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border border-white/20"
-              title="Print document"
-            >
-              <Printer className="w-3.5 h-3.5 text-blue-200" />
-              <span className="hidden sm:inline">Print</span>
-            </button>
+          <div className="h-4 w-px bg-slate-700 shrink-0" />
 
-            <button
-              type="button"
-              onClick={() => {
-                downloadReportExcel({
-                  reportTitle: reportConfig.title,
-                  reportSubtitle: reportConfig.subtitle,
-                  periodLabel: reportConfig.periodLabel,
-                  asOfDate: reportConfig.asOfDate,
-                  headers: reportConfig.headers,
-                  groups: reportConfig.groups,
-                  grandTotalRow: reportConfig.grandTotalRow,
-                  kpis: reportConfig.kpis,
-                });
-                toast.success('Excel Spreadsheet downloaded');
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-xs"
-              title="Download Excel"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Excel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsExportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0A1A4A] hover:bg-blue-50 transition-colors cursor-pointer shadow-md"
-              title="Open Export Options"
-            >
-              <Download className="w-3.5 h-3.5 text-[#2652C8]" />
-              <span>Export PDF</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sub-bar: Inline Filter Controls */}
-        <div className="border-t border-white/10 bg-slate-900/30 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-blue-200 font-semibold flex items-center gap-1">
-                <Filter className="w-3 h-3" /> Filters:
+          <div className="min-w-0">
+            <h1 className="text-xs font-bold text-white truncate flex items-center gap-2">
+              <span>{reportConfig.title}</span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                PDF
               </span>
-
-              {/* Group By selector (for net position) */}
-              {(reportType === 'net-position' || reportType === 'open-position') && (
-                <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10">
-                  <span className="text-white/70">Group By:</span>
-                  <select
-                    value={groupBy}
-                    onChange={(e) => setGroupBy(e.target.value as GroupByDimension)}
-                    className="bg-transparent text-white font-bold outline-hidden cursor-pointer"
-                  >
-                    <option value="CLIENT" className="text-slate-900">Client</option>
-                    <option value="BROKER" className="text-slate-900">Broker</option>
-                    <option value="SCRIPT" className="text-slate-900">Script</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Entity Type Toggle (for invoice) */}
-              {reportType === 'invoice' && (
-                <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10">
-                  <span className="text-white/70">Entity:</span>
-                  <select
-                    value={entityType}
-                    onChange={(e) => setEntityType(e.target.value as 'CLIENT' | 'BROKER')}
-                    className="bg-transparent text-white font-bold outline-hidden cursor-pointer"
-                  >
-                    <option value="CLIENT" className="text-slate-900">Clients</option>
-                    <option value="BROKER" className="text-slate-900">Brokers</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Date Filter (DD-MM-YYYY) */}
-              <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
-                <Calendar className="w-3 h-3 text-blue-200" />
-                <span className="text-white/70">As of:</span>
-                <input
-                  type="date"
-                  value={asOfDate}
-                  onChange={(e) => setAsOfDate(e.target.value)}
-                  className="bg-transparent text-white font-bold outline-hidden text-xs cursor-pointer"
-                />
-              </div>
-
-              {/* Settlement Selector (if settlements exist) */}
-              {settlementsList.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10">
-                  <span className="text-white/70">Cycle:</span>
-                  <select
-                    value={settlementId}
-                    onChange={(e) => setSettlementId(e.target.value)}
-                    className="bg-transparent text-white font-bold outline-hidden cursor-pointer max-w-[140px] truncate"
-                  >
-                    <option value="" className="text-slate-900">Latest / All</option>
-                    {settlementsList.map((s) => (
-                      <option key={s.id} value={s.id} className="text-slate-900">
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Total Records Counter */}
-            <div className="text-blue-200 font-mono text-[11px]">
-              Total Records: <strong className="text-white">{reportConfig.totalRows}</strong>
-            </div>
+            </h1>
+            <p className="text-[10px] text-slate-400 truncate hidden md:block">
+              {reportConfig.periodLabel}: {formatDateToDDMMYY(reportConfig.asOfDate)} · {reportConfig.totalRows} Records
+            </p>
           </div>
         </div>
-      </header>
 
-      {/* ─── DOCUMENT CANVAS (PRINT READY) ─────────────────────────────────── */}
-      <main className="flex-1 p-4 sm:p-8 overflow-y-auto print:p-0 print:overflow-visible">
-        <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200/90 p-8 sm:p-12 print:shadow-none print:border-none print:p-0 print:max-w-full">
-          {/* 1. Official Branded Header */}
-          <div className="border-b border-slate-200 pb-6 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-lg bg-[#0A1A4A] flex items-center justify-center text-white font-bold text-sm shadow-xs">
-                    B
-                  </div>
-                  <div>
-                    <h2 className="text-base font-extrabold tracking-tight text-[#0A1A4A]">BIZZMATE FINANCIAL SYSTEMS</h2>
-                    <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase">Institutional Settlement & Reporting</p>
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-3">{reportConfig.title}</h3>
-                <p className="text-xs text-slate-500 font-medium">{reportConfig.subtitle}</p>
-              </div>
+        {/* Center: Page Counter & Zoom Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Page Step Navigator */}
+          <div className="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-700/80 text-xs">
+            <button
+              type="button"
+              onClick={() => scrollToPage(Math.max(1, activePage - 1))}
+              disabled={activePage <= 1}
+              className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
 
-              {/* Right: Metadata Seal */}
-              <div className="text-right text-xs space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200/80 shrink-0">
-                <div>
-                  <span className="text-slate-500">{reportConfig.periodLabel}:</span>{' '}
-                  <strong className="text-slate-900 font-mono">{formatDateToDDMMYY(reportConfig.asOfDate)}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Generated:</span>{' '}
-                  <span className="text-slate-700 font-mono">{formatDateToDDMMYY(new Date())}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Security:</span>{' '}
-                  <span className="font-semibold text-emerald-700">Verified Confidential</span>
-                </div>
-              </div>
-            </div>
+            <span className="px-2 text-[11px] font-mono text-slate-300">
+              Page <strong className="text-white font-bold">{activePage}</strong> / {totalDocumentPages}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => scrollToPage(Math.min(totalDocumentPages, activePage + 1))}
+              disabled={activePage >= totalDocumentPages}
+              className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+              title="Next Page"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* 2. KPI Summary Cards */}
-          {reportConfig.kpis && reportConfig.kpis.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-8">
-              {reportConfig.kpis.map((kpi, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3.5 relative overflow-hidden"
-                >
-                  <div
-                    className={cn(
-                      'absolute top-0 left-0 right-0 h-1',
-                      kpi.color === 'green' ? 'bg-emerald-500' : kpi.color === 'red' ? 'bg-rose-500' : 'bg-[#2652C8]'
-                    )}
-                  />
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{kpi.label}</div>
-                  <div
-                    className={cn(
-                      'text-lg font-bold font-mono tracking-tight mt-1',
-                      kpi.color === 'green' ? 'text-emerald-700' : kpi.color === 'red' ? 'text-rose-700' : 'text-slate-900'
-                    )}
-                  >
-                    {kpi.value}
-                  </div>
-                </div>
-              ))}
+          <div className="h-4 w-px bg-slate-700 hidden sm:block shrink-0" />
+
+          {/* Zoom Level */}
+          <div className="hidden sm:flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-700/80 text-xs">
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.max(75, z - 10))}
+              disabled={zoomLevel <= 75}
+              className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="px-1.5 text-[11px] font-mono text-slate-300 min-w-[42px] text-center font-semibold">
+              {zoomLevel}%
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
+              disabled={zoomLevel >= 130}
+              className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setZoomLevel(100)}
+              className="px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:text-white rounded hover:bg-slate-800 cursor-pointer border-l border-slate-800"
+              title="Reset Zoom"
+            >
+              Fit
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Controls & Export Trigger */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Group By selector for Net Position */}
+          {reportType === 'net-position' && (
+            <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-700 text-xs">
+              <span className="text-slate-400 text-[11px]">Group:</span>
+              <select
+                value={groupBy}
+                onChange={(e) => setGroupBy(e.target.value as GroupByDimension)}
+                className="bg-transparent text-white font-semibold outline-hidden cursor-pointer text-xs"
+              >
+                <option value="CLIENT" className="bg-slate-900 text-white">Client</option>
+                <option value="BROKER" className="bg-slate-900 text-white">Broker</option>
+                <option value="SCRIPT" className="bg-slate-900 text-white">Script</option>
+              </select>
             </div>
           )}
 
-          {/* 3. Financial Data Table */}
-          {isLoading ? (
-            <div className="py-24 text-center space-y-3">
-              <div className="w-10 h-10 border-3 border-[#2652C8]/30 border-t-[#2652C8] rounded-full animate-spin mx-auto" />
-              <p className="text-xs font-semibold text-slate-500">Calculating and preparing financial document...</p>
-            </div>
-          ) : reportConfig.totalRows === 0 ? (
-            <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-xl p-8">
-              <p className="text-sm font-semibold text-slate-600">No records found for the selected criteria.</p>
-              <p className="text-xs text-slate-400 mt-1">Try switching the date range or account filters above.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-xs text-left border-collapse">
-                {/* Table Header */}
-                <thead>
-                  <tr className="bg-[#0A1A4A] text-white">
-                    {reportConfig.headers.map((h, i) => (
-                      <th
-                        key={i}
-                        className={cn(
-                          'py-2.5 px-3 font-bold tracking-wider uppercase text-[11px] border-b border-[#102E7A]',
-                          reportConfig.alignments[i] === 'right' ? 'text-right' : reportConfig.alignments[i] === 'center' ? 'text-center' : 'text-left'
-                        )}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+          {/* Refresh */}
+          <button
+            type="button"
+            onClick={fetchReport}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-600/70 transition-colors cursor-pointer"
+            title="Reload report data"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-blue-400')} />
+          </button>
 
-                {/* Table Body with Groups */}
-                <tbody>
-                  {paginatedGroups.map((group, gIdx) => (
-                    <React.Fragment key={gIdx}>
-                      {/* Group Header Row */}
-                      {group.groupTitle && (
-                        <tr className="bg-indigo-50/70 border-y border-indigo-100">
-                          <td
-                            colSpan={reportConfig.headers.length}
-                            className="py-2 px-3 font-bold text-indigo-900 text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                              <span>{group.groupTitle}</span>
-                            </div>
-                          </td>
-                        </tr>
+          {/* Print */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/70 transition-colors cursor-pointer"
+            title="Print Document"
+          >
+            <Printer className="w-3.5 h-3.5 text-slate-400" />
+            <span>Print</span>
+          </button>
+
+          {/* Direct Excel */}
+          <button
+            type="button"
+            onClick={() => {
+              downloadReportExcel({
+                reportTitle: reportConfig.title,
+                reportSubtitle: reportConfig.subtitle,
+                periodLabel: reportConfig.periodLabel,
+                asOfDate: reportConfig.asOfDate,
+                headers: reportConfig.headers,
+                columnAlignments: reportConfig.alignments,
+                groups: reportConfig.groups,
+                grandTotalRow: reportConfig.grandTotalRow,
+              });
+              toast.success('Excel spreadsheet downloaded!');
+            }}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-600/70 transition-colors cursor-pointer"
+            title="Download Excel Sheet"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Excel</span>
+          </button>
+
+          {/* Primary Download / Export Modal */}
+          <button
+            type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#2652C8] hover:bg-blue-600 text-white shadow-sm transition-all cursor-pointer"
+            title="Open Download / Export Options"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export PDF</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ─── 2. MAIN VIEWER WORKSPACE: SIDEBAR + PAPER CANVAS ───────────────────── */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left: Collapsible Page Thumbnails Sidebar */}
+        {isSidebarOpen && (
+          <aside className="w-64 bg-[#1E293B] border-r border-slate-700/80 flex flex-col shrink-0 z-20 print:hidden select-none transition-all duration-200">
+            {/* Sidebar Header */}
+            <div className="p-3 border-b border-slate-700/80 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-blue-400" />
+                <span>Page Thumbnails</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-400">
+                {totalDocumentPages} pages
+              </span>
+            </div>
+
+            {/* Thumbnail Cards Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {documentPages.map((page) => {
+                const isSelected = activePage === page.pageNumber;
+
+                return (
+                  <div
+                    key={page.pageNumber}
+                    onClick={() => scrollToPage(page.pageNumber)}
+                    className="group cursor-pointer flex flex-col items-center"
+                  >
+                    {/* Miniature Paper Sheet Preview */}
+                    <div
+                      className={cn(
+                        'w-full aspect-[1.414/1] bg-white rounded-sm transition-all duration-150 p-2 relative overflow-hidden flex flex-col justify-between shadow-md',
+                        isSelected
+                          ? 'ring-2 ring-[#2652C8] shadow-blue-900/40 shadow-lg scale-[1.02]'
+                          : 'opacity-70 group-hover:opacity-100 group-hover:scale-[1.01] border border-slate-600/50'
                       )}
+                    >
+                      {/* Top Header Mockup */}
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                        <div className="h-1.5 w-12 bg-slate-800 rounded-2xs" />
+                        <div className="h-1 w-8 bg-slate-300 rounded-2xs" />
+                      </div>
 
-                      {/* Detail Rows */}
-                      {group.rows.map((row, rIdx) => (
-                        <tr
-                          key={rIdx}
-                          className={cn(
-                            'border-b border-slate-100 hover:bg-slate-50/80 transition-colors',
-                            rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                      {/* Mockup Table Rows */}
+                      <div className="space-y-1 my-1">
+                        <div className="h-1.5 w-full bg-slate-200 rounded-2xs" />
+                        <div className="h-1 w-5/6 bg-slate-100 rounded-2xs" />
+                        <div className="h-1 w-full bg-slate-100 rounded-2xs" />
+                        <div className="h-1 w-4/5 bg-slate-100 rounded-2xs" />
+                        <div className="h-1 w-full bg-slate-100 rounded-2xs" />
+                        <div className="h-1.5 w-3/4 bg-blue-100 rounded-2xs" />
+                      </div>
+
+                      {/* Bottom Footer Mockup */}
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-1">
+                        <div className="h-1 w-10 bg-slate-200 rounded-2xs" />
+                        <span className="text-[8px] font-mono font-bold text-slate-400">
+                          {page.pageNumber}
+                        </span>
+                      </div>
+
+                      {/* Active Page Badge Overlay */}
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 size-2 rounded-full bg-[#2652C8] ring-2 ring-white" />
+                      )}
+                    </div>
+
+                    {/* Page Label & Title */}
+                    <div className="mt-1.5 flex items-center justify-between w-full px-1 text-[11px]">
+                      <span className={cn('font-mono font-bold', isSelected ? 'text-blue-400' : 'text-slate-400')}>
+                        Page {page.pageNumber}
+                      </span>
+                      <span className="text-[10px] text-slate-400 truncate max-w-[130px]" title={page.title}>
+                        {page.title.replace(/^.*:\s*/, '')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+        )}
+
+        {/* Right: Document Reading Canvas with Stacked Paper Sheets */}
+        <main
+          ref={viewerContainerRef}
+          className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#0B1120] flex flex-col items-center print:bg-white print:p-0 print:overflow-visible"
+        >
+          {/* Zoom Wrapper */}
+          <div
+            style={{
+              transform: `scale(${zoomLevel / 100})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.15s ease-out',
+            }}
+            className="flex flex-col items-center space-y-8 print:space-y-0 print:transform-none w-full max-w-[1050px]"
+          >
+            {documentPages.map((page) => (
+              <article
+                key={page.pageNumber}
+                id={`doc-sheet-page-${page.pageNumber}`}
+                className={cn(
+                  'w-full bg-white text-slate-900 shadow-2xl rounded-xs border border-slate-200/90 flex flex-col justify-between print:shadow-none print:border-none print:rounded-none print:w-full print:h-screen print:page-break-after-always',
+                  'min-h-[740px] p-8 sm:p-12' // Landscape paper proportions
+                )}
+              >
+                {/* ── Document Page Header ── */}
+                <header className="border-b border-slate-200 pb-4 mb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Left: Brand & Title */}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div className="size-6 rounded-md bg-[#0A1A4A] flex items-center justify-center text-white font-bold text-xs">
+                          B
+                        </div>
+                        <div>
+                          <div className="text-xs font-black tracking-wider text-[#0A1A4A] uppercase">
+                            BIZZMATE FINANCIAL SYSTEMS
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase">
+                            Institutional Settlement & Reporting
+                          </div>
+                        </div>
+                      </div>
+
+                      <h2 className="text-lg font-bold text-slate-900 mt-2 tracking-tight">
+                        {reportConfig.title}
+                      </h2>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {reportConfig.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Right: Date & Verification Stamp */}
+                    <div className="text-right text-[11px] space-y-0.5 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 shrink-0 font-sans">
+                      <div>
+                        <span className="text-slate-500">{reportConfig.periodLabel}:</span>{' '}
+                        <strong className="text-slate-900 font-mono font-bold">
+                          {formatDateToDDMMYY(reportConfig.asOfDate)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Generated:</span>{' '}
+                        <span className="text-slate-700 font-mono">{formatDateToDDMMYY(new Date())}</span>
+                      </div>
+                      <div className="text-[10px] font-semibold text-emerald-700 flex items-center justify-end gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Verified Ledger Record</span>
+                      </div>
+                    </div>
+                  </div>
+                </header>
+
+                {/* ── Document Page Data Table ── */}
+                <div className="flex-1 overflow-x-auto">
+                  <table className="w-full text-[11px] border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-slate-800 bg-[#0A1A4A] text-white">
+                        {reportConfig.headers.map((h, hIdx) => {
+                          const align = reportConfig.alignments[hIdx] || 'left';
+                          return (
+                            <th
+                              key={hIdx}
+                              className={cn(
+                                'py-2 px-2.5 font-bold tracking-wider uppercase text-[10px]',
+                                align === 'right' && 'text-right',
+                                align === 'center' && 'text-center',
+                                align === 'left' && 'text-left'
+                              )}
+                            >
+                              {h}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {page.groups.map((group, grpIdx) => (
+                        <React.Fragment key={grpIdx}>
+                          {/* Section Group Header */}
+                          {group.groupTitle && (
+                            <tr className="bg-slate-100/90 font-bold border-y border-slate-300">
+                              <td
+                                colSpan={reportConfig.headers.length}
+                                className="py-1.5 px-3 text-[11px] font-bold text-slate-800 uppercase tracking-wider"
+                              >
+                                {group.groupTitle}
+                              </td>
+                            </tr>
                           )}
-                        >
-                          {row.map((cell, cIdx) => {
-                            const isNumeric = reportConfig.alignments[cIdx] === 'right';
-                            const strVal = String(cell);
-                            const isNegative = strVal.startsWith('-');
 
+                          {/* Data Rows */}
+                          {group.rows.map((row, rIdx) => (
+                            <tr
+                              key={rIdx}
+                              className="hover:bg-blue-50/50 transition-colors border-b border-slate-100"
+                            >
+                              {row.map((cell, cIdx) => {
+                                const align = reportConfig.alignments[cIdx] || 'left';
+                                const isNumeric = typeof cell === 'number' || (!isNaN(Number(cell)) && cell !== '-' && cell !== '');
+                                const numVal = isNumeric ? Number(cell) : null;
+
+                                return (
+                                  <td
+                                    key={cIdx}
+                                    className={cn(
+                                      'py-1.5 px-2.5',
+                                      align === 'right' && 'text-right font-mono',
+                                      align === 'center' && 'text-center font-mono',
+                                      align === 'left' && 'text-left',
+                                      numVal !== null && numVal < 0 && 'text-rose-700 font-semibold',
+                                      numVal !== null && numVal > 0 && cIdx === row.length - 1 && 'text-emerald-700 font-semibold',
+                                      cell === '-' && 'text-slate-300 text-center'
+                                    )}
+                                  >
+                                    {cell}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+
+                          {/* Subtotal Row */}
+                          {group.subtotalRow && (
+                            <tr className="bg-blue-50/70 font-bold border-t border-b border-blue-200">
+                              {group.subtotalRow.map((cell, sIdx) => {
+                                const align = reportConfig.alignments[sIdx] || 'left';
+                                return (
+                                  <td
+                                    key={sIdx}
+                                    className={cn(
+                                      'py-1.5 px-2.5 text-slate-900 font-bold',
+                                      align === 'right' && 'text-right font-mono',
+                                      align === 'center' && 'text-center font-mono',
+                                      align === 'left' && 'text-left font-semibold text-slate-800'
+                                    )}
+                                  >
+                                    {cell}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+
+                      {/* Grand Total on Last Page */}
+                      {page.isLastPage && reportConfig.grandTotalRow && (
+                        <tr className="border-t-2 border-b-2 border-slate-900 bg-slate-100 font-black">
+                          {reportConfig.grandTotalRow.map((cell, gIdx) => {
+                            const align = reportConfig.alignments[gIdx] || 'left';
                             return (
                               <td
-                                key={cIdx}
+                                key={gIdx}
                                 className={cn(
-                                  'py-2 px-3 text-slate-800',
-                                  isNumeric && 'font-mono text-right tabular-nums',
-                                  reportConfig.alignments[cIdx] === 'center' && 'text-center',
-                                  isNumeric && isNegative && 'text-rose-600 font-semibold',
-                                  isNumeric && !isNegative && strVal !== '0.00' && strVal !== '0' && cIdx >= 6 && 'text-emerald-700 font-semibold'
+                                  'py-2.5 px-2.5 text-slate-950 font-black text-xs',
+                                  align === 'right' && 'text-right font-mono',
+                                  align === 'center' && 'text-center font-mono',
+                                  align === 'left' && 'text-left font-black tracking-wider uppercase'
                                 )}
                               >
                                 {cell}
@@ -928,120 +1149,36 @@ export function ReportViewerManager() {
                             );
                           })}
                         </tr>
-                      ))}
-
-                      {/* Subtotal Row */}
-                      {group.subtotalRow && (
-                        <tr className="bg-slate-100/90 font-bold border-b border-slate-300 text-slate-900">
-                          {group.subtotalRow.map((cell, cIdx) => (
-                            <td
-                              key={cIdx}
-                              className={cn(
-                                'py-2 px-3',
-                                reportConfig.alignments[cIdx] === 'right' && 'font-mono text-right tabular-nums',
-                                reportConfig.alignments[cIdx] === 'center' && 'text-center'
-                              )}
-                            >
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
                       )}
-                    </React.Fragment>
-                  ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                  {/* Grand Total Row */}
-                  {reportConfig.grandTotalRow && (
-                    <tr className="bg-[#0A1A4A] text-white font-extrabold text-xs">
-                      {reportConfig.grandTotalRow.map((cell, cIdx) => (
-                        <td
-                          key={cIdx}
-                          className={cn(
-                            'py-3 px-3',
-                            reportConfig.alignments[cIdx] === 'right' && 'font-mono text-right tabular-nums',
-                            reportConfig.alignments[cIdx] === 'center' && 'text-center'
-                          )}
-                        >
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* 4. Pagination Bar (Hidden on print) */}
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200 text-xs text-slate-600 print:hidden">
-            <div className="flex items-center gap-3">
-              <span>Rows per page:</span>
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                {([25, 50, 100, 'all'] as const).map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => {
-                      setPageSize(size);
-                      setCurrentPage(1);
-                    }}
-                    className={cn(
-                      'px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer',
-                      pageSize === size ? 'bg-white text-[#2652C8] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                    )}
-                  >
-                    {size === 'all' ? 'All' : size}
-                  </button>
-                ))}
-              </div>
-              <span className="text-slate-400">|</span>
-              <span>
-                Showing <strong className="text-slate-900">{currentPageRowsCount}</strong> of{' '}
-                <strong className="text-slate-900">{reportConfig.totalRows}</strong> records
-              </span>
-            </div>
-
-            {/* Prev / Next controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="font-semibold px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+                {/* ── Document Page Footer ── */}
+                <footer className="border-t border-slate-200 pt-3 mt-4 text-[10px] text-slate-400 flex items-center justify-between font-mono">
+                  <div>
+                    Generated by <strong className="text-slate-600">BizzMate Accounting Systems</strong> · Verified Document
+                  </div>
+                  <div className="font-sans font-semibold text-slate-500 uppercase tracking-widest text-[9px]">
+                    Strictly Confidential & Proprietary
+                  </div>
+                  <div className="font-bold text-slate-700">
+                    Page {page.pageNumber} of {totalDocumentPages}
+                  </div>
+                </footer>
+              </article>
+            ))}
           </div>
+        </main>
+      </div>
 
-          {/* 5. Document Footer Disclaimer */}
-          <div className="mt-8 pt-4 border-t border-slate-200/80 text-[10px] text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div>This statement was generated electronically by BizzMate Accounting and is valid without physical seal.</div>
-            <div>Confidential & Proprietary</div>
-          </div>
-        </div>
-      </main>
-
-      {/* ─── EXPORT CONFIGURATION MODAL ────────────────────────────────────── */}
+      {/* ─── 3. PRE-DOWNLOAD EXPORT MODAL ────────────────────────────────────── */}
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         reportTitle={reportConfig.title}
         totalRowsCount={reportConfig.totalRows}
-        currentPageRowsCount={currentPageRowsCount}
+        currentPageRowsCount={reportConfig.totalRows}
         onConfirmExport={handleExportExecute}
         isExporting={isExporting}
       />
