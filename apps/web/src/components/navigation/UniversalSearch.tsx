@@ -63,13 +63,13 @@ export interface SearchItem {
 }
 
 const STATIC_REGISTRY: SearchItem[] = [
-  // ── Pages: Core Blotters & Trading ──────────────────────────────
+  // ── Pages: Core Operations & Trading ──────────────────────────────
   {
     id: 'page-trades',
     title: 'Trades',
-    description: 'Trading ledger blotter, transactions, market orders, and execution filters',
+    description: 'Trading records, transactions, market orders, and execution filters',
     category: 'Pages',
-    keywords: ['trade', 'trades', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate', 'blotter'],
+    keywords: ['trade', 'trades', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate'],
     icon: ArrowUpDown,
     href: '/trades',
   },
@@ -454,7 +454,7 @@ const STATIC_REGISTRY: SearchItem[] = [
   {
     id: 'shortcut-table-filter',
     title: 'Current Table Filter & Search',
-    description: 'Instant multi-field row filtering on active blotters and ledgers',
+    description: 'Instant multi-field row filtering on active tables and ledgers',
     category: 'Shortcuts',
     keywords: ['find on page', 'table search', 'filter table', 'ctrl f'],
     icon: Keyboard,
@@ -690,7 +690,7 @@ export function UniversalSearch() {
               const isBroker = a.group?.name?.toUpperCase()?.includes('BROKER');
               const roleLabel = isBroker ? 'Broker' : 'Client';
 
-              // 1. Direct Entity Blotter Jump
+              // 1. Direct Entity Navigation Jump
               items.push({
                 id: `entity-${a.id}`,
                 title: `${a.code} - ${a.name}`,
