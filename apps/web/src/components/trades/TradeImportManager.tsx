@@ -438,7 +438,8 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
         setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
-        notify.success('Dubai Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length} Dubai trade rows.` });
+        const skipMsg = dubaiResult.skippedOptionsCount ? ` (${dubaiResult.skippedOptionsCount.toLocaleString()} Options trades excluded)` : '';
+        notify.success('Dubai Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
 
         setIsValidatingMasterData(true);
         setTimeout(async () => {
@@ -684,6 +685,8 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
           clnCharges1: parseFloat(r.clnCharges1) || null,
           clnCharges2: parseFloat(r.clnCharges2) || null,
           vat: parseFloat(r.vat) || null,
+          substituteClientCode: r.substituteClientCode,
+          remarks: r.substituteClientCode ? `Imported via ${r.substituteClientCode}` : 'Imported via Trade_FnO wizard',
         };
       });
 

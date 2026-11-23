@@ -285,11 +285,25 @@ function extractDubaiFields(
   };
 
   const rawCP = g('callPut', 11);
+  const rawClient = g('clientCode', 3);
+
+  // Check last column for Real Client Code:
+  // If the row has extra trailing columns beyond the standard 28-field header (e.g. index 29 or fields[fields.length - 1]),
+  // check if it contains a real client code instead of trade status descriptors ("Normal", "MediumCarry", "Forward", "Spot", etc.).
+  const lastColRaw = fields.length > 28 ? fields[fields.length - 1].trim().replace(/^["']|["']$/g, '') : '';
+  const standardDescriptors = ['NORMAL', 'MEDIUMCARRY', 'FORWARD', 'SPOT'];
+  const hasSwappedClient = lastColRaw !== '' && !standardDescriptors.includes(lastColRaw.toUpperCase());
+
+  const effectiveClientCode = hasSwappedClient ? lastColRaw : rawClient;
+  const substituteClientCode = hasSwappedClient ? rawClient : undefined;
+
   return {
     typeCode:        g('typeCode', 0),
     tradeDate:       g('tradeDate', 1),
     tradeTime:       g('tradeTime', 2),
-    clientCode:      g('clientCode', 3),
+    clientCode:      effectiveClientCode,
+    substituteClientCode,
+    rawLastCol:      lastColRaw,
     marketCode:      g('marketCode', 4),
     securityCode:    g('securityCode', 5),
     currencyCode:    g('currencyCode', 6),
@@ -316,7 +330,7 @@ function extractDubaiFields(
     platformOrderId: g('platformOrderId', 26),
     settlementId:    g('settlementId', 27),
     settlementDate:  g('settlementDate', 28),
-    tradeType:       g('tradeType', 29),
+    tradeType:       hasSwappedClient ? 'Normal' : (g('tradeType', 29) || 'Normal'),
   };
 }
 
@@ -433,6 +447,7 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
   }
 
   const debugSampleLinesList: Array<{ row: number; content: string }> = [];
+  let skippedOptionsCount = 0;
 
   const startIndex = colMapMatched ? 1 : 0;
 
@@ -465,8 +480,19 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
     }
 
     const trade = extractDubaiFields(fields, colMap);
-    const validationError = validateDubaiRow(trade);
 
+    // Filter out Option trades (only import and show Futures)
+    const isOption =
+      trade.callPut === 'Options' ||
+      (trade.rawCallPut && ['P', 'C', 'PE', 'CE', 'PUT', 'CALL'].includes(trade.rawCallPut.trim().toUpperCase())) ||
+      (trade.strikePrice && parseFloat(trade.strikePrice) > 0);
+
+    if (isOption) {
+      skippedOptionsCount++;
+      continue;
+    }
+
+    const validationError = validateDubaiRow(trade);
 
     if (validationError) {
       errors.push({
@@ -489,6 +515,7 @@ export function parseDubaiTradeFile(raw: string): DubaiParseResult {
     totalRows: rows.length,
     successCount: trades.length,
     errorCount: errors.length,
+    skippedOptionsCount,
     debugSampleCsv,
     debugSampleLines: debugSampleLinesList,
   };

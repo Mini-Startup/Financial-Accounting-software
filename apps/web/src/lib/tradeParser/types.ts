@@ -73,6 +73,8 @@ export interface DubaiParsedTrade {
   tradeDate: string;
   tradeTime: string;
   clientCode: string;
+  substituteClientCode?: string;
+  rawLastCol?: string;
   marketCode: string;       // acts as exchange
   securityCode: string;
   currencyCode: string;
@@ -110,6 +112,7 @@ export interface DubaiParseResult {
   totalRows: number;
   successCount: number;
   errorCount: number;
+  skippedOptionsCount?: number;
   debugSampleCsv?: string;
   debugSampleLines?: Array<{ row: number; content: string }>;
 }
