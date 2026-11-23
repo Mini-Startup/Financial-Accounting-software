@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, FileSpreadsheet, Check, X, Sliders, Layout, Layers, ShieldCheck } from 'lucide-react';
+import { FileText, FileSpreadsheet, Check, X, Sliders, Layout, Download } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export interface ExportConfig {
@@ -35,7 +35,6 @@ export function ExportModal({
   const [format, setFormat] = useState<'pdf' | 'excel'>('pdf');
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('portrait');
   const [scope, setScope] = useState<'all' | 'page'>('all');
-  const [includeKpis, setIncludeKpis] = useState(true);
   const [includeSubtotals, setIncludeSubtotals] = useState(true);
   const [includeTotals, setIncludeTotals] = useState(true);
 
@@ -46,94 +45,54 @@ export function ExportModal({
       format,
       orientation,
       scope,
-      includeKpis,
+      includeKpis: false, // Permanently purged
       includeSubtotals,
       includeTotals,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="px-6 py-4.5 bg-gradient-to-r from-[#0A1A4A] via-[#102E7A] to-[#1D4ED8] text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
-              <Sliders className="w-4 h-4 text-blue-200" />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isExporting) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-lg flex flex-col p-0 overflow-hidden shadow-2xl border border-slate-200/90 bg-white rounded-2xl animate-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Executive Modal Header (Matching Standard App Modals) */}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-[#2652C8] flex items-center justify-center shrink-0 border border-blue-100/60 shadow-2xs">
+              <Sliders className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold tracking-tight">Export Report Configuration</h3>
-              <p className="text-[11px] text-blue-200">{reportTitle}</p>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+                Export Document Configuration
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5 truncate max-w-xs sm:max-w-sm">
+                {reportTitle}
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             disabled={isExporting}
-            className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="p-6 space-y-5">
-          {/* 1. Format Choice */}
-          <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
-              Export Format
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormat('pdf')}
-                className={cn(
-                  'flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer',
-                  format === 'pdf'
-                    ? 'border-[#2652C8] bg-blue-50/60 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 hover:bg-slate-50'
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center',
-                    format === 'pdf' ? 'bg-[#2652C8] text-white' : 'bg-slate-100 text-slate-600'
-                  )}
-                >
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900">PDF Document</div>
-                  <div className="text-[11px] text-slate-500">Executive & branded styling</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFormat('excel')}
-                className={cn(
-                  'flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer',
-                  format === 'excel'
-                    ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20'
-                    : 'border-slate-200 hover:bg-slate-50'
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center',
-                    format === 'excel' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                  )}
-                >
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900">Excel Spreadsheet</div>
-                  <div className="text-[11px] text-slate-500">Raw numbers & formulas</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* 2. PDF Orientation (Only for PDF) */}
+        {/* Content Body */}
+        <div className="p-6 space-y-4 bg-white text-slate-800">
+          {/* 1. Page Orientation (First priority as requested) */}
           {format === 'pdf' && (
             <div>
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
@@ -146,7 +105,7 @@ export function ExportModal({
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
                     orientation === 'portrait'
-                      ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
+                      ? 'border-[#2652C8] bg-blue-50/60 text-[#2652C8] font-bold ring-1 ring-blue-500/20'
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   )}
                 >
@@ -163,7 +122,7 @@ export function ExportModal({
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
                     orientation === 'landscape'
-                      ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
+                      ? 'border-[#2652C8] bg-blue-50/60 text-[#2652C8] font-bold ring-1 ring-blue-500/20'
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   )}
                 >
@@ -177,6 +136,62 @@ export function ExportModal({
             </div>
           )}
 
+          {/* 2. Format Choice */}
+          <div>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
+              Export Format
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormat('pdf')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer',
+                  format === 'pdf'
+                    ? 'border-[#2652C8] bg-blue-50/60 ring-1 ring-blue-500/20'
+                    : 'border-slate-200 hover:bg-slate-50'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                    format === 'pdf' ? 'bg-[#2652C8] text-white shadow-2xs' : 'bg-slate-100 text-slate-600'
+                  )}
+                >
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">PDF Document</div>
+                  <div className="text-[11px] text-slate-500">Executive & branded styling</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormat('excel')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer',
+                  format === 'excel'
+                    ? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-500/20'
+                    : 'border-slate-200 hover:bg-slate-50'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                    format === 'excel' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600'
+                  )}
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">Excel Sheet</div>
+                  <div className="text-[11px] text-slate-500">Raw formulas & numbers</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* 3. Scope / Range */}
           <div>
             <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
@@ -189,11 +204,11 @@ export function ExportModal({
                 className={cn(
                   'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
                   scope === 'all'
-                    ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
+                    ? 'border-[#2652C8] bg-blue-50/60 text-[#2652C8] font-bold ring-1 ring-blue-500/20'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                <span>All Filtered Data ({totalRowsCount} rows)</span>
+                <span>All Records ({totalRowsCount})</span>
                 {scope === 'all' && <Check className="w-4 h-4 text-[#2652C8]" />}
               </button>
 
@@ -203,11 +218,11 @@ export function ExportModal({
                 className={cn(
                   'flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer',
                   scope === 'page'
-                    ? 'border-[#2652C8] bg-blue-50/50 text-[#2652C8] font-bold'
+                    ? 'border-[#2652C8] bg-blue-50/60 text-[#2652C8] font-bold ring-1 ring-blue-500/20'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                <span>Current Page Only ({currentPageRowsCount} rows)</span>
+                <span>Current Page ({currentPageRowsCount})</span>
                 {scope === 'page' && <Check className="w-4 h-4 text-[#2652C8]" />}
               </button>
             </div>
@@ -218,17 +233,7 @@ export function ExportModal({
             <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
               Include In Document
             </label>
-            <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
-              <label className="flex items-center gap-2.5 text-xs font-medium text-slate-800 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeKpis}
-                  onChange={(e) => setIncludeKpis(e.target.checked)}
-                  className="rounded border-slate-300 text-[#2652C8] focus:ring-[#2652C8] w-4 h-4"
-                />
-                <span>Executive KPI Summary Cards</span>
-              </label>
-
+            <div className="space-y-2.5 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
               <label className="flex items-center gap-2.5 text-xs font-medium text-slate-800 cursor-pointer">
                 <input
                   type="checkbox"
@@ -246,19 +251,19 @@ export function ExportModal({
                   onChange={(e) => setIncludeTotals(e.target.checked)}
                   className="rounded border-slate-300 text-[#2652C8] focus:ring-[#2652C8] w-4 h-4"
                 />
-                <span>Grand Total & System Audit Seal</span>
+                <span>Grand Total &amp; System Audit Seal</span>
               </label>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        {/* Executive Modal Footer (Matching Standard App Modals) */}
+        <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isExporting}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
@@ -267,7 +272,7 @@ export function ExportModal({
             type="button"
             onClick={handleDownload}
             disabled={isExporting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#2652C8] hover:bg-[#1E40AF] text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#0A1A4A] hover:bg-[#102E7A] text-white shadow-sm transition-all cursor-pointer disabled:opacity-50"
           >
             {isExporting ? (
               <>
@@ -276,7 +281,7 @@ export function ExportModal({
               </>
             ) : (
               <>
-                <ShieldCheck className="w-4 h-4" />
+                <Download className="w-4 h-4" />
                 <span>Download {format.toUpperCase()}</span>
               </>
             )}
