@@ -29,6 +29,12 @@ import {
   type OpenPositionParsedRow 
 } from '../../lib/tradeParser/openPositionParser';
 import { validateClosingRateImportFile, type FileValidationResult } from '../../lib/tradeParser';
+import {
+  detectFileTemplate,
+  fetchFileImportTemplates,
+  DEFAULT_CLOSING_RATE_TEMPLATES,
+  type FileImportTemplateOption,
+} from '../../lib/tradeParser/templateDetector';
 import { formatCurrencySymbol } from '@/utils/currency';
 import { formatDateToDDMMYY } from '@/utils/dateUtils';
 import { useTopBar } from '@/context/TopBarContext';
@@ -130,6 +136,16 @@ export function ClosingRatePageManager({
   const [rawOpenPositionRows, setRawOpenPositionRows] = useState<OpenPositionParsedRow[]>([]);
   const [parsedItems, setParsedItems] = useState<ParsedClosingRateItem[]>([]);
   const [fileValidationError, setFileValidationError] = useState<FileValidationResult | null>(null);
+  const [closingRateTemplates, setClosingRateTemplates] = useState<FileImportTemplateOption[]>(DEFAULT_CLOSING_RATE_TEMPLATES);
+  const [selectedTemplateCode, setSelectedTemplateCode] = useState<string>('AUTO');
+  const [detectedTemplate, setDetectedTemplate] = useState<FileImportTemplateOption | null>(null);
+
+  // Load closing rate templates on mount
+  useEffect(() => {
+    fetchFileImportTemplates('CLOSING_RATE').then((data) => {
+      if (data && data.length > 0) setClosingRateTemplates(data);
+    });
+  }, []);
   
   // Preview Selection & Search States
   const [selectedRateIndices, setSelectedRateIndices] = useState<Set<number>>(new Set());
@@ -331,6 +347,20 @@ export function ClosingRatePageManager({
           return;
         }
 
+        // ── Auto-Detect Template if AUTO is selected ──
+        if (selectedTemplateCode === 'AUTO') {
+          const detected = detectFileTemplate(text, closingRateTemplates);
+          if (detected) {
+            setSelectedTemplateCode(detected.code);
+            setDetectedTemplate(detected);
+            notify.info('Template Auto-Detected', {
+              description: `Detected format: ${detected.name}`,
+            });
+          } else {
+            setSelectedTemplateCode('BROKER_OPEN_POSITIONS');
+          }
+        }
+
         setFileValidationError(null);
         const rawRows = parseOpenPositionCSV(text);
         if (rawRows.length === 0) {
@@ -362,6 +392,8 @@ export function ClosingRatePageManager({
     setFileValidationError(null);
     setRawOpenPositionRows([]);
     setParsedItems([]);
+    setSelectedTemplateCode('AUTO');
+    setDetectedTemplate(null);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -806,17 +838,51 @@ export function ClosingRatePageManager({
               /* ── 1. Initial Upload State (Clean, Compact, No Dropzone after file selected) ── */
               <div className="p-6 overflow-y-auto space-y-5 bg-slate-50/50 flex-1">
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-                  {/* Top Section: Date Selection */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                      Import Rate Date <span className="text-rose-500">*</span>
-                    </label>
-                    <UniversalDatePicker
-                      value={importDate}
-                      onChange={(d) => setImportDate(d)}
-                      placeholder="DD-MM-YY"
-                    />
-                    <p className="text-[11px] text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
+                  {/* Top Section: Date & Template Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                        Import Rate Date <span className="text-rose-500">*</span>
+                      </label>
+                      <UniversalDatePicker
+                        value={importDate}
+                        onChange={(d) => setImportDate(d)}
+                        placeholder="DD-MM-YY"
+                      />
+                      <p className="text-[11px] text-slate-400">Closing rates extracted from this file will be saved under this date.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center justify-between">
+                        <span>File Format / Template</span>
+                        {detectedTemplate && (
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            Auto-detected
+                          </span>
+                        )}
+                      </label>
+                      <UniversalDropdown
+                        value={selectedTemplateCode}
+                        options={[
+                          { value: 'AUTO', label: 'Auto (Auto Detect)' },
+                          ...closingRateTemplates.map((t) => ({
+                            value: t.code,
+                            label: `${t.name} (${t.code})`,
+                          })),
+                        ]}
+                        onChange={(val) => {
+                          setSelectedTemplateCode(val);
+                          if (val === 'AUTO') {
+                            setDetectedTemplate(null);
+                          } else {
+                            const found = closingRateTemplates.find((t) => t.code === val);
+                            if (found) setDetectedTemplate(found);
+                          }
+                        }}
+                        disabled={isProcessing}
+                      />
+                      <p className="text-[11px] text-slate-400">Auto detects schema signatures or select custom mapping.</p>
+                    </div>
                   </div>
 
                   {/* Bottom Section: File Upload Component */}
@@ -852,6 +918,15 @@ export function ClosingRatePageManager({
                       <span className="text-slate-600 font-medium">Date: {formatDateToDDMMYY(importDate) || importDate}</span>
                       <span className="text-slate-300">|</span>
                       <span className="text-slate-500 font-semibold">{rawOpenPositionRows.length.toLocaleString()} rows</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px] flex items-center gap-1">
+                        {detectedTemplate?.name || closingRateTemplates.find((t) => t.code === selectedTemplateCode)?.name || selectedTemplateCode}
+                        {detectedTemplate && (
+                          <span className="text-[9px] bg-emerald-200/70 text-emerald-800 font-semibold px-1 rounded">
+                            Auto
+                          </span>
+                        )}
+                      </span>
                     </div>
 
                     {/* Clean single-line Remove file button (compact X icon with tooltip) */}

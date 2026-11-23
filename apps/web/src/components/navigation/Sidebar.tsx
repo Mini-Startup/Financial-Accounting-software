@@ -148,6 +148,7 @@ const sections: NavSection[] = [
     icon: ShieldCheckIcon,
     children: [
       { name: "Users & Roles", path: "/users", icon: Users, feature: "USER_MANAGEMENT" },
+      { name: "File Import Rules", path: "/file-import-rules", icon: Sliders, feature: "TRADES" },
     ],
   },
 ];
