@@ -180,12 +180,15 @@ export function ClosingRatePageManager({
     );
   });
 
-  // Sync selectedRateIndices whenever parsedItems or matchedParsedItems changes (default all matched rates selected)
+  // Sync selectedRateIndices whenever parsedItems or matchedParsedItems changes
+  // Default to selecting only VALID rates (where script exists in DB)
   useEffect(() => {
     const init = new Set<number>();
     matchedParsedItems.forEach((item) => {
-      const idx = parsedItems.indexOf(item);
-      if (idx !== -1) init.add(idx);
+      if (item.status === 'Valid') {
+        const idx = parsedItems.indexOf(item);
+        if (idx !== -1) init.add(idx);
+      }
     });
     setSelectedRateIndices(init);
   }, [matchedParsedItems, parsedItems]);
@@ -792,32 +795,34 @@ export function ClosingRatePageManager({
       toast.success(`Replaced all occurrences in ${columnKey}`);
     };
 
-    const allIndicesInFiltered = filteredParsedItems
+    const validIndicesInFiltered = filteredParsedItems
       .map((item) => parsedItems.indexOf(item))
-      .filter((idx) => idx !== -1);
+      .filter((idx) => idx !== -1 && parsedItems[idx]?.status === 'Valid');
 
-    const isAllFilteredSelected =
-      allIndicesInFiltered.length > 0 &&
-      allIndicesInFiltered.every((idx) => selectedRateIndices.has(idx));
+    const isAllFilteredValidSelected =
+      validIndicesInFiltered.length > 0 &&
+      validIndicesInFiltered.every((idx) => selectedRateIndices.has(idx));
 
     const handleToggleSelectAllFiltered = () => {
       setSelectedRateIndices((prev) => {
         const next = new Set(prev);
-        if (isAllFilteredSelected) {
-          allIndicesInFiltered.forEach((idx) => next.delete(idx));
+        if (isAllFilteredValidSelected) {
+          validIndicesInFiltered.forEach((idx) => next.delete(idx));
         } else {
-          allIndicesInFiltered.forEach((idx) => next.add(idx));
+          validIndicesInFiltered.forEach((idx) => next.add(idx));
         }
         return next;
       });
     };
 
-    const handleSelectAllMatched = () => {
+    const handleSelectAllValid = () => {
       setSelectedRateIndices((prev) => {
         const next = new Set(prev);
         matchedParsedItems.forEach((item) => {
-          const idx = parsedItems.indexOf(item);
-          if (idx !== -1) next.add(idx);
+          if (item.status === 'Valid') {
+            const idx = parsedItems.indexOf(item);
+            if (idx !== -1) next.add(idx);
+          }
         });
         return next;
       });
@@ -937,15 +942,14 @@ export function ClosingRatePageManager({
                       <span className="text-slate-500 font-semibold">{rawOpenPositionRows.length.toLocaleString()} rows</span>
                     </div>
 
-                    {/* Clean single-line Remove file button (cancels import & resets) */}
+                    {/* Clean single-line Remove file button (compact X icon with tooltip) */}
                     <button
                       type="button"
                       onClick={handleClearFile}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
                       title="Remove file"
                     >
-                      <X className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
-                      <span>Remove file</span>
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -1095,10 +1099,10 @@ export function ClosingRatePageManager({
 
                       <button
                         type="button"
-                        onClick={handleSelectAllMatched}
+                        onClick={handleSelectAllValid}
                         className="text-xs font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition-colors cursor-pointer"
                       >
-                        Select All
+                        Select All Valid
                       </button>
 
                       <button
