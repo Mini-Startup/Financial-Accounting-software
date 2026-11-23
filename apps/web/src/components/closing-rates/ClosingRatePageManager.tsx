@@ -139,24 +139,60 @@ export function ClosingRatePageManager({
   const [previewSearchColumn, setPreviewSearchColumn] = useState('ALL');
   const [showPreviewFindAndReplace, setShowPreviewFindAndReplace] = useState(false);
 
-  // Sync selectedRateIndices whenever parsedItems changes (default all Valid selected)
+  // System settlement trades for date verification
+  const [settlementItems, setSettlementItems] = useState<any[]>([]);
+
+  // Filter Parsed Closing Rates to only those relevant to active unsettled trades
+  // (User requirement: Only matched closing rates for active unsettled trades should be shown, with stats chips)
+  const activeUnsettledScriptIds = new Set(
+    settlementItems
+      .filter((i) => i.scriptId && i.netQty !== 0)
+      .map((i) => i.scriptId)
+  );
+
+  const activeUnsettledScriptNames = new Set(
+    settlementItems
+      .filter((i) => i.netQty !== 0)
+      .flatMap((i) => [
+        (i.scriptShortName || '').toUpperCase().trim(),
+        (i.scriptFullName || '').toUpperCase().trim(),
+        (i.securityName || '').toUpperCase().trim(),
+      ])
+      .filter(Boolean)
+  );
+
+  const matchedParsedItems = parsedItems.filter((item) => {
+    // If no active settlement trades, show all parsed items so user can import closing rates
+    if (activeUnsettledScriptNames.size === 0 && activeUnsettledScriptIds.size === 0) return true;
+
+    // Check if scriptId matches an active unsettled trade
+    if (item.resolvedScriptId && activeUnsettledScriptIds.has(item.resolvedScriptId)) return true;
+
+    // Check if commodityCode, scriptFullName, or securityName matches
+    const commCode = (item.commodityCode || '').toUpperCase().trim();
+    const fullName = (item.scriptFullName || '').toUpperCase().trim();
+    const secName = (item.securityName || '').toUpperCase().trim();
+
+    return (
+      activeUnsettledScriptNames.has(commCode) ||
+      activeUnsettledScriptNames.has(fullName) ||
+      activeUnsettledScriptNames.has(secName)
+    );
+  });
+
+  // Sync selectedRateIndices whenever parsedItems or matchedParsedItems changes (default all matched rates selected)
   useEffect(() => {
     const init = new Set<number>();
-    parsedItems.forEach((item, idx) => {
-      if (item.status === 'Valid') init.add(idx);
+    matchedParsedItems.forEach((item) => {
+      const idx = parsedItems.indexOf(item);
+      if (idx !== -1) init.add(idx);
     });
     setSelectedRateIndices(init);
-  }, [parsedItems]);
-
-  // Accordion state (Closed by default)
-  const [isAccordionOpen, setIsAccordionOpen] = useState<boolean>(false);
+  }, [matchedParsedItems, parsedItems]);
 
   // Pagination for Accordion Table
   const [tablePage, setTablePage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(20);
-
-  // System settlement trades for date verification
-  const [settlementItems, setSettlementItems] = useState<any[]>([]);
 
   // Duplicate Check Modal state
   const [duplicateCheckModal, setDuplicateCheckModal] = useState<{
@@ -329,7 +365,6 @@ export function ClosingRatePageManager({
         setRawOpenPositionRows(rawRows);
         const items = processOpenPositionClosingRates(rawRows, exchanges, localScripts);
         setParsedItems(items);
-        setIsAccordionOpen(true);
         notify.success('Rates Extracted Successfully', {
           description: `Extracted ${items.length} unique closing rates from ${rawRows.length} open position rows.`,
         });
@@ -353,14 +388,15 @@ export function ClosingRatePageManager({
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  // Perform Open Position Verification against system settlement trades
+  // Perform Open Position Verification against system settlement trades (One-Way Verification: System -> CSV)
   const performVerification = (): {
     status: 'NO_FILE' | 'VALIDATED' | 'FAILED';
     items: PositionVerificationItem[];
     discrepancies: PositionVerificationItem[];
+    netQtyMatched: boolean;
   } => {
     if (rawOpenPositionRows.length === 0) {
-      return { status: 'NO_FILE', items: [], discrepancies: [] };
+      return { status: 'NO_FILE', items: [], discrepancies: [], netQtyMatched: false };
     }
 
     // 1. Group CSV open net lots by ClientCode + SecurityName (constructed using full script name)
@@ -439,18 +475,17 @@ export function ClosingRatePageManager({
       systemClientMap.set(key, { item, netQty: item.netQty });
     }
 
-    // 3. Compare All Positions (Valid + Discrepancies)
+    // 3. Asymmetric / One-Way Verification: Only verify system trades against CSV
+    // Whatever is in system must match in CSV. Extra positions in CSV are ignored.
     const items: PositionVerificationItem[] = [];
-    const allKeys = new Set([...Array.from(csvClientMap.keys()), ...Array.from(systemClientMap.keys())]);
 
-    for (const key of Array.from(allKeys)) {
-      const csvData = csvClientMap.get(key);
-      const csvQty = csvData ? csvData.netLots : 0;
+    for (const key of Array.from(systemClientMap.keys())) {
       const sysObj = systemClientMap.get(key);
       const sysQty = sysObj ? sysObj.netQty : 0;
+      if (sysQty === 0) continue;
 
-      // Skip entries where both system and CSV have 0 open positions
-      if (csvQty === 0 && sysQty === 0) continue;
+      const csvData = csvClientMap.get(key);
+      const csvQty = csvData ? csvData.netLots : 0;
 
       const diff = sysQty - csvQty;
       const isQtyMatched = Math.abs(diff) <= 0.001;
@@ -462,25 +497,22 @@ export function ClosingRatePageManager({
       // Check script in DB
       const isUnmappedScript = !!csvData?.isScriptMissing;
 
-      // Position is valid if quantity matches and script exists in DB (client validation not required)
       const isValid = isQtyMatched && !isUnmappedScript;
 
       let reason = 'Matched';
       if (isUnmappedScript) {
         reason = `Script '${csvData?.commodityCode}' not found in database. Please create script.`;
       } else if (!isQtyMatched) {
-        reason = sysQty === 0
-          ? `Position present in CSV (Qty: ${csvQty}) but missing in system trades (Qty: 0)`
-          : csvQty === 0
-          ? `Position present in system trades (Qty: ${sysQty}) but missing in CSV (Qty: 0)`
-          : `Open quantity mismatch: System (${sysQty}) vs CSV (${csvQty})`;
+        reason = csvQty === 0
+          ? `Position in system (Qty: ${sysQty}) is missing in broker position file (Qty: 0)`
+          : `Quantity mismatch: System (${sysQty}) vs File (${csvQty})`;
       }
 
       items.push({
         clientCode,
         securityName,
-        commodityCode: csvData?.commodityCode,
-        exchangeCode: csvData?.exchangeCode,
+        commodityCode: csvData?.commodityCode || sysObj?.item?.script?.shortName,
+        exchangeCode: csvData?.exchangeCode || sysObj?.item?.exchange?.code,
         systemNetQty: sysQty,
         csvNetQty: csvQty,
         diff,
@@ -492,12 +524,14 @@ export function ClosingRatePageManager({
     }
 
     const discrepancies = items.filter((i) => !i.isValid);
-    const isValidated = discrepancies.length === 0 && items.length > 0;
+    const netQtyMatched = discrepancies.length === 0;
+    const isValidated = netQtyMatched && items.length > 0;
 
     return {
-      status: isValidated ? ('VALIDATED' as const) : ('FAILED' as const),
+      status: items.length === 0 ? ('VALIDATED' as const) : (isValidated ? ('VALIDATED' as const) : ('FAILED' as const)),
       items,
       discrepancies,
+      netQtyMatched,
     };
   };
 
@@ -600,11 +634,29 @@ export function ClosingRatePageManager({
   };
 
   const handleConfirmImport = async () => {
-    const validItems = parsedItems.filter(
-      (item, idx) => selectedRateIndices.has(idx) && item.status === 'Valid' && item.resolvedExchangeId && item.resolvedScriptId
+    // Check if any selected item is unmapped (script missing in DB)
+    const selectedIndicesList = Array.from(selectedRateIndices);
+    const selectedItems = selectedIndicesList.map((idx) => parsedItems[idx]).filter(Boolean);
+
+    const unmappedSelected = selectedItems.filter(
+      (item) => item.status !== 'Valid' || !item.resolvedScriptId
+    );
+
+    if (unmappedSelected.length > 0) {
+      const firstUnmapped = unmappedSelected[0];
+      toast.error(
+        `Script '${firstUnmapped.commodityCode}' (${firstUnmapped.securityName}) is not in database. Please create this script before importing!`,
+        { duration: 6000 }
+      );
+      handleOpenScriptModal(firstUnmapped.commodityCode, firstUnmapped.securityName, firstUnmapped.exchangeCode);
+      return;
+    }
+
+    const validItems = selectedItems.filter(
+      (item) => item.status === 'Valid' && item.resolvedExchangeId && item.resolvedScriptId
     );
     if (validItems.length === 0) {
-      toast.error('No selected valid mapped scripts available to import. Please select at least one valid script.');
+      toast.error('No valid mapped scripts selected to import. Please select at least one valid script.');
       return;
     }
 
@@ -669,12 +721,16 @@ export function ClosingRatePageManager({
   const renderImportModal = () => {
     if (!isImportModalOpen) return null;
 
-    const validCount = parsedItems.filter((i) => i.status === 'Valid').length;
-    const selectedValidCount = parsedItems.filter((i, idx) => selectedRateIndices.has(idx) && i.status === 'Valid').length;
-    const unmappedCount = parsedItems.filter((i) => i.status === 'Unmapped').length;
+    // Use matchedParsedItems (matched against active unsettled trades) by default
+    const validCount = matchedParsedItems.filter((i) => i.status === 'Valid').length;
+    const selectedCount = matchedParsedItems.filter((i) => {
+      const gIdx = parsedItems.indexOf(i);
+      return gIdx !== -1 && selectedRateIndices.has(gIdx);
+    }).length;
+    const unmappedCount = matchedParsedItems.filter((i) => i.status === 'Unmapped').length;
 
     // Filter parsed items based on preview search
-    const filteredParsedItems = parsedItems.filter((item) => {
+    const filteredParsedItems = matchedParsedItems.filter((item) => {
       if (!previewSearchQuery.trim()) return true;
       const q = previewSearchQuery.toLowerCase().trim();
       if (previewSearchColumn === 'exchangeCode') return (item.exchangeCode || '').toLowerCase().includes(q);
@@ -736,32 +792,35 @@ export function ClosingRatePageManager({
       toast.success(`Replaced all occurrences in ${columnKey}`);
     };
 
-    const validIndicesInFiltered = filteredParsedItems
+    const allIndicesInFiltered = filteredParsedItems
       .map((item) => parsedItems.indexOf(item))
-      .filter((idx) => idx !== -1 && parsedItems[idx]?.status === 'Valid');
+      .filter((idx) => idx !== -1);
 
-    const isAllFilteredValidSelected =
-      validIndicesInFiltered.length > 0 &&
-      validIndicesInFiltered.every((idx) => selectedRateIndices.has(idx));
+    const isAllFilteredSelected =
+      allIndicesInFiltered.length > 0 &&
+      allIndicesInFiltered.every((idx) => selectedRateIndices.has(idx));
 
-    const handleToggleSelectAllValid = () => {
+    const handleToggleSelectAllFiltered = () => {
       setSelectedRateIndices((prev) => {
         const next = new Set(prev);
-        if (isAllFilteredValidSelected) {
-          validIndicesInFiltered.forEach((idx) => next.delete(idx));
+        if (isAllFilteredSelected) {
+          allIndicesInFiltered.forEach((idx) => next.delete(idx));
         } else {
-          validIndicesInFiltered.forEach((idx) => next.add(idx));
+          allIndicesInFiltered.forEach((idx) => next.add(idx));
         }
         return next;
       });
     };
 
-    const handleSelectAllValidOverall = () => {
-      const allValid = new Set<number>();
-      parsedItems.forEach((item, idx) => {
-        if (item.status === 'Valid') allValid.add(idx);
+    const handleSelectAllMatched = () => {
+      setSelectedRateIndices((prev) => {
+        const next = new Set(prev);
+        matchedParsedItems.forEach((item) => {
+          const idx = parsedItems.indexOf(item);
+          if (idx !== -1) next.add(idx);
+        });
+        return next;
       });
-      setSelectedRateIndices(allValid);
     };
 
     const handleDeselectAll = () => {
@@ -888,24 +947,6 @@ export function ClosingRatePageManager({
                       <X className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
                       <span>Remove file</span>
                     </button>
-
-                    {/* Verification Status Badge */}
-                    {verification.status === 'VALIDATED' ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        Open Position Verified
-                      </span>
-                    ) : verification.status === 'FAILED' ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                        Mismatch ({verification.discrepancies.length})
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                        No Settlement Trades
-                      </span>
-                    )}
                   </div>
 
                   {/* Top Action Buttons */}
@@ -935,7 +976,7 @@ export function ClosingRatePageManager({
 
                     <button
                       onClick={handleConfirmImport}
-                      disabled={isProcessing || selectedValidCount === 0}
+                      disabled={isProcessing || selectedCount === 0}
                       className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-xl bg-[#2652C8] hover:bg-[#1E40AF] text-white shadow-md shadow-blue-600/20 transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? (
@@ -944,52 +985,56 @@ export function ClosingRatePageManager({
                           <span>Saving…</span>
                         </>
                       ) : (
-                        <>Import {selectedValidCount} Selected Rates</>
+                        <>Import {selectedCount} Selected Rates</>
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* KPI Executive Summary Strip (Dashboard Double-Bezel Design) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
-                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Unique Rates</div>
-                        <div className="text-2xl font-extrabold font-mono text-slate-900 mt-1">{parsedItems.length.toLocaleString()}</div>
-                        <div className="text-[11px] text-slate-400 mt-1 font-medium">from {rawOpenPositionRows.length.toLocaleString()} open position rows</div>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#2652C8]">
-                        <FileSpreadsheet className="w-5 h-5 stroke-[2]" />
-                      </div>
-                    </div>
+                {/* Minimalist Stats Chips Bar */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Matched Closing Rates Chip */}
+                  <div className="flex items-center gap-2 px-3.5 py-2 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-xs font-semibold text-slate-500">Matched Closing Rates:</span>
+                    <span className="text-sm font-extrabold font-mono text-slate-900">{matchedParsedItems.length}</span>
+                    {matchedParsedItems.length < parsedItems.length && (
+                      <span className="text-[11px] text-slate-400 font-medium">({parsedItems.length} in file)</span>
+                    )}
                   </div>
 
-                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
-                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Valid Unique Rates</div>
-                        <div className="text-2xl font-extrabold font-mono text-emerald-700 mt-1">{validCount.toLocaleString()}</div>
-                        <div className="text-[11px] text-emerald-600/90 mt-1 font-medium">Ready for database import</div>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
-                        <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
-                      </div>
-                    </div>
+                  {/* Net Quantity Matched Chip */}
+                  <div className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-xl border shadow-2xs text-xs font-semibold",
+                    verification.netQtyMatched
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                      : "bg-rose-50 text-rose-800 border-rose-300"
+                  )}>
+                    {verification.netQtyMatched ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Net Quantity: <strong>Matched (True)</strong></span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Net Quantity: <strong>Mismatched ({verification.discrepancies.length})</strong></span>
+                      </>
+                    )}
                   </div>
 
-                  <div className="bg-slate-100/70 p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all">
-                    <div className="bg-white p-4 rounded-[calc(1rem-0.375rem)] border border-slate-100 flex items-center justify-between h-full">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Unmapped Securities</div>
-                        <div className="text-2xl font-extrabold font-mono text-amber-700 mt-1">{unmappedCount.toLocaleString()}</div>
-                        <div className="text-[11px] text-amber-700/80 mt-1 font-medium">Require script mapping</div>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
-                        <AlertCircle className="w-5 h-5 stroke-[2.2]" />
-                      </div>
+                  {/* Unmapped Scripts Chip */}
+                  {unmappedCount > 0 ? (
+                    <div className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 rounded-xl border border-amber-300 shadow-2xs text-xs font-semibold text-amber-800">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Unmapped Scripts: <strong>{unmappedCount} (Add Script before importing)</strong></span>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3.5 py-2 bg-white rounded-xl border border-slate-200 shadow-2xs text-xs font-semibold text-slate-600">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>All Scripts Mapped in DB</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Closing Rates Table (Directly Visible, not collapsed in an accordion) */}
@@ -1045,15 +1090,15 @@ export function ClosingRatePageManager({
 
                       {/* Batch Selection Counters */}
                       <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
-                        <strong>{selectedValidCount}</strong> of {validCount} valid selected
+                        <strong>{selectedCount}</strong> selected
                       </span>
 
                       <button
                         type="button"
-                        onClick={handleSelectAllValidOverall}
-                        className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                        onClick={handleSelectAllMatched}
+                        className="text-xs font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition-colors cursor-pointer"
                       >
-                        Select All Valid
+                        Select All
                       </button>
 
                       <button
@@ -1097,8 +1142,8 @@ export function ClosingRatePageManager({
                         <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                           <th className="py-3 px-3 text-center" style={{ width: '40px' }}>
                             <CustomCheckbox
-                              checked={isAllFilteredValidSelected}
-                              onChange={handleToggleSelectAllValid}
+                              checked={isAllFilteredSelected}
+                              onChange={handleToggleSelectAllFiltered}
                             />
                           </th>
                           <th className="py-3 px-4">#</th>
@@ -1117,11 +1162,10 @@ export function ClosingRatePageManager({
                           const isSelected = selectedRateIndices.has(globalIdx);
 
                           return (
-                            <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-rose-50/20' : ''}`}>
+                            <tr key={globalIdx} className={`hover:bg-slate-50 transition-colors ${item.status !== 'Valid' ? 'bg-amber-50/25' : ''}`}>
                               <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                 <CustomCheckbox
                                   checked={isSelected}
-                                  disabled={item.status !== 'Valid'}
                                   onChange={() => handleToggleRow(globalIdx)}
                                 />
                               </td>
@@ -1146,11 +1190,11 @@ export function ClosingRatePageManager({
                                   <button
                                     type="button"
                                     onClick={() => handleOpenScriptModal(item.commodityCode, item.securityName, item.exchangeCode)}
-                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
-                                    title={item.errors.join(', ') + ' - Click to add this script'}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 cursor-pointer transition-colors shadow-2xs"
+                                    title="Script not found in database. Click to create this script before importing."
                                   >
-                                    <Plus className="w-3 h-3 text-rose-600" />
-                                    <span>Unmapped (Add)</span>
+                                    <Plus className="w-3 h-3 text-amber-700 stroke-[2.5]" />
+                                    <span>Add Script First</span>
                                   </button>
                                 )}
                               </td>
