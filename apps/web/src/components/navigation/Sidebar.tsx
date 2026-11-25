@@ -25,6 +25,7 @@ import {
   ChevronDown,
   Sliders,
   Calendar,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePermissions } from "@/context/AuthPermissionsContext";
@@ -149,6 +150,7 @@ const sections: NavSection[] = [
     children: [
       { name: "Users & Roles", path: "/users", icon: Users, feature: "USER_MANAGEMENT" },
       { name: "File Import Rules", path: "/file-import-rules", icon: Sliders, feature: "TRADES" },
+      { name: "Recycle Bin", path: "/recycle-bin", icon: RotateCcw },
     ],
   },
 ];

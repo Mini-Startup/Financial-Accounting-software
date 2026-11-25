@@ -24,6 +24,7 @@ import {
   ExternalLink,
   FileText,
   TableProperties,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useTableSearch } from '@/context/TableSearchContext';
@@ -249,6 +250,15 @@ const STATIC_REGISTRY: SearchItem[] = [
     icon: Users,
     href: '/users',
   },
+  {
+    id: 'page-recycle-bin',
+    title: 'Recycle Bin & Data Recovery',
+    description: 'View and restore deleted trades, accounts, closing rates, vouchers, and masters',
+    category: 'Pages',
+    keywords: ['recycle bin', 'deleted items', 'restore', 'trash', 'recover', 'undo delete', 'deleted', 'trash bin'],
+    icon: RotateCcw,
+    href: '/recycle-bin',
+  },
 
   // ── Quick Actions ────────────────────────────────────────────────
   {
@@ -317,6 +327,15 @@ const STATIC_REGISTRY: SearchItem[] = [
     action: () => {
       window.open('/report-viewer?type=invoice', '_blank');
     },
+  },
+  {
+    id: 'action-open-recycle-bin',
+    title: 'Open Recycle Bin',
+    description: 'Jump to deleted records recovery center and restore deleted entries',
+    category: 'Actions',
+    keywords: ['restore deleted', 'open recycle bin', 'undo delete', 'recover items', 'recover trades'],
+    icon: RotateCcw,
+    href: '/recycle-bin',
   },
   {
     id: 'action-view-settle-audit',
