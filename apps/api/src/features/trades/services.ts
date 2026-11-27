@@ -513,6 +513,87 @@ export class TradesService {
       profitTotal: result.profitTotal,
     };
   }
+
+  /**
+   * Recalculates client brokerage, clientRate, and profitTotal for all OPEN POSITION trades
+   * (unsettled regular/internal trades where settlementId is null).
+   */
+  async recalculateOpenPositionsBrokerage() {
+    const openTrades = await prisma.trade.findMany({
+      where: {
+        isDeleted: false,
+        settlementId: null,
+        tradeType: {
+          notIn: ['CARRY_FORWARD', 'BACK_FORWARD', 'SETTLEMENT'],
+        },
+      },
+      include: {
+        script: {
+          select: { lotSize: true },
+        },
+      },
+    });
+
+    if (openTrades.length === 0) {
+      return { totalProcessed: 0, updatedCount: 0 };
+    }
+
+    const updates: Array<{
+      id: string;
+      clientBrokerage: number;
+      clientRate: number;
+      profitTotal: number;
+    }> = [];
+
+    for (const t of openTrades) {
+      const lot = t.marketLot && t.marketLot > 0 ? t.marketLot : (t.script?.lotSize || 1);
+      const calc = await this.calculateBrokerageForTrade({
+        accountId: t.accountId,
+        brokerId: t.brokerId,
+        scriptId: t.scriptId,
+        quantity: t.quantity,
+        marketRate: t.rate,
+        transactionType: t.transactionType,
+        marketLot: lot,
+        brokerBrokerage: t.brokerBrokerage ?? 0,
+        tradeType: t.tradeType,
+      });
+
+      const changed =
+        Math.abs((t.clientBrokerage ?? 0) - calc.clientBrokerage) > 0.0001 ||
+        Math.abs((t.clientRate ?? t.rate) - calc.clientRate) > 0.0001 ||
+        Math.abs((t.profitTotal ?? 0) - calc.profitTotal) > 0.0001;
+
+      if (changed) {
+        updates.push({
+          id: t.id,
+          clientBrokerage: calc.clientBrokerage,
+          clientRate: calc.clientRate,
+          profitTotal: calc.profitTotal,
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await prisma.$transaction(
+        updates.map((u) =>
+          prisma.trade.update({
+            where: { id: u.id },
+            data: {
+              clientBrokerage: u.clientBrokerage,
+              clientRate: u.clientRate,
+              profitTotal: u.profitTotal,
+            },
+          })
+        )
+      );
+    }
+
+    return {
+      totalProcessed: openTrades.length,
+      updatedCount: updates.length,
+    };
+  }
 }
 
 export const tradesService = new TradesService();

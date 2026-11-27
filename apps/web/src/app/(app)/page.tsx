@@ -963,7 +963,7 @@ export default async function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
-              title: "Trade Import Wizard",
+              title: "Trade File Import",
               description: "Bulk CSV/Excel trade mapping with pre-parse format checks",
               icon: FileSpreadsheet,
               href: "/trades?import=true",

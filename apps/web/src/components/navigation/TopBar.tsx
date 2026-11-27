@@ -37,7 +37,7 @@ export function TopBar() {
   const activeTitle = config.title || DEFAULT_TITLES[pathname] || pathname.replace('/', '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Dashboard';
 
   const handleOpenSearch = () => {
-    openModal(activeTable ? 'table' : 'app');
+    openModal('app');
   };
 
   return (
@@ -59,21 +59,16 @@ export function TopBar() {
         <button
           type="button"
           onClick={handleOpenSearch}
-          className="w-56 sm:w-64 md:w-80 h-9 px-3.5 bg-slate-100/90 hover:bg-slate-100 text-slate-500 rounded-lg flex items-center justify-between border border-slate-200/80 shadow-2xs transition-all cursor-pointer group hover:border-blue-400 hover:ring-2 hover:ring-blue-100"
-          title={activeTable ? `Filter ${activeTable.tableName} (Ctrl+F) or App Search (Ctrl+K)` : "Search anything... (Ctrl+K / ⌘K)"}
+          className="w-56 sm:w-64 md:w-80 h-9 px-3.5 bg-slate-50/90 hover:bg-white text-slate-500 rounded-lg flex items-center justify-between border border-slate-200/90 shadow-2xs transition-all cursor-pointer group hover:border-[#2652C8]/60 hover:ring-2 hover:ring-blue-100"
+          title="App-wide search (Ctrl+K / ⌘K)"
         >
           <div className="flex items-center gap-2 text-xs">
-            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#2652C8] transition-colors" />
             <span className="text-slate-500 font-medium truncate">
-              {activeTable ? `Filter ${activeTable.tableName}...` : 'Search...'}
+              App-wide search...
             </span>
           </div>
           <div className="flex items-center gap-1">
-            {activeTable && (
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-blue-600 font-bold shadow-2xs">
-                Ctrl+F
-              </kbd>
-            )}
             <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-bold shadow-2xs flex items-center gap-0.5">
               <Command className="w-2.5 h-2.5 text-slate-400" />
               <span>K</span>

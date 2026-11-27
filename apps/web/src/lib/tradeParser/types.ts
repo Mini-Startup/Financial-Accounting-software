@@ -177,6 +177,7 @@ export interface FileImportTemplateOption {
   expectedColCount?: number;
   signatureHeaders?: string[];
   optionsFilterRule?: {
+    enabled?: boolean;
     columnHeader?: string;
     columnIndex?: number;
     excludeValues?: string[];
@@ -186,12 +187,16 @@ export interface FileImportTemplateOption {
     remarksExclude?: string[];
   } | null;
   clientSwapRule?: {
+    enabled?: boolean;
     columnIndex?: number;
     columnHeader?: string;
     ignoreValues?: string[];
   } | null;
   brokerFeeFormula?: {
+    mode?: 'SUM_HEADERS' | 'SINGLE_HEADER' | 'NONE';
     sumHeaders?: string[];
+    singleHeader?: string;
+    multiplier?: number;
   } | null;
   mappings?: FileColumnMappingOption[];
 }

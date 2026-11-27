@@ -18,6 +18,13 @@ router.post('/trades', requirePermission('TRADES', 'CREATE'), async (req, res, n
   } catch (err) { next(err); }
 });
 
+router.post('/trades/recalculate-brokerage', requirePermission('TRADES', 'EDIT'), async (_req, res, next) => {
+  try {
+    const result = await tradesService.recalculateOpenPositionsBrokerage();
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.put('/trades/:id', requirePermission('TRADES', 'EDIT'), async (req, res, next) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

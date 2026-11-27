@@ -1069,8 +1069,9 @@ export class ReportsService {
         for (const t of secTrades) {
           const isBuy = t.transactionType === 'BUY';
           const qty = t.quantity;
+          const marketLot = getEffectiveMarketLot(t.marketLot, t.script?.lotSize);
           const rate = entityType === 'CLIENT' ? (t.clientRate ?? t.rate) : (t.brokerRate ?? t.rate);
-          const tradeAmt = isBuy ? (qty * rate) : -(qty * rate);
+          const tradeAmt = isBuy ? (qty * rate * marketLot) : -(qty * rate * marketLot);
 
           if (isBuy) secBuyQty += qty;
           else secSellQty += qty;

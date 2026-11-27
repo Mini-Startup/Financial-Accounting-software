@@ -226,16 +226,16 @@ export function TableToolbar({
         {/* Left side: Search Trigger & Filter Controls */}
         <div className="flex items-center gap-2.5 flex-1 flex-wrap">
           {onSearchChange && (
-            !searchQuery ? (
+            !searchQuery && (!advancedConditions || advancedConditions.filter((c) => c.value?.trim()).length === 0) ? (
               <button
                 type="button"
                 onClick={() => openModal('table')}
-                className="h-9 px-3.5 bg-slate-50 hover:bg-slate-100/90 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200/90 shadow-2xs flex items-center gap-2.5 transition-all cursor-pointer group hover:border-[#2652C8]/50 active:scale-98 select-none"
-                title={`Filter ${tableName || 'table'} records (Ctrl+F)`}
+                className="h-9 px-3.5 bg-slate-50 hover:bg-blue-50/50 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200/90 shadow-2xs flex items-center gap-2.5 transition-all cursor-pointer group hover:border-[#2652C8]/50 active:scale-98 select-none"
+                title={`Search data in ${tableName || 'table'} (Ctrl+F)`}
               >
                 <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#2652C8] transition-colors" />
                 <span className="text-xs font-medium">
-                  Search {tableName || 'Table'}...
+                  Search data on this page...
                 </span>
                 <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-500 font-semibold shadow-2xs">
                   Ctrl+F
@@ -245,7 +245,7 @@ export function TableToolbar({
               <div className="flex items-center gap-2 bg-blue-50/90 border border-blue-200 text-[#2652C8] px-3 py-1.5 rounded-lg shadow-2xs text-xs animate-in fade-in duration-150 select-none">
                 <Search className="w-3.5 h-3.5 text-[#2652C8] shrink-0" />
                 <span className="font-medium truncate max-w-56">
-                  "{searchQuery}"
+                  {searchQuery ? `"${searchQuery}"` : `${advancedConditions?.filter((c) => c.value?.trim()).length} Multi-Col Filters`}
                   {searchColumn && searchColumn !== 'ALL' && (
                     <span className="text-blue-600/80 font-normal">
                       {' '}in {columns?.find((c) => c.key === searchColumn)?.label || searchColumn}
@@ -265,7 +265,10 @@ export function TableToolbar({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSearchChange('')}
+                  onClick={() => {
+                    onSearchChange('');
+                    onAdvancedConditionsChange?.([]);
+                  }}
                   className="p-1 hover:bg-blue-100 rounded-md text-blue-600 hover:text-blue-900 transition-colors cursor-pointer"
                   title="Clear filter"
                 >

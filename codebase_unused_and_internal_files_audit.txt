@@ -1,0 +1,241 @@
+================================================================================
+COMPREHENSIVE CODEBASE AUDIT: UNUSED, COMMENTED-OUT, AND INTERNAL-ONLY FILES
+================================================================================
+Generated: 23-Nov-2026
+Scope: Root directory, apps/api, apps/web
+Status: Complete & Verified. (LOCAL ONLY — DO NOT COMMIT THIS FILE)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. COMMENTED-OUT NAVIGATION & REPORT ROUTES (SIDEBAR & MENUS)
+--------------------------------------------------------------------------------
+These report routes exist as complete backend endpoints and full frontend page 
+implementations, but have been explicitly commented out or omitted from the main 
+navigation in `apps/web/src/components/navigation/Sidebar.tsx`:
+
+1. Settlement Report (/reports/settlement)
+   - Location: `apps/web/src/components/navigation/Sidebar.tsx` (Lines 112–118)
+   - Code:
+     // {
+     //   name: "Settlement Report",
+     //   path: "/reports/settlement",
+     //   icon: ScrollText,
+     //   feature: "REPORTS",
+     //   permission: { feature: "REPORTS", action: "VIEW" },
+     // },
+   - Implementation: Full page exists at `apps/web/src/app/reports/settlement/page.tsx` 
+     (renders `<SettlementDetailPage />` with trade-by-trade audit trail).
+   - Status: Commented out in Sidebar.
+
+2. Settlement Summary (/reports/settlement-summary)
+   - Location: `apps/web/src/components/navigation/Sidebar.tsx` (Lines 119–125)
+   - Code:
+     // {
+     //   name: "Settlement Summary",
+     //   path: "/reports/settlement-summary",
+     //   icon: BookText,
+     //   feature: "REPORTS",
+     //   permission: { feature: "REPORTS", action: "VIEW" },
+     // },
+   - Implementation: Full page exists at `apps/web/src/app/reports/settlement-summary/page.tsx` 
+     (renders double-entry clearing sheet with `SettlementBalanceSheetTable`, `ClientSummarySection`, 
+     `BrokerSummarySection`, and `ReconciliationSection`).
+   - Status: Commented out in Sidebar.
+
+3. Net Position Report (/reports/net-position)
+   - Location: Was previously declared in `Sidebar.tsx` (commit c62180e), but was removed 
+     and omitted from the sidebar report items.
+   - Implementation: Full page exists at `apps/web/src/app/reports/net-position/page.tsx` 
+     with real-time open position grouping, MTM cards, and drag-and-drop dropzone.
+   - Status: Active route & backend API exist (`GET /reports/net-position`), but completely 
+     omitted/hidden from the Sidebar navigation menu.
+
+4. Settlement Detail / Audit Report (/reports/settlement-detail)
+   - Location: Was previously declared as "Settlement Audit Report" in `Sidebar.tsx`, but 
+     was removed and omitted from the sidebar report items.
+   - Implementation: Full page exists at `apps/web/src/app/reports/settlement-detail/page.tsx` 
+     with `SettlementAuditTable.tsx` and backend API `GET /reports/settlement-detail`.
+   - Status: Active route exists, but omitted/hidden from Sidebar navigation.
+
+5. _comingSoon Navigation Helper
+   - Location: `apps/web/src/components/navigation/Sidebar.tsx` (Lines 60–64)
+   - Code:
+     function _comingSoon(feature: string) {
+       return `/coming-soon?feature=${feature}`;
+     }
+   - Status: Declared as an internal helper, but no navigation item in `sections` currently calls it.
+
+6. NavBar Component (Gutted / Disabled Component)
+   - Location: `apps/web/src/components/navigation/NavBar.tsx` (Lines 1–3)
+   - Code:
+     export function NavBar() {
+       return null; // Removing the floating navbar entirely in favor of an integrated top-ribbon in the layout or dedicated page menus
+     }
+   - Status: File exists on disk, but its entire JSX was commented out / returned null.
+
+--------------------------------------------------------------------------------
+2. COMMENTED-OUT JSX & FUNCTIONAL BLOCKS IN ACTIVE FILES
+--------------------------------------------------------------------------------
+Large functional sections of components or pages that are commented out:
+
+1. Financial Intelligence Hub Hero Banner
+   - File: `apps/web/src/app/page.tsx` (Lines 293–379, 86 lines)
+   - Description: A large gradient executive hero card featuring live trading session badges, 
+     gross turnover metrics, traded volume stats, and 3 action pills ("Import Trades", 
+     "Import Rates", "New Voucher").
+   - Status: Commented out with `{/* ... */}`; dashboard jumps straight to the KPI matrix.
+
+2. Net Trade Spread Profit Container
+   - File: `apps/web/src/components/trades/TradeDetailModal.tsx` (Lines 221–243, 23 lines)
+   - Description: Container displaying net trade spread profit calculated as quantity * (clientRate - brokerRate).
+   - Status: Commented out with `{/* ... */}` and explicitly marked "commented out as requested".
+
+3. Future Broker Field Mappings
+   - File: `apps/web/src/lib/tradeParser/fieldMappings.ts` (Lines 44–45)
+   - Description: Commented-out mock mappings for Zerodha and Angel One:
+     // export const ZERODHA_MAPPING: FieldMapping = { ... };
+     // export const ANGEL_MAPPING: FieldMapping = { ... };
+
+--------------------------------------------------------------------------------
+3. UNLINKED / ORPHANED PAGE ROUTES (EXIST ON DISK BUT ZERO IN-APP LINKS)
+--------------------------------------------------------------------------------
+Next.js page routes under `apps/web/src/app` that are compiled into the build, 
+but are never linked from the navigation, dashboard, or other pages:
+
+1. /trades/import (`apps/web/src/app/trades/import/page.tsx`)
+   - Standalone page rendering `<TradeImportManager />`.
+   - Reason: The entire application workflow uses `<TradeImportModal />` or `/trades?import=true`. 
+     This standalone `/trades/import` page is never linked from anywhere.
+
+2. /coming-soon (`apps/web/src/app/coming-soon/page.tsx`)
+   - Standalone landing page for unreleased features. Only reached if manually typed with query params.
+
+3. /reports/settlement (`apps/web/src/app/reports/settlement/page.tsx`)
+   - Wrapper page delegating to `SettlementDetailPage`. Commented out in `Sidebar.tsx`.
+
+4. /reports/settlement-summary (`apps/web/src/app/reports/settlement-summary/page.tsx`)
+   - Financial clearing sheet page. Commented out in `Sidebar.tsx`.
+
+5. /reports/settlement-detail (`apps/web/src/app/reports/settlement-detail/page.tsx`)
+   - Settlement audit report page. Omitted from `Sidebar.tsx`.
+
+6. /reports/net-position (`apps/web/src/app/reports/net-position/page.tsx`)
+   - Real-time open exposure tree page. Omitted from `Sidebar.tsx`.
+
+--------------------------------------------------------------------------------
+4. ORPHANED FRONTEND COMPONENTS (0 IMPORTS ANYWHERE IN PROJECT)
+--------------------------------------------------------------------------------
+These 11 component files exist on disk in `apps/web/src/components/`, but have 
+ZERO imports anywhere in the codebase:
+
+1. apps/web/src/components/icons/AppIcons.tsx (121 lines)
+   - Custom SVG wrapper icon definitions. Replaced by `lucide-react`.
+
+2. apps/web/src/components/navigation/NavBar.tsx (120 lines / 3 lines active)
+   - Older top navigation bar. Replaced by `Sidebar.tsx` + `TopBar.tsx`.
+
+3. apps/web/src/components/trades/FileUploadZone.tsx (84 lines)
+   - Standalone dropzone. Replaced by `UniversalFileUploader.tsx` & `UniversalPageDropzone.tsx`.
+
+4. apps/web/src/components/trades/TradeDataGrid.tsx (150 lines)
+   - Early grid view. Replaced by `DubaiPreviewTable.tsx` and `NormalPreviewTable.tsx`.
+
+5. apps/web/src/components/trades/TradeDetailModal.tsx (366 lines)
+   - Individual trade popup. Replaced by `TradeRowDrawer.tsx` and `TradeFormModal.tsx`.
+
+6. apps/web/src/components/trades/TradeErrorPanel.tsx (95 lines)
+   - Error panel. Replaced by `toastNotify.tsx` and `ImportResultPanel.tsx`.
+
+7. apps/web/src/components/trades/TradeStatsBar.tsx (77 lines)
+   - Trade import count banner. Replaced by `ImportFilterBar.tsx` and badges.
+
+8. apps/web/src/components/ui/HeroTable.tsx (180 lines)
+   - Unused prototype generic table component.
+
+9. apps/web/src/components/ui/UniversalDataTable.tsx (215 lines)
+   - Unused prototype universal data table.
+
+10. apps/web/src/components/ui/UniversalFilterPanel.tsx (130 lines)
+    - Unused flyout filter panel. Replaced by the filter modal inside `TableToolbar.tsx`.
+
+11. apps/web/src/components/ui/UniversalSearchBar.tsx (88 lines)
+    - Unused standalone search bar. Replaced by `UniversalSearch.tsx` (Ctrl+K omnibar).
+
+--------------------------------------------------------------------------------
+5. UNUSED / UNCALLED BACKEND API ENDPOINTS
+--------------------------------------------------------------------------------
+1. POST /settlement/adjust-trades (in `apps/api/src/features/settlement/routes.ts`)
+   - Purpose: Intended to adjust settled trades during settlement reconciliation.
+   - Status: Registered on Express router and backed by `settlementService.adjustTrades()`, 
+     but 0 frontend pages or components send requests to this endpoint.
+
+--------------------------------------------------------------------------------
+6. UNUSED UTILITIES & EXPORTED FUNCTIONS
+--------------------------------------------------------------------------------
+[Frontend - apps/web/src/utils/]
+1. isValidCalendarDate (in `apps/web/src/utils/dateUtils.ts`) — Only in tests.
+2. Regex constants & validators in `apps/web/src/utils/validators.ts`:
+   - `CODE_REGEX`, `SCRIPT_CODE_REGEX`, `EMAIL_REGEX`, `PHONE_REGEX`, `IFSC_REGEX`
+   - `validateScriptShortName`, `validateTradeDate` — Only in tests.
+3. calculateColumnTotals (in `apps/web/src/utils/tableFilter.ts`) — Never invoked.
+4. calculateClientBrokerage (in `apps/web/src/utils/brokerage.ts`) — Never invoked.
+
+[Backend - apps/api/]
+5. requireOwner (in `apps/api/src/middleware/auth.ts`) — Middleware never attached to any route.
+6. formatExpiryToSecurityDate (in `apps/api/src/features/settlement/utils.ts`) — Never used.
+7. normalizeSecurityName (in `apps/api/src/features/settlement/utils.ts`) — Never used.
+8. ROUND_DECIMALS (in `apps/api/src/utils/brokerage.ts`) — Never imported.
+9. HttpException & UnauthorizedException (in `apps/api/src/errors.ts`) — Never thrown directly.
+
+--------------------------------------------------------------------------------
+7. INTERNAL-ONLY / MAINTENANCE SCRIPTS (TERMINAL USE ONLY)
+--------------------------------------------------------------------------------
+[Backend CLI Scripts - apps/api/src/scripts/]
+1. apps/api/src/scripts/db_inspect.ts (Database inspection and count tool).
+2. apps/api/src/scripts/generate_all_security_names.ts (Batch security name generator).
+3. apps/api/src/scripts/migrate_all_security_names.ts (Security name migration script).
+4. apps/api/src/scripts/sync_expiries.ts (Syncs unique expiries into ExpiryDate table).
+5. apps/api/src/scripts/update_is_deleted.ts (Patches null isDeleted records).
+
+[Prisma Maintenance Scripts - apps/api/prisma/]
+6. apps/api/prisma/reset-opening-balance.js (Resets account master opening balances).
+7. apps/api/prisma/seed-accounts.js (Seeds test accounts).
+8. apps/api/prisma/update-isdeleted-false.ts (Repairs null soft-delete flags).
+9. apps/api/prisma/seed.js (Base seeder for admin, roles, groups).
+10. apps/api/prisma/seed-file-templates.ts (Seeds file import templates).
+
+[Unit Test Files]
+11. apps/api/src/features/reports/reports.test.ts
+12. apps/api/src/features/trades/securityName.test.ts
+13. apps/api/src/utils/brokerage.test.ts
+14. apps/web/src/components/reports/ReportExportUtils.test.ts
+15. apps/web/src/utils/dateUtils.test.ts
+16. apps/web/src/utils/securityName.test.ts
+17. apps/web/src/utils/syncUser.test.ts
+18. apps/web/src/utils/tableFilter.test.ts
+19. apps/web/src/utils/validators.test.ts
+
+--------------------------------------------------------------------------------
+8. TEMPORARY DEBUG DUMPS, PATCHES, AND SAMPLE DATA
+--------------------------------------------------------------------------------
+1. apps/api/debug_samples/ (Directory with 27+ CSV debug dump files)
+   - Written by `/trade-import/save-debug-sample`.
+2. .dev-patches/dev-auth-bypass.patch (Local auth bypass patch file).
+3. abc-26-06/ (Directory with 5 broker test CSV files).
+4. sample.csv & Sample_openpostion.csv (2 sample CSVs at root).
+5. screenshots/ (23 UI verification screenshot PNGs).
+6. graphify-out/ (Dependency graph output cache).
+7. scripts/ (Empty root directory).
+
+--------------------------------------------------------------------------------
+9. UNUSED NPM PACKAGE DEPENDENCIES (IN apps/web/package.json)
+--------------------------------------------------------------------------------
+1. @heroicons/react (^2.2.0) — 0 imports; project uses `lucide-react`.
+2. @radix-ui/react-dialog (^1.1.15) — 0 imports.
+3. @radix-ui/react-dropdown-menu (^2.1.16) — 0 imports.
+4. @radix-ui/react-popover (^1.1.15) — 0 imports.
+5. @radix-ui/react-select (^2.2.6) — 0 imports.
+
+================================================================================
+END OF AUDIT REPORT
+================================================================================

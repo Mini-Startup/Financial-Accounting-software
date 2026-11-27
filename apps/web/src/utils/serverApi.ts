@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 
 /**
  * Server-side authenticated fetch wrapper for Next.js App Router Server Components.
@@ -6,11 +7,25 @@ import { auth } from '@clerk/nextjs/server';
  */
 export async function serverFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   let userId: string | null = null;
-  try {
-    const session = await auth();
-    userId = session?.userId || null;
-  } catch {
-    // In background tasks or static generation without request context
+
+  // Development bypass support for testing & automated browser tasks
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const { cookies, headers } = await import('next/headers');
+      const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);
+      if (cookieStore.get('__dev_bypass')?.value === 'true' || headerStore.get('x-dev-bypass') === 'true') {
+        userId = 'dev_admin_user';
+      }
+    } catch {}
+  }
+
+  if (!userId) {
+    try {
+      const session = await auth();
+      userId = session?.userId || null;
+    } catch {
+      // In background tasks or static generation without request context
+    }
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';

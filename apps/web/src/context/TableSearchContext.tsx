@@ -124,16 +124,19 @@ export function TableSearchProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Ctrl + F -> Open Current Table Search (prevent browser native search)
+      // Ctrl + F -> Open Current Table Search if page has an active table; otherwise allow Chrome native Ctrl+F!
       if (isCtrlOrMeta && key === 'f') {
+        if (!activeTable) {
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
         setIsOpen((prev) => {
           if (!prev) {
-            setMode(activeTable ? 'table' : 'app');
+            setMode('table');
             return true;
           }
-          if (mode === 'app' && activeTable) {
+          if (mode === 'app') {
             setMode('table');
             return true;
           }

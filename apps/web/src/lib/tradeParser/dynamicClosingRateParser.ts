@@ -108,7 +108,7 @@ export function parseClosingRatesWithDynamicTemplate(
     if (fields.length === 0 || (fields.length === 1 && !fields[0])) continue;
 
     // 1. Check Options Filter Rule
-    if (activeTemplate.optionsFilterRule) {
+    if (activeTemplate.optionsFilterRule && activeTemplate.optionsFilterRule.enabled !== false) {
       const optRule = activeTemplate.optionsFilterRule;
       const optIdx = optionsFilterIndex !== undefined ? optionsFilterIndex : -1;
       const optVal = optIdx >= 0 && optIdx < fields.length ? fields[optIdx].trim() : '';

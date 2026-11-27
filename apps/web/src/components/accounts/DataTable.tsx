@@ -89,6 +89,7 @@ export function DataTable({
     syncWithServer(initialAccounts);
   }, [initialAccounts, syncWithServer]);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,6 +101,7 @@ export function DataTable({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -320,9 +322,9 @@ export function DataTable({
             setAdvancedConditions(conds);
             setCurrentPage(1);
           }}
-          showFindReplaceButton={true}
+          /* showFindReplaceButton={true}
           isFindReplaceOpen={isFindReplaceOpen}
-          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
           selectedCount={selectedIds.size}
           onBulkDelete={canDelete ? handleBulkDelete : undefined}
           onClearSelection={() => setSelectedIds(new Set())}
@@ -507,7 +509,7 @@ export function DataTable({
         </div>
       </div>
 
-      {/* Floating Find & Replace Overlay Widget */}
+      {/* Floating Find & Replace Overlay Widget - disabled outside import flows
       {isFindReplaceOpen && (
         <FindAndReplace
           data={paginatedAccounts}
@@ -520,7 +522,7 @@ export function DataTable({
           }}
           onMatchChange={setFindReplaceMatch}
         />
-      )}
+      )} */}
 
       {editingAccount && (
         <FormModal

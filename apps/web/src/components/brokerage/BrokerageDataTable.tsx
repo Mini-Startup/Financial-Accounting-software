@@ -60,6 +60,7 @@ export function BrokerageDataTable({
     setBrokeragesList(initialBrokerages);
   }, [initialBrokerages]);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -71,6 +72,7 @@ export function BrokerageDataTable({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -232,9 +234,9 @@ export function BrokerageDataTable({
             setAdvancedConditions(conds);
             setCurrentPage(1);
           }}
-          showFindReplaceButton={true}
+          /* showFindReplaceButton={true}
           isFindReplaceOpen={isFindReplaceOpen}
-          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
           selectedCount={selectedIds.size}
           onBulkDelete={handleBulkDelete}
           onClearSelection={() => setSelectedIds(new Set())}
@@ -247,6 +249,7 @@ export function BrokerageDataTable({
           pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
         />
 
+        {/* Find & Replace disabled outside import flows
         {isFindReplaceOpen && (
           <FindAndReplace
             data={paginatedBrokerages}
@@ -255,7 +258,7 @@ export function BrokerageDataTable({
             onReplaceAll={handleReplaceAll}
             onClose={() => setIsFindReplaceOpen(false)}
           />
-        )}
+        )} */}
 
         <div className="card shadow-xs border border-slate-200 rounded-xl bg-white p-0 overflow-hidden">
           <div className="overflow-x-auto">

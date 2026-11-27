@@ -65,6 +65,7 @@ export function ScriptDataTable({
     setScriptsList(initialScripts);
   }, [initialScripts]);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +77,7 @@ export function ScriptDataTable({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -243,9 +245,9 @@ export function ScriptDataTable({
           setAdvancedConditions(conds);
           setCurrentPage(1);
         }}
-        showFindReplaceButton={true}
+        /* showFindReplaceButton={true}
         isFindReplaceOpen={isFindReplaceOpen}
-        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
         selectedCount={selectedIds.size}
         onBulkDelete={handleBulkDelete}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -257,7 +259,7 @@ export function ScriptDataTable({
         onPageSizeChange={setPageSize}
       />
 
-      {/* Find & Replace Drawer */}
+      {/* Find & Replace Drawer - disabled outside import flows
       {isFindReplaceOpen && (
         <FindAndReplace
           data={paginatedScripts}
@@ -266,7 +268,7 @@ export function ScriptDataTable({
           onReplaceAll={handleReplaceAll}
           onClose={() => setIsFindReplaceOpen(false)}
         />
-      )}
+      )} */}
 
       <div className="overflow-x-auto">
         <table className="data-table w-full text-xs">

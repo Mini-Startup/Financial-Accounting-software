@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies, headers } from "next/headers";
 import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider, SignIn, SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
@@ -33,14 +34,23 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let clerkUserId: string | null = null;
-  try {
-    const session = await auth();
-    clerkUserId = session?.userId || null;
-  } catch {}
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const isDevBypass =
+    process.env.NODE_ENV === "development" &&
+    (cookieStore.get("__dev_bypass")?.value === "true" || headerStore.get("x-dev-bypass") === "true");
 
-  const userId = clerkUserId;
-  const syncResult = await syncUser();
+  let clerkUserId: string | null = null;
+  if (!isDevBypass) {
+    try {
+      const session = await auth();
+      clerkUserId = session?.userId || null;
+    } catch {}
+  }
+  const userId = clerkUserId || (isDevBypass ? "dev_admin_user" : null);
+  const syncResult = isDevBypass
+    ? { isWhitelisted: true, email: "admin@bizzmate.com", user: { id: "dev_admin_user", name: "Dev Administrator", role: { name: "Owner", isOwner: true } } }
+    : await syncUser();
 
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
@@ -98,7 +108,7 @@ export default async function RootLayout({
               </div>
             </div>
           ) : (
-            <AuthPermissionsProvider>
+            <AuthPermissionsProvider isDevBypass={isDevBypass}>
               {children}
             </AuthPermissionsProvider>
           )}

@@ -212,13 +212,20 @@ export function resolveTemplateColumnBindings(
     }
   }
 
-  // 3. Resolve brokerFeeFormula sumHeaders
+  // 3. Resolve brokerFeeFormula sumHeaders or singleHeader
   const brokerFeeIndices: number[] = [];
-  if (template.brokerFeeFormula?.sumHeaders) {
-    for (const h of template.brokerFeeFormula.sumHeaders) {
-      const norm = normalizeHeaderKey(h);
+  if (template.brokerFeeFormula?.mode !== 'NONE') {
+    if (template.brokerFeeFormula?.mode === 'SINGLE_HEADER' && template.brokerFeeFormula.singleHeader) {
+      const norm = normalizeHeaderKey(template.brokerFeeFormula.singleHeader);
       if (fileHeaderMap.has(norm)) {
         brokerFeeIndices.push(fileHeaderMap.get(norm)!);
+      }
+    } else if (template.brokerFeeFormula?.sumHeaders) {
+      for (const h of template.brokerFeeFormula.sumHeaders) {
+        const norm = normalizeHeaderKey(h);
+        if (fileHeaderMap.has(norm)) {
+          brokerFeeIndices.push(fileHeaderMap.get(norm)!);
+        }
       }
     }
   }
@@ -286,8 +293,8 @@ export function parseTradesWithDynamicTemplate(
     const fields = parseCsvLine(rawLine, delimiter);
     if (fields.length === 0 || (fields.length === 1 && !fields[0])) continue;
 
-    // 1. Check Options Filter Rule
-    if (activeTemplate.optionsFilterRule) {
+    // 1. Check Options / Exclusion Filter Rule
+    if (activeTemplate.optionsFilterRule && activeTemplate.optionsFilterRule.enabled !== false) {
       const optRule = activeTemplate.optionsFilterRule;
       const optIdx = optionsFilterIndex !== undefined ? optionsFilterIndex : -1;
       const optVal = optIdx >= 0 && optIdx < fields.length ? fields[optIdx].trim() : '';
@@ -350,7 +357,12 @@ export function parseTradesWithDynamicTemplate(
     let substituteClientCode: string | undefined;
     let rawLastCol = '';
 
-    if (swapColumnIndex !== undefined && swapColumnIndex >= 0 && swapColumnIndex < fields.length) {
+    if (
+      activeTemplate.clientSwapRule?.enabled !== false &&
+      swapColumnIndex !== undefined &&
+      swapColumnIndex >= 0 &&
+      swapColumnIndex < fields.length
+    ) {
       const swapVal = fields[swapColumnIndex].trim().replace(/^["']|["']$/g, '');
       rawLastCol = swapVal;
       const ignoreValues = (activeTemplate.clientSwapRule?.ignoreValues || [
@@ -390,11 +402,17 @@ export function parseTradesWithDynamicTemplate(
 
     // Brokerage fee calculation
     let commission = 0;
-    if (brokerFeeIndices.length > 0) {
+    if (activeTemplate.brokerFeeFormula?.mode === 'NONE') {
+      commission = 0;
+    } else if (brokerFeeIndices.length > 0) {
       for (const bIdx of brokerFeeIndices) {
         if (bIdx >= 0 && bIdx < fields.length) {
           commission += parseNumeric(fields[bIdx]);
         }
+      }
+      const mult = activeTemplate.brokerFeeFormula?.multiplier;
+      if (mult && !isNaN(mult) && mult !== 1) {
+        commission = commission * mult;
       }
     } else {
       commission = parseNumeric(getCell('clnCommission', '0'));
