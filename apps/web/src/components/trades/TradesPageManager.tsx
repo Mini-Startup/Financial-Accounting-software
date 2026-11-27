@@ -23,7 +23,7 @@ import {
   type SortDirection,
   type AdvancedCondition,
 } from '@/utils/tableFilter';
-import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
+import { Trash2, Plus, UploadCloud, Pencil, Lock, ChevronUp, ChevronDown, ChevronsUpDown, X, Calculator } from 'lucide-react';
 import { notify } from '@/utils/toastNotify';
 import { cn } from '@/utils/cn';
 import { formatDateToDDMMYY, formatDateForInput } from '@/utils/dateUtils';
@@ -166,9 +166,9 @@ export function TradesPageManager({
 
   // Primary business filters
   const [settlementFilter, setSettlementFilter] = useState<string>('OPEN');
-  const [clientFilter, setClientFilter] = useState<string>('');
-  const [brokerFilter, setBrokerFilter] = useState<string>('');
-  const [scriptFilter, setScriptFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState<string>(() => searchParams.get('clientId') || '');
+  const [brokerFilter, setBrokerFilter] = useState<string>(() => searchParams.get('brokerId') || '');
+  const [scriptFilter, setScriptFilter] = useState<string>(() => searchParams.get('scriptId') || '');
 
   const [selectedTrade, setSelectedTrade] = useState<any | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -176,13 +176,16 @@ export function TradesPageManager({
     title: string;
     message: string;
     confirmLabel?: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success' | 'security';
     onConfirm: () => void;
   }>({
     isOpen: false,
     title: '',
     message: '',
+    variant: 'danger',
     onConfirm: () => {},
   });
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,6 +228,44 @@ export function TradesPageManager({
 
   const { setTopBar, resetTopBar } = useTopBar();
 
+  const handleRecalculateBrokerage = useCallback(() => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Recalculate Open Positions Brokerage',
+      message:
+        'Recalculate client brokerage, client net rate, and profit total for all unsettled Open Position trades using your latest Brokerage Rules? Carry Forward, Backforward, and settled trades will remain untouched.',
+      confirmLabel: 'Recalculate Now',
+      variant: 'info',
+      onConfirm: async () => {
+        setIsRecalculating(true);
+        try {
+          const res = await apiFetch('/trades/recalculate-brokerage', {
+            method: 'POST',
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.message || data.error || 'Failed to recalculate brokerage');
+          }
+          const tradesRes = await apiFetch('/trades');
+          if (tradesRes.ok) {
+            const freshTrades = await tradesRes.json();
+            if (Array.isArray(freshTrades)) {
+              syncWithServer(freshTrades);
+            }
+          }
+          router.refresh();
+          notify.success(
+            `Recalculated brokerage across ${data.totalProcessed || 0} open trades (${data.updatedCount || 0} updated).`
+          );
+        } catch (err: any) {
+          notify.error(err.message || 'Failed to recalculate brokerage');
+        } finally {
+          setIsRecalculating(false);
+        }
+      },
+    });
+  }, [router, syncWithServer]);
+
   // Push clean simple title & page action buttons to unified TopBar
   useEffect(() => {
     setTopBar({
@@ -256,12 +297,23 @@ export function TradesPageManager({
               <span>Import File</span>
             </button>
           </UniversalTooltip>
+          <UniversalTooltip content="Recalculate client brokerage on all Open Position trades">
+            <button
+              type="button"
+              onClick={handleRecalculateBrokerage}
+              disabled={isRecalculating}
+              className="h-9 px-3.5 bg-white hover:bg-blue-50/70 text-[#2652C8] border border-blue-200 text-xs font-semibold rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0 disabled:opacity-60"
+            >
+              <Calculator className={cn('w-3.5 h-3.5 text-[#2652C8]', isRecalculating && 'animate-spin')} />
+              <span>{isRecalculating ? 'Recalculating...' : 'Recalculate Brk'}</span>
+            </button>
+          </UniversalTooltip>
         </div>
       ),
     });
 
     return () => resetTopBar();
-  }, [setTopBar, resetTopBar]);
+  }, [setTopBar, resetTopBar, handleRecalculateBrokerage, isRecalculating]);
 
   // Sync state with query parameters (e.g. sidebar links)
   useEffect(() => {
@@ -293,6 +345,7 @@ export function TradesPageManager({
     fetchExpiries();
   }, []);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -304,6 +357,7 @@ export function TradesPageManager({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const clients = useMemo(
     () =>
@@ -329,7 +383,6 @@ export function TradesPageManager({
 
   const settlementOptions = useMemo(() => [
     { value: 'OPEN', label: 'Open Positions' },
-    { value: 'ALL', label: 'All Settlements' },
     ...(settlements || []).map((s: any) => ({
       value: s.id,
       label: s.name || `Settlement (${formatDateToDDMMYY(s.toDate)})`,
@@ -402,10 +455,10 @@ export function TradesPageManager({
   const filteredTrades = useMemo(() => {
     let list = filterRecordsWithAdvanced(trades, searchQuery, searchColumn, advancedConditions, selectedColumns);
 
-    // 1. Settlement filter (default 'OPEN' shows only open/unsettled positions)
+    // 1. Settlement filter (default 'OPEN' shows only open/unsettled positions; specific settlement ID shows all trades settled in that cycle)
     if (settlementFilter === 'OPEN') {
       list = list.filter((t) => !t.settlementId);
-    } else if (settlementFilter !== 'ALL' && settlementFilter) {
+    } else if (settlementFilter) {
       list = list.filter((t) => t.settlementId === settlementFilter);
     }
 
@@ -739,9 +792,9 @@ export function TradesPageManager({
             onChange: setVisibleColumns,
             storageKey: 'bizzmate_trades_visible_columns',
           }}
-          showFindReplaceButton={true}
+          /* showFindReplaceButton={true}
           isFindReplaceOpen={isFindReplaceOpen}
-          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+          onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
           selectedCount={selectedIds.size}
           onBulkDelete={handleBulkDelete}
           onClearSelection={() => setSelectedIds(new Set())}
@@ -811,13 +864,40 @@ export function TradesPageManager({
                 </UniversalTooltip>
               </div>
 
-              {/* Settlement Dropdown: Supports Open Positions, All Settlements, and specific cycles like Settlement 1 */}
+              {/* Settlement Dropdown: Supports Open Positions and specific settled cycles like Settlement 1 */}
               <div className="w-44 shrink-0">
                 <UniversalDropdown
                   options={settlementOptions}
                   value={settlementFilter}
                   onChange={(val) => {
-                    setSettlementFilter(val || 'OPEN');
+                    const nextVal = val || 'OPEN';
+                    setSettlementFilter(nextVal);
+                    // Clear date boundaries so settled trades in older cycles are never clipped out by open-position dates
+                    if (nextVal !== 'OPEN') {
+                      setFromDate('');
+                      setToDate('');
+                    } else {
+                      const openTrades = (trades || []).filter((t: any) => !t.settlementId && t.tradeDate);
+                      if (openTrades.length > 0) {
+                        setFromDate(
+                          openTrades.reduce((min: string, t: any) => {
+                            const parts = parseTradeDateString(t.tradeDate);
+                            if (!parts) return min;
+                            return !min || parts.yyyyMmDd < min ? parts.yyyyMmDd : min;
+                          }, '')
+                        );
+                        setToDate(
+                          openTrades.reduce((max: string, t: any) => {
+                            const parts = parseTradeDateString(t.tradeDate);
+                            if (!parts) return max;
+                            return !max || parts.yyyyMmDd > max ? parts.yyyyMmDd : max;
+                          }, '')
+                        );
+                      } else {
+                        setFromDate('');
+                        setToDate('');
+                      }
+                    }
                     setCurrentPage(1);
                   }}
                   placeholder="Settlement"
@@ -1018,10 +1098,10 @@ export function TradesPageManager({
                 )}
                 {visibleColumns.includes('quantity') && (
                   <th
-                    className="text-right cursor-pointer hover:bg-slate-100 select-none"
+                    className="text-left cursor-pointer hover:bg-slate-100 select-none"
                     onClick={() => handleSort('quantity')}
                   >
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-start gap-1.5">
                       <span>Quantity</span>
                       {sortKey === 'quantity' ? (
                         sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
@@ -1063,10 +1143,10 @@ export function TradesPageManager({
                 )}
                 {visibleColumns.includes('price') && (
                   <th
-                    className="text-right cursor-pointer hover:bg-slate-100 select-none font-semibold text-slate-700"
+                    className="text-left cursor-pointer hover:bg-slate-100 select-none font-semibold text-slate-700"
                     onClick={() => handleSort('price')}
                   >
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-start gap-1.5">
                       <span>Market Rate</span>
                       {sortKey === 'price' ? (
                         sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
@@ -1155,8 +1235,17 @@ export function TradesPageManager({
                         <div className="font-mono font-medium text-slate-800">
                           {renderWithDiff('tradeDate', formatDateToDDMMYY(t.tradeDate), isActiveMatch)}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          {t.tradeNumber || '—'}
+                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                          <span>{t.tradeNumber || '—'}</span>
+                          {t.settlementId && (
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200/80 text-[9px] font-sans font-semibold"
+                              title="Settled trade"
+                            >
+                              <Lock className="w-2.5 h-2.5 text-slate-400" />
+                              Settled
+                            </span>
+                          )}
                         </div>
                       </td>
                     )}
@@ -1215,7 +1304,7 @@ export function TradesPageManager({
                     )}
 
                     {visibleColumns.includes('quantity') && (
-                      <td className="font-mono font-medium text-right whitespace-nowrap text-slate-800">
+                      <td className="font-mono font-medium text-left whitespace-nowrap text-slate-800">
                         {Math.abs(t.quantity).toLocaleString()}
                       </td>
                     )}
@@ -1258,7 +1347,7 @@ export function TradesPageManager({
 
                     {/* Market Rate & Brokerage Columns (Uniform modern styling) */}
                     {visibleColumns.includes('price') && (
-                      <td className="font-mono text-right text-xs whitespace-nowrap font-semibold text-slate-900">
+                      <td className="font-mono text-left text-xs whitespace-nowrap font-semibold text-slate-900">
                         {currSym}{t.rate.toFixed(2)}
                       </td>
                     )}
@@ -1333,7 +1422,7 @@ export function TradesPageManager({
         </div>
       </div>
 
-      {/* Floating Find & Replace Overlay Widget */}
+      {/* Floating Find & Replace Overlay Widget - disabled outside import flows
       {isFindReplaceOpen && (
         <FindAndReplace
           data={paginatedTrades}
@@ -1346,7 +1435,7 @@ export function TradesPageManager({
           }}
           onMatchChange={setFindReplaceMatch}
         />
-      )}
+      )} */}
 
       {/* Manual Entry Form Modal */}
       {isAdding && (
@@ -1425,8 +1514,8 @@ export function TradesPageManager({
         title={confirmDialog.title}
         message={confirmDialog.message}
         confirmLabel={confirmDialog.confirmLabel}
-        variant="danger"
-        isLoading={isDeleting}
+        variant={confirmDialog.variant || 'danger'}
+        isLoading={isDeleting || isRecalculating}
         onConfirm={async () => {
           await confirmDialog.onConfirm();
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));

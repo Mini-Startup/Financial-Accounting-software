@@ -43,6 +43,7 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
     setCurrenciesList(initialCurrencies);
   }, [initialCurrencies]);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,6 +55,7 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -137,9 +139,9 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
           setAdvancedConditions(conds);
           setCurrentPage(1);
         }}
-        showFindReplaceButton={true}
+        /* showFindReplaceButton={true}
         isFindReplaceOpen={isFindReplaceOpen}
-        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
         currentPage={currentPage}
         pageSize={pageSize}
         totalItems={sortedCurrencies.length}
@@ -148,6 +150,7 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
         pageSizeOptions={[25, 50, 100, 200, { value: 999999, label: 'All' }]}
       />
 
+      {/* Find & Replace disabled outside import flows
       {isFindReplaceOpen && (
         <FindAndReplace
           data={paginatedCurrencies}
@@ -156,7 +159,7 @@ export function CurrencyDataTable({ currencies: initialCurrencies }: { currencie
           onReplaceAll={handleReplaceAll}
           onClose={() => setIsFindReplaceOpen(false)}
         />
-      )}
+      )} */}
 
       <div className="overflow-x-auto rounded-b-xl">
         <table className="data-table data-table-dense w-full text-xs">

@@ -498,3 +498,76 @@ model ExpiryDate {
   @@map("expiry_dates")
 }
 
+// ─────────────────────────────────────────────
+// FILE IMPORT TEMPLATES & DYNAMIC COLUMN MAPPINGS
+// ─────────────────────────────────────────────
+
+enum FileImportType {
+  TRADE
+  CLOSING_RATE
+}
+
+enum FileFormatType {
+  CSV
+}
+
+model FileImportTemplate {
+  id               String              @id @default(uuid())
+  name             String              @unique
+  code             String              @unique
+  description      String?
+  importType       FileImportType      @map("import_type")
+  formatType       FileFormatType      @default(CSV) @map("format_type")
+  
+  delimiter        String              @default(",")
+  hasHeader        Boolean             @default(true) @map("has_header")
+  headerRowIndex   Int                 @default(0) @map("header_row_index")
+  dataStartRow     Int                 @default(1) @map("data_start_row")
+  expectedColCount Int?                @map("expected_col_count")
+
+  signatureHeaders String[]            @default([]) @map("signature_headers")
+
+  // Chargeable / Business Rules (Stored as JSON)
+  optionsFilterRule Json?              @map("options_filter_rule")
+  clientSwapRule    Json?              @map("client_swap_rule")
+  brokerFeeFormula  Json?              @map("broker_fee_formula")
+
+  isActive         Boolean             @default(true) @map("is_active")
+  isDeleted        Boolean             @default(false) @map("is_deleted")
+  deletedAt        DateTime?           @map("deleted_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  mappings         FileColumnMapping[]
+
+  @@index([importType])
+  @@index([isDeleted])
+  @@map("file_import_templates")
+}
+
+model FileColumnMapping {
+  id               String             @id @default(uuid())
+  templateId       String             @map("template_id")
+  
+  appField         String             @map("app_field")
+  fileColumnHeader String?            @map("file_column_header")
+  fileColumnIndex  Int?               @map("file_column_index")
+  alternateHeaders String[]           @default([]) @map("alternate_headers")
+
+  isRequired       Boolean            @default(false) @map("is_required")
+  defaultValue     String?            @map("default_value")
+  transformRule    String?            @map("transform_rule")
+
+  isDeleted        Boolean            @default(false) @map("is_deleted")
+  deletedAt        DateTime?          @map("deleted_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  template         FileImportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, appField], name: "uq_template_app_field")
+  @@index([templateId])
+  @@index([isDeleted])
+  @@map("file_column_mappings")
+}
+

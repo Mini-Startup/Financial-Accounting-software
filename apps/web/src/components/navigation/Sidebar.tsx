@@ -25,6 +25,7 @@ import {
   ChevronDown,
   Sliders,
   Calendar,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePermissions } from "@/context/AuthPermissionsContext";
@@ -109,20 +110,20 @@ const sections: NavSection[] = [
         feature: "REPORTS",
         permission: { feature: "REPORTS", action: "VIEW" },
       },
-      // {
-      //   name: "Settlement Report",
-      //   path: "/reports/settlement",
-      //   icon: ScrollText,
-      //   feature: "REPORTS",
-      //   permission: { feature: "REPORTS", action: "VIEW" },
-      // },
-      // {
-      //   name: "Settlement Summary",
-      //   path: "/reports/settlement-summary",
-      //   icon: BookText,
-      //   feature: "REPORTS",
-      //   permission: { feature: "REPORTS", action: "VIEW" },
-      // },
+      {
+        name: "Settlement Report",
+        path: "/reports/settlement",
+        icon: ScrollText,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
+      {
+        name: "Settlement Summary",
+        path: "/reports/settlement-summary",
+        icon: BookText,
+        feature: "REPORTS",
+        permission: { feature: "REPORTS", action: "VIEW" },
+      },
       {
         name: "Settlement Operations",
         path: "/settlement",
@@ -148,6 +149,8 @@ const sections: NavSection[] = [
     icon: ShieldCheckIcon,
     children: [
       { name: "Users & Roles", path: "/users", icon: Users, feature: "USER_MANAGEMENT" },
+      { name: "File Import Rules", path: "/file-import-rules", icon: Sliders, feature: "TRADES" },
+      { name: "Recycle Bin", path: "/recycle-bin", icon: RotateCcw },
     ],
   },
 ];

@@ -101,7 +101,7 @@ export async function authenticateUser(req: Request, _res: Response, next: NextF
       (req.headers['x-user-id'] as string) ||
       (req.headers['authorization']?.replace(/^Bearer\s+/i, '') as string);
 
-    if (rawUserId) {
+    if (rawUserId && rawUserId !== 'dev_admin_user') {
       const user = await resolveUser(rawUserId);
       if (user) {
         req.user = user;

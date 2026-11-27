@@ -150,19 +150,33 @@ export function DubaiTableRow({
       {/* 4. Client */}
       <td className="py-3 px-3">
         {val.resolvedClientId || isValidatingMasterData ? (
-          <span className="font-bold text-slate-800 font-mono">{row.clientCode}</span>
+          <div>
+            <span className="font-bold text-slate-800 font-mono">{row.clientCode}</span>
+            {row.substituteClientCode && (
+              <span className="block text-[10px] text-blue-600 font-mono font-medium" title={`Swapped from substitute client ${row.substituteClientCode}`}>
+                via {row.substituteClientCode}
+              </span>
+            )}
+          </div>
         ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDoubleClickClient(row.clientCode);
-            }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
-            title="Unmapped client. Click to create."
-          >
-            <span>{row.clientCode || 'Missing'}</span>
-            <Plus className="w-3 h-3" />
-          </button>
+          <div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDoubleClickClient(row.clientCode);
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+              title={row.substituteClientCode ? `Unmapped client '${row.clientCode}' (swapped from ${row.substituteClientCode}). Click to create.` : 'Unmapped client. Click to create.'}
+            >
+              <span>{row.clientCode || 'Missing'}</span>
+              <Plus className="w-3 h-3" />
+            </button>
+            {row.substituteClientCode && (
+              <span className="block text-[10px] text-blue-600 font-mono font-medium" title={`Swapped from substitute client ${row.substituteClientCode}`}>
+                via {row.substituteClientCode}
+              </span>
+            )}
+          </div>
         )}
       </td>
 

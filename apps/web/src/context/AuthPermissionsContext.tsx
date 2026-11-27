@@ -47,11 +47,22 @@ const AuthPermissionsContext = createContext<AuthPermissionsContextType>({
   refreshPermissions: async () => {},
 });
 
-export function AuthPermissionsProvider({ children }: { children: React.ReactNode }) {
+export function AuthPermissionsProvider({
+  children,
+  isDevBypass = false,
+}: {
+  children: React.ReactNode;
+  isDevBypass?: boolean;
+}) {
   const { user, isLoaded } = useUser();
-  const [role, setRole] = useState<UserRoleInfo | null>(null);
+  const [role, setRole] = useState<UserRoleInfo | null>(() => {
+    if (isDevBypass) {
+      return { id: 'dev_admin_user', name: 'Owner', isOwner: true, isAdmin: true };
+    }
+    return null;
+  });
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!isDevBypass);
 
   const fetchProfile = useCallback(async (currentUserId: string) => {
     try {
@@ -83,6 +94,15 @@ export function AuthPermissionsProvider({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
+    if (isDevBypass && !user?.id) {
+      if (typeof window !== 'undefined') {
+        (window as any).__BIZZMATE_USER_ID__ = 'dev_admin_user';
+      }
+      setRole({ id: 'dev_admin_user', name: 'Owner', isOwner: true, isAdmin: true });
+      setLoading(false);
+      return;
+    }
+
     if (!isLoaded) return;
 
     if (user?.id) {
@@ -95,7 +115,7 @@ export function AuthPermissionsProvider({ children }: { children: React.ReactNod
         delete (window as any).__BIZZMATE_USER_ID__;
       }
     }
-  }, [user?.id, isLoaded, fetchProfile]);
+  }, [user?.id, isLoaded, fetchProfile, isDevBypass]);
 
   const refreshPermissions = async () => {
     if (user?.id) {
@@ -126,9 +146,9 @@ export function AuthPermissionsProvider({ children }: { children: React.ReactNod
   return (
     <AuthPermissionsContext.Provider
       value={{
-        userId: user?.id || null,
-        userName: user?.fullName || user?.firstName || null,
-        userEmail: user?.primaryEmailAddress?.emailAddress || null,
+        userId: user?.id || (isDevBypass ? 'dev_admin_user' : null),
+        userName: user?.fullName || user?.firstName || (isDevBypass ? 'Administrator' : null),
+        userEmail: user?.primaryEmailAddress?.emailAddress || (isDevBypass ? 'admin@bizzmate.com' : null),
         role,
         roleName,
         isOwner,

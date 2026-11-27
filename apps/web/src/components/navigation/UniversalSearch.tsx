@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
@@ -13,391 +13,29 @@ import {
   Coins,
   Calendar,
   Percent,
-  TrendingUp,
   FileSpreadsheet,
-  LayoutDashboard,
-  Layers,
   Plus,
-  Command,
   ArrowRight,
   X,
-  Keyboard,
   BookText,
-  Receipt,
-  Scale,
-  FolderOpen,
   PieChart,
-  FileCheck2,
   Sliders,
   Sparkles,
-  Check,
+  ExternalLink,
+  FileText,
+  RotateCcw,
+  Keyboard,
   ChevronDown,
+  Check,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useTableSearch } from '@/context/TableSearchContext';
+import { apiFetch } from '@/utils/apiClient';
+import { formatDateToDDMMYY } from '@/utils/dateUtils';
 
-export type MainTab = 'All' | 'Pages' | 'Actions' | 'Shortcuts';
-
-interface SearchItem {
-  id: string;
-  title: string;
-  description: string;
-  category: 'Pages' | 'Actions' | 'Shortcuts';
-  subCategory?: 'Trades' | 'Report' | 'Master';
-  keywords: string[];
-  icon: React.ComponentType<{ className?: string }>;
-  href?: string;
-  action?: () => void;
-  shortcut?: string;
-  badge?: string;
-}
-
-const REGISTRY: SearchItem[] = [
-  // ── Pages: Core Trades ────────────────────────────────────────
-  {
-    id: 'page-dashboard',
-    title: 'Dashboard Overview',
-    description: 'Financial KPI summary, active clients, and real-time ledger metrics',
-    category: 'Pages',
-    subCategory: 'Trades',
-    keywords: ['home', 'overview', 'summary', 'metrics', 'kpi', 'dashboard'],
-    icon: LayoutDashboard,
-    href: '/',
-    badge: 'Trades',
-  },
-  {
-    id: 'page-trades',
-    title: 'Trades',
-    description: 'Interactive trading ledger with click-to-edit row inspection and instant filters',
-    category: 'Pages',
-    subCategory: 'Trades',
-    keywords: ['trade', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate'],
-    icon: ArrowUpDown,
-    href: '/trades',
-    badge: 'Trades',
-  },
-  {
-    id: 'page-closing-rates',
-    title: 'Closing Rates',
-    description: 'End-of-day market settlement prices and mark-to-market rate management',
-    category: 'Pages',
-    subCategory: 'Trades',
-    keywords: ['rates', 'eod', 'closing', 'daily prices', 'market rates', 'mtm'],
-    icon: TrendingUp,
-    href: '/closing-rates',
-    badge: 'Trades',
-  },
-  {
-    id: 'page-trade-import',
-    title: 'Trade Import',
-    description: 'Bulk CSV / Excel trade transaction import wizard with mapping validation',
-    category: 'Pages',
-    subCategory: 'Trades',
-    keywords: ['import', 'upload', 'csv', 'excel', 'trades import', 'files'],
-    icon: FileSpreadsheet,
-    href: '/trades?import=true',
-    badge: 'Trades',
-  },
-  {
-    id: 'page-pos-import',
-    title: 'Open Position Import',
-    description: 'Carry forward, brought-forward (BF), and settlement position bulk import',
-    category: 'Pages',
-    subCategory: 'Trades',
-    keywords: ['open position', 'import', 'upload', 'carry forward', 'bf', 'cf'],
-    icon: TrendingUp,
-    href: '/closing-rates?import=true',
-    badge: 'Trades',
-  },
-
-  // ── Pages: Reports ──────────────────────────────────────────────
-  {
-    id: 'page-report-net-position',
-    title: 'Net Position Report',
-    description: 'Real-time open exposures, quantity aggregates, and MTM valuation across scripts',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['net position', 'open positions', 'mtm', 'exposure', 'market positions', 'reports', 'pnl'],
-    icon: PieChart,
-    href: '/reports/net-position',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-settlement-detail',
-    title: 'Settlement Audit Report',
-    description: 'Detailed contract-note audit trail, bills, brokerage charges, and trade breakdown',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['settlement audit', 'audit report', 'bill', 'settlement detail', 'breakdown', 'contract notes'],
-    icon: FileCheck2,
-    href: '/reports/settlement-detail',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-settlement-summary',
-    title: 'Financial Settlement Sheet',
-    description: 'Comprehensive financial settlement summary and party debit/credit statements',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['settlement sheet', 'summary', 'party balance', 'financial summary', 'pnl', 'reports'],
-    icon: FileSpreadsheet,
-    href: '/reports/settlement-summary',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-settlement-ops',
-    title: 'Settlement Operations',
-    description: 'Execute settlement cycle, generate party bills, and freeze processed periods',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['settlement', 'run settlement', 'billing', 'operations', 'settlement cycle', 'execute'],
-    icon: FolderOpen,
-    href: '/settlement',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-ledger',
-    title: 'Ledger Report',
-    description: 'Party-wise financial accounting ledger with chronological vouchers',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['ledger', 'statement', 'party ledger', 'debit', 'credit', 'account statement'],
-    icon: BookText,
-    href: '/ledger',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-voucher',
-    title: 'Voucher Entry',
-    description: 'Journal, payment, receipt, and adjustment voucher register',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['voucher', 'journal', 'payment', 'receipt', 'contra', 'entry', 'financial'],
-    icon: Receipt,
-    href: '/vouchers',
-    badge: 'Report',
-  },
-  {
-    id: 'page-report-trial-balance',
-    title: 'Trial Balance',
-    description: 'Double-entry trial balance report across asset, liability, and revenue groups',
-    category: 'Pages',
-    subCategory: 'Report',
-    keywords: ['trial balance', 'tb', 'balances', 'financial statements', 'accounting', 'audit'],
-    icon: Scale,
-    href: '/trial-balance',
-    badge: 'Report',
-  },
-
-  // ── Pages: Masters ──────────────────────────────────────────────
-  {
-    id: 'page-master-clients',
-    title: 'Clients Master',
-    description: 'Manage Sundry Debtors, contact telephone numbers, bank details, and opening balances',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['clients', 'customers', 'accounts', 'sundry debtors', 'parties'],
-    icon: Users,
-    href: '/clients',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-brokers',
-    title: 'Brokers Master',
-    description: 'Manage Sundry Creditors, clearing brokers, brokerage tariffs, and settlement terms',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['brokers', 'clearing', 'sundry creditors', 'agents'],
-    icon: ShieldCheck,
-    href: '/brokers',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-scripts',
-    title: 'Scripts Master',
-    description: 'Configure traded securities, commodity contracts, short names, lot sizes, and units',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['scripts', 'securities', 'instruments', 'commodities', 'symbols', 'lot size'],
-    icon: ScrollText,
-    href: '/scripts',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-exchanges',
-    title: 'Exchanges Master',
-    description: 'Bourses and marketplaces configuration (MCX, SGX, NYME, MDEX, LME)',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['exchanges', 'mcx', 'sgx', 'nyme', 'lme', 'mdex', 'bourses'],
-    icon: Globe,
-    href: '/exchanges',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-currencies',
-    title: 'Currencies Master',
-    description: 'Base currencies and FX symbols (INR ₹, USD $, MYR RM, etc.)',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['currencies', 'inr', 'usd', 'myr', 'fx', 'forex'],
-    icon: Coins,
-    href: '/currencies',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-expiries',
-    title: 'Expiry Dates Master',
-    description: 'Active contract expiry calendar and settlement cycle dates',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['expiries', 'expiry dates', 'settlement dates', 'contracts'],
-    icon: Calendar,
-    href: '/expiry-dates',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-brokerage',
-    title: 'Brokerage Rules',
-    description: 'Client and broker commission structures per script, volume, and lot',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['brokerage', 'commission', 'charges', 'rates'],
-    icon: Percent,
-    href: '/brokerage',
-    badge: 'Master',
-  },
-  {
-    id: 'page-master-others',
-    title: 'Chart of Accounts (All)',
-    description: 'Full chart of accounts across all ledger groups and classifications',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['accounts', 'ledger', 'groups', 'chart of accounts'],
-    icon: Layers,
-    href: '/account-master',
-    badge: 'Master',
-  },
-  {
-    id: 'page-admin-users',
-    title: 'Users & Permissions',
-    description: 'User access control, whitelist status, and administrative role assignments',
-    category: 'Pages',
-    subCategory: 'Master',
-    keywords: ['users', 'roles', 'permissions', 'whitelist', 'admin'],
-    icon: Users,
-    href: '/users',
-    badge: 'Master',
-  },
-
-  // ── Actions ─────────────────────────────────────────────────────
-  {
-    id: 'action-add-trade',
-    title: 'Add New Trade',
-    description: 'Open the trade entry modal directly with smart auto-focus and keyboard entry',
-    category: 'Actions',
-    keywords: ['new trade', 'create trade', 'enter trade', 'add order', 'new'],
-    icon: Plus,
-    action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('bizzmate-open-add-trade'));
-      }
-    },
-    href: '/trades?action=add',
-    badge: 'Action',
-  },
-  {
-    id: 'action-add-client',
-    title: 'Add New Client',
-    description: 'Open the client onboarding form with phone verification and spontaneous validation',
-    category: 'Actions',
-    keywords: ['new client', 'create customer', 'add client', 'debtor'],
-    icon: Plus,
-    action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('bizzmate-open-add-client'));
-      }
-    },
-    href: '/clients?action=add',
-    badge: 'Action',
-  },
-  {
-    id: 'action-add-broker',
-    title: 'Add New Broker',
-    description: 'Register a new clearing broker or creditor with banking details and contact info',
-    category: 'Actions',
-    keywords: ['new broker', 'create broker', 'add broker', 'creditor'],
-    icon: Plus,
-    action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('bizzmate-open-add-broker'));
-      }
-    },
-    href: '/brokers?action=add',
-    badge: 'Action',
-  },
-  {
-    id: 'action-new-voucher',
-    title: 'Create Voucher Entry',
-    description: 'Book payment, receipt, or journal debit/credit voucher',
-    category: 'Actions',
-    keywords: ['new voucher', 'create voucher', 'add payment', 'receipt'],
-    icon: Plus,
-    href: '/vouchers?action=add',
-    badge: 'Action',
-  },
-  {
-    id: 'action-toggle-sidebar',
-    title: 'Toggle / Lock Sidebar',
-    description: 'Pin or collapse the navigation sidebar directly on screen',
-    category: 'Actions',
-    keywords: ['sidebar', 'menu', 'collapse', 'expand', 'pin', 'lock'],
-    icon: Sliders,
-    action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('bizzmate-toggle-sidebar'));
-      }
-    },
-    shortcut: '[',
-    badge: 'Action',
-  },
-
-  // ── Shortcuts ───────────────────────────────────────────────────
-  {
-    id: 'shortcut-search',
-    title: 'Universal Search Palette',
-    description: 'Quickly open this global search command palette anywhere in BizzMate',
-    category: 'Shortcuts',
-    keywords: ['search', 'find', 'palette', 'shortcut', 'command'],
-    icon: Keyboard,
-    shortcut: 'Ctrl + K',
-    badge: 'Shortcut',
-  },
-  {
-    id: 'shortcut-save',
-    title: 'Submit / Save Modals',
-    description: 'Instantly submit and commit active modal forms without clicking the button',
-    category: 'Shortcuts',
-    keywords: ['save', 'submit', 'modal', 'enter', 'shortcut'],
-    icon: Keyboard,
-    shortcut: 'Ctrl + Enter',
-    badge: 'Shortcut',
-  },
-  {
-    id: 'shortcut-escape',
-    title: 'Close Modal / Dropdown',
-    description: 'Dismiss any open dropdown, modal dialog, or search palette',
-    category: 'Shortcuts',
-    keywords: ['close', 'cancel', 'dismiss', 'escape'],
-    icon: Keyboard,
-    shortcut: 'Esc',
-    badge: 'Shortcut',
-  },
-];
-
-const MAIN_TABS: MainTab[] = ['All', 'Pages', 'Actions', 'Shortcuts'];
+export type MainCategoryTab = 'All' | 'Pages' | 'Actions' | 'Reports' | 'Entities' | 'Shortcuts';
 
 export interface MultiFieldCondition {
   id: string;
@@ -407,25 +45,463 @@ export interface MultiFieldCondition {
   conjunction: 'AND' | 'OR';
 }
 
+export interface SearchItem {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Pages' | 'Actions' | 'Reports' | 'Entities' | 'Shortcuts';
+  keywords: string[];
+  lowerTitle?: string;
+  lowerKeywords?: string[];
+  icon: React.ComponentType<{ className?: string }>;
+  href?: string;
+  action?: () => void;
+  shortcut?: string;
+  isExternalTab?: boolean;
+  entityKind?: 'CLIENT' | 'BROKER' | 'SCRIPT';
+  entityRank?: number; // Lower = higher sub-rank within matched entity
+}
+
+const STATIC_REGISTRY: SearchItem[] = [
+  // ── Pages: Core Operations & Trading ──────────────────────────────
+  {
+    id: 'page-trades',
+    title: 'Trades',
+    description: 'Trading records, transactions, market orders, and execution filters',
+    category: 'Pages',
+    keywords: ['trade', 'trades', 'transactions', 'orders', 'buy', 'sell', 'quantity', 'market rate'],
+    icon: ArrowUpDown,
+    href: '/trades',
+  },
+  {
+    id: 'page-dashboard',
+    title: 'Dashboard Overview',
+    description: 'Financial KPI summary, active clients, turnover, and real-time ledger metrics',
+    category: 'Pages',
+    keywords: ['dashboard', 'home', 'overview', 'kpi', 'metrics', 'analytics', 'turnover'],
+    icon: Globe,
+    href: '/',
+  },
+  {
+    id: 'page-closing-rates',
+    title: 'Closing Rates',
+    description: 'Daily settlement closing prices, market valuations, and contract mark-to-market rates',
+    category: 'Pages',
+    keywords: ['closing rates', 'rates', 'cmp', 'market price', 'settlement price', 'daily rates', 'script'],
+    icon: Coins,
+    href: '/closing-rates',
+  },
+  {
+    id: 'page-trade-import',
+    title: 'Trade File Import',
+    description: 'Dynamic CSV / Excel trade transaction import with flexible column mapping',
+    category: 'Pages',
+    keywords: ['trade file import', 'import', 'upload', 'csv', 'excel', 'trades import', 'upload trades'],
+    icon: FileSpreadsheet,
+    href: '/trades?import=true',
+  },
+  {
+    id: 'page-closing-rates-import',
+    title: 'Closing Rates Import',
+    description: 'Import daily settlement closing rates from external CSV/Excel sheets',
+    category: 'Pages',
+    keywords: ['import rates', 'closing rate import', 'upload rates', 'rate file'],
+    icon: FileSpreadsheet,
+    href: '/closing-rates?import=true',
+  },
+  {
+    id: 'page-file-import-rules',
+    title: 'File Import Rules',
+    description: 'Manage CSV templates, brokerage fee formulas, exclusions, swaps, and mappings',
+    category: 'Pages',
+    keywords: ['file import rules', 'templates', 'column mapping', 'brokerage rule', 'exclude', 'swap'],
+    icon: Sliders,
+    href: '/file-import-rules',
+  },
+
+  // ── Pages: Financial Reports & Statements ─────────────────────────
+  {
+    id: 'report-net-position',
+    title: 'Net Position Report',
+    description: 'Open market positions, contract quantities, closing rates, and MTM valuations',
+    category: 'Reports',
+    keywords: ['net position', 'open position', 'mtm', 'exposure', 'positions', 'contracts', 'client', 'broker', 'script'],
+    icon: PieChart,
+    href: '/reports/net-position',
+  },
+  {
+    id: 'report-invoices',
+    title: 'Client & Broker Invoices',
+    description: 'Bilateral settled contract invoices and futures billing statements',
+    category: 'Reports',
+    keywords: ['invoice', 'invoices', 'bill', 'billing', 'statement', 'contract note', 'client', 'broker'],
+    icon: FileText,
+    href: '/reports/invoice',
+  },
+  {
+    id: 'report-settlement-detail',
+    title: 'Settlement Audit Report',
+    description: 'Trade provenance categorized into Regular, Carry Forward, Back Forward, and Settlement',
+    category: 'Reports',
+    keywords: ['settlement audit', 'trade provenance', 'carry forward', 'back forward', 'audit report', 'client'],
+    icon: ScrollText,
+    href: '/reports/settlement-detail',
+  },
+  {
+    id: 'report-settlement-summary',
+    title: 'Settlement Summary (Reconciliation)',
+    description: 'Firm-wide counterparty reconciliation, clearing balance sheet, and imbalance audits',
+    category: 'Reports',
+    keywords: ['settlement summary', 'reconciliation', 'clearing sheet', 'balance sheet', 'client', 'broker'],
+    icon: FileText,
+    href: '/reports/settlement-summary',
+  },
+  {
+    id: 'page-settlement',
+    title: 'Settlement Operations',
+    description: 'Manage weekly/monthly settlement cycles, clearing execution, and cycle rollovers',
+    category: 'Pages',
+    keywords: ['settlement', 'cycle', 'rollover', 'clearing', 'settle', 'close cycle'],
+    icon: Sliders,
+    href: '/settlement',
+  },
+  {
+    id: 'page-ledger',
+    title: 'Ledger Report',
+    description: 'Detailed double-entry financial ledger statements, debit/credit journal, running balance',
+    category: 'Reports',
+    keywords: ['ledger', 'account statement', 'transactions', 'journal', 'running balance', 'client', 'broker'],
+    icon: BookText,
+    href: '/ledger',
+  },
+  {
+    id: 'page-vouchers',
+    title: 'Voucher Register',
+    description: 'Bank payment, receipt, journal, and contra voucher postings',
+    category: 'Pages',
+    keywords: ['voucher', 'vouchers', 'payment', 'receipt', 'journal entry', 'contra'],
+    icon: FileText,
+    href: '/vouchers',
+  },
+  {
+    id: 'page-trial-balance',
+    title: 'Trial Balance',
+    description: 'Consolidated debit and credit trial balance summary across all account heads',
+    category: 'Reports',
+    keywords: ['trial balance', 'accounting balance', 'general ledger', 'debit total', 'credit total'],
+    icon: BookText,
+    href: '/trial-balance',
+  },
+
+  // ── Pages: Master Data & Entities ─────────────────────────────────
+  {
+    id: 'page-clients',
+    title: 'Clients Master',
+    description: 'Client account directory, KYC credentials, brokerage plans, and margins',
+    category: 'Pages',
+    keywords: ['client', 'clients', 'accounts', 'parties', 'customer', 'customer list'],
+    icon: Users,
+    href: '/clients',
+  },
+  {
+    id: 'page-brokers',
+    title: 'Brokers Master',
+    description: 'Clearing broker directory, turnover slabs, rebate structures, and counterparty records',
+    category: 'Pages',
+    keywords: ['broker', 'brokers', 'clearing broker', 'counterparties', 'sub broker'],
+    icon: ShieldCheck,
+    href: '/brokers',
+  },
+  {
+    id: 'page-scripts',
+    title: 'Scripts Master',
+    description: 'Configure securities, commodity contracts, short names, lot sizes, and units',
+    category: 'Pages',
+    keywords: ['script', 'scripts', 'symbols', 'instruments', 'contracts', 'lot size', 'security'],
+    icon: ScrollText,
+    href: '/scripts',
+  },
+  {
+    id: 'page-exchanges',
+    title: 'Exchanges Master',
+    description: 'Configure trading exchange venues (NSE, MCX, BSE, GIFT-NIFTY, DGCX)',
+    category: 'Pages',
+    keywords: ['exchange', 'exchanges', 'nse', 'mcx', 'bse', 'dgcx', 'market venue'],
+    icon: Globe,
+    href: '/exchanges',
+  },
+  {
+    id: 'page-currencies',
+    title: 'Currencies Master',
+    description: 'Currency configuration, decimal precisions, and multi-currency exchange rates',
+    category: 'Pages',
+    keywords: ['currency', 'currencies', 'inr', 'usd', 'fx', 'exchange rate'],
+    icon: Coins,
+    href: '/currencies',
+  },
+  {
+    id: 'page-expiry-dates',
+    title: 'Expiry Dates Master',
+    description: 'Contract settlement expiry dates, settlement cycles, and derivative maturities',
+    category: 'Pages',
+    keywords: ['expiry', 'expiries', 'expiry dates', 'maturity', 'contract cycle'],
+    icon: Calendar,
+    href: '/expiry-dates',
+  },
+  {
+    id: 'page-brokerage',
+    title: 'Brokerage Rules',
+    description: 'Formulaic commission tiers, turnover-based calculation, per-lot tariffs',
+    category: 'Pages',
+    keywords: ['brokerage', 'commission', 'charges', 'rates', 'brokerage rules', 'slabs'],
+    icon: Percent,
+    href: '/brokerage',
+  },
+  {
+    id: 'page-account-master',
+    title: 'Chart of Accounts (All)',
+    description: 'Universal ledger accounts hierarchy, asset, liability, expense & income accounts',
+    category: 'Pages',
+    keywords: ['chart of accounts', 'account master', 'general ledger', 'balance sheet heads'],
+    icon: BookText,
+    href: '/account-master',
+  },
+  {
+    id: 'page-users',
+    title: 'Users & Permissions',
+    description: 'Role-based access control, operator logins, audit permissions, and security',
+    category: 'Pages',
+    keywords: ['users', 'roles', 'permissions', 'security', 'admin', 'operator'],
+    icon: Users,
+    href: '/users',
+  },
+  {
+    id: 'page-recycle-bin',
+    title: 'Recycle Bin & Data Recovery',
+    description: 'View and restore deleted trades, accounts, closing rates, vouchers, and masters',
+    category: 'Pages',
+    keywords: ['recycle bin', 'deleted items', 'restore', 'trash', 'recover', 'undo delete', 'deleted'],
+    icon: RotateCcw,
+    href: '/recycle-bin',
+  },
+
+  // ── Quick Actions ────────────────────────────────────────────────
+  {
+    id: 'action-add-trade',
+    title: 'Add New Trade',
+    description: 'Open the quick trade entry modal with smart keyboard focus',
+    category: 'Actions',
+    keywords: ['add trade', 'new trade', 'create trade', 'enter trade', 'add order', 'trade entry', 'trades'],
+    icon: Plus,
+    action: () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bizzmate-open-add-trade'));
+      }
+    },
+    href: '/trades?action=add',
+  },
+  {
+    id: 'action-add-client',
+    title: 'Add New Client',
+    description: 'Register a new institutional or retail client account',
+    category: 'Actions',
+    keywords: ['add client', 'new client', 'create client', 'new account', 'add party'],
+    icon: Plus,
+    href: '/clients?action=add',
+  },
+  {
+    id: 'action-add-broker',
+    title: 'Add New Broker',
+    description: 'Register a new clearing broker or counterparty firm',
+    category: 'Actions',
+    keywords: ['add broker', 'new broker', 'create broker'],
+    icon: Plus,
+    href: '/brokers?action=add',
+  },
+  {
+    id: 'action-create-voucher',
+    title: 'Create Voucher Entry',
+    description: 'Record an accounting payment, receipt, journal, or contra entry',
+    category: 'Actions',
+    keywords: ['new voucher', 'create voucher', 'add payment', 'record receipt', 'journal entry'],
+    icon: Plus,
+    href: '/vouchers?action=new',
+  },
+  {
+    id: 'action-open-recycle-bin',
+    title: 'Open Recycle Bin',
+    description: 'Jump to deleted records recovery center and restore deleted entries',
+    category: 'Actions',
+    keywords: ['restore deleted', 'open recycle bin', 'undo delete', 'recover items', 'recover trades'],
+    icon: RotateCcw,
+    href: '/recycle-bin',
+  },
+  {
+    id: 'action-view-netpos',
+    title: 'Preview & Export Net Position Report',
+    description: 'Open standalone report document reader to view, print, or download PDF/Excel',
+    category: 'Actions',
+    keywords: ['export net position', 'download net position', 'net position pdf', 'preview report'],
+    icon: ExternalLink,
+    isExternalTab: true,
+    action: () => {
+      window.open('/report-viewer?type=net-position', '_blank');
+    },
+  },
+  {
+    id: 'action-view-invoice',
+    title: 'Preview & Export Invoice Statement',
+    description: 'Open standalone document reader for client and broker billing invoices',
+    category: 'Actions',
+    keywords: ['export invoice', 'download invoice', 'invoice pdf', 'preview invoice'],
+    icon: ExternalLink,
+    isExternalTab: true,
+    action: () => {
+      window.open('/report-viewer?type=invoice', '_blank');
+    },
+  },
+  {
+    id: 'action-view-settle-audit',
+    title: 'Preview & Export Settlement Audit',
+    description: 'Open standalone document reader for settlement trade breakdown',
+    category: 'Actions',
+    keywords: ['export settlement audit', 'download settlement', 'settlement pdf'],
+    icon: ExternalLink,
+    isExternalTab: true,
+    action: () => {
+      window.open('/report-viewer?type=settlement-detail', '_blank');
+    },
+  },
+  {
+    id: 'action-view-settle-summary',
+    title: 'Preview & Export Settlement Summary Sheet',
+    description: 'Open standalone document reader for counterparty reconciliation clearing balance sheet',
+    category: 'Actions',
+    keywords: ['export settlement summary', 'clearing sheet pdf', 'reconciliation export'],
+    icon: ExternalLink,
+    isExternalTab: true,
+    action: () => {
+      window.open('/report-viewer?type=settlement-summary', '_blank');
+    },
+  },
+  {
+    id: 'action-toggle-sidebar',
+    title: 'Toggle / Lock Sidebar',
+    description: 'Pin or collapse the left navigation sidebar',
+    category: 'Actions',
+    keywords: ['sidebar', 'menu', 'collapse', 'expand', 'pin', 'lock'],
+    icon: Sliders,
+    shortcut: '[',
+    action: () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bizzmate-toggle-sidebar'));
+      }
+    },
+  },
+
+  // ── Keyboard Shortcuts ───────────────────────────────────────────
+  {
+    id: 'shortcut-app-search',
+    title: 'App-Wide Search Command Center',
+    description: 'Open global search across pages, reports, clients, brokers, scripts, and actions',
+    category: 'Shortcuts',
+    keywords: ['shortcut', 'ctrl+k', 'search', 'command', 'palette'],
+    icon: Keyboard,
+    shortcut: 'Ctrl + K',
+  },
+  {
+    id: 'shortcut-table-search',
+    title: 'Search Data on Current Page',
+    description: 'Open multi-column live table filter modal (falls back to browser find on non-table pages)',
+    category: 'Shortcuts',
+    keywords: ['shortcut', 'ctrl+f', 'filter', 'table search', 'find'],
+    icon: Keyboard,
+    shortcut: 'Ctrl + F',
+  },
+  {
+    id: 'shortcut-save-modal',
+    title: 'Submit / Save Active Modal',
+    description: 'Save form entries cleanly without lifting hands from keyboard',
+    category: 'Shortcuts',
+    keywords: ['shortcut', 'ctrl+enter', 'save', 'submit', 'modal'],
+    icon: Keyboard,
+    shortcut: 'Ctrl + Enter',
+  },
+  {
+    id: 'shortcut-toggle-sidebar',
+    title: 'Toggle Navigation Sidebar Lock',
+    description: 'Collapse or expand the side menu for wider spreadsheet view',
+    category: 'Shortcuts',
+    keywords: ['shortcut', '[', 'sidebar', 'collapse', 'expand'],
+    icon: Keyboard,
+    shortcut: '[',
+  },
+  {
+    id: 'shortcut-close-modal',
+    title: 'Dismiss Modal / Dropdown',
+    description: 'Immediately close open popovers, drawers, or search dialog',
+    category: 'Shortcuts',
+    keywords: ['shortcut', 'esc', 'escape', 'close', 'cancel'],
+    icon: Keyboard,
+    shortcut: 'Esc',
+  },
+];
+
+// Pre-index static items once at module load
+const INDEXED_STATIC_REGISTRY: SearchItem[] = STATIC_REGISTRY.map((item) => ({
+  ...item,
+  lowerTitle: item.title.toLowerCase(),
+  lowerKeywords: item.keywords.map((k) => k.toLowerCase()),
+}));
+
 function getRecordValue(record: any, key: string): any {
   if (!record || !key) return '';
 
-  // 1. Direct property check (if it's a primitive or object with code/name)
-  if (record[key] !== undefined && record[key] !== null) {
-    if (typeof record[key] === 'object') {
-      return (
-        record[key].code ||
-        record[key].name ||
-        record[key].shortName ||
-        record[key].symbol ||
-        record[key].label ||
-        ''
-      );
-    }
-    return record[key];
+  // Domain column aliases used in Page Table definitions (e.g. Trades, Scripts, Closing Rates, Accounts)
+  if (key === 'client' || key === 'account') {
+    const code = record.account?.code || record.clientCode || '';
+    const name = record.account?.name || record.clientName || record.client || '';
+    if (code && name && code !== name) return `${code} - ${name}`;
+    return code || name;
+  }
+  if (key === 'broker') {
+    const code = record.broker?.code || record.brokerCode || '';
+    const name = record.broker?.name || record.brokerName || '';
+    if (code && name && code !== name) return `${code} - ${name}`;
+    return code || name;
+  }
+  if (key === 'securityName') {
+    return record.securityName || record.script?.fullName || record.script?.shortName || '';
+  }
+  if (key === 'script' || key === 'symbol') {
+    const short = record.script?.shortName || record.shortName || record.symbol || '';
+    const full = record.script?.fullName || record.fullName || '';
+    if (short && full && short !== full) return `${short} (${full})`;
+    return short || full;
+  }
+  if (key === 'tradeDate' || key === 'date' || key === 'rateDate') {
+    const raw = record[key] || record.tradeDate || record.rateDate || record.date || record.normalizedDate;
+    if (!raw) return '';
+    return formatDateToDDMMYY(raw) || String(raw);
+  }
+  if (key === 'expiry') {
+    return record.expiry ? formatDateToDDMMYY(record.expiry) || String(record.expiry) : '';
+  }
+  if (key === 'price') {
+    const val = record.price ?? record.rate;
+    return val !== undefined && val !== null ? String(val) : '';
+  }
+  if (key === 'exchange') {
+    return record.exchange?.code || record.exchange?.name || (typeof record.exchange === 'string' ? record.exchange : '');
+  }
+  if (key === 'currency') {
+    return record.currency?.code || record.currency?.symbol || (typeof record.currency === 'string' ? record.currency : '');
+  }
+  if (key === 'contact') {
+    return record.mobileNumber || record.whatsappNumber || record.email || '';
   }
 
-  // 2. Nested dot notation e.g. "account.code", "account.name", "group.name", "exchange.code"
+  // Nested dot notation e.g. "exchange.code", "account.code", "group.name"
   if (key.includes('.')) {
     const parts = key.split('.');
     let cur = record;
@@ -436,64 +512,44 @@ function getRecordValue(record: any, key: string): any {
     return cur ?? '';
   }
 
-  // 3. Known domain aliases across trades and master blotters
-  if (key === 'client' || key === 'account') {
-    const code = record.account?.code || record.clientCode || '';
-    const name = record.account?.name || record.clientName || record.client || '';
-    if (code && name) return `${code} - ${name}`;
-    return code || name;
-  }
-  if (key === 'broker') {
-    const code = record.broker?.code || record.brokerCode || '';
-    const name = record.broker?.name || record.brokerName || '';
-    if (code && name) return `${code} - ${name}`;
-    return code || name;
-  }
-  if (key === 'securityName' || key === 'script' || key === 'symbol') {
-    const short = record.script?.shortName || record.symbol || '';
-    const name = record.script?.name || '';
-    if (record.securityName) return record.securityName;
-    if (short && name) return `${short} - ${name}`;
-    return short || name;
-  }
-  if (key === 'tradeDate' || key === 'date') {
-    return record.tradeDate || record.date || record.normalizedDate || '';
-  }
-  if (key === 'exchange') {
-    return record.exchange?.code || record.exchange?.name || record.exchange || '';
+  // Direct property check
+  if (record[key] !== undefined && record[key] !== null) {
+    if (typeof record[key] === 'object') {
+      return (
+        record[key].code ||
+        record[key].shortName ||
+        record[key].name ||
+        record[key].symbol ||
+        record[key].label ||
+        ''
+      );
+    }
+    return record[key];
   }
 
   return '';
 }
 
 function getAllSearchableStrings(record: any): { key: string; label: string; value: string }[] {
-  if (!record) return [];
+  if (!record || typeof record !== 'object') return [];
   const entries: { key: string; label: string; value: string }[] = [];
 
-  function walk(obj: any, prefix = '', labelPrefix = '', depth = 0) {
-    if (depth > 3 || !obj) return;
-    if (typeof obj === 'string' || typeof obj === 'number') {
-      const valStr = String(obj).trim();
-      if (valStr) {
-        entries.push({
-          key: prefix || 'field',
-          label: labelPrefix || prefix || 'Field',
-          value: valStr,
-        });
-      }
-      return;
+  for (const [k, v] of Object.entries(record)) {
+    if (v === null || v === undefined || k === 'id' || k === 'isDeleted' || k === 'createdAt' || k === 'updatedAt') {
+      continue;
     }
-    if (typeof obj === 'object') {
-      for (const [k, v] of Object.entries(obj)) {
-        if (k === 'id' || k === 'createdAt' || k === 'updatedAt' || k === 'isDeleted') continue;
-        const subKey = prefix ? `${prefix}.${k}` : k;
-        const subLabel = k.charAt(0).toUpperCase() + k.slice(1);
-        walk(v, subKey, labelPrefix ? `${labelPrefix} ${subLabel}` : subLabel, depth + 1);
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      const str = String(v).trim();
+      if (str) entries.push({ key: k, label: k, value: str });
+    } else if (typeof v === 'object' && !Array.isArray(v)) {
+      for (const [subK, subV] of Object.entries(v as any)) {
+        if (typeof subV === 'string' || typeof subV === 'number') {
+          const str = String(subV).trim();
+          if (str) entries.push({ key: `${k}.${subK}`, label: `${k} ${subK}`, value: str });
+        }
       }
     }
   }
-
-  walk(record);
   return entries;
 }
 
@@ -513,7 +569,7 @@ function highlightMatch(text: any, query: string): React.ReactNode {
 
   return parts.map((part, i) =>
     terms.some((t) => part.toLowerCase() === t.toLowerCase()) ? (
-      <mark key={i} className="bg-amber-200 text-amber-950 font-bold px-0.5 rounded">
+      <mark key={i} className="bg-blue-100 text-[#1D4ED8] font-bold px-0.5 rounded-xs">
         {part}
       </mark>
     ) : (
@@ -522,67 +578,494 @@ function highlightMatch(text: any, query: string): React.ReactNode {
   );
 }
 
+// ── Item Ranking & Scoring Engine ──────────────────────────────────────
+function computeItemScore(item: SearchItem, q: string, baseQ: string): number {
+  const title = item.lowerTitle || item.title.toLowerCase();
+  const keywords = item.lowerKeywords || item.keywords.map((k) => k.toLowerCase());
+
+  // Entity-specific dynamic items (Clients, Brokers, Scripts + their reports/actions):
+  // ONLY match when query actually targets the entity code/name!
+  if (item.entityKind) {
+    // Primary entity identifiers are stored at index 0 and 1 (e.g. code, name)
+    const primaryMatches = keywords.slice(0, 2).some(
+      (kw) => kw && (kw === q || kw === baseQ || kw.startsWith(q) || (q.length >= 2 && kw.includes(q)))
+    );
+    const fullPhraseMatches = keywords.some(
+      (kw) => kw && (kw === q || kw === baseQ || kw.startsWith(q))
+    );
+    if (!primaryMatches && !fullPhraseMatches) {
+      return 0;
+    }
+
+    let score = 4000;
+    if (keywords[0] === q || keywords[0] === baseQ || keywords[1] === q) {
+      score += 6000; // Exact code/name match (e.g. "ele01" or "gold")
+    } else if (keywords[0]?.startsWith(q) || keywords[1]?.startsWith(q)) {
+      score += 3000;
+    }
+
+    // Sub-rank strictly puts:
+    // 1. Entity Master Page first (entityRank = 1)
+    // 2. All possible Reports next (entityRank = 2..6)
+    // 3. Quick Actions last (entityRank = 10)
+    score -= (item.entityRank ?? 5) * 100;
+    return score;
+  }
+
+  // Pinned canonical routing for generic noun searches
+  if (baseQ === 'trade') {
+    if (item.id === 'page-trades') return 12000;
+    if (item.id === 'action-add-trade') return 11000;
+    if (item.id === 'page-trade-import') return 10000;
+  }
+  if (baseQ === 'client') {
+    if (item.id === 'page-clients') return 12000; // #1 Client Page
+    if (item.id === 'report-net-position') return 11200;
+    if (item.id === 'report-invoices') return 11100; // Extra Invoice Report for Clients
+    if (item.id === 'page-ledger') return 11000;
+    if (item.id === 'report-settlement-detail') return 10900;
+    if (item.id === 'report-settlement-summary') return 10800;
+    if (item.id === 'action-add-client') return 10000;
+  }
+  if (baseQ === 'broker') {
+    if (item.id === 'page-brokers') return 12000; // #1 Broker Page
+    if (item.id === 'report-net-position') return 11200;
+    if (item.id === 'report-invoices') return 11100; // Extra Invoice Report for Brokers
+    if (item.id === 'page-ledger') return 11000;
+    if (item.id === 'report-settlement-summary') return 10800;
+    if (item.id === 'action-add-broker') return 10000;
+  }
+  if (baseQ === 'script') {
+    if (item.id === 'page-scripts') return 12000; // #1 Script Page
+    if (item.id === 'report-net-position') return 11200;
+    if (item.id === 'page-closing-rates') return 11000;
+    if (item.id === 'page-trades') return 10800;
+  }
+  if (baseQ === 'settle' || baseQ === 'settlement') {
+    if (item.id === 'page-settlement') return 12000;
+    if (item.id === 'report-settlement-summary') return 11000;
+    if (item.id === 'report-settlement-detail') return 10500;
+  }
+  if (baseQ === 'net position' || baseQ === 'open position') {
+    if (item.id === 'report-net-position') return 12000;
+    if (item.id === 'action-view-netpos') return 11000;
+  }
+
+  let score = 0;
+
+  if (title === q || title === baseQ || title === `${baseQ}s`) {
+    score += 4000;
+  } else if (title.startsWith(q) || title.startsWith(baseQ)) {
+    score += 2000;
+  } else if (title.includes(q)) {
+    score += 800;
+  }
+
+  const titleWords = title.split(/[\s-]+/);
+  if (titleWords.some((w) => w === q || w === baseQ || w === `${baseQ}s`)) {
+    score += 1500;
+  } else if (titleWords.some((w) => w.startsWith(q))) {
+    score += 600;
+  }
+
+  for (const kw of keywords) {
+    if (kw === q || kw === baseQ) {
+      score = Math.max(score, 3000);
+    } else if (kw.startsWith(q)) {
+      score = Math.max(score, 1200);
+    } else if (kw.includes(q) && q.length >= 2) {
+      score = Math.max(score, 500);
+    }
+  }
+
+  if (score > 0) {
+    if (item.category === 'Pages') score += 500;
+    else if (item.category === 'Reports') score += 400;
+    else if (item.category === 'Actions') score += 300;
+    else if (item.category === 'Shortcuts') score += 200;
+  }
+
+  return score;
+}
+
 export function UniversalSearch() {
   const { isOpen, mode, setMode, closeModal, activeTable } = useTableSearch();
-  const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<MainTab>('All');
-  const [subCategory, setSubCategory] = useState<'All' | 'Trades' | 'Report' | 'Master'>('All');
+
+  // Instant responsive local states (eliminates typing lag!)
+  const [appInput, setAppInput] = useState('');
+  const [tableInput, setTableInput] = useState('');
+  const deferredAppQuery = useDeferredValue(appInput);
+  const deferredTableQuery = useDeferredValue(tableInput);
+
+  const [activeTab, setActiveTab] = useState<MainCategoryTab>('All');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [keyboardIndex, setKeyboardIndex] = useState<number>(-1);
-  const [selectedTableIndex, setSelectedTableIndex] = useState(0);
 
-  // Table Mode: Match Mode, Multi-Field & Columns Dropdown State
-  const [searchMatchMode, setSearchMatchMode] = useState<'AND' | 'OR'>('AND');
+  // Table Mode States: AND/OR toggle (default OR), Column Dropdown, Multi-Col Query Builder
+  const [searchMatchMode, setSearchMatchMode] = useState<'AND' | 'OR'>('OR');
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isMultiFieldOpen, setIsMultiFieldOpen] = useState(false);
   const [conditions, setConditions] = useState<MultiFieldCondition[]>([]);
-  const columnDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic accounts & scripts loaded once for instant deep entity search
+  const [dynamicEntities, setDynamicEntities] = useState<SearchItem[]>([]);
 
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const tableInputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const columnDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Focus input and reset hover/keyboard states when opened or mode switched
+  // Load Clients, Brokers, Scripts for instant entity search
   useEffect(() => {
-    if (isOpen) {
-      if (mode === 'app') {
-        setQuery('');
-        setActiveTab('All');
-        setSubCategory('All');
-        setHoveredId(null);
-        setKeyboardIndex(-1);
-        setTimeout(() => inputRef.current?.focus(), 60);
-      } else {
-        setSelectedTableIndex(0);
-        setIsColumnDropdownOpen(false);
-        setTimeout(() => tableInputRef.current?.focus(), 60);
+    async function loadEntities() {
+      try {
+        const [accRes, scrRes] = await Promise.all([
+          apiFetch('/account-masters'),
+          apiFetch('/scripts'),
+        ]);
+
+        const rawItems: SearchItem[] = [];
+
+        if (accRes.ok) {
+          const accs = await accRes.json();
+          if (Array.isArray(accs)) {
+            accs.forEach((a: any) => {
+              const isBroker = a.group?.name?.toUpperCase()?.includes('BROKER') || a.group?.name?.toUpperCase()?.includes('CREDITOR');
+              const roleLabel = isBroker ? 'Broker' : 'Client';
+              const entityKind = isBroker ? 'BROKER' : 'CLIENT';
+
+              // Rank 1: Respective Master Page
+              rawItems.push({
+                id: `entity-${a.id}`,
+                title: `${a.code} - ${a.name}`,
+                description: `${roleLabel} Master Profile • Account directory & settings`,
+                category: 'Entities',
+                keywords: [a.code || '', a.name || '', roleLabel.toLowerCase()],
+                icon: isBroker ? ShieldCheck : Users,
+                href: isBroker ? `/brokers?id=${a.id}` : `/clients?id=${a.id}`,
+                entityKind,
+                entityRank: 1,
+              });
+
+              // Rank 2..5: All Possible Reports (Invoices included extra for Clients & Brokers!)
+              rawItems.push({
+                id: `action-netpos-${a.id}`,
+                title: `Net Position Report — "${a.code}"`,
+                description: `Open positions & MTM valuation for ${a.name}`,
+                category: 'Reports',
+                keywords: [a.code || '', a.name || '', 'net position', 'open position'],
+                icon: PieChart,
+                href: `/report-viewer?type=net-position&entityId=${a.id}&groupBy=${isBroker ? 'BROKER' : 'CLIENT'}`,
+                entityKind,
+                entityRank: 2,
+              });
+
+              rawItems.push({
+                id: `action-invoice-${a.id}`,
+                title: `Invoice Statement — "${a.code}"`,
+                description: `Bilateral settled futures bill & contract invoice for ${a.name}`,
+                category: 'Reports',
+                keywords: [a.code || '', a.name || '', 'invoice', 'bill', 'statement'],
+                icon: FileText,
+                href: `/report-viewer?type=invoice&entityType=${isBroker ? 'BROKER' : 'CLIENT'}&entityId=${a.id}`,
+                entityKind,
+                entityRank: 3,
+              });
+
+              rawItems.push({
+                id: `action-ledger-${a.id}`,
+                title: `Ledger Statement — "${a.code}"`,
+                description: `Financial accounting transactions and debit/credit ledger for ${a.name}`,
+                category: 'Reports',
+                keywords: [a.code || '', a.name || '', 'ledger', 'statement'],
+                icon: BookText,
+                href: `/ledger?accountId=${a.id}`,
+                entityKind,
+                entityRank: 4,
+              });
+
+              if (!isBroker) {
+                rawItems.push({
+                  id: `action-settle-audit-${a.id}`,
+                  title: `Settlement Audit Report — "${a.code}"`,
+                  description: `Trade provenance categorized for ${a.name}`,
+                  category: 'Reports',
+                  keywords: [a.code || '', a.name || '', 'settlement audit', 'audit'],
+                  icon: ScrollText,
+                  href: `/report-viewer?type=settlement-detail&clientId=${a.id}`,
+                  entityKind,
+                  entityRank: 5,
+                });
+              }
+
+              rawItems.push({
+                id: `action-settle-summary-${a.id}`,
+                title: `Settlement Clearing Sheet — "${a.code}"`,
+                description: `Counterparty clearing balance sheet & reconciliation`,
+                category: 'Reports',
+                keywords: [a.code || '', a.name || '', 'settlement summary', 'clearing sheet'],
+                icon: FileText,
+                href: `/report-viewer?type=settlement-summary`,
+                entityKind,
+                entityRank: 6,
+              });
+
+              // Rank 10: Quick Action
+              rawItems.push({
+                id: `action-trade-${a.id}`,
+                title: `Add Trade for "${a.code}"`,
+                description: `Open new trade entry form for ${a.name}`,
+                category: 'Actions',
+                keywords: [a.code || '', a.name || '', 'add trade', 'new trade'],
+                icon: Plus,
+                href: `/trades?${isBroker ? 'brokerId' : 'clientId'}=${a.id}&action=add`,
+                entityKind,
+                entityRank: 10,
+              });
+            });
+          }
+        }
+
+        if (scrRes.ok) {
+          const scrs = await scrRes.json();
+          if (Array.isArray(scrs)) {
+            scrs.forEach((s: any) => {
+              const code = s.shortName || s.symbol || '';
+              const fullName = s.fullName || code;
+
+              // Rank 1: Script Master Page
+              rawItems.push({
+                id: `script-${s.id}`,
+                title: `${code} — ${fullName}`,
+                description: `Script Master • Lot Size: ${s.lotSize || 1}`,
+                category: 'Entities',
+                keywords: [code, fullName, 'script'],
+                icon: ScrollText,
+                href: `/scripts?id=${s.id}`,
+                entityKind: 'SCRIPT',
+                entityRank: 1,
+              });
+
+              // Rank 2..4: Script Reports (no Invoice for Scripts)
+              rawItems.push({
+                id: `script-netpos-${s.id}`,
+                title: `Net Position Report (Script) — "${code}"`,
+                description: `Open market exposure & MTM across ${fullName}`,
+                category: 'Reports',
+                keywords: [code, fullName, 'net position', 'exposure'],
+                icon: PieChart,
+                href: `/report-viewer?type=net-position&groupBy=SCRIPT&scriptId=${s.id}`,
+                entityKind: 'SCRIPT',
+                entityRank: 2,
+              });
+
+              rawItems.push({
+                id: `script-trades-${s.id}`,
+                title: `Trades History — "${code}"`,
+                description: `View all active and settled trades for ${fullName}`,
+                category: 'Reports',
+                keywords: [code, fullName, 'trades', 'orders'],
+                icon: ArrowUpDown,
+                href: `/trades?scriptId=${s.id}`,
+                entityKind: 'SCRIPT',
+                entityRank: 3,
+              });
+
+              rawItems.push({
+                id: `script-rates-${s.id}`,
+                title: `Closing Rates — "${code}"`,
+                description: `Daily mark-to-market settlement prices for ${fullName}`,
+                category: 'Reports',
+                keywords: [code, fullName, 'closing rate', 'rates'],
+                icon: Coins,
+                href: `/closing-rates`,
+                entityKind: 'SCRIPT',
+                entityRank: 4,
+              });
+            });
+          }
+        }
+
+        // Pre-index lowercased titles & keywords for 0ms keystroke scoring
+        const indexed = rawItems.map((item) => ({
+          ...item,
+          lowerTitle: item.title.toLowerCase(),
+          lowerKeywords: item.keywords.map((k) => k.toLowerCase()),
+        }));
+
+        setDynamicEntities(indexed);
+      } catch (err) {
+        console.error('Failed to load search entities:', err);
       }
     }
-  }, [isOpen, mode]);
 
-  // Click outside to close column dropdown
+    loadEntities();
+  }, []);
+
+  // Initialize states cleanly when modal opens or mode switches
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (isOpen) {
+      setHoveredId(null);
+      setKeyboardIndex(-1);
+      setIsColumnDropdownOpen(false);
+
+      if (mode === 'table') {
+        // Persist existing search query & multi-field conditions from the active page!
+        setTableInput(activeTable?.searchQuery || '');
+        const existingConds = activeTable?.advancedConditions || [];
+        setConditions(existingConds);
+        setIsMultiFieldOpen(existingConds.some((c) => c.value?.trim()));
+      } else {
+        setAppInput('');
+        setActiveTab('All');
+      }
+
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, mode]); // intentionally only re-run on open/mode change
+
+  // Sync deferred table search string back to underlying page table (non-blocking)
+  useEffect(() => {
+    if (!isOpen || mode !== 'table' || !activeTable?.onSearchChange) return;
+    if (tableInput === (activeTable.searchQuery || '')) return;
+
+    const timer = setTimeout(() => {
+      activeTable.onSearchChange(tableInput);
+    }, 140);
+    return () => clearTimeout(timer);
+  }, [tableInput, isOpen, mode, activeTable]);
+
+  // Outside click close for Columns Dropdown
+  useEffect(() => {
+    if (!isColumnDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
       if (columnDropdownRef.current && !columnDropdownRef.current.contains(e.target as Node)) {
         setIsColumnDropdownOpen(false);
       }
     };
-    if (isColumnDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [isColumnDropdownOpen]);
 
-  // Reset selected table index when table search query or conditions change
+  // Reset arrow key selection whenever query or tab changes (so ArrowDown always starts cleanly on Row 1!)
   useEffect(() => {
-    setSelectedTableIndex(0);
-  }, [activeTable?.searchQuery, conditions]);
+    setKeyboardIndex(-1);
+    setHoveredId(null);
+  }, [deferredAppQuery, deferredTableQuery, activeTab, mode]);
 
-  // Primary 2 to 3 columns to display in the modal table
-  const primaryCols = useMemo(() => {
+  // ── APP MODE (`Ctrl+K`) COMPUTATIONS ─────────────────────────────────
+  const allAppItems = useMemo(() => {
+    return [...INDEXED_STATIC_REGISTRY, ...dynamicEntities];
+  }, [dynamicEntities]);
+
+  const tabCounts = useMemo(() => {
+    return {
+      All: INDEXED_STATIC_REGISTRY.length,
+      Pages: INDEXED_STATIC_REGISTRY.filter((i) => i.category === 'Pages').length,
+      Actions: INDEXED_STATIC_REGISTRY.filter((i) => i.category === 'Actions').length,
+      Reports: INDEXED_STATIC_REGISTRY.filter((i) => i.category === 'Reports').length,
+      Entities: dynamicEntities.filter((i) => i.category === 'Entities').length,
+      Shortcuts: INDEXED_STATIC_REGISTRY.filter((i) => i.category === 'Shortcuts').length,
+    };
+  }, [dynamicEntities]);
+
+  const rankedAppItems = useMemo(() => {
+    let items = allAppItems;
+    if (activeTab !== 'All') {
+      items = items.filter((i) => i.category === activeTab);
+    }
+
+    const q = deferredAppQuery.trim().toLowerCase();
+    if (!q) {
+      // When empty query, avoid dumping thousands of entity combinations; show crisp defaults
+      if (activeTab === 'All') {
+        return INDEXED_STATIC_REGISTRY;
+      }
+      if (activeTab === 'Entities') {
+        return dynamicEntities.filter((i) => i.category === 'Entities').slice(0, 30);
+      }
+      return items.slice(0, 40);
+    }
+
+    const baseQ = q.endsWith('s') && q.length > 3 ? q.slice(0, -1) : q;
+    const scored: { item: SearchItem; score: number }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const score = computeItemScore(item, q, baseQ);
+      if (score > 0) {
+        scored.push({ item, score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 45).map((s) => s.item);
+  }, [allAppItems, dynamicEntities, activeTab, deferredAppQuery]);
+
+  const appSections = useMemo(() => {
+    const sections: { title: string; items: SearchItem[] }[] = [];
+
+    if (!deferredAppQuery.trim()) {
+      if (activeTab === 'Shortcuts') {
+        sections.push({
+          title: 'Keyboard Shortcuts',
+          items: rankedAppItems,
+        });
+      } else if (activeTab === 'Entities') {
+        sections.push({
+          title: 'Clients, Brokers & Scripts',
+          items: rankedAppItems,
+        });
+      } else if (activeTab !== 'All') {
+        sections.push({
+          title: activeTab,
+          items: rankedAppItems,
+        });
+      } else {
+        sections.push(
+          { title: 'Core Pages', items: rankedAppItems.filter((i) => i.category === 'Pages').slice(0, 8) },
+          { title: 'Quick Actions', items: rankedAppItems.filter((i) => i.category === 'Actions').slice(0, 6) },
+          { title: 'Reports', items: rankedAppItems.filter((i) => i.category === 'Reports').slice(0, 6) },
+          { title: 'Keyboard Shortcuts', items: rankedAppItems.filter((i) => i.category === 'Shortcuts') }
+        );
+      }
+      return sections.filter((s) => s.items.length > 0);
+    }
+
+    const bestMatches = rankedAppItems.slice(0, 4);
+    const bestIds = new Set(bestMatches.map((i) => i.id));
+    const remainder = rankedAppItems.filter((i) => !bestIds.has(i.id));
+
+    if (bestMatches.length > 0) {
+      sections.push({ title: 'Best Matches', items: bestMatches });
+    }
+
+    const pages = remainder.filter((i) => i.category === 'Pages');
+    if (pages.length > 0) sections.push({ title: 'Pages', items: pages });
+
+    const reports = remainder.filter((i) => i.category === 'Reports');
+    if (reports.length > 0) sections.push({ title: 'Reports & Statements', items: reports });
+
+    const entities = remainder.filter((i) => i.category === 'Entities');
+    if (entities.length > 0) sections.push({ title: 'Accounts & Scripts', items: entities.slice(0, 8) });
+
+    const actions = remainder.filter((i) => i.category === 'Actions');
+    if (actions.length > 0) sections.push({ title: 'Quick Actions', items: actions });
+
+    const shortcuts = remainder.filter((i) => i.category === 'Shortcuts');
+    if (shortcuts.length > 0) sections.push({ title: 'Shortcuts', items: shortcuts });
+
+    return sections.filter((s) => s.items.length > 0);
+  }, [rankedAppItems, deferredAppQuery, activeTab]);
+
+  const flatAppItems = useMemo(() => appSections.flatMap((s) => s.items), [appSections]);
+
+  // ── TABLE MODE (`Ctrl+F`) COMPUTATIONS ───────────────────────────────
+  const displayCols = useMemo(() => {
     if (!activeTable?.columns || activeTable.columns.length === 0) return [];
-    return activeTable.columns.slice(0, 3);
+    return activeTable.columns.slice(0, 4);
   }, [activeTable?.columns]);
 
   const hasSelectedSpecificCols = Boolean(
@@ -593,7 +1076,7 @@ export function UniversalSearch() {
   );
 
   const columnButtonLabel = useMemo(() => {
-    if (!activeTable?.columns || !hasSelectedSpecificCols) return '✦ All Columns';
+    if (!activeTable?.columns || !hasSelectedSpecificCols) return 'All Columns';
     if (
       activeTable.selectedColumns &&
       activeTable.selectedColumns.length > 0 &&
@@ -609,24 +1092,24 @@ export function UniversalSearch() {
       const col = activeTable.columns.find((c) => c.key === activeTable.searchColumn);
       return col ? col.label : '1 Column';
     }
-    return '✦ All Columns';
+    return 'All Columns';
   }, [activeTable?.columns, activeTable?.selectedColumns, activeTable?.searchColumn, hasSelectedSpecificCols]);
 
-  // Filtered rows for the current active table with match detection
   const filteredTableRows = useMemo(() => {
     const records = activeTable?.records || [];
-    const q = (activeTable?.searchQuery || '').trim().toLowerCase();
     const columns = activeTable?.columns || [];
+    const q = deferredTableQuery.trim().toLowerCase();
     const activeConditions = conditions.filter((c) => c.value && c.value.trim());
 
-    if (!records.length) return [];
+    if (records.length === 0) return [];
 
-    // USER REQUIREMENT: If nothing is typed (and no multi-field conditions), show nothing!
     if (!q && activeConditions.length === 0) {
-      return [];
+      return records.slice(0, 15).map((record) => ({
+        record,
+        matchedColumn: null as { key: string; label: string; value: string } | null,
+      }));
     }
 
-    // Target columns to search
     let targetCols = columns;
     if (
       activeTable?.selectedColumns &&
@@ -641,21 +1124,19 @@ export function UniversalSearch() {
     const terms = q ? q.split(/[,\s]+/).filter(Boolean) : [];
     const results: { record: any; matchedColumn: { key: string; label: string; value: string } | null }[] = [];
 
-    for (const record of records) {
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
       let matchedColInfo: { key: string; label: string; value: string } | null = null;
       let textMatchPassed = terms.length === 0;
 
-      // 1. Text Search matching (respecting searchMatchMode: AND vs OR)
       if (terms.length > 0) {
         const candidateEntries: { key: string; label: string; value: string }[] = [];
-
         for (const col of targetCols) {
-          const val = String(getRecordValue(record, col.key) ?? '');
+          const val = String(getRecordValue(record, col.key) ?? '').trim();
           if (val) candidateEntries.push({ key: col.key, label: col.label, value: val });
         }
 
-        // If searching ALL, also include any deep nested searchable fields
-        if (!activeTable?.searchColumn || activeTable.searchColumn === 'ALL') {
+        if (!hasSelectedSpecificCols) {
           const deepStrings = getAllSearchableStrings(record);
           for (const ds of deepStrings) {
             candidateEntries.push(ds);
@@ -663,42 +1144,27 @@ export function UniversalSearch() {
         }
 
         if (searchMatchMode === 'AND') {
-          // AND mode: Every term in terms must match in at least one candidate entry
           const termMatches = terms.map((term) =>
             candidateEntries.find((entry) => entry.value.toLowerCase().includes(term))
           );
-          const allTermsFound = termMatches.every(Boolean);
-
-          if (allTermsFound) {
+          if (termMatches.every(Boolean)) {
             textMatchPassed = true;
-            const firstFound = termMatches[0];
-            if (firstFound) {
-              matchedColInfo = {
-                key: firstFound.key,
-                label: firstFound.label,
-                value: firstFound.value,
-              };
+            if (termMatches[0]) {
+              matchedColInfo = termMatches[0];
             }
           }
         } else {
-          // OR mode: Any term matches
           for (const entry of candidateEntries) {
             const lower = entry.value.toLowerCase();
-            const matchedTerm = terms.find((t) => lower.includes(t));
-            if (matchedTerm) {
+            if (terms.some((t) => lower.includes(t))) {
               textMatchPassed = true;
-              matchedColInfo = {
-                key: entry.key,
-                label: entry.label,
-                value: entry.value,
-              };
+              matchedColInfo = entry;
               break;
             }
           }
         }
       }
 
-      // 2. Multi-Field Conditions matching (with AND / OR conjunctions)
       let conditionMatchPassed = true;
       if (activeConditions.length > 0) {
         activeConditions.forEach((c, idx) => {
@@ -707,29 +1173,12 @@ export function UniversalSearch() {
           const targetStr = c.value.toLowerCase().trim();
 
           let passed = false;
-          switch (c.operator) {
-            case 'equals':
-              passed = valStr === targetStr;
-              break;
-            case 'starts_with':
-              passed = valStr.startsWith(targetStr);
-              break;
-            case 'contains':
-            default:
-              passed = valStr.includes(targetStr);
-              break;
-          }
+          if (c.operator === 'equals') passed = valStr === targetStr;
+          else if (c.operator === 'starts_with') passed = valStr.startsWith(targetStr);
+          else passed = valStr.includes(targetStr);
 
-          if (idx === 0) {
-            conditionMatchPassed = passed;
-          } else {
-            const conj = c.conjunction || 'AND';
-            if (conj === 'OR') {
-              conditionMatchPassed = conditionMatchPassed || passed;
-            } else {
-              conditionMatchPassed = conditionMatchPassed && passed;
-            }
-          }
+          if (idx === 0) conditionMatchPassed = passed;
+          else conditionMatchPassed = c.conjunction === 'OR' ? conditionMatchPassed || passed : conditionMatchPassed && passed;
 
           if (passed && !matchedColInfo) {
             const colDef = columns.find((col) => col.key === c.column);
@@ -742,291 +1191,208 @@ export function UniversalSearch() {
         });
       }
 
-      // Both text query and multi-field conditions must pass
       if (textMatchPassed && conditionMatchPassed) {
-        results.push({
-          record,
-          matchedColumn: matchedColInfo,
-        });
+        results.push({ record, matchedColumn: matchedColInfo });
+        if (results.length >= 30) break;
       }
     }
 
     return results;
   }, [
     activeTable?.records,
-    activeTable?.searchQuery,
     activeTable?.columns,
     activeTable?.searchColumn,
     activeTable?.selectedColumns,
+    hasSelectedSpecificCols,
+    deferredTableQuery,
     searchMatchMode,
     conditions,
   ]);
 
-  const handleApplyFilterAndClose = useCallback(
-    (selectedRecord?: any) => {
-      if (selectedRecord && activeTable?.onSelectRow) {
-        activeTable.onSelectRow(selectedRecord);
-      }
-      if (activeTable?.onAdvancedConditionsChange && conditions.length > 0) {
-        activeTable.onAdvancedConditionsChange(
-          conditions.filter((c) => c.value && c.value.trim())
-        );
-      }
-      closeModal();
-    },
-    [activeTable, conditions, closeModal]
-  );
-
-  // Filter items based on active tab & query
-  const filteredItems = useMemo(() => {
-    let items = REGISTRY;
-    if (activeTab !== 'All') {
-      items = items.filter((item) => item.category === activeTab);
-    }
-    if (activeTab === 'Pages' && subCategory !== 'All') {
-      items = items.filter((item) => item.subCategory === subCategory);
-    }
-    if (!query.trim()) {
-      return items;
-    }
-    const q = query.toLowerCase().trim();
-    return items.filter((item) => {
-      return (
-        item.title.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        (item.subCategory && item.subCategory.toLowerCase().includes(q)) ||
-        item.keywords.some((k) => k.toLowerCase().includes(q))
-      );
-    });
-  }, [activeTab, query]);
-
-  // Tab counts
-  const tabCounts = useMemo(() => {
-    return {
-      All: REGISTRY.length,
-      Pages: REGISTRY.filter((i) => i.category === 'Pages').length,
-      Actions: REGISTRY.filter((i) => i.category === 'Actions').length,
-      Shortcuts: REGISTRY.filter((i) => i.category === 'Shortcuts').length,
-    };
-  }, []);
-
-  // Handle selection of item
-  const handleSelect = useCallback(
+  // ── ACTION HANDLERS ──────────────────────────────────────────────────
+  const handleSelectAppItem = useCallback(
     (item: SearchItem) => {
       closeModal();
       if (item.action) {
         item.action();
-      }
-      if (item.href) {
-        router.push(item.href);
+      } else if (item.href) {
+        if (item.isExternalTab) {
+          window.open(item.href, '_blank');
+        } else {
+          router.push(item.href);
+        }
       }
     },
-    [router, closeModal]
+    [closeModal, router]
   );
 
-  // Arrow key navigation
+  const handleApplyTableAndClose = useCallback(
+    (selectedRecord?: any) => {
+      if (activeTable) {
+        activeTable.onSearchChange(tableInput);
+        if (activeTable.onAdvancedConditionsChange) {
+          activeTable.onAdvancedConditionsChange(conditions.filter((c) => c.value?.trim()));
+        }
+        if (selectedRecord && activeTable.onSelectRow) {
+          activeTable.onSelectRow(selectedRecord);
+        }
+      }
+      closeModal();
+    },
+    [activeTable, tableInput, conditions, closeModal]
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const listLen = mode === 'table' ? filteredTableRows.length : flatAppItems.length;
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHoveredId(null);
-      setKeyboardIndex((prev) => (prev < filteredItems.length - 1 ? prev + 1 : 0));
+      if (listLen === 0) return;
+      setKeyboardIndex((prev) => (prev < listLen - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHoveredId(null);
-      setKeyboardIndex((prev) => (prev > 0 ? prev - 1 : filteredItems.length - 1));
+      if (listLen === 0) return;
+      setKeyboardIndex((prev) => (prev <= 0 ? listLen - 1 : prev - 1));
+    } else if (e.key === 'Tab' && activeTable) {
+      e.preventDefault();
+      setMode(mode === 'app' ? 'table' : 'app');
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const targetIndex = keyboardIndex >= 0 ? keyboardIndex : 0;
-      if (filteredItems[targetIndex]) {
-        handleSelect(filteredItems[targetIndex]);
+      if (mode === 'table') {
+        if (keyboardIndex >= 0 && filteredTableRows[keyboardIndex]) {
+          handleApplyTableAndClose(filteredTableRows[keyboardIndex].record);
+        } else {
+          // Pressed Enter while typing directly -> apply query string to table filter
+          handleApplyTableAndClose();
+        }
+      } else {
+        const targetIndex = keyboardIndex >= 0 ? keyboardIndex : 0;
+        if (flatAppItems[targetIndex]) {
+          handleSelectAppItem(flatAppItems[targetIndex]);
+        }
       }
-    } else if (e.key === 'Tab') {
+    } else if (e.key === 'Escape') {
       e.preventDefault();
-      if (activeTable) {
-        setMode(mode === 'app' ? 'table' : 'app');
-      }
+      closeModal();
     }
   };
 
   if (!isOpen || typeof document === 'undefined') return null;
 
+  let currentAppCounter = 0;
+
   return createPortal(
     <div
-      className="fixed inset-0 z-999999 flex items-start justify-center pt-16 sm:pt-20 p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-99999 flex items-start justify-center pt-[8vh] sm:pt-[11vh] px-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150 select-none"
       onClick={closeModal}
     >
       <div
         className={cn(
-          'bg-white border border-slate-200/90 rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 transition-all max-h-[85vh]',
-          mode === 'table' ? 'max-w-3xl' : 'max-w-2xl'
+          'w-full flex flex-col p-0 overflow-hidden shadow-[0_24px_60px_rgba(15,23,42,0.18)] border border-slate-200/90 bg-white rounded-2xl animate-in zoom-in-95 duration-150 max-h-[84vh]',
+          mode === 'table' ? 'max-w-3xl' : 'max-w-2xl sm:max-w-3xl'
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Mode Segmented Switcher (Ctrl+K App Search / Ctrl+F Table Filter) */}
-        <div className="flex items-center justify-between px-5 py-2.5 border-b border-slate-100 bg-slate-50/70 select-none">
-          <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setMode('app')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
-                mode === 'app'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              <Globe className="w-3.5 h-3.5 text-blue-600" />
-              <span>App-Wide Search</span>
-              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-500 font-bold">
-                Ctrl+K
-              </kbd>
-            </button>
+        {/* ── SEARCH INPUT BAR ───────────────────────────────────────── */}
+        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-slate-200/80 bg-white shrink-0">
+          <Search className="w-5 h-5 text-[#2652C8] shrink-0" />
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={mode === 'table' ? tableInput : appInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (mode === 'table') setTableInput(v);
+              else setAppInput(v);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              mode === 'table'
+                ? 'Search data on this page...'
+                : 'App-wide search... (pages, clients, brokers, scripts, reports, shortcuts)'
+            }
+            className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-[#2652C8]"
+          />
+
+          {/* Clear Input */}
+          {(mode === 'table' ? tableInput : appInput) && (
             <button
               type="button"
               onClick={() => {
-                if (activeTable) setMode('table');
+                if (mode === 'table') {
+                  setTableInput('');
+                  activeTable?.onSearchChange('');
+                } else {
+                  setAppInput('');
+                }
+                inputRef.current?.focus();
               }}
-              disabled={!activeTable}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
-                mode === 'table'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : activeTable
-                  ? 'text-slate-600 hover:text-slate-900'
-                  : 'text-slate-400 cursor-not-allowed opacity-50'
-              )}
+              className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0 transition-colors"
+              title="Clear search"
             >
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Current Table{activeTable ? `: ${activeTable.tableName}` : ''}</span>
-              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-500 font-bold">
-                Ctrl+F
-              </kbd>
+              <X className="w-4 h-4" />
             </button>
-          </div>
+          )}
 
-          <div className="flex items-center gap-2">
-            {activeTable && (
-              <span className="text-[11px] text-slate-400 hidden sm:inline">
-                Press <kbd className="font-mono bg-white border border-slate-200 px-1 py-0.5 rounded text-slate-600 text-[10px]">Tab</kbd> to toggle
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={closeModal}
-              className="px-2 py-0.5 text-xs font-mono font-semibold text-slate-500 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
-              title="Close (Esc)"
-            >
-              <span>Esc</span>
-            </button>
-          </div>
-        </div>
-
-        {mode === 'table' ? (
-          <div className="flex flex-col overflow-hidden">
-            {/* Table Search Input Bar with AND/OR toggle, Columns Dropdown & Multi-Field */}
-            <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-white">
-              <Search className="w-5 h-5 text-emerald-600 shrink-0" />
-              <input
-                ref={tableInputRef}
-                type="text"
-                value={activeTable?.searchQuery || ''}
-                onChange={(e) => activeTable?.onSearchChange(e.target.value)}
-                placeholder={`Search ${activeTable?.tableName || 'table'} records (e.g. ele01, reliance)...`}
-                className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-emerald-600"
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setSelectedTableIndex((prev) =>
-                      filteredTableRows.length > 0 ? (prev < filteredTableRows.length - 1 ? prev + 1 : 0) : 0
-                    );
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setSelectedTableIndex((prev) =>
-                      filteredTableRows.length > 0 ? (prev > 0 ? prev - 1 : filteredTableRows.length - 1) : 0
-                    );
-                  } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const targetRecord = filteredTableRows[selectedTableIndex]?.record;
-                    handleApplyFilterAndClose(targetRecord);
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    closeModal();
-                  } else if (e.key === 'Tab') {
-                    e.preventDefault();
-                    setMode('app');
-                  }
-                }}
-              />
-
-              {activeTable?.searchQuery ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    activeTable?.onSearchChange('');
-                    tableInputRef.current?.focus();
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors shrink-0"
-                  title="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              ) : null}
-
-              {/* AND / OR Match Mode Toggle Button */}
-              <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-bold select-none shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setSearchMatchMode('AND')}
-                  className={cn(
-                    'px-2 py-0.5 rounded-md transition-all cursor-pointer text-xs',
-                    searchMatchMode === 'AND'
-                      ? 'bg-white text-emerald-700 shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-800'
-                  )}
-                  title="AND: Row must match ALL typed words"
-                >
-                  AND
-                </button>
+          {/* Mode-Specific Header Controls */}
+          {mode === 'table' && activeTable ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* AND / OR Match Mode */}
+              <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200/90 text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setSearchMatchMode('OR')}
                   className={cn(
-                    'px-2 py-0.5 rounded-md transition-all cursor-pointer text-xs',
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer',
                     searchMatchMode === 'OR'
-                      ? 'bg-white text-emerald-700 shadow-2xs font-bold'
+                      ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
                   )}
-                  title="OR: Row can match ANY typed word"
+                  title="OR: Match ANY typed term"
                 >
                   OR
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMatchMode('AND')}
+                  className={cn(
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer',
+                    searchMatchMode === 'AND'
+                      ? 'bg-white text-[#2652C8] shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                  title="AND: Match ALL typed terms"
+                >
+                  AND
+                </button>
               </div>
 
-              {/* Target Columns Dropdown (at right corner of search) */}
-              {activeTable?.columns && activeTable.columns.length > 0 && (
-                <div className="relative shrink-0" ref={columnDropdownRef}>
+              {/* Column Picker Dropdown */}
+              {activeTable.columns && activeTable.columns.length > 0 && (
+                <div className="relative" ref={columnDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setIsColumnDropdownOpen((prev) => !prev)}
                     className={cn(
-                      'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border select-none',
+                      'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer',
                       hasSelectedSpecificCols
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs font-bold'
+                        ? 'bg-blue-50 text-[#2652C8] border-blue-200 font-bold'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     )}
-                    title="Select columns to search in"
+                    title="Target specific columns"
                   >
-                    <span className="max-w-[120px] truncate">{columnButtonLabel}</span>
+                    <span className="max-w-[110px] truncate">{columnButtonLabel}</span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
-                  {/* Dropdown Menu */}
                   {isColumnDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                    <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 max-h-68 overflow-y-auto">
                       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 px-1">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                          Search Columns
+                          Target Columns
                         </span>
                         <button
                           type="button"
@@ -1034,13 +1400,12 @@ export function UniversalSearch() {
                             activeTable.onSearchColumnChange?.('ALL');
                             activeTable.onSelectedColumnsChange?.(['ALL']);
                           }}
-                          className="text-[11px] text-emerald-600 hover:text-emerald-800 font-semibold cursor-pointer"
+                          className="text-[11px] text-[#2652C8] hover:underline font-semibold cursor-pointer"
                         >
-                          Reset to All
+                          All Columns
                         </button>
                       </div>
 
-                      {/* All Columns Option */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1049,19 +1414,18 @@ export function UniversalSearch() {
                           setIsColumnDropdownOpen(false);
                         }}
                         className={cn(
-                          'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer text-left',
+                          'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-left',
                           !hasSelectedSpecificCols
-                            ? 'bg-emerald-50 text-emerald-800'
+                            ? 'bg-blue-50 text-[#2652C8]'
                             : 'hover:bg-slate-50 text-slate-700'
                         )}
                       >
-                        <span>✦ All Columns</span>
-                        {!hasSelectedSpecificCols && <Check className="w-4 h-4 text-emerald-600" />}
+                        <span>All Columns</span>
+                        {!hasSelectedSpecificCols && <Check className="w-3.5 h-3.5 text-[#2652C8]" />}
                       </button>
 
                       <div className="my-1 border-t border-slate-100" />
 
-                      {/* List of Individual Columns */}
                       <div className="space-y-0.5">
                         {activeTable.columns.map((col) => {
                           const isChecked =
@@ -1092,14 +1456,14 @@ export function UniversalSearch() {
                                 }
                               }}
                               className={cn(
-                                'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer text-left',
+                                'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer text-left',
                                 isChecked
-                                  ? 'bg-emerald-50/70 text-emerald-800 font-semibold'
+                                  ? 'bg-blue-50/70 text-[#2652C8] font-semibold'
                                   : 'hover:bg-slate-50 text-slate-700 font-medium'
                               )}
                             >
                               <span className="truncate">{col.label}</span>
-                              {isChecked && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                              {isChecked && <Check className="w-3.5 h-3.5 text-[#2652C8] shrink-0" />}
                             </button>
                           );
                         })}
@@ -1109,12 +1473,13 @@ export function UniversalSearch() {
                 </div>
               )}
 
-              {/* Multi-Field Filter Toggle Button */}
+              {/* Multi-Column Query Builder Toggle */}
               <button
                 type="button"
                 onClick={() => {
-                  setIsMultiFieldOpen((prev) => !prev);
-                  if (!isMultiFieldOpen && conditions.length === 0 && activeTable?.columns?.length) {
+                  const next = !isMultiFieldOpen;
+                  setIsMultiFieldOpen(next);
+                  if (next && conditions.length === 0 && activeTable.columns?.length) {
                     setConditions([
                       {
                         id: Math.random().toString(36).slice(2, 8),
@@ -1127,33 +1492,50 @@ export function UniversalSearch() {
                   }
                 }}
                 className={cn(
-                  'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border select-none shrink-0',
-                  isMultiFieldOpen || conditions.some((c) => c.value.trim())
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  'h-8 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer',
+                  isMultiFieldOpen || conditions.some((c) => c.value?.trim())
+                    ? 'bg-blue-50 text-[#2652C8] border-blue-300 font-bold'
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 )}
-                title="Toggle Multi-Field Column Search (query different words in specific columns)"
+                title="Multi-Column Search (different words in specific columns)"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Multi-Field</span>
-                {conditions.filter((c) => c.value.trim()).length > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-white text-emerald-700 text-[10px] font-bold flex items-center justify-center">
-                    {conditions.filter((c) => c.value.trim()).length}
+                <span className="hidden sm:inline">Multi-Col</span>
+                {conditions.filter((c) => c.value?.trim()).length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#2652C8] text-white text-[10px] font-bold">
+                    {conditions.filter((c) => c.value?.trim()).length}
                   </span>
                 )}
               </button>
             </div>
+          ) : (
+            activeTable && (
+              <button
+                type="button"
+                onClick={() => setMode('table')}
+                className="hidden sm:flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 text-[#2652C8] border border-blue-200/80 transition-colors cursor-pointer shrink-0"
+                title={`Switch to searching ${activeTable.tableName} (Tab)`}
+              >
+                <span>{activeTable.tableName}</span>
+                <kbd className="font-mono text-[10px] bg-white px-1 rounded border border-blue-200">Tab</kbd>
+              </button>
+            )
+          )}
+        </div>
 
-            {/* Multi-Field / Multi-Row Query Builder Panel */}
+        {/* ── MODE 1: TABLE DATA SEARCH (`Ctrl+F`) ────────────────────── */}
+        {mode === 'table' && activeTable ? (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {/* Multi-Column Query Builder Panel */}
             {isMultiFieldOpen && (
-              <div className="px-5 py-3 bg-slate-50/90 border-b border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <span>Multi-Column Search (Diff Words in Diff Columns)</span>
+              <div className="px-5 py-3 bg-blue-50/40 border-b border-blue-100 flex flex-col gap-2 shrink-0">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  <span>Multi-Column Filter Conditions</span>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => {
-                        if (activeTable?.columns?.length) {
+                        if (activeTable.columns?.length) {
                           setConditions((prev) => [
                             ...prev,
                             {
@@ -1166,18 +1548,21 @@ export function UniversalSearch() {
                           ]);
                         }
                       }}
-                      className="text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer flex items-center gap-1"
+                      className="text-[#2652C8] hover:underline font-bold cursor-pointer flex items-center gap-1"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>Add Row</span>
+                      <span>Add Condition</span>
                     </button>
                     {conditions.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setConditions([])}
-                        className="text-slate-400 hover:text-slate-700 font-semibold cursor-pointer"
+                        onClick={() => {
+                          setConditions([]);
+                          activeTable.onAdvancedConditionsChange?.([]);
+                        }}
+                        className="text-slate-500 hover:text-slate-800 font-semibold cursor-pointer"
                       >
-                        Clear
+                        Clear All
                       </button>
                     )}
                   </div>
@@ -1186,7 +1571,6 @@ export function UniversalSearch() {
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {conditions.map((cond, idx) => (
                     <div key={cond.id} className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                      {/* Conjunction connector for rows after first */}
                       {idx > 0 ? (
                         <select
                           value={cond.conjunction}
@@ -1196,18 +1580,17 @@ export function UniversalSearch() {
                               prev.map((c) => (c.id === cond.id ? { ...c, conjunction: val } : c))
                             );
                           }}
-                          className="h-8 px-2 bg-emerald-50 text-emerald-800 font-bold text-xs rounded-lg border border-emerald-200 outline-none cursor-pointer"
+                          className="h-8 px-2 bg-blue-50 text-[#2652C8] font-bold text-xs rounded-lg border border-blue-200 outline-none cursor-pointer"
                         >
                           <option value="AND">AND</option>
                           <option value="OR">OR</option>
                         </select>
                       ) : (
-                        <span className="w-14 text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">
+                        <span className="w-12 text-[11px] font-bold text-slate-500 uppercase pl-1 shrink-0">
                           Where
                         </span>
                       )}
 
-                      {/* Column Select */}
                       <select
                         value={cond.column}
                         onChange={(e) => {
@@ -1216,16 +1599,15 @@ export function UniversalSearch() {
                             prev.map((c) => (c.id === cond.id ? { ...c, column: val } : c))
                           );
                         }}
-                        className="h-8 px-2.5 bg-white text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 outline-none cursor-pointer shadow-2xs max-w-[160px]"
+                        className="h-8 px-2.5 bg-white text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 outline-none cursor-pointer max-w-[160px]"
                       >
-                        {activeTable?.columns.map((c) => (
+                        {activeTable.columns.map((c) => (
                           <option key={c.key} value={c.key}>
                             {c.label}
                           </option>
                         ))}
                       </select>
 
-                      {/* Operator */}
                       <select
                         value={cond.operator}
                         onChange={(e) => {
@@ -1234,14 +1616,13 @@ export function UniversalSearch() {
                             prev.map((c) => (c.id === cond.id ? { ...c, operator: val } : c))
                           );
                         }}
-                        className="h-8 px-2 bg-white text-slate-600 text-xs font-medium rounded-lg border border-slate-200 outline-none cursor-pointer shadow-2xs"
+                        className="h-8 px-2 bg-white text-slate-600 text-xs font-medium rounded-lg border border-slate-200 outline-none cursor-pointer"
                       >
                         <option value="contains">contains</option>
                         <option value="equals">equals</option>
                         <option value="starts_with">starts with</option>
                       </select>
 
-                      {/* Value Input */}
                       <input
                         type="text"
                         value={cond.value}
@@ -1251,17 +1632,14 @@ export function UniversalSearch() {
                             prev.map((c) => (c.id === cond.id ? { ...c, value: val } : c))
                           );
                         }}
-                        placeholder="Search value..."
-                        className="h-8 px-3 flex-1 min-w-[120px] bg-white text-slate-900 text-xs font-medium rounded-lg border border-slate-200 outline-none focus:border-emerald-500 shadow-2xs"
+                        placeholder="Value..."
+                        className="h-8 px-3 flex-1 min-w-[120px] bg-white text-slate-900 text-xs font-medium rounded-lg border border-slate-200 outline-none focus:border-[#2652C8]"
                       />
 
-                      {/* Remove row */}
                       <button
                         type="button"
-                        onClick={() => {
-                          setConditions((prev) => prev.filter((c) => c.id !== cond.id));
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer transition-colors"
+                        onClick={() => setConditions((prev) => prev.filter((c) => c.id !== cond.id))}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors"
                         title="Remove condition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1272,438 +1650,299 @@ export function UniversalSearch() {
               </div>
             )}
 
-            {/* Live Filter Preview Table */}
-            {activeTable?.records && activeTable.records.length > 0 ? (
-              <div className="relative overflow-hidden flex flex-col">
-                {filteredTableRows.length > 0 ? (
-                  <div className="overflow-x-auto max-h-[42vh] overflow-y-auto divide-y divide-slate-100">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200">
-                        <tr>
-                          {primaryCols.map((col) => (
-                            <th
-                              key={col.key}
-                              className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider"
-                            >
-                              {col.label}
-                            </th>
-                          ))}
-                          <th className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                            {activeTable?.searchQuery || conditions.some((c) => c.value.trim())
-                              ? 'Matched In'
-                              : activeTable?.columns[3]?.label || 'Status'}
-                          </th>
-                          <th className="w-20 px-3 py-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {filteredTableRows.map((row, idx) => {
-                          const isSelected = idx === selectedTableIndex;
-                          return (
-                            <tr
-                              key={row.record.id || idx}
-                              onClick={() => handleApplyFilterAndClose(row.record)}
-                              onMouseEnter={() => setSelectedTableIndex(idx)}
-                              className={cn(
-                                'transition-colors duration-75 cursor-pointer group',
-                                isSelected
-                                  ? 'bg-emerald-50/70 border-l-4 border-l-emerald-600'
-                                  : 'hover:bg-slate-50/80 border-l-4 border-l-transparent'
-                              )}
-                            >
-                              {primaryCols.map((col) => {
-                                const val = String(getRecordValue(row.record, col.key) ?? '');
-                                return (
-                                  <td
-                                    key={col.key}
-                                    className={cn(
-                                      'px-4 py-2.5 text-xs text-slate-800 font-normal truncate max-w-[180px]',
-                                      isSelected && 'text-slate-950 font-medium'
-                                    )}
-                                  >
-                                    {highlightMatch(val, activeTable?.searchQuery || '')}
-                                  </td>
-                                );
-                              })}
-                              <td className="px-4 py-2.5 text-xs truncate max-w-[240px]">
-                                {row.matchedColumn ? (
-                                  <div className="inline-flex items-center gap-1.5 max-w-full">
-                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                      {row.matchedColumn.label}
-                                    </span>
-                                    <span className="text-xs text-slate-700 truncate font-mono">
-                                      {highlightMatch(row.matchedColumn.value, activeTable?.searchQuery || '')}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400 text-xs">
-                                    {activeTable?.columns[3]
-                                      ? String(getRecordValue(row.record, activeTable.columns[3].key) ?? '—')
-                                      : '—'}
-                                  </span>
+            {/* Structured Multi-Column Table Preview */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredTableRows.length > 0 ? (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 z-10 bg-slate-50/95 border-b border-slate-200">
+                    <tr>
+                      {displayCols.map((col) => (
+                        <th
+                          key={col.key}
+                          className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {col.label}
+                        </th>
+                      ))}
+                      {tableInput.trim() && (
+                        <th className="px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                          Matched In
+                        </th>
+                      )}
+                      <th className="w-20 px-4 py-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {filteredTableRows.map((row, idx) => {
+                      const rowId = row.record.id || String(idx);
+                      const isSelected = hoveredId === rowId || (hoveredId === null && keyboardIndex === idx);
+
+                      return (
+                        <tr
+                          key={rowId}
+                          onClick={() => handleApplyTableAndClose(row.record)}
+                          onMouseEnter={() => setHoveredId(rowId)}
+                          onMouseLeave={() => setHoveredId(null)}
+                          className={cn(
+                            'transition-colors cursor-pointer group',
+                            isSelected ? 'bg-blue-50/80 text-slate-950' : 'hover:bg-slate-50/80'
+                          )}
+                        >
+                          {displayCols.map((col, colIdx) => {
+                            const val = String(getRecordValue(row.record, col.key) ?? '') || '—';
+                            return (
+                              <td
+                                key={col.key}
+                                className={cn(
+                                  'px-4 py-2.5 truncate max-w-[190px]',
+                                  colIdx === 0 ? 'font-semibold text-slate-900' : 'text-slate-700'
                                 )}
+                              >
+                                {highlightMatch(val, deferredTableQuery)}
                               </td>
-                              <td className="w-20 px-3 py-2.5 text-right">
-                                <span
-                                  className={cn(
-                                    'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold transition-opacity select-none',
-                                    isSelected
-                                      ? 'bg-emerald-600 text-white shadow-2xs opacity-100'
-                                      : 'opacity-0 group-hover:opacity-70 text-slate-500 bg-slate-100'
-                                  )}
-                                >
-                                  Enter ↵
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : activeTable?.searchQuery.trim() || conditions.some((c) => c.value.trim()) ? (
-                  <div className="py-10 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="size-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-2.5 shadow-2xs">
-                      <Search className="w-5 h-5" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      No records found matching your search
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Check your spelling, try toggling to &ldquo;OR&rdquo; mode, or select &ldquo;✦ All Columns&rdquo; in the top-right dropdown.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        activeTable?.onSearchChange('');
-                        setConditions([]);
-                        tableInputRef.current?.focus();
-                      }}
-                      className="mt-3.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
-                    >
-                      Clear Search
-                    </button>
-                  </div>
-                ) : (
-                  /* Nothing typed prompt (USER REQUIREMENT: don't show anything when nothing is typed) */
-                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 shadow-2xs">
-                      <Search className="w-5 h-5" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Type above to search {activeTable?.tableName || 'table'}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Filter by code, name, client, or script. Use the Columns dropdown on the right or click Multi-Field for multi-column search.
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Fallback if records are still loading */
-              <div className="p-8 flex flex-col items-center justify-center text-center">
-                <div className="size-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3.5 shadow-2xs">
-                  <Layers className="w-7 h-7" />
-                </div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {activeTable?.searchQuery
-                    ? `Filtering "${activeTable.searchQuery}" in ${activeTable.tableName}`
-                    : `Filtering ${activeTable?.tableName || 'Current Table'}`}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
-                  Press Enter or click below to view the filtered table on the main page.
-                </p>
+                            );
+                          })}
 
-                <div className="flex items-center gap-3 mt-6">
-                  {activeTable?.searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => activeTable.onSearchChange('')}
-                      className="h-8.5 px-4 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
-                    >
-                      Clear Filter
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleApplyFilterAndClose()}
-                    className="h-8.5 px-5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2 active:scale-95"
-                  >
-                    <span>Apply & View Table</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-700/60 text-white font-bold">
-                      Enter ↵
-                    </kbd>
-                  </button>
-                </div>
-              </div>
-            )}
+                          {tableInput.trim() && (
+                            <td className="px-4 py-2.5 truncate max-w-[200px]">
+                              {row.matchedColumn ? (
+                                <div className="inline-flex items-center gap-1.5 max-w-full">
+                                  <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#2652C8] border border-blue-200/80">
+                                    {row.matchedColumn.label}
+                                  </span>
+                                  <span className="font-mono text-[11px] text-slate-700 truncate">
+                                    {highlightMatch(row.matchedColumn.value, deferredTableQuery)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-300">—</span>
+                              )}
+                            </td>
+                          )}
 
-            {/* Footer Bar for Table Filter */}
-            <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
-                    ↑↓
-                  </kbd>
-                  <span>navigate rows</span>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            {isSelected ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#2652C8] text-white text-[10px] font-bold shadow-2xs">
+                                <span>Select</span>
+                                <span className="font-mono">↵</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-300 opacity-0 group-hover:opacity-100 font-semibold">
+                                Open →
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-14 px-6 text-center space-y-2">
+                  <p className="text-sm font-semibold text-slate-800">
+                    No matching records in {activeTable.tableName}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Try adjusting keywords, switching AND/OR mode, or selecting &ldquo;All Columns&rdquo;.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Table Mode Footer */}
+            <div className="px-5 py-2.5 bg-slate-50/90 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">↑↓</kbd>{' '}
+                  Navigate
                 </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
-                    ↵
-                  </kbd>
-                  <span>show on page</span>
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">↵</kbd>{' '}
+                  Apply Filter / Open Row
                 </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
-                    tab
-                  </kbd>
-                  <span>switch to app search</span>
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Tab</kbd>{' '}
+                  App Search
                 </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
-                    esc
-                  </kbd>
-                  <span>dismiss</span>
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Esc</kbd>{' '}
+                  Close
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                {activeTable?.records && (
-                  <span className="text-slate-500 font-sans font-semibold">
-                    {activeTable.searchQuery || conditions.some((c) => c.value.trim())
-                      ? `${filteredTableRows.length} match${filteredTableRows.length === 1 ? '' : 'es'} in ${activeTable.tableName}`
-                      : `${activeTable.records.length} total records in ${activeTable.tableName}`}
-                  </span>
-                )}
-                {(activeTable?.searchQuery || conditions.some((c) => c.value.trim())) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      activeTable?.onSearchChange('');
-                      setConditions([]);
-                      tableInputRef.current?.focus();
-                    }}
-                    className="text-slate-500 hover:text-slate-900 underline text-xs cursor-pointer font-medium"
-                  >
-                    Clear Filter
-                  </button>
-                )}
+              <div className="flex items-center gap-2 font-semibold text-slate-600">
+                <span>
+                  {filteredTableRows.length} shown ({activeTable.records?.length || 0} total)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyTableAndClose()}
+                  className="ml-2 px-2.5 py-1 rounded-lg bg-[#2652C8] hover:bg-[#1F42A3] text-white text-[11px] font-bold cursor-pointer"
+                >
+                  Apply Filter
+                </button>
               </div>
             </div>
           </div>
         ) : (
+          /* ── MODE 2: APP-WIDE SEARCH (`Ctrl+K`) ─────────────────────── */
           <>
-            {/* Search Header Input (Clickable Esc Button in top right) */}
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 bg-white">
-              <Search className="w-5 h-5 text-[#2652C8] shrink-0" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setKeyboardIndex(-1);
-                  setHoveredId(null);
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Type to search pages, reports, actions, or masters... (e.g. trades, net position, add client)"
-                className="w-full text-sm font-medium bg-transparent text-slate-900 placeholder:text-slate-400 outline-none caret-[#2652C8]"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setKeyboardIndex(-1);
-                    setHoveredId(null);
-                    inputRef.current?.focus();
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              ) : null}
-            </div>
-
-        {/* Tab Navigation: Matching Reference Image (All | Pages | Actions | Shortcuts) */}
-        <div className="flex items-center justify-between px-5 pt-2 border-b border-slate-100 bg-white">
-          <div className="flex items-center gap-1">
-            {MAIN_TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setSubCategory('All');
-                    setKeyboardIndex(-1);
-                    setHoveredId(null);
-                  }}
-                  className={cn(
-                    'px-4 py-2 text-xs font-bold rounded-t-xl transition-all cursor-pointer relative shrink-0 select-none',
-                    isActive
-                      ? 'text-[#2652C8] border-b-2 border-[#2652C8] bg-blue-50/40'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                  )}
-                >
-                  <span>{tab}</span>
-                  <span
+            {/* Bright Executive Light-Theme Navigation Tabs (including Shortcuts!) */}
+            <div className="flex items-center gap-1 px-5 pt-2 border-b border-slate-200/80 bg-slate-50/50 overflow-x-auto select-none shrink-0">
+              {(['All', 'Pages', 'Actions', 'Reports', 'Entities', 'Shortcuts'] as MainCategoryTab[]).map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
                     className={cn(
-                      'ml-2 text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold',
+                      'px-3.5 py-2 text-xs font-bold border-b-2 rounded-t-xl transition-all cursor-pointer shrink-0 flex items-center gap-1.5',
                       isActive
-                        ? 'bg-blue-100 text-[#2652C8]'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'text-[#2652C8] border-[#2652C8] bg-white shadow-2xs'
+                        : 'text-slate-500 border-transparent hover:text-slate-800 hover:bg-slate-100/70'
                     )}
                   >
-                    {tabCounts[tab]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Secondary Sub-Category Pills for Pages: Matching Reference Image (All | Trades | Report | Master) */}
-        {activeTab === 'Pages' && (
-          <div className="flex items-center gap-1.5 px-5 py-2 bg-slate-50/70 border-b border-slate-100 select-none">
-            {(['All', 'Trades', 'Report', 'Master'] as const).map((sub) => {
-              const isSubActive = subCategory === sub;
-              return (
-                <button
-                  key={sub}
-                  type="button"
-                  onClick={() => {
-                    setSubCategory(sub);
-                    setKeyboardIndex(-1);
-                    setHoveredId(null);
-                  }}
-                  className={cn(
-                    'px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer select-none',
-                    isSubActive
-                      ? 'bg-blue-100/90 text-[#2652C8] border border-blue-200/90 shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'
-                  )}
-                >
-                  {sub}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Results List: Reference Image Layout (No Black, Solid Centered Icon, Clear On Hover Out) */}
-        <div
-          ref={listRef}
-          onMouseLeave={() => setHoveredId(null)}
-          className="max-h-96 overflow-y-auto p-2 divide-y divide-slate-100"
-        >
-          {filteredItems.length === 0 ? (
-            <div className="py-12 px-6 text-center text-slate-400 text-xs">
-              No results found for <strong className="text-slate-700">"{query}"</strong>
-            </div>
-          ) : (
-            filteredItems.map((item, idx) => {
-              const isSelected = hoveredId === item.id || (hoveredId === null && keyboardIndex === idx);
-              const IconComp = item.icon;
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelect(item)}
-                  onMouseEnter={() => setHoveredId(item.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  className={cn(
-                    'flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer text-xs transition-colors my-0.5',
-                    isSelected
-                      ? 'bg-blue-50/70 ring-1 ring-blue-200/80 shadow-2xs'
-                      : 'hover:bg-slate-50'
-                  )}
-                >
-                  {/* Left: Themed Primary / Accent Icon (Rock-solid Centered, NO transform on hover) */}
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div
+                    <span>{tab}</span>
+                    <span
                       className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border',
-                        item.category === 'Actions'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : item.category === 'Shortcuts'
-                          ? 'bg-amber-50 text-amber-800 border-amber-200'
-                          : 'bg-blue-50 text-[#2652C8] border-blue-100'
+                        'px-1.5 py-0.2 rounded text-[10px] font-mono font-bold',
+                        isActive ? 'bg-blue-50 text-[#2652C8]' : 'bg-slate-200/70 text-slate-600'
                       )}
                     >
-                      <IconComp className="w-4 h-4 stroke-[2]" />
+                      {tabCounts[tab]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Grouped Results List */}
+            <div
+              onMouseLeave={() => setHoveredId(null)}
+              className="flex-1 overflow-y-auto p-3 space-y-4 bg-white"
+            >
+              {appSections.length === 0 ? (
+                <div className="py-14 px-6 text-center text-slate-400 text-xs">
+                  No matching pages, reports, entities, or shortcuts found for{' '}
+                  <strong className="text-slate-700">&ldquo;{appInput}&rdquo;</strong>
+                </div>
+              ) : (
+                appSections.map((section) => (
+                  <div key={section.title} className="space-y-1">
+                    <div className="flex items-center justify-between px-3 py-1">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        {section.title === 'Best Matches' && <Sparkles className="w-3.5 h-3.5 text-[#2652C8]" />}
+                        <span>{section.title}</span>
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold text-slate-400">
+                        {section.items.length}
+                      </span>
                     </div>
 
-                    {/* Title & Description */}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900 text-xs sm:text-sm tracking-tight truncate">
-                          {item.title}
-                        </span>
-                        {item.badge && (
-                          <span
+                    <div className="space-y-0.5">
+                      {section.items.map((item) => {
+                        const itemIndex = currentAppCounter++;
+                        const isSelected =
+                          hoveredId === item.id || (hoveredId === null && keyboardIndex === itemIndex);
+                        const isImplicitDefault =
+                          hoveredId === null && keyboardIndex === -1 && itemIndex === 0 && Boolean(deferredAppQuery.trim());
+                        const IconComp = item.icon;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handleSelectAppItem(item)}
+                            onMouseEnter={() => setHoveredId(item.id)}
                             className={cn(
-                              'text-[10px] font-semibold px-2 py-0.2 rounded-md font-sans border',
-                              item.badge === 'Trades' && 'bg-blue-50 text-[#2652C8] border-blue-200',
-                              item.badge === 'Report' && 'bg-purple-50 text-purple-700 border-purple-200',
-                              item.badge === 'Master' && 'bg-slate-100 text-slate-700 border-slate-200',
-                              item.badge === 'Action' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                              item.badge === 'Shortcut' && 'bg-amber-50 text-amber-800 border-amber-200'
+                              'flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer text-xs transition-all duration-75 group',
+                              isSelected || isImplicitDefault
+                                ? 'bg-blue-50/75 text-slate-900 ring-1 ring-blue-200/90 shadow-2xs'
+                                : 'hover:bg-slate-50 text-slate-700'
                             )}
                           >
-                            {item.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
-                        {item.description}
-                      </p>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={cn(
+                                  'w-8.5 h-8.5 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs',
+                                  item.category === 'Actions'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                    : item.category === 'Reports'
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200/80'
+                                    : item.category === 'Entities'
+                                    ? 'bg-blue-50 text-[#1D4ED8] border-blue-200/80'
+                                    : item.category === 'Shortcuts'
+                                    ? 'bg-sky-50 text-sky-700 border-sky-200/80'
+                                    : 'bg-blue-50/70 text-[#2652C8] border-blue-200/70'
+                                )}
+                              >
+                                <IconComp className="w-4 h-4 stroke-[2]" />
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="font-semibold text-slate-900 text-xs sm:text-sm tracking-tight truncate">
+                                  {highlightMatch(item.title, deferredAppQuery)}
+                                </div>
+                                <p className="text-[11px] text-slate-500 font-normal truncate mt-0.5">
+                                  {item.description}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                              {item.shortcut ? (
+                                <kbd className="px-2 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-mono font-bold text-[11px] shadow-2xs">
+                                  {item.shortcut}
+                                </kbd>
+                              ) : isSelected || isImplicitDefault ? (
+                                <span className="px-2 py-0.5 rounded-md bg-[#2652C8] text-white font-bold text-[10px] shadow-2xs flex items-center gap-1">
+                                  <span>Open</span>
+                                  <span className="font-mono">↵</span>
+                                </span>
+                              ) : (
+                                <ArrowRight className="w-3.5 h-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
+                ))
+              )}
+            </div>
 
-                  {/* Right: Shortcut or Navigation Arrow */}
-                  <div className="shrink-0 ml-3 flex items-center gap-2">
-                    {item.shortcut ? (
-                      <kbd className="text-[11px] font-mono px-2 py-1 rounded-md bg-white border border-slate-200 text-slate-700 font-bold shadow-2xs">
-                        {item.shortcut}
-                      </kbd>
-                    ) : (
-                      <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1 font-semibold">
-                        <span>Go</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Footer Hint Bar: Primary Ledger Blue accents */}
-        <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">↑↓</kbd>
-              <span>navigate</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">↵</kbd>
-              <span>select</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">esc</kbd>
-              <span>dismiss</span>
-            </span>
-          </div>
-          <span className="text-slate-400 font-sans">BizzMate Universal Search</span>
-        </div>
-      </>
-    )}
-  </div>
-</div>,
+            {/* App Mode Footer */}
+            <div className="px-5 py-2.5 bg-slate-50/90 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500 select-none shrink-0">
+              <div className="flex items-center gap-3">
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">↑↓</kbd>{' '}
+                  Navigate
+                </span>
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">↵</kbd>{' '}
+                  Open
+                </span>
+                {activeTable && (
+                  <span>
+                    <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Tab</kbd>{' '}
+                    Page Filter
+                  </span>
+                )}
+                <span>
+                  <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Esc</kbd>{' '}
+                  Close
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 font-semibold hidden sm:block">
+                BizzMate Command Center
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
     document.body
   );
 }

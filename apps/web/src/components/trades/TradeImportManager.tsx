@@ -6,8 +6,20 @@ import { createPortal } from 'react-dom';
 import { UniversalFileUploader } from '../ui/UniversalFileUploader';
 import { notify } from '../../utils/toastNotify';
 import { ArrowLeft, RefreshCw, FileSpreadsheet, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
-import { parseTradeFile, parseDubaiTradeFile, validateTradeImportFile, type FileValidationResult } from '../../lib/tradeParser';
-import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import {
+  parseTradeFile,
+  parseTradesWithDynamicTemplate,
+  parseDubaiTradeFile,
+  validateTradeImportFile,
+  type FileValidationResult,
+  type DubaiParsedTrade,
+} from '../../lib/tradeParser';
+import {
+  detectFileTemplate,
+  fetchFileImportTemplates,
+  DEFAULT_TRADE_TEMPLATES,
+  type FileImportTemplateOption,
+} from '../../lib/tradeParser/templateDetector';
 import * as XLSX from 'xlsx';
 import { FormModal } from '../accounts/FormModal';
 import { ScriptFormModal } from '../scripts/ScriptFormModal';
@@ -46,12 +58,24 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
     setSelectedBrokerId,
     selectedImportType,
     setSelectedImportType,
+    selectedTemplateCode,
+    setSelectedTemplateCode,
+    detectedTemplate,
+    setDetectedTemplate,
     dubaiPreviewRows,
     setDubaiPreviewRows,
     resetImportState,
   } = useTradeImport();
 
-  const isDubaiImport = selectedImportType === 'dubai_trade_fno';
+  const [tradeTemplates, setTradeTemplates] = useState<FileImportTemplateOption[]>(DEFAULT_TRADE_TEMPLATES);
+  const isDubaiImport = selectedTemplateCode === 'DUBAI_FNO_TRADE' || selectedTemplateCode === 'ELEC_TRADE' || selectedImportType === 'dubai_trade_fno';
+
+  // Load trade templates on mount
+  useEffect(() => {
+    fetchFileImportTemplates('TRADE').then((data) => {
+      if (data && data.length > 0) setTradeTemplates(data);
+    });
+  }, []);
 
   const [clients, setClients] = useState<any[]>([]);
   const [exchanges, setExchanges] = useState<any[]>([]);
@@ -415,8 +439,31 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
     setFileName(name);
     setFileValidationError(null);
 
+    // ── Auto-Detect Template if in AUTO mode ──
+    let activeTemplate = tradeTemplates.find((t) => t.code === selectedTemplateCode);
+    let activeCode = selectedTemplateCode;
+    if (selectedTemplateCode === 'AUTO') {
+      const matched = detectFileTemplate(content, tradeTemplates);
+      if (matched) {
+        activeTemplate = matched;
+        activeCode = matched.code;
+        setSelectedTemplateCode(matched.code);
+        setDetectedTemplate(matched);
+        if (matched.code === 'DUBAI_FNO_TRADE' || matched.code === 'ELEC_TRADE') {
+          setSelectedImportType('dubai_trade_fno');
+        }
+        notify.info('Template Auto-Detected', {
+          description: `Using template: ${matched.name}`,
+        });
+      } else {
+        activeTemplate = tradeTemplates[0];
+        activeCode = tradeTemplates[0]?.code || 'DUBAI_FNO_TRADE';
+        setSelectedTemplateCode(activeCode);
+      }
+    }
+
     // ── Pre-Parse File Validation Layer ──
-    const validation = validateTradeImportFile(content);
+    const validation = validateTradeImportFile(content, activeTemplate);
     if (!validation.isValid) {
       setFileValidationError(validation);
       notify.error(validation.isCrossFileMismatch ? 'Wrong File Uploaded' : 'Invalid Trade File Format', {
@@ -428,29 +475,31 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
     }
 
     try {
-      if (isDubaiImport) {
-        const dubaiResult = parseDubaiTradeFile(content);
-        if (dubaiResult.trades.length === 0) {
-          throw new Error('No valid trade rows found in the Dubai file.');
+      const isDynamicTrade = Boolean(activeTemplate) || activeCode === 'DUBAI_FNO_TRADE' || activeCode === 'ELEC_TRADE' || isDubaiImport;
+      if (isDynamicTrade) {
+        const tradeResult = parseTradesWithDynamicTemplate(content, activeTemplate);
+        if (tradeResult.trades.length === 0) {
+          throw new Error('No valid trade rows found in the file.');
         }
-        const deselectedTrades = dubaiResult.trades.map((t) => ({ ...t, selected: false }));
+        const deselectedTrades = tradeResult.trades.map((t) => ({ ...t, selected: false }));
         setDubaiPreviewRows(deselectedTrades);
-        setDubaiDebugSample(dubaiResult.debugSampleCsv || '');
+        setDubaiDebugSample(tradeResult.debugSampleCsv || '');
         setDubaiCurrentPage(1);
         setStep('PREVIEW');
-        notify.success('Dubai Trades Parsed', { description: `Successfully parsed ${dubaiResult.trades.length} Dubai trade rows.` });
+        const skipMsg = tradeResult.skippedOptionsCount ? ` (${tradeResult.skippedOptionsCount.toLocaleString()} Options trades excluded)` : '';
+        notify.success('Trades Parsed', { description: `Successfully parsed ${tradeResult.trades.length.toLocaleString()} Futures trades.${skipMsg}` });
 
         setIsValidatingMasterData(true);
         setTimeout(async () => {
           await handleRevalidateAll();
         }, 100);
 
-        if (dubaiResult.debugSampleCsv) {
+        if (tradeResult.debugSampleCsv) {
           try {
             apiFetch('/trade-import/save-debug-sample', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileName: name, csvContent: dubaiResult.debugSampleCsv }),
+              body: JSON.stringify({ fileName: name, csvContent: tradeResult.debugSampleCsv }),
             });
           } catch (e) {
             console.error('Failed to save debug sample to backend', e);
@@ -684,6 +733,8 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
           clnCharges1: parseFloat(r.clnCharges1) || null,
           clnCharges2: parseFloat(r.clnCharges2) || null,
           vat: parseFloat(r.vat) || null,
+          substituteClientCode: r.substituteClientCode,
+          remarks: r.substituteClientCode ? `Imported via ${r.substituteClientCode}` : 'Imported via Trade_FnO wizard',
         };
       });
 
@@ -803,8 +854,13 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
                 {(isDubaiImport ? dubaiPreviewRows.length : parsedTrades.length).toLocaleString()} rows
               </span>
               <span className="text-slate-300">|</span>
-              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px]">
-                {isDubaiImport ? 'Dubai F&O' : 'Standard'}
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px] flex items-center gap-1">
+                {detectedTemplate?.name || tradeTemplates.find((t) => t.code === selectedTemplateCode)?.name || (isDubaiImport ? 'Dubai F&O' : 'Standard')}
+                {detectedTemplate && (
+                  <span className="text-[9px] bg-emerald-200/70 text-emerald-800 font-semibold px-1 rounded">
+                    Auto
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -920,16 +976,36 @@ export function TradeImportManager({ onBack, initialFile }: { onBack?: () => voi
               </div>
 
               <div className="form-field">
-                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5 block">
-                  Trade Format
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5 flex items-center justify-between">
+                  <span>Trade Format / Template</span>
+                  {detectedTemplate && (
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      Auto-detected
+                    </span>
+                  )}
                 </label>
                 <UniversalDropdown
-                  value={selectedImportType}
+                  value={selectedTemplateCode}
                   options={[
-                    { value: 'dubai_trade_fno', label: 'Trade FNO (Dubai Format)' },
+                    { value: 'AUTO', label: 'Auto (Auto Detect)' },
+                    ...tradeTemplates.map((t) => ({
+                      value: t.code,
+                      label: `${t.name} (${t.code})`,
+                    })),
                   ]}
-                  onChange={(val) => setSelectedImportType(val as any)}
-                  disabled={true}
+                  onChange={(val) => {
+                    setSelectedTemplateCode(val);
+                    if (val === 'AUTO') {
+                      setDetectedTemplate(null);
+                    } else {
+                      const found = tradeTemplates.find((t) => t.code === val);
+                      if (found) setDetectedTemplate(found);
+                      if (val === 'DUBAI_FNO_TRADE' || val === 'ELEC_TRADE') {
+                        setSelectedImportType('dubai_trade_fno');
+                      }
+                    }
+                  }}
+                  disabled={isProcessing}
                 />
               </div>
             </div>

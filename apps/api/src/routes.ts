@@ -17,6 +17,8 @@ import usersRouter from './features/users/routes';
 import rolesRouter from './features/roles/routes';
 import reportsRouter from './features/reports/routes';
 import expiryDatesRouter from './features/expiry-dates/routes';
+import fileImportTemplatesRouter from './features/file-import-templates/routes';
+import recycleBinRouter from './features/recycle-bin/routes';
 
 export function registerRoutes(app: Application) {
   // Health check
@@ -44,7 +46,9 @@ export function registerRoutes(app: Application) {
   app.use('/ledger-report', ledgerReportRouter);
   app.use('/trial-balance', trialBalanceRouter);
   app.use('/expiry-dates', expiryDatesRouter);
+  app.use('/file-import-templates', fileImportTemplatesRouter);
   app.use('/reports', reportsRouter);
+  app.use('/recycle-bin', recycleBinRouter);
   app.use('/', tradesRouter);
   app.use('/', tradeFnoRouter);
 }

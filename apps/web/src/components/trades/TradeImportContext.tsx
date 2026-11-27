@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import type { DubaiParsedTrade } from '../../lib/tradeParser';
+import type { FileImportTemplateOption } from '../../lib/tradeParser/templateDetector';
 
 type ImportStep = 'UPLOAD' | 'PREVIEW' | 'RESULT';
 
@@ -26,6 +27,10 @@ interface TradeImportContextType {
   setSelectedBrokerId: React.Dispatch<React.SetStateAction<string>>;
   selectedImportType: string;
   setSelectedImportType: React.Dispatch<React.SetStateAction<string>>;
+  selectedTemplateCode: string;
+  setSelectedTemplateCode: React.Dispatch<React.SetStateAction<string>>;
+  detectedTemplate: FileImportTemplateOption | null;
+  setDetectedTemplate: React.Dispatch<React.SetStateAction<FileImportTemplateOption | null>>;
   // Dubai-specific
   dubaiPreviewRows: DubaiParsedTrade[];
   setDubaiPreviewRows: React.Dispatch<React.SetStateAction<DubaiParsedTrade[]>>;
@@ -46,6 +51,8 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
   const [selectedExchangeId, setSelectedExchangeId] = useState<string>('');
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('');
   const [selectedImportType, setSelectedImportType] = useState<string>('dubai_trade_fno');
+  const [selectedTemplateCode, setSelectedTemplateCode] = useState<string>('AUTO');
+  const [detectedTemplate, setDetectedTemplate] = useState<FileImportTemplateOption | null>(null);
   const [dubaiPreviewRows, setDubaiPreviewRows] = useState<DubaiParsedTrade[]>([]);
 
   const resetImportState = () => {
@@ -56,6 +63,8 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
     setPreviewRows([]);
     setImportResult(null);
     setDubaiPreviewRows([]);
+    setSelectedTemplateCode('AUTO');
+    setDetectedTemplate(null);
   };
 
   return (
@@ -81,6 +90,10 @@ export function TradeImportProvider({ children }: { children: React.ReactNode })
         setSelectedBrokerId,
         selectedImportType,
         setSelectedImportType,
+        selectedTemplateCode,
+        setSelectedTemplateCode,
+        detectedTemplate,
+        setDetectedTemplate,
         dubaiPreviewRows,
         setDubaiPreviewRows,
         resetImportState,

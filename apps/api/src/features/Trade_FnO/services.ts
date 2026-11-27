@@ -60,6 +60,8 @@ export interface PreviewRow {
   clnCharges1?: number;
   clnCharges2?: number;
   vat?: number;
+  remarks?: string;
+  substituteClientCode?: string;
 }
 
 export function parseFlexibleDate(dateVal: string | Date | null | undefined): Date {
@@ -555,7 +557,7 @@ export class TradeImportService {
           quantity: row.quantity,
           rate: row.rate,
           source: 'IMPORT',
-          remarks: 'Imported via Trade_FnO wizard',
+          remarks: row.remarks || 'Imported via Trade_FnO wizard',
           terminal: row.terminal || null,
           expiry: normalizedExpiryStr,
           orderId: row.exchOrderId || row.orderId || null,

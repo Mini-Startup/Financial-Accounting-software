@@ -114,6 +114,7 @@ export function AccountMasterPageManager({
     setAccounts(initialAccounts);
   }, [initialAccounts]);
 
+  /* Find & Replace disabled outside import flows
   // Global Ctrl+F / Cmd+F keyboard shortcut to toggle Find & Replace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -125,6 +126,7 @@ export function AccountMasterPageManager({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  */
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -296,9 +298,9 @@ export function AccountMasterPageManager({
           setAdvancedConditions(conds);
           setCurrentPage(1);
         }}
-        showFindReplaceButton={true}
+        /* showFindReplaceButton={true}
         isFindReplaceOpen={isFindReplaceOpen}
-        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)}
+        onToggleFindReplace={() => setIsFindReplaceOpen(!isFindReplaceOpen)} */
         selectedCount={selectedIds.size}
         onBulkDelete={handleBulkDelete}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -310,7 +312,7 @@ export function AccountMasterPageManager({
         onPageSizeChange={setPageSize}
       />
 
-      {/* Find & Replace Drawer */}
+      {/* Find & Replace Drawer - disabled outside import flows
       {isFindReplaceOpen && (
         <FindAndReplace
           data={paginatedAccounts}
@@ -319,7 +321,7 @@ export function AccountMasterPageManager({
           onReplaceAll={handleReplaceAll}
           onClose={() => setIsFindReplaceOpen(false)}
         />
-      )}
+      )} */}
 
       {/* Table Card */}
       <div className="card shadow-xs border border-t-0 border-slate-200 rounded-t-none bg-white p-0 overflow-hidden">
