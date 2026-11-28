@@ -48,12 +48,21 @@ export function UniversalDatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedRef = useRef<string>(value);
+
+  const emitChange = (nextVal: string) => {
+    lastEmittedRef.current = nextVal;
+    onChange(nextVal);
+  };
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    setTextValue(formatDateToDDMMYY(value));
-    setLocalError(null);
+    if (value !== lastEmittedRef.current) {
+      lastEmittedRef.current = value;
+      setTextValue(formatDateToDDMMYY(value));
+      setLocalError(null);
+    }
   }
 
   const calculateCoords = useCallback((): Coords | null => {
@@ -172,7 +181,7 @@ export function UniversalDatePicker({
     if (!raw.trim()) {
       setTextValue('');
       setLocalError(null);
-      onChange('');
+      emitChange('');
       return;
     }
 
@@ -180,36 +189,35 @@ export function UniversalDatePicker({
     const formatted = formatTypingDate(raw);
     setTextValue(formatted);
 
-    // If 6 or 8 digits typed, or complete DD-MM-YY format with separators
-    const digits = raw.replace(/\D/g, '');
-    const hasThreeParts = formatted.split(/[-/.]/).length === 3;
+    const parts = formatted.split(/[-/.]/);
+    const yearPart = parts[2] || '';
+    const isCompleteYear = parts.length === 3 && (yearPart.length === 2 || yearPart.length === 4);
 
-    if (digits.length >= 6 || (hasThreeParts && digits.length >= 5)) {
+    if (isCompleteYear) {
       const result = parseDateDetailed(formatted);
       if (!result.isValid) {
         setLocalError(result.error || 'Invalid date (DD-MM-YY)');
-        onChange('');
+        emitChange('');
       } else if (result.iso) {
         if (minDate && result.iso < formatDateForInput(minDate)) {
           setLocalError(`Date cannot be before ${formatDateToDDMMYY(minDate)}`);
-          onChange('');
+          emitChange('');
         } else if (maxDate && result.iso > formatDateForInput(maxDate)) {
           setLocalError(`Date cannot be after ${formatDateToDDMMYY(maxDate)}`);
-          onChange('');
+          emitChange('');
         } else {
           setLocalError(null);
-          onChange(result.iso);
+          emitChange(result.iso);
         }
       }
     } else {
-      // In the middle of typing digits (e.g. "21" or "21-05")
+      // In the middle of typing digits (e.g. "04", "04-02", or "04-02-2")
       // Check if partial day or month typed so far is already clearly invalid
-      const parts = formatted.split(/[-/.]/);
       if (parts[0] && parts[0].length === 2) {
         const d = parseInt(parts[0], 10);
         if (d < 1 || d > 31) {
           setLocalError('Day must be between 01 and 31');
-          onChange('');
+          emitChange('');
           return;
         }
       }
@@ -217,18 +225,21 @@ export function UniversalDatePicker({
         const m = parseInt(parts[1], 10);
         if (m < 1 || m > 12) {
           setLocalError('Month must be between 01 and 12');
-          onChange('');
+          emitChange('');
           return;
         }
       }
       setLocalError(null);
+      if (lastEmittedRef.current !== '') {
+        emitChange('');
+      }
     }
   };
 
   // Handle typing blur & smart year expansion
   const handleBlur = () => {
     if (!textValue.trim()) {
-      onChange('');
+      emitChange('');
       setLocalError(null);
       return;
     }
@@ -236,24 +247,24 @@ export function UniversalDatePicker({
     const result = parseDateDetailed(textValue);
     if (!result.isValid || !result.iso) {
       setLocalError(result.error || 'Invalid date (DD-MM-YY)');
-      onChange('');
+      emitChange('');
       return;
     }
 
     if (minDate && result.iso < formatDateForInput(minDate)) {
       setLocalError(`Date cannot be before ${formatDateToDDMMYY(minDate)}`);
-      onChange('');
+      emitChange('');
       return;
     }
     if (maxDate && result.iso > formatDateForInput(maxDate)) {
       setLocalError(`Date cannot be after ${formatDateToDDMMYY(maxDate)}`);
-      onChange('');
+      emitChange('');
       return;
     }
 
     setLocalError(null);
     setTextValue(formatDateToDDMMYY(result.iso));
-    onChange(result.iso);
+    emitChange(result.iso);
   };
 
   // Calendar Days generator

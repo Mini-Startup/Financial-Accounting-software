@@ -348,64 +348,91 @@ export class TradesService {
     if (!data.tradeNumber || String(data.tradeNumber).trim() === '') {
       throw new BadRequestException('Trade Number is required');
     }
-    if (!data.tradeDate || isNaN(Date.parse(data.tradeDate))) {
+    const parseAndValidateCalendarDate = (rawVal: string | Date, label: string): Date => {
+      if (rawVal instanceof Date) {
+        if (isNaN(rawVal.getTime())) {
+          throw new BadRequestException(`A valid ${label} is required`);
+        }
+        const yr = rawVal.getUTCFullYear();
+        if (yr < 2000 || yr > 2099) {
+          throw new BadRequestException(`${label} year must be a valid 4-digit year (between 2000 and 2099)`);
+        }
+        return rawVal;
+      }
+
+      const cleaned = String(rawVal).trim();
+      if (!cleaned) {
+        throw new BadRequestException(`A valid ${label} is required`);
+      }
+
+      let y: number | null = null;
+      let m: number | null = null;
+      let d: number | null = null;
+
+      // 1. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (with optional time/ISO suffix)
+      const ymd = cleaned.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s].*)?$/);
+      if (ymd) {
+        y = parseInt(ymd[1], 10);
+        m = parseInt(ymd[2], 10);
+        d = parseInt(ymd[3], 10);
+      } else {
+        // 2. DD-MM-YYYY or DD-MM-YY (with optional time suffix)
+        const dmy = cleaned.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})(?:[T\s].*)?$/);
+        if (dmy) {
+          d = parseInt(dmy[1], 10);
+          m = parseInt(dmy[2], 10);
+          y = parseInt(dmy[3], 10);
+          if (y < 100) y += 2000;
+        } else {
+          // 3. DD-MMM-YY or DD-MMM-YYYY or DDMMMYY (e.g. 29-Dec-2026)
+          const mmm = cleaned.match(/^(\d{1,2})[-/\s]?([A-Za-z]{3})[-/\s]?(\d{2}|\d{4})(?:[T\s].*)?$/);
+          const monthMap: Record<string, number> = {
+            JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
+            JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12,
+          };
+          if (mmm && monthMap[mmm[2].toUpperCase()]) {
+            d = parseInt(mmm[1], 10);
+            m = monthMap[mmm[2].toUpperCase()];
+            y = parseInt(mmm[3], 10);
+            if (y < 100) y += 2000;
+          }
+        }
+      }
+
+      if (y !== null && m !== null && d !== null) {
+        if (m < 1 || m > 12 || d < 1 || d > 31) {
+          throw new BadRequestException(`Invalid ${label}: Month must be between 01-12 and Day must be between 01-31`);
+        }
+        const testD = new Date(Date.UTC(y, m - 1, d));
+        if (testD.getUTCFullYear() !== y || testD.getUTCMonth() !== m - 1 || testD.getUTCDate() !== d) {
+          throw new BadRequestException(`Invalid ${label}: Day ${d} is not valid for month ${m}`);
+        }
+        if (y < 2000 || y > 2099) {
+          throw new BadRequestException(`${label} year must be a valid 4-digit year (between 2000 and 2099)`);
+        }
+        return testD;
+      }
+
+      const fallback = parseFlexibleDate(cleaned);
+      if (isNaN(fallback.getTime())) {
+        throw new BadRequestException(`A valid ${label} is required`);
+      }
+      const fallbackYear = fallback.getUTCFullYear();
+      if (fallbackYear < 2000 || fallbackYear > 2099) {
+        throw new BadRequestException(`${label} year must be a valid 4-digit year (between 2000 and 2099)`);
+      }
+      return fallback;
+    };
+
+    if (!data.tradeDate) {
       throw new BadRequestException('A valid Trade Date is required');
     }
-
-    const rawTradeDate = String(data.tradeDate).trim();
-    const tradeParts = rawTradeDate.split(/[-/.]/).map(Number);
-    if (tradeParts.length >= 3) {
-      let y = tradeParts[0];
-      let m = tradeParts[1];
-      let d = tradeParts[2];
-      if (y < 100) { // DD-MM-YY
-        d = tradeParts[0];
-        m = tradeParts[1];
-        y = tradeParts[2] + (tradeParts[2] < 100 ? 2000 : 0);
-      }
-      if (m < 1 || m > 12 || d < 1 || d > 31) {
-        throw new BadRequestException('Invalid Trade Date: Month must be between 01-12 and Day must be between 01-31');
-      }
-      const testD = new Date(Date.UTC(y, m - 1, d));
-      if (testD.getUTCFullYear() !== y || testD.getUTCMonth() !== m - 1 || testD.getUTCDate() !== d) {
-        throw new BadRequestException(`Invalid Trade Date: Day ${d} is not valid for month ${m}`);
-      }
-    }
-
-    const tradeDateObj = parseFlexibleDate(data.tradeDate);
-    const tradeYear = tradeDateObj.getFullYear();
-    if (tradeYear < 2000 || tradeYear > 2099) {
-      throw new BadRequestException('Trade Date year must be a valid 4-digit year (between 2000 and 2099)');
-    }
+    const tradeDateObj = parseAndValidateCalendarDate(data.tradeDate, 'Trade Date');
 
     if (data.expiry) {
-      const rawExpiry = String(data.expiry).trim();
-      const expParts = rawExpiry.split(/[-/.]/).map(Number);
-      if (expParts.length >= 3) {
-        let y = expParts[0];
-        let m = expParts[1];
-        let d = expParts[2];
-        if (y < 100) { // DD-MM-YY
-          d = expParts[0];
-          m = expParts[1];
-          y = expParts[2] + (expParts[2] < 100 ? 2000 : 0);
-        }
-        if (m < 1 || m > 12 || d < 1 || d > 31) {
-          throw new BadRequestException('Invalid Expiry Date: Month must be between 01-12 and Day must be between 01-31');
-        }
-        const testExpD = new Date(Date.UTC(y, m - 1, d));
-        if (testExpD.getUTCFullYear() !== y || testExpD.getUTCMonth() !== m - 1 || testExpD.getUTCDate() !== d) {
-          throw new BadRequestException(`Invalid Expiry Date: Day ${d} is not valid for month ${m}`);
-        }
-      }
-
-      const expiryDateObj = parseFlexibleDate(data.expiry);
-      const expYear = expiryDateObj.getFullYear();
-      if (expYear < 2000 || expYear > 2099) {
-        throw new BadRequestException('Expiry Date year must be a valid 4-digit year (between 2000 and 2099)');
-      }
-      const tDateUtc = Date.UTC(tradeDateObj.getFullYear(), tradeDateObj.getMonth(), tradeDateObj.getDate());
-      const eDateUtc = Date.UTC(expiryDateObj.getFullYear(), expiryDateObj.getMonth(), expiryDateObj.getDate());
+      const expiryDateObj = parseAndValidateCalendarDate(data.expiry, 'Expiry Date');
+      const tDateUtc = Date.UTC(tradeDateObj.getUTCFullYear(), tradeDateObj.getUTCMonth(), tradeDateObj.getUTCDate());
+      const eDateUtc = Date.UTC(expiryDateObj.getUTCFullYear(), expiryDateObj.getUTCMonth(), expiryDateObj.getUTCDate());
       if (eDateUtc < tDateUtc) {
         throw new BadRequestException('Expiry date cannot be before the trade date');
       }

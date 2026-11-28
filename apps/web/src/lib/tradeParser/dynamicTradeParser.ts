@@ -83,10 +83,14 @@ export function normalizeDateToDDMMYYYY(
     return `${day}/${mon}/${yr}`;
   }
 
-  // Handle standard numeric parts (DD/MM/YYYY or MM/DD/YYYY)
+  // Handle standard numeric parts (YYYY-MM-DD, DD/MM/YYYY or MM/DD/YYYY)
   const parts = datePart.split(/[-/]/);
   if (parts.length === 3) {
     let [p1, p2, year] = parts;
+    if (p1.length === 4) {
+      // YYYY-MM-DD or YYYY/MM/DD -> DD/MM/YYYY
+      return `${year.padStart(2, '0')}/${p2.padStart(2, '0')}/${p1}`;
+    }
     if (year.length === 2) year = `20${year}`;
 
     // If second part > 12, then p1 is month and p2 is day
