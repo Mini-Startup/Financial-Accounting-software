@@ -330,7 +330,12 @@ export function TradeFormModal({
     return errMap;
   }, [clientId, scriptId, exchangeId, brokerId, marketRate, quantity, date, expiryDate]);
 
-  const isFormValid = Object.keys(errors).length === 0 && Boolean(scriptId && clientId && brokerId && quantity && marketRate && expiryDate);
+  const qtyNumeric = parseFloat(quantity);
+  const isFormValid =
+    Object.keys(errors).length === 0 &&
+    Boolean(scriptId && clientId && brokerId && marketRate && expiryDate) &&
+    !isNaN(qtyNumeric) &&
+    qtyNumeric !== 0;
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -479,7 +484,11 @@ export function TradeFormModal({
   };
 
   const qtyNumber = parseFloat(quantity);
-  const isBuy = !isNaN(qtyNumber) ? qtyNumber >= 0 : (initialTrade?.transactionType !== 'SELL');
+  const isBuy = quantity.startsWith('-')
+    ? false
+    : !isNaN(qtyNumber)
+      ? qtyNumber >= 0
+      : initialTrade?.transactionType !== 'SELL';
   const isExistingTrade = Boolean(initialTrade);
 
   // Toggle side (BUY <-> SELL) by inverting quantity sign
@@ -729,21 +738,17 @@ export function TradeFormModal({
                   </div>
                   <input
                     ref={quantityInputRef}
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={quantity ? Math.abs(parseFloat(quantity)) : ''}
+                    type="text"
+                    inputMode="numeric"
+                    value={quantity}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) {
-                        setQuantity(isBuy ? '' : '-');
-                      } else {
-                        const num = Math.abs(parseFloat(val));
-                        setQuantity(isBuy ? String(num) : String(-num));
+                      const val = e.target.value.trim();
+                      if (val === '' || val === '-' || /^-?\d+$/.test(val)) {
+                        setQuantity(val);
                       }
                     }}
                     onBlur={() => handleBlur('quantity')}
-                    placeholder="Qty"
+                    placeholder="Qty (use - for Sell)"
                     disabled={isLocked}
                     className={cn(
                       'w-full h-10 px-3.5 text-sm font-mono font-bold rounded-lg border transition-all duration-150 outline-none',
